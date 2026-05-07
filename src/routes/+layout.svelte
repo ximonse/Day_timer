@@ -79,7 +79,7 @@
   :global(body.dark #darkToggle), :global(body.psychedelic #darkToggle) { opacity: 0.4; }
   :global(body.dark #darkToggle:hover), :global(body.psychedelic #darkToggle:hover) { opacity: 0.85; }
   :global(.app) { display: flex; width: 100%; min-height: 100vh; }
-  :global(.sidebar) { width: max-content; min-width: 320px; max-width: 640px; background: var(--panel); border-right: 1px solid var(--border); padding: 20px 16px; position: relative; transition: margin-left .25s ease; overflow-y: auto; flex-shrink: 0; }
+  :global(.sidebar) { width: max-content; min-width: 200px; max-width: min(640px, 25vw); background: var(--panel); border-right: 1px solid var(--border); padding: 20px 16px; position: relative; transition: margin-left .25s ease; overflow-y: auto; flex-shrink: 0; }
   :global(body.sb-collapsed .sidebar) { margin-left: calc(-1 * var(--sb-w, 260px)); }
   :global(.sidebar h3) { margin: 0 0 18px; font-size: 50px; color: var(--fg); font-weight: 800; text-transform: none; letter-spacing: -1px; padding: 0 10px; line-height: 1; }
   :global(.seglist) { display: flex; flex-direction: column; gap: 4px; }
@@ -95,13 +95,13 @@
   :global(.collapse-btn) { position: fixed; top: 50%; left: calc(var(--sb-w, 260px) - 14px); transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--panel); color: var(--fg); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; z-index: 50; transition: left .25s ease; }
   :global(body.sb-collapsed .collapse-btn) { left: 8px; }
   :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 8px; position: relative; }
-  :global(.lesson-title) { position: absolute; top: 24px; left: 32px; font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -2px; color: var(--fg); max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  :global(.top-time) { text-align: center; }
+  :global(.main-header) { display: flex; align-items: baseline; width: 100%; padding: 0 8px; gap: 16px; }
+  :global(.lesson-title) { font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -2px; color: var(--fg); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.top-time) { flex-shrink: 0; text-align: right; }
   :global(.top-time .now) { font-size: 72px; font-weight: 200; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
   :global(.clock-wrap) { position: relative; }
-  :global(svg.clock) { display: block; user-select: none; touch-action: none; overflow: visible; width: min(85vh, calc(100vw - var(--sb-w, 260px) - 200px)); height: min(85vh, calc(100vw - var(--sb-w, 260px) - 200px)); }
-  :global(body.sb-collapsed svg.clock) { width: min(90vh, calc(100vw - 220px)); height: min(90vh, calc(100vw - 220px)); }
+  :global(svg.clock) { display: block; user-select: none; touch-action: none; overflow: visible; width: min(85vh, 50vw); height: min(85vh, 50vw); }
   :global(.toolbar) { display: flex; align-items: center; gap: 8px; background: transparent; border: 0; border-radius: 999px; padding: 4px 6px; position: relative; opacity: 0.55; transition: opacity .2s; }
   :global(.toolbar:hover) { opacity: 1; }
   :global(.toolbar button.icon) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: 999px; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
@@ -142,7 +142,7 @@
   :global(.sync-status) { font-size: 13px; color: var(--menu-muted); min-height: 18px; }
   /* ── Agenda panel ── */
   :global(.agenda) {
-    min-width: 240px; max-width: 420px; background: var(--panel);
+    min-width: 180px; max-width: min(420px, 25vw); background: var(--panel);
     border-left: 1px solid var(--border); padding: 20px 14px;
     overflow-y: auto; flex-shrink: 0; transition: margin-right .25s ease;
   }
@@ -182,10 +182,17 @@
   :global(.agenda-nav-btn:hover:not(:disabled)) { background: var(--pill); color: var(--fg); }
   :global(.agenda-nav-btn:disabled) { opacity: .25; cursor: default; }
   :global(.agenda-date-label) { flex: 1; text-align: center; font-size: 13px; font-weight: 600; color: var(--fg); }
-  :global(body.ag-open svg.clock) {
-    width: min(85vh, calc(100vw - var(--sb-w, 260px) - var(--ag-w, 280px) - 120px));
-    height: min(85vh, calc(100vw - var(--sb-w, 260px) - var(--ag-w, 280px) - 120px));
-  }
+  :global(.agenda-input-header) { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  :global(.agenda-input-label) { flex: 1; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+  :global(.agenda-input-toggle) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 7px; border-radius: 5px; font-family: inherit; }
+  :global(.agenda-input-toggle:hover) { background: var(--pill); color: var(--fg); }
+  :global(.agenda-save-btn) { width: 100%; padding: 7px; background: var(--pill); border: 1px solid var(--border); border-radius: 8px; color: var(--fg); font-size: 13px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; font-family: inherit; transition: background .12s; }
+  :global(.agenda-save-btn:hover) { background: var(--pill-on); color: var(--pill-on-fg); }
+  :global(.login-form) { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
+  :global(.logged-in-row) { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  :global(.logged-in-row .username) { flex: 1; font-weight: 600; color: var(--menu-fg); }
+  :global(.logout-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }
+  :global(.logout-btn:hover) { background: var(--menu-surface); color: var(--menu-fg); }
   @media (max-width: 800px) {
     :global(.agenda) { display: none; }
     :global(.agenda-toggle-btn) { display: none; }
@@ -216,11 +223,11 @@
     :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
     :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
     :global(.main) { order: 1; padding: 8px 8px 12px; gap: 6px; }
-    :global(.lesson-title) { position: static; font-size: 28px; letter-spacing: -1px; max-width: 100%; text-align: center; padding: 0 8px; }
+    :global(.main-header) { gap: 8px; padding: 0; }
+    :global(.lesson-title) { font-size: 28px; letter-spacing: -1px; }
     :global(.top-time .now) { font-size: 40px; letter-spacing: -1px; }
     :global(.top-time .left) { font-size: 14px; }
     :global(svg.clock) { width: min(95vw, 70vh); height: min(95vw, 70vh); }
-    :global(body.sb-collapsed svg.clock) { width: min(95vw, 80vh); height: min(95vw, 80vh); }
     :global(.collapse-btn), :global(body.sb-collapsed .collapse-btn) { position: fixed; left: auto; right: 8px; top: 8px; transform: none; z-index: 60; }
     :global(.controls) { width: 100%; max-width: 100%; }
   }
