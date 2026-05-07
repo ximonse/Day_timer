@@ -31,7 +31,7 @@
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
   const elapsedMin = () => nowMinutes() - s.startMin;
-  const startAngle = () => ((s.startMin % 60) / 60) * 360;
+  const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
@@ -58,14 +58,14 @@
     s.blocks.forEach((b, i) => {
       const segStartMin = cumMin;
       const segEndMin = cumMin + b.minutes;
-      const a0 = sa + (segStartMin / 60) * 360;
-      const a1 = sa + (segEndMin / 60) * 360;
+      const a0 = sa + (segStartMin / s.clockSpan) * 360;
+      const a1 = sa + (segEndMin / s.clockSpan) * 360;
       const baseColor = cs[i % cs.length];
       const isPast = elapsed >= segEndMin;
       const isActive = elapsed >= segStartMin && elapsed < segEndMin;
 
       if (isActive) {
-        const splitAngle = sa + (elapsed / 60) * 360;
+        const splitAngle = sa + (elapsed / s.clockSpan) * 360;
         const pastP = document.createElementNS(NS, 'path');
         pastP.setAttribute('d', arcPath(a0, splitAngle, R, ri));
         pastP.setAttribute('fill', baseColor + dimSuffix);
@@ -149,7 +149,7 @@
       svgEl.appendChild(shit);
     }
 
-    const lessonSpan = (tot / 60) * 360;
+    const lessonSpan = (tot / s.clockSpan) * 360;
     if (lessonSpan < 360 - 2) {
       const aEnd = sa + lessonSpan;
       const [ex0, ey0] = polar(aEnd, ri || 0);
@@ -181,12 +181,16 @@
       l.setAttribute('pointer-events', 'none');
       svgEl.appendChild(l);
     };
-    if (s.showMin) { for (let m = 0; m < 60; m++) drawMark((m/60)*360, 5, 1, 0.45); }
-    if (s.showFive) { for (let m = 0; m < 60; m += 5) drawMark((m/60)*360, 11, 1.8, 0.7); }
-    if (s.showQuarter) { for (let m = 0; m < 60; m += 15) drawMark((m/60)*360, 18, 3, 0.95); }
+    {
+      const cs = s.clockSpan;
+      const f = cs / 60;
+      if (s.showMin)     { for (let m = 0; m < cs; m += f)      drawMark((m/cs)*360, 5,  1,   0.45); }
+      if (s.showFive)    { for (let m = 0; m < cs; m += 5*f)    drawMark((m/cs)*360, 11, 1.8, 0.7);  }
+      if (s.showQuarter) { for (let m = 0; m < cs; m += 15*f)   drawMark((m/cs)*360, 18, 3,   0.95); }
+    }
 
     {
-      const ang = (nowMinutes() % 60 / 60) * 360;
+      const ang = (nowMinutes() % s.clockSpan / s.clockSpan) * 360;
       const innerR = 30, tipR = R + 2, baseWidth = 22;
       const [tx, ty] = polar(ang, tipR);
       const aRad = (ang - 90) * Math.PI / 180;
@@ -292,10 +296,10 @@
     while (rel < 0) rel += 360;
 
     if (drag.type === 'end') {
-      let newTotal = (rel / 360) * 60;
+      let newTotal = (rel / 360) * s.clockSpan;
       const minTotal = s.blocks.length * 2;
       if (newTotal < minTotal) newTotal = minTotal;
-      if (newTotal > 360) newTotal = 360;
+      if (newTotal > s.clockSpan) newTotal = s.clockSpan;
       scaleMinutesTo(Math.round(newTotal));
       renderEndControl(); renderClock(); return;
     }
@@ -303,18 +307,18 @@
       let delta = ang - drag.pointerAng0;
       while (delta > 180) delta -= 360;
       while (delta < -180) delta += 360;
-      const minDelta = (delta / 360) * 60;
+      const minDelta = (delta / 360) * s.clockSpan;
       let newStart = Math.round(drag.startMin0 + minDelta);
       let newTotal = drag.endMin0 - newStart;
       const minTotal = s.blocks.length * 2;
       if (newTotal < minTotal) { newTotal = minTotal; newStart = drag.endMin0 - newTotal; }
-      if (newTotal > 360) { newTotal = 360; newStart = drag.endMin0 - newTotal; }
+      if (newTotal > s.clockSpan) { newTotal = s.clockSpan; newStart = drag.endMin0 - newTotal; }
       s.startMin = newStart;
       scaleMinutesTo(newTotal);
       if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
       renderEndControl(); renderClock(); return;
     }
-    const targetCumMin = (rel / 360) * 60;
+    const targetCumMin = (rel / 360) * s.clockSpan;
     let cumBefore = 0;
     for (let k = 0; k < drag.i; k++) cumBefore += s.blocks[k].minutes;
     let newLeft = targetCumMin - cumBefore;
@@ -598,7 +602,7 @@ Regler:
 
   $effect(() => {
     const _ = JSON.stringify(s.blocks) + s.palette + s.dark + s.hollow + s.textOutside +
-      s.showMin + s.showFive + s.showQuarter + s.showSegLabels + s.showCenterEnd + s.segMinutesMode;
+      s.showMin + s.showFive + s.showQuarter + s.showSegLabels + s.showCenterEnd + s.segMinutesMode + s.clockSpan;
     renderClock();
   });
 
@@ -670,6 +674,7 @@ Regler:
         {/each}
       </div>
       <div class="popover" class:open={popoverOpen}>
+        <button class="pill" class:on={s.clockSpan === 120} onclick={() => { s.clockSpan = s.clockSpan === 120 ? 60 : 120; appState.persist(); }}>2h-vy <span>•</span></button>
         <button class="pill" class:on={s.showLeft} onclick={() => { s.showLeft = !s.showLeft; appState.persist(); }}>Tid kvar <span>•</span></button>
         <button class="pill" class:on={s.showCenterEnd} onclick={() => { s.showCenterEnd = !s.showCenterEnd; appState.persist(); }}>Sluttid i mitten <span>•</span></button>
         <button class="pill" class:on={s.hollow} onclick={() => { s.hollow = !s.hollow; appState.persist(); }}>Ihålig mitt <span>•</span></button>
