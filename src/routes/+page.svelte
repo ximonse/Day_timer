@@ -18,6 +18,7 @@
   let partsFeedback = $state<HTMLElement>(null!);
   let timeFeedback = $state<HTMLElement>(null!);
   let syncKeyInput = $state<HTMLInputElement>(null!);
+  let agendaEl = $state<HTMLElement>(null!);
 
   let nowText = $state('--:--');
   let leftText = $state('');
@@ -30,6 +31,14 @@
 
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
+
+  const agendaItems = $derived(
+    s.flows.map((flow, i) => {
+      const prevMin = s.flows.slice(0, i).reduce((a, f) => a + f.minutes.reduce((x, y) => x + y, 0), 0);
+      const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
+      return { flow, startMin: s.startMin + prevMin, totalMin };
+    })
+  );
 
   function fmtLeft(left: number): string {
     if (left <= 0) return 'klart';
@@ -44,10 +53,11 @@
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
-    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed');
+    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open');
     if (s.palette) document.body.classList.add(s.palette);
     if (s.dark && s.palette !== 'psychedelic') document.body.classList.add('dark');
     if (s.sbCollapsed) document.body.classList.add('sb-collapsed');
+    if (s.agendaOpen) document.body.classList.add('ag-open');
   }
 
   function renderClock() {
@@ -600,6 +610,13 @@ Regler:
       ro.observe(sidebarEl);
       document.documentElement.style.setProperty('--sb-w', sidebarEl.offsetWidth + 'px');
     }
+    if (agendaEl && window.ResizeObserver) {
+      const ro = new ResizeObserver(() => {
+        document.documentElement.style.setProperty('--ag-w', agendaEl.offsetWidth + 'px');
+      });
+      ro.observe(agendaEl);
+      document.documentElement.style.setProperty('--ag-w', agendaEl.offsetWidth + 'px');
+    }
     const savedKey = localStorage.getItem(SYNC_KEY_STORAGE);
     if (savedKey && syncKeyInput) syncKeyInput.value = savedKey;
     renderEndControl();
@@ -628,7 +645,7 @@ Regler:
   });
 
   $effect(() => {
-    const _ = s.palette + s.dark + s.sbCollapsed;
+    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen;
     if (typeof document !== 'undefined') syncBodyClasses();
   });
 
@@ -640,6 +657,11 @@ Regler:
 
   function toggleCollapse() {
     s.sbCollapsed = !s.sbCollapsed;
+    appState.persist();
+  }
+
+  function toggleAgenda() {
+    s.agendaOpen = !s.agendaOpen;
     appState.persist();
   }
 </script>
@@ -803,6 +825,37 @@ Regler:
       </div>
     {/if}
   </main>
+
+  <aside class="agenda" bind:this={agendaEl}>
+    {#if agendaItems.length === 0}
+      <p class="agenda-empty">Spara flöden för att bygga en dagagenda.</p>
+    {:else}
+      <div class="agenda-list">
+        {#each agendaItems as item (item.flow.id)}
+          {@const isActive = item.flow.id === s.flows.find(f => f.title === s.dayTitle)?.id}
+          <div class="agenda-item" class:active={isActive}
+               onclick={() => loadFlow(item.flow.id)}>
+            <div class="agenda-item-head">
+              <span class="agenda-time">{fmtHM(item.startMin)}</span>
+              <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
+              <span class="agenda-dur">{item.totalMin}m</span>
+            </div>
+            {#if item.flow.parts.length > 0}
+              <div class="agenda-subs">
+                {#each item.flow.parts as part, pi}
+                  <span class="agenda-sub">· {part} {item.flow.minutes[pi]}m</span>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </aside>
+
+  <button class="agenda-toggle-btn" onclick={toggleAgenda} title="Dagagenda">
+    {s.agendaOpen ? '›' : '‹'}
+  </button>
 </div>
 
 <div class="theme-dots">
