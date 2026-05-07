@@ -95,9 +95,8 @@
   :global(.collapse-btn) { position: fixed; top: 50%; left: calc(var(--sb-w, 260px) - 14px); transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--panel); color: var(--fg); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; z-index: 50; transition: left .25s ease; }
   :global(body.sb-collapsed .collapse-btn) { left: 8px; }
   :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 8px; position: relative; }
-  :global(.main-header) { display: flex; align-items: baseline; width: 100%; padding: 0 8px; gap: 16px; }
-  :global(.lesson-title) { font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -2px; color: var(--fg); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  :global(.top-time) { flex-shrink: 0; text-align: right; }
+  :global(.lesson-title) { font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -2px; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-align: center; }
+  :global(.top-time) { text-align: center; }
   :global(.top-time .now) { font-size: 72px; font-weight: 200; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
   :global(.clock-wrap) { position: relative; }
@@ -142,7 +141,7 @@
   :global(.sync-status) { font-size: 13px; color: var(--menu-muted); min-height: 18px; }
   /* ── Agenda panel ── */
   :global(.agenda) {
-    min-width: 180px; max-width: min(420px, 25vw); background: var(--panel);
+    min-width: 200px; max-width: min(640px, 25vw); background: var(--panel);
     border-left: 1px solid var(--border); padding: 20px 14px;
     overflow-y: auto; flex-shrink: 0; transition: margin-right .25s ease;
   }
@@ -157,17 +156,17 @@
   :global(body:not(.ag-open) .agenda-toggle-btn) { right: 8px; }
   :global(.agenda-list) { display: flex; flex-direction: column; gap: 2px; }
   :global(.agenda-item) {
-    border-radius: 10px; padding: 8px 10px; cursor: pointer;
-    transition: background .12s; user-select: none;
+    border-radius: 0 10px 10px 0; padding: 10px 12px 10px 14px; cursor: pointer;
+    transition: background .12s; user-select: none; border-left: 7px solid transparent;
   }
   :global(.agenda-item:hover) { background: var(--pill); }
-  :global(.agenda-item.active) { background: var(--pill); outline: 2px solid var(--accent); outline-offset: -2px; }
-  :global(.agenda-item-head) { display: flex; align-items: baseline; gap: 8px; }
-  :global(.agenda-time) { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; min-width: 38px; flex-shrink: 0; }
-  :global(.agenda-name) { flex: 1; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  :global(.agenda-dur) { font-size: 12px; color: var(--muted); flex-shrink: 0; }
-  :global(.agenda-subs) { padding-left: 46px; margin-top: 3px; display: flex; flex-direction: column; gap: 1px; }
-  :global(.agenda-sub) { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  :global(.agenda-item.active) { background: var(--pill); }
+  :global(.agenda-item-head) { display: flex; align-items: baseline; gap: 10px; }
+  :global(.agenda-time) { font-size: 16px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; min-width: 48px; flex-shrink: 0; }
+  :global(.agenda-name) { flex: 1; font-size: 30px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.agenda-dur) { font-size: 16px; color: var(--muted); flex-shrink: 0; }
+  :global(.agenda-subs) { padding-left: 58px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+  :global(.agenda-sub) { font-size: 20px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
   :global(.agenda-input) {
     width: 100%; min-height: 120px; resize: vertical;
@@ -223,7 +222,6 @@
     :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
     :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
     :global(.main) { order: 1; padding: 8px 8px 12px; gap: 6px; }
-    :global(.main-header) { gap: 8px; padding: 0; }
     :global(.lesson-title) { font-size: 28px; letter-spacing: -1px; }
     :global(.top-time .now) { font-size: 40px; letter-spacing: -1px; }
     :global(.top-time .left) { font-size: 14px; }

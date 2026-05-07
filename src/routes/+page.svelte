@@ -36,6 +36,8 @@
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
 
+  const sectorColors = $derived(clockTheme(s.palette, s.dark).colors);
+
   const agendaDays = $derived.by<AgendaDay[] | null>(() =>
     s.agendaText.trim() ? parseAgenda(s.agendaText) : null
   );
@@ -795,14 +797,12 @@ Regler:
   </button>
 
   <main class="main">
-    <div class="main-header">
-      {#if s.dayTitle}
-        <div class="lesson-title">{s.dayTitle}</div>
-      {/if}
-      <div class="top-time">
-        <div class="now">{nowText}</div>
-        <div class="left" style="opacity:{s.showLeft ? 1 : 0}">{leftText}</div>
-      </div>
+    {#if s.dayTitle}
+      <div class="lesson-title">{s.dayTitle}</div>
+    {/if}
+    <div class="top-time">
+      <div class="now">{nowText}</div>
+      <div class="left" style="opacity:{s.showLeft ? 1 : 0}">{leftText}</div>
     </div>
 
     <div class="clock-wrap">
@@ -966,9 +966,11 @@ Regler:
       <p class="agenda-empty">Skriv in dagplanen ovan, eller spara flöden via ⚒︎-panelen.</p>
     {:else}
       <div class="agenda-list">
-        {#each agendaItems as item (item.startMin + item.flow.title)}
+        {#each agendaItems as item, ai (item.startMin + item.flow.title)}
           {@const isActive = s.dayTitle === item.flow.title && s.startMin === item.startMin}
+          {@const itemColor = sectorColors[ai % sectorColors.length]}
           <div class="agenda-item" class:active={isActive}
+               style="border-left-color: {itemColor}"
                onclick={() => item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id)}>
             <div class="agenda-item-head">
               <span class="agenda-time">{fmtHM(item.startMin)}</span>
