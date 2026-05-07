@@ -95,7 +95,8 @@
   :global(.collapse-btn) { position: fixed; top: 50%; left: calc(var(--sb-w, 260px) - 14px); transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--panel); color: var(--fg); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; z-index: 50; transition: left .25s ease; }
   :global(body.sb-collapsed .collapse-btn) { left: 8px; }
   :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 8px; position: relative; }
-  :global(.lesson-title) { font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -2px; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-align: center; }
+  :global(.main-header) { position: relative; width: 100%; }
+  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -2px; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.top-time) { text-align: center; }
   :global(.top-time .now) { font-size: 72px; font-weight: 200; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
@@ -232,7 +233,7 @@
     :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
     :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
     :global(.main) { order: 1; padding: 8px 8px 12px; gap: 6px; }
-    :global(.lesson-title) { font-size: 28px; letter-spacing: -1px; }
+    :global(.lesson-title) { position: static; font-size: 28px; letter-spacing: -1px; max-width: 100%; text-align: center; }
     :global(.top-time .now) { font-size: 40px; letter-spacing: -1px; }
     :global(.top-time .left) { font-size: 14px; }
     :global(svg.clock) { width: min(95vw, 70vh); height: min(95vw, 70vh); }

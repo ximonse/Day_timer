@@ -863,12 +863,14 @@ Regler:
   </button>
 
   <main class="main">
-    {#if s.dayTitle}
-      <div class="lesson-title">{s.dayTitle}</div>
-    {/if}
-    <div class="top-time">
-      <div class="now">{nowText}</div>
-      <div class="left" style="opacity:{s.showLeft ? 1 : 0}">{leftText}</div>
+    <div class="main-header">
+      {#if s.dayTitle}
+        <div class="lesson-title">{s.dayTitle}</div>
+      {/if}
+      <div class="top-time">
+        <div class="now">{nowText}</div>
+        <div class="left" style="opacity:{s.showLeft ? 1 : 0}">{leftText}</div>
+      </div>
     </div>
 
     <div class="clock-wrap">
