@@ -219,3 +219,35 @@ export function serializeBlocks(blocks: Block[]): string {
   }
   return out.join('\n');
 }
+
+export function serializeAgenda(days: AgendaDay[]): string {
+  const lines: string[] = [];
+  let firstDay = true;
+  for (const day of days) {
+    if (!firstDay) lines.push('');
+    firstDay = false;
+    if (day.date !== null) {
+      const [y, m, d] = day.date.split('-');
+      lines.push(`@${y.slice(2)}${m}${d}`);
+    }
+    for (const flow of day.flows) {
+      if (flow.startMin !== undefined) {
+        const h = String(Math.floor(flow.startMin / 60)).padStart(2, '0');
+        const mi = String(flow.startMin % 60).padStart(2, '0');
+        lines.push(`#${flow.title} ${h}:${mi}`);
+      } else {
+        lines.push(`#${flow.title}`);
+      }
+      for (let i = 0; i < flow.parts.length; i++) {
+        lines.push(`${flow.parts[i]} ${flow.minutes[i]}m`);
+        if (flow.notes[i]) {
+          for (const note of flow.notes[i].split('\n')) {
+            if (note.trim()) lines.push(`- ${note}`);
+          }
+        }
+      }
+      if (flow.extraInfo) lines.push(`& ${flow.extraInfo}`);
+    }
+  }
+  return lines.join('\n');
+}
