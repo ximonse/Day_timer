@@ -44,6 +44,7 @@ export interface AppState {
   sbCollapsed: boolean;
   agendaOpen: boolean;
   agendaText: string;
+  agendaDate: string;
   showControls: boolean;
   flows: Flow[];
 }
@@ -77,6 +78,7 @@ function defaultState(): AppState {
     sbCollapsed: false,
     agendaOpen: false,
     agendaText: '',
+    agendaDate: '',
     showControls: true,
     flows: [],
   };

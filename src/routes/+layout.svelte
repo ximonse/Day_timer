@@ -177,6 +177,11 @@
     line-height: 1.5; margin-bottom: 12px;
   }
   :global(.agenda-input::placeholder) { color: var(--muted); opacity: .6; }
+  :global(.agenda-nav) { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+  :global(.agenda-nav-btn) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 18px; padding: 2px 8px; border-radius: 6px; line-height: 1; }
+  :global(.agenda-nav-btn:hover:not(:disabled)) { background: var(--pill); color: var(--fg); }
+  :global(.agenda-nav-btn:disabled) { opacity: .25; cursor: default; }
+  :global(.agenda-date-label) { flex: 1; text-align: center; font-size: 13px; font-weight: 600; color: var(--fg); }
   :global(body.ag-open svg.clock) {
     width: min(85vh, calc(100vw - var(--sb-w, 260px) - var(--ag-w, 280px) - 120px));
     height: min(85vh, calc(100vw - var(--sb-w, 260px) - var(--ag-w, 280px) - 120px));
