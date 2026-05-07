@@ -3,7 +3,7 @@
   import { appState, uid, type Flow } from '$lib/state.svelte.js';
   import { PALETTES, PALETTE_COLORS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
-  import { parseParts, serializeBlocks, parseAgenda, type AgendaDay } from '$lib/parse.js';
+  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
@@ -22,6 +22,7 @@
   let loggedInUser = $state('');
   let agendaInputOpen = $state(true);
   let savedAgendaMsg = $state('');
+  let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; startMinB: number } | null>(null);
   let agendaEl = $state<HTMLElement>(null!);
 
   let nowText = $state('--:--');
@@ -98,6 +99,14 @@
     if (h === 0) return m === 1 ? '1 minut kvar' : `${m} minuter kvar`;
     if (m === 0) return h === 1 ? '1 timme kvar' : `${h} timmar kvar`;
     return `${h}h ${m}m kvar`;
+  }
+
+  function fmtTillStart(min: number): string {
+    const h = Math.floor(min / 60);
+    const m = Math.ceil(min % 60);
+    if (h === 0) return `${m} min till start`;
+    if (m === 0) return `${h}h till start`;
+    return `${h}h ${m}m till start`;
   }
   const elapsedMin = () => nowMinutes() - s.startMin;
   const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
@@ -522,7 +531,12 @@
     const now = new Date();
     nowText = pad(now.getHours()) + ':' + pad(now.getMinutes());
     const tot = totalMin();
-    leftText = fmtLeft((s.startMin + tot) - nowMinutes());
+    const nowMin = nowMinutes();
+    if (nowMin < s.startMin) {
+      leftText = fmtTillStart(s.startMin - nowMin);
+    } else {
+      leftText = fmtLeft((s.startMin + tot) - nowMin);
+    }
     renderClock();
     checkWarnings();
   }
@@ -635,6 +649,58 @@
     appState.persist();
     savedAgendaMsg = 'Sparat ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
+  }
+
+  function setFlowMinutes(flow: Flow, newTotal: number): Flow {
+    const oldTotal = flow.minutes.reduce((a, b) => a + b, 0);
+    if (oldTotal === 0) return { ...flow, minutes: flow.minutes.map(() => Math.max(1, Math.round(newTotal / flow.minutes.length))) };
+    const scaled = flow.minutes.map(m => Math.max(1, Math.round(m * newTotal / oldTotal)));
+    const drift = newTotal - scaled.reduce((a, b) => a + b, 0);
+    scaled[scaled.length - 1] = Math.max(1, scaled[scaled.length - 1] + drift);
+    return { ...flow, minutes: scaled };
+  }
+
+  function startAgendaDrag(e: PointerEvent, i: number) {
+    if (!agendaDays || !selectedDay) return;
+    e.preventDefault();
+    const dayIdx = agendaDays.indexOf(selectedDay);
+    if (dayIdx < 0) return;
+    agendaDragState = {
+      i, dayIdx,
+      startY: e.clientY,
+      startMinA: agendaItems[i].totalMin,
+      startMinB: agendaItems[i + 1]?.totalMin ?? 0,
+    };
+    window.addEventListener('pointermove', onAgendaDrag);
+    window.addEventListener('pointerup', endAgendaDrag);
+  }
+
+  function onAgendaDrag(e: PointerEvent) {
+    const d = agendaDragState;
+    if (!d || !agendaDays) return;
+    const deltaMin = Math.round((e.clientY - d.startY) * 0.8);
+    const total = d.startMinA + d.startMinB;
+    const newA = Math.max(5, Math.min(total - 5, d.startMinA + deltaMin));
+    const newB = total - newA;
+    const newDays = agendaDays.map((day, di) => {
+      if (di !== d.dayIdx) return day;
+      return {
+        ...day,
+        flows: day.flows.map((flow, fi) => {
+          if (fi === d.i) return setFlowMinutes(flow, newA);
+          if (fi === d.i + 1) return setFlowMinutes(flow, newB);
+          return flow;
+        }),
+      };
+    });
+    s.agendaText = serializeAgenda(newDays);
+  }
+
+  function endAgendaDrag() {
+    agendaDragState = null;
+    window.removeEventListener('pointermove', onAgendaDrag);
+    window.removeEventListener('pointerup', endAgendaDrag);
+    appState.persist();
   }
 
   const AI_PROMPT = `Du är en assistent som hjälper mig planera närmsta timmen eller mindre.
@@ -985,6 +1051,11 @@ Regler:
               </div>
             {/if}
           </div>
+          {#if ai < agendaItems.length - 1 && item.fromText}
+            <div class="agenda-drag-handle"
+                 class:dragging={agendaDragState?.i === ai}
+                 onpointerdown={(e) => startAgendaDrag(e, ai)}></div>
+          {/if}
         {/each}
       </div>
     {/if}
