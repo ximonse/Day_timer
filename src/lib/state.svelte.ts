@@ -17,6 +17,7 @@ export interface Flow {
   warnings: boolean[];
   notes: string[];
   extraInfo: string;
+  startMin?: number;
 }
 
 export interface AppState {
@@ -42,6 +43,7 @@ export interface AppState {
   showSegLabels: boolean;
   sbCollapsed: boolean;
   agendaOpen: boolean;
+  agendaText: string;
   showControls: boolean;
   flows: Flow[];
 }
@@ -74,6 +76,7 @@ function defaultState(): AppState {
     showSegLabels: true,
     sbCollapsed: false,
     agendaOpen: false,
+    agendaText: '',
     showControls: true,
     flows: [],
   };
