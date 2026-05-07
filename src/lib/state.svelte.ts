@@ -41,6 +41,7 @@ export interface AppState {
   showExtraInfo: boolean;
   showSegLabels: boolean;
   sbCollapsed: boolean;
+  agendaOpen: boolean;
   showControls: boolean;
   flows: Flow[];
 }
@@ -72,6 +73,7 @@ function defaultState(): AppState {
     showExtraInfo: true,
     showSegLabels: true,
     sbCollapsed: false,
+    agendaOpen: false,
     showControls: true,
     flows: [],
   };

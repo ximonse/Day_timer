@@ -140,6 +140,44 @@
   :global(.sync-row) { display: flex; gap: 8px; }
   :global(.sync-btn) { flex: 1; font-size: 14px; }
   :global(.sync-status) { font-size: 13px; color: var(--menu-muted); min-height: 18px; }
+  /* ── Agenda panel ── */
+  :global(.agenda) {
+    min-width: 240px; max-width: 420px; background: var(--panel);
+    border-left: 1px solid var(--border); padding: 20px 14px;
+    overflow-y: auto; flex-shrink: 0; transition: margin-right .25s ease;
+  }
+  :global(body:not(.ag-open) .agenda) { margin-right: calc(-1 * var(--ag-w, 280px)); }
+  :global(.agenda-toggle-btn) {
+    position: fixed; top: 50%; right: calc(var(--ag-w, 280px) - 14px);
+    transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%;
+    background: var(--panel); color: var(--fg); border: 1px solid var(--border);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 600; z-index: 50; transition: right .25s ease;
+  }
+  :global(body:not(.ag-open) .agenda-toggle-btn) { right: 8px; }
+  :global(.agenda-list) { display: flex; flex-direction: column; gap: 2px; }
+  :global(.agenda-item) {
+    border-radius: 10px; padding: 8px 10px; cursor: pointer;
+    transition: background .12s; user-select: none;
+  }
+  :global(.agenda-item:hover) { background: var(--pill); }
+  :global(.agenda-item.active) { background: var(--pill); outline: 2px solid var(--accent); outline-offset: -2px; }
+  :global(.agenda-item-head) { display: flex; align-items: baseline; gap: 8px; }
+  :global(.agenda-time) { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; min-width: 38px; flex-shrink: 0; }
+  :global(.agenda-name) { flex: 1; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.agenda-dur) { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  :global(.agenda-subs) { padding-left: 46px; margin-top: 3px; display: flex; flex-direction: column; gap: 1px; }
+  :global(.agenda-sub) { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
+  :global(body.ag-open svg.clock) {
+    width: min(85vh, calc(100vw - var(--sb-w, 260px) - var(--ag-w, 280px) - 120px));
+    height: min(85vh, calc(100vw - var(--sb-w, 260px) - var(--ag-w, 280px) - 120px));
+  }
+  @media (max-width: 800px) {
+    :global(.agenda) { display: none; }
+    :global(.agenda-toggle-btn) { display: none; }
+  }
+
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
   :global(.flash.on) { opacity: .35; }
   :global(.help-modal) { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
