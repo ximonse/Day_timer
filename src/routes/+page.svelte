@@ -17,7 +17,11 @@
   let endControlEl = $state<HTMLElement>(null!);
   let partsFeedback = $state<HTMLElement>(null!);
   let timeFeedback = $state<HTMLElement>(null!);
-  let syncKeyInput = $state<HTMLInputElement>(null!);
+  let loginNameInput = $state<HTMLInputElement>(null!);
+  let loginPassInput = $state<HTMLInputElement>(null!);
+  let loggedInUser = $state('');
+  let agendaInputOpen = $state(true);
+  let savedAgendaMsg = $state('');
   let agendaEl = $state<HTMLElement>(null!);
 
   let nowText = $state('--:--');
@@ -582,9 +586,8 @@
   }
 
   async function syncLoad() {
-    const key = syncKeyInput?.value.trim() ?? '';
-    if (!key) { showSyncStatus('Ange en lösenfras', true); return; }
-    localStorage.setItem(SYNC_KEY_STORAGE, key);
+    const key = s.syncKey || '';
+    if (!key) { showSyncStatus('Inte inloggad', true); return; }
     try {
       const res = await fetch('/api/sync?key=' + encodeURIComponent(key));
       if (!res.ok) throw new Error();
@@ -594,9 +597,8 @@
   }
 
   async function syncSave() {
-    const key = syncKeyInput?.value.trim() ?? '';
-    if (!key) { showSyncStatus('Ange en lösenfras', true); return; }
-    localStorage.setItem(SYNC_KEY_STORAGE, key);
+    const key = s.syncKey || '';
+    if (!key) { showSyncStatus('Inte inloggad', true); return; }
     try {
       const res = await fetch('/api/sync?key=' + encodeURIComponent(key), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -605,6 +607,32 @@
       if (!res.ok) throw new Error();
       showSyncStatus('Sparat till moln ✓');
     } catch { showSyncStatus('Kunde inte spara', true); }
+  }
+
+  function login() {
+    const name = loginNameInput?.value.trim() ?? '';
+    const pass = loginPassInput?.value.trim() ?? '';
+    if (!name || !pass) { showSyncStatus('Ange namn och lösenord', true); return; }
+    s.syncKey = name + ':' + pass;
+    loggedInUser = name;
+    localStorage.setItem(SYNC_KEY_STORAGE, s.syncKey);
+    localStorage.setItem('timer-login-user', name);
+    appState.persist();
+    syncLoad();
+  }
+
+  function logout() {
+    loggedInUser = '';
+    s.syncKey = '';
+    localStorage.removeItem(SYNC_KEY_STORAGE);
+    localStorage.removeItem('timer-login-user');
+    appState.persist();
+  }
+
+  function saveAgenda() {
+    appState.persist();
+    savedAgendaMsg = 'Sparat ✓';
+    setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
 
   const AI_PROMPT = `Du är en assistent som hjälper mig planera närmsta timmen eller mindre.
@@ -663,7 +691,9 @@ Regler:
       document.documentElement.style.setProperty('--ag-w', agendaEl.offsetWidth + 'px');
     }
     const savedKey = localStorage.getItem(SYNC_KEY_STORAGE);
-    if (savedKey && syncKeyInput) syncKeyInput.value = savedKey;
+    if (savedKey) s.syncKey = savedKey;
+    const savedUser = localStorage.getItem('timer-login-user');
+    if (savedUser) loggedInUser = savedUser;
     renderEndControl();
     updateTimeFeedback();
     tick();
@@ -765,13 +795,14 @@ Regler:
   </button>
 
   <main class="main">
-    {#if s.dayTitle}
-      <div class="lesson-title">{s.dayTitle}</div>
-    {/if}
-
-    <div class="top-time">
-      <div class="now">{nowText}</div>
-      <div class="left" style="opacity:{s.showLeft ? 1 : 0}">{leftText}</div>
+    <div class="main-header">
+      {#if s.dayTitle}
+        <div class="lesson-title">{s.dayTitle}</div>
+      {/if}
+      <div class="top-time">
+        <div class="now">{nowText}</div>
+        <div class="left" style="opacity:{s.showLeft ? 1 : 0}">{leftText}</div>
+      </div>
     </div>
 
     <div class="clock-wrap">
@@ -791,6 +822,9 @@ Regler:
           ></button>
         {/each}
       </div>
+      {#if loggedInUser}
+        <span style="font-size:11px;opacity:.55;padding:0 4px;font-weight:500;border-left:1px solid var(--border);">👤 {loggedInUser}</span>
+      {/if}
       <div class="popover" class:open={popoverOpen}>
         <button class="pill" class:on={s.clockSpan === 120} onclick={() => { s.clockSpan = s.clockSpan === 120 ? 60 : 120; appState.persist(); }}>2h-vy <span>•</span></button>
         <button class="pill" class:on={s.clockSpan === 720} onclick={() => { s.clockSpan = s.clockSpan === 720 ? 60 : 720; appState.persist(); }}>12h-vy <span>•</span></button>
@@ -877,13 +911,24 @@ Regler:
           </div>
         </div>
 
-        <div class="sync-section">
-          <input type="text" class="sync-input" bind:this={syncKeyInput}
-            placeholder="Lösenfras för synk..." autocomplete="off" spellcheck="false" />
-          <div class="sync-row">
-            <button class="quickstart sync-btn" onclick={syncLoad}>☁ Ladda</button>
-            <button class="quickstart sync-btn" onclick={syncSave}>☁ Spara</button>
-          </div>
+        <div class="login-form">
+          {#if loggedInUser}
+            <div class="logged-in-row">
+              <span class="username">👤 {loggedInUser}</span>
+              <button class="logout-btn" onclick={logout}>Logga ut</button>
+            </div>
+            <div class="sync-row">
+              <button class="quickstart sync-btn" onclick={syncLoad}>☁ Ladda</button>
+              <button class="quickstart sync-btn" onclick={syncSave}>☁ Spara</button>
+            </div>
+          {:else}
+            <label>Synkronisering</label>
+            <input type="text" class="sync-input" bind:this={loginNameInput}
+              placeholder="Namn" autocomplete="username" spellcheck="false" />
+            <input type="password" class="sync-input" bind:this={loginPassInput}
+              placeholder="Lösenord" autocomplete="current-password" />
+            <button class="quickstart" onclick={login}>Logga in & synka</button>
+          {/if}
           <div class="sync-status" style="color:{syncStatusError ? '#c0392b' : 'var(--muted)'}">{syncStatusText}</div>
         </div>
       </div>
@@ -891,12 +936,23 @@ Regler:
   </main>
 
   <aside class="agenda" bind:this={agendaEl}>
-    <textarea
-      class="agenda-input"
-      placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
-      value={s.agendaText}
-      oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
-    ></textarea>
+    <div class="agenda-input-header">
+      <span class="agenda-input-label">Dagplan</span>
+      <button class="agenda-input-toggle" onclick={() => agendaInputOpen = !agendaInputOpen}>
+        {agendaInputOpen ? '△ Dölj' : '▽ Redigera'}
+      </button>
+    </div>
+    {#if agendaInputOpen}
+      <textarea
+        class="agenda-input"
+        placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
+        value={s.agendaText}
+        oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
+      ></textarea>
+      <button class="agenda-save-btn" onclick={saveAgenda}>
+        {savedAgendaMsg || '💾 Spara dagplan'}
+      </button>
+    {/if}
 
     {#if agendaDays && agendaDays.length > 0}
       <div class="agenda-nav">
