@@ -30,6 +30,15 @@
 
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
+
+  function fmtLeft(left: number): string {
+    if (left <= 0) return 'klart';
+    const h = Math.floor(left / 60);
+    const m = Math.ceil(left % 60);
+    if (h === 0) return m === 1 ? '1 minut kvar' : `${m} minuter kvar`;
+    if (m === 0) return h === 1 ? '1 timme kvar' : `${h} timmar kvar`;
+    return `${h}h ${m}m kvar`;
+  }
   const elapsedMin = () => nowMinutes() - s.startMin;
   const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
 
@@ -122,18 +131,36 @@
       c.setAttribute('r', String(Ri - 3)); c.setAttribute('fill', bg);
       svgEl.appendChild(c);
       if (s.showCenterEnd) {
-        const t1 = document.createElementNS(NS, 'text');
-        t1.setAttribute('x', String(CX)); t1.setAttribute('y', String(CY - 8));
-        t1.setAttribute('text-anchor', 'middle'); t1.setAttribute('font-size', '11');
-        t1.setAttribute('fill', centerMuted); t1.textContent = 'slutar';
-        svgEl.appendChild(t1);
-        const t2 = document.createElementNS(NS, 'text');
-        t2.setAttribute('x', String(CX)); t2.setAttribute('y', String(CY + 12));
-        t2.setAttribute('text-anchor', 'middle'); t2.setAttribute('font-size', '20');
-        t2.setAttribute('font-weight', '200'); t2.setAttribute('letter-spacing', '-0.5');
-        t2.setAttribute('font-variant-numeric', 'tabular-nums'); t2.setAttribute('fill', centerMain);
-        t2.textContent = fmtHM(s.startMin + tot);
-        svgEl.appendChild(t2);
+        if (s.clockSpan === 720) {
+          const now = new Date();
+          const dayNames = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
+          const monthNames = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+          const t1 = document.createElementNS(NS, 'text');
+          t1.setAttribute('x', String(CX)); t1.setAttribute('y', String(CY - 8));
+          t1.setAttribute('text-anchor', 'middle'); t1.setAttribute('font-size', '9');
+          t1.setAttribute('fill', centerMuted);
+          t1.textContent = dayNames[now.getDay()];
+          svgEl.appendChild(t1);
+          const t2 = document.createElementNS(NS, 'text');
+          t2.setAttribute('x', String(CX)); t2.setAttribute('y', String(CY + 11));
+          t2.setAttribute('text-anchor', 'middle'); t2.setAttribute('font-size', '17');
+          t2.setAttribute('font-weight', '200'); t2.setAttribute('fill', centerMain);
+          t2.textContent = `${now.getDate()} ${monthNames[now.getMonth()]}`;
+          svgEl.appendChild(t2);
+        } else {
+          const t1 = document.createElementNS(NS, 'text');
+          t1.setAttribute('x', String(CX)); t1.setAttribute('y', String(CY - 8));
+          t1.setAttribute('text-anchor', 'middle'); t1.setAttribute('font-size', '11');
+          t1.setAttribute('fill', centerMuted); t1.textContent = 'slutar';
+          svgEl.appendChild(t1);
+          const t2 = document.createElementNS(NS, 'text');
+          t2.setAttribute('x', String(CX)); t2.setAttribute('y', String(CY + 12));
+          t2.setAttribute('text-anchor', 'middle'); t2.setAttribute('font-size', '20');
+          t2.setAttribute('font-weight', '200'); t2.setAttribute('letter-spacing', '-0.5');
+          t2.setAttribute('font-variant-numeric', 'tabular-nums'); t2.setAttribute('fill', centerMain);
+          t2.textContent = fmtHM(s.startMin + tot);
+          svgEl.appendChild(t2);
+        }
       }
     }
 
@@ -183,10 +210,16 @@
     };
     {
       const cs = s.clockSpan;
-      const f = cs / 60;
-      if (s.showMin)     { for (let m = 0; m < cs; m += f)      drawMark((m/cs)*360, 5,  1,   0.45); }
-      if (s.showFive)    { for (let m = 0; m < cs; m += 5*f)    drawMark((m/cs)*360, 11, 1.8, 0.7);  }
-      if (s.showQuarter) { for (let m = 0; m < cs; m += 15*f)   drawMark((m/cs)*360, 18, 3,   0.95); }
+      if (cs === 720) {
+        if (s.showMin)     { for (let m = 0; m < 720; m += 15)  drawMark((m/720)*360, 5,  1,   0.45); }
+        if (s.showFive)    { for (let m = 0; m < 720; m += 60)  drawMark((m/720)*360, 11, 1.8, 0.7);  }
+        if (s.showQuarter) { for (let m = 0; m < 720; m += 180) drawMark((m/720)*360, 18, 3,   0.95); }
+      } else {
+        const f = cs / 60;
+        if (s.showMin)     { for (let m = 0; m < cs; m += f)    drawMark((m/cs)*360, 5,  1,   0.45); }
+        if (s.showFive)    { for (let m = 0; m < cs; m += 5*f)  drawMark((m/cs)*360, 11, 1.8, 0.7);  }
+        if (s.showQuarter) { for (let m = 0; m < cs; m += 15*f) drawMark((m/cs)*360, 18, 3,   0.95); }
+      }
     }
 
     {
@@ -428,8 +461,7 @@
     const now = new Date();
     nowText = pad(now.getHours()) + ':' + pad(now.getMinutes());
     const tot = totalMin();
-    const left = (s.startMin + tot) - nowMinutes();
-    leftText = left <= 0 ? 'klart' : (Math.ceil(left) === 1 ? '1 minut kvar' : `${Math.ceil(left)} minuter kvar`);
+    leftText = fmtLeft((s.startMin + tot) - nowMinutes());
     renderClock();
     checkWarnings();
   }
@@ -675,6 +707,7 @@ Regler:
       </div>
       <div class="popover" class:open={popoverOpen}>
         <button class="pill" class:on={s.clockSpan === 120} onclick={() => { s.clockSpan = s.clockSpan === 120 ? 60 : 120; appState.persist(); }}>2h-vy <span>•</span></button>
+        <button class="pill" class:on={s.clockSpan === 720} onclick={() => { s.clockSpan = s.clockSpan === 720 ? 60 : 720; appState.persist(); }}>12h-vy <span>•</span></button>
         <button class="pill" class:on={s.showLeft} onclick={() => { s.showLeft = !s.showLeft; appState.persist(); }}>Tid kvar <span>•</span></button>
         <button class="pill" class:on={s.showCenterEnd} onclick={() => { s.showCenterEnd = !s.showCenterEnd; appState.persist(); }}>Sluttid i mitten <span>•</span></button>
         <button class="pill" class:on={s.hollow} onclick={() => { s.hollow = !s.hollow; appState.persist(); }}>Ihålig mitt <span>•</span></button>

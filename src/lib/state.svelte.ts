@@ -28,7 +28,7 @@ export interface AppState {
   startMin: number;        // minutes since midnight
   endMode: 'end' | 'len';
   syncKey: string;
-  clockSpan: 60 | 120;
+  clockSpan: 60 | 120 | 720;
   showLeft: boolean;
   showCenterEnd: boolean;
   hollow: boolean;
