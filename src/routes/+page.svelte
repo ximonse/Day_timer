@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { appState } from '$lib/state.svelte.js';
+  import { appState, uid, type Flow } from '$lib/state.svelte.js';
   import { PALETTES, PALETTE_COLORS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
-  import { parseParts, serializeBlocks } from '$lib/parse.js';
+  import { parseParts, serializeBlocks, parseAgenda } from '$lib/parse.js';
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
@@ -32,13 +32,17 @@
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
 
-  const agendaItems = $derived(
-    s.flows.map((flow, i) => {
-      const prevMin = s.flows.slice(0, i).reduce((a, f) => a + f.minutes.reduce((x, y) => x + y, 0), 0);
+  const agendaItems = $derived.by(() => {
+    const source = s.agendaText.trim() ? parseAgenda(s.agendaText) : s.flows;
+    let t = s.startMin;
+    return source.map(flow => {
+      if (flow.startMin !== undefined) t = flow.startMin;
+      const startMin = t;
       const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
-      return { flow, startMin: s.startMin + prevMin, totalMin };
-    })
-  );
+      t += totalMin;
+      return { flow, startMin, totalMin, fromText: s.agendaText.trim().length > 0 };
+    });
+  });
 
   function fmtLeft(left: number): string {
     if (left <= 0) return 'klart';
@@ -664,6 +668,25 @@ Regler:
     s.agendaOpen = !s.agendaOpen;
     appState.persist();
   }
+
+  function loadAgendaFlow(flow: Flow, computedStart: number) {
+    s.dayTitle = flow.title;
+    s.blocks = flow.parts.map((title, i) => ({
+      id: uid(),
+      title,
+      minutes: flow.minutes[i] ?? 45,
+      note: flow.notes?.[i] ?? '',
+      warning: flow.warnings?.[i] ?? false,
+      pinned: flow.minutes[i] > 0,
+    }));
+    s.extraInfo = flow.extraInfo || '';
+    s.startMin = flow.startMin ?? computedStart;
+    warnedSet.clear();
+    if (titleInput) titleInput.value = s.dayTitle;
+    if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
+    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
+    updateTimeFeedback(); renderEndControl(); appState.persist();
+  }
 </script>
 
 <div class="app">
@@ -827,14 +850,20 @@ Regler:
   </main>
 
   <aside class="agenda" bind:this={agendaEl}>
+    <textarea
+      class="agenda-input"
+      placeholder="#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;#Arbete 09:00&#10;..."
+      value={s.agendaText}
+      oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
+    ></textarea>
     {#if agendaItems.length === 0}
-      <p class="agenda-empty">Spara flöden för att bygga en dagagenda.</p>
+      <p class="agenda-empty">Skriv in dagplanen ovan, eller spara flöden via ⚒︎-panelen.</p>
     {:else}
       <div class="agenda-list">
-        {#each agendaItems as item (item.flow.id)}
-          {@const isActive = item.flow.id === s.flows.find(f => f.title === s.dayTitle)?.id}
+        {#each agendaItems as item (item.startMin + item.flow.title)}
+          {@const isActive = s.dayTitle === item.flow.title && s.startMin === item.startMin}
           <div class="agenda-item" class:active={isActive}
-               onclick={() => loadFlow(item.flow.id)}>
+               onclick={() => item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id)}>
             <div class="agenda-item-head">
               <span class="agenda-time">{fmtHM(item.startMin)}</span>
               <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>

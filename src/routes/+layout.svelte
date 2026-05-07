@@ -169,6 +169,14 @@
   :global(.agenda-subs) { padding-left: 46px; margin-top: 3px; display: flex; flex-direction: column; gap: 1px; }
   :global(.agenda-sub) { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
+  :global(.agenda-input) {
+    width: 100%; min-height: 120px; resize: vertical;
+    background: var(--menu-surface); color: var(--menu-fg);
+    border: 1px solid var(--menu-border); border-radius: 8px;
+    padding: 8px 10px; font-size: 13px; font-family: ui-monospace, monospace;
+    line-height: 1.5; margin-bottom: 12px;
+  }
+  :global(.agenda-input::placeholder) { color: var(--muted); opacity: .6; }
   :global(body.ag-open svg.clock) {
     width: min(85vh, calc(100vw - var(--sb-w, 260px) - var(--ag-w, 280px) - 120px));
     height: min(85vh, calc(100vw - var(--sb-w, 260px) - var(--ag-w, 280px) - 120px));
