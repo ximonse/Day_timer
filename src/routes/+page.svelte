@@ -3,7 +3,7 @@
   import { appState, uid, type Flow } from '$lib/state.svelte.js';
   import { PALETTES, PALETTE_COLORS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
-  import { parseParts, serializeBlocks, parseAgenda } from '$lib/parse.js';
+  import { parseParts, serializeBlocks, parseAgenda, type AgendaDay } from '$lib/parse.js';
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
@@ -32,17 +32,58 @@
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
 
+  const agendaDays = $derived.by<AgendaDay[] | null>(() =>
+    s.agendaText.trim() ? parseAgenda(s.agendaText) : null
+  );
+
+  const selectedDay = $derived.by<AgendaDay | null>(() => {
+    if (!agendaDays?.length) return null;
+    if (s.agendaDate) {
+      const hit = agendaDays.find(d => d.date === s.agendaDate);
+      if (hit) return hit;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    return agendaDays.find(d => d.date === today)
+      ?? agendaDays.find(d => d.date === null)
+      ?? agendaDays[0];
+  });
+
+  const selectedDayIdx = $derived.by(() =>
+    agendaDays && selectedDay ? agendaDays.indexOf(selectedDay) : -1
+  );
+
   const agendaItems = $derived.by(() => {
-    const source = s.agendaText.trim() ? parseAgenda(s.agendaText) : s.flows;
+    const flows = selectedDay?.flows ?? (agendaDays ? [] : s.flows);
+    const fromText = agendaDays !== null;
     let t = s.startMin;
-    return source.map(flow => {
+    return flows.map(flow => {
       if (flow.startMin !== undefined) t = flow.startMin;
       const startMin = t;
       const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
       t += totalMin;
-      return { flow, startMin, totalMin, fromText: s.agendaText.trim().length > 0 };
+      return { flow, startMin, totalMin, fromText };
     });
   });
+
+  function fmtAgendaDate(iso: string | null): string {
+    if (!iso) return 'Odaterat';
+    const [y, m, d] = iso.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    const days = ['Sön','Mån','Tis','Ons','Tor','Fre','Lör'];
+    const months = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+    return `${days[dt.getDay()]} ${d} ${months[m - 1]}`;
+  }
+
+  function prevDay() {
+    if (!agendaDays || selectedDayIdx <= 0) return;
+    s.agendaDate = agendaDays[selectedDayIdx - 1].date ?? '';
+    appState.persist();
+  }
+  function nextDay() {
+    if (!agendaDays || selectedDayIdx >= agendaDays.length - 1) return;
+    s.agendaDate = agendaDays[selectedDayIdx + 1].date ?? '';
+    appState.persist();
+  }
 
   function fmtLeft(left: number): string {
     if (left <= 0) return 'klart';
@@ -852,10 +893,19 @@ Regler:
   <aside class="agenda" bind:this={agendaEl}>
     <textarea
       class="agenda-input"
-      placeholder="#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;#Arbete 09:00&#10;..."
+      placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
       value={s.agendaText}
       oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
     ></textarea>
+
+    {#if agendaDays && agendaDays.length > 0}
+      <div class="agenda-nav">
+        <button class="agenda-nav-btn" onclick={prevDay} disabled={selectedDayIdx <= 0}>‹</button>
+        <span class="agenda-date-label">{fmtAgendaDate(selectedDay?.date ?? null)}</span>
+        <button class="agenda-nav-btn" onclick={nextDay} disabled={selectedDayIdx >= (agendaDays.length - 1)}>›</button>
+      </div>
+    {/if}
+
     {#if agendaItems.length === 0}
       <p class="agenda-empty">Skriv in dagplanen ovan, eller spara flöden via ⚒︎-panelen.</p>
     {:else}

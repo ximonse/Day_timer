@@ -74,6 +74,11 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
 
 // ── Agenda parser ──────────────────────────────────────────────────────────
 
+export interface AgendaDay {
+  date: string | null;   // ISO YYYY-MM-DD, null = undated
+  flows: Flow[];
+}
+
 interface RawSection {
   title: string;
   startMin?: number;
@@ -88,19 +93,83 @@ function parseTimeStr(s: string): number | undefined {
   return isNaN(h) || isNaN(min) ? undefined : h * 60 + min;
 }
 
-export function parseAgenda(text: string): Flow[] {
+// @YYMMDD, @YYYYMMDD or @YYYY-MM-DD → ISO string or null
+function parseDateMarker(raw: string): string | null {
+  const s = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{8}$/.test(s)) return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+  if (/^\d{6}$/.test(s)) {
+    const y = 2000 + parseInt(s.slice(0, 2), 10);
+    return `${y}-${s.slice(2, 4)}-${s.slice(4, 6)}`;
+  }
+  return null;
+}
+
+function sectionsToFlows(sections: RawSection[]): Flow[] {
+  return sections.map((sec, i) => {
+    const next = sections[i + 1];
+    let available = 60;
+    if (sec.startMin !== undefined && next?.startMin !== undefined && next.startMin > sec.startMin) {
+      available = next.startMin - sec.startMin;
+    }
+    const pinnedSum = sec.items.reduce((a, b) => a + (b.minutes ?? 0), 0);
+    const unpinnedCount = sec.items.filter(b => b.minutes === null).length;
+    const perUnpinned = unpinnedCount > 0
+      ? Math.max(1, Math.round(Math.max(unpinnedCount, available - pinnedSum) / unpinnedCount))
+      : 0;
+    return {
+      id: uid(),
+      title: sec.title,
+      startMin: sec.startMin,
+      parts: sec.items.map(b => b.title),
+      minutes: sec.items.map(b => b.minutes !== null ? b.minutes : perUnpinned),
+      warnings: sec.items.map(() => false),
+      notes: sec.items.map(b => b.note),
+      extraInfo: sec.extraInfo,
+    } satisfies Flow;
+  });
+}
+
+export function parseAgenda(text: string): AgendaDay[] {
   const lines = text.split('\n').map(l => l.replace(/\s+$/, ''));
-  const sections: RawSection[] = [];
+  const days: AgendaDay[] = [];
+  let curDate: string | null = null;
+  let sections: RawSection[] = [];
   let cur: RawSection | null = null;
+
+  const flushDay = () => {
+    if (cur) { sections.push(cur); cur = null; }
+    if (sections.length > 0) {
+      days.push({ date: curDate, flows: sectionsToFlows(sections) });
+      sections = [];
+    } else if (curDate !== null) {
+      // date marker with no sessions yet — keep it open for next lines
+    }
+  };
 
   for (const rawLine of lines) {
     const t = rawLine.trim();
     if (!t) continue;
 
+    // Date marker: @YYMMDD / @YYYYMMDD / @YYYY-MM-DD
+    if (t.startsWith('@')) {
+      const iso = parseDateMarker(t.slice(1));
+      if (iso !== null) {
+        // flush current day only if we have content
+        if (cur) { sections.push(cur); cur = null; }
+        if (sections.length > 0) {
+          days.push({ date: curDate, flows: sectionsToFlows(sections) });
+          sections = [];
+        }
+        curDate = iso;
+        continue;
+      }
+    }
+
+    // Session header: #Titel or #Titel 08:00
     if (t.startsWith('#')) {
       if (cur) sections.push(cur);
       const content = t.slice(1).trim();
-      // Optional time at end: "#Titel 08:00"
       const timeMatch = content.match(/^(.*?)\s+(\d{1,2}:\d{2})\s*$/);
       let title = content;
       let startMin: number | undefined;
@@ -114,10 +183,7 @@ export function parseAgenda(text: string): Flow[] {
 
     if (!cur) cur = { title: 'Session', startMin: undefined, items: [], extraInfo: '' };
 
-    if (t.startsWith('& ') || t === '&') {
-      cur.extraInfo = t.slice(1).trim();
-      continue;
-    }
+    if (t.startsWith('& ') || t === '&') { cur.extraInfo = t.slice(1).trim(); continue; }
 
     if (t.startsWith('-') && cur.items.length > 0) {
       const note = t.replace(/^-\s*/, '');
@@ -133,32 +199,12 @@ export function parseAgenda(text: string): Flow[] {
       cur.items.push({ title: t, minutes: null, note: '' });
     }
   }
+
+  // Flush last day
   if (cur) sections.push(cur);
+  if (sections.length > 0) days.push({ date: curDate, flows: sectionsToFlows(sections) });
 
-  return sections.map((sec, i) => {
-    const next = sections[i + 1];
-    let available = 60;
-    if (sec.startMin !== undefined && next?.startMin !== undefined && next.startMin > sec.startMin) {
-      available = next.startMin - sec.startMin;
-    }
-
-    const pinnedSum = sec.items.reduce((a, b) => a + (b.minutes ?? 0), 0);
-    const unpinnedCount = sec.items.filter(b => b.minutes === null).length;
-    const perUnpinned = unpinnedCount > 0
-      ? Math.max(1, Math.round(Math.max(unpinnedCount, available - pinnedSum) / unpinnedCount))
-      : 0;
-
-    return {
-      id: uid(),
-      title: sec.title,
-      startMin: sec.startMin,
-      parts: sec.items.map(b => b.title),
-      minutes: sec.items.map(b => b.minutes !== null ? b.minutes : perUnpinned),
-      warnings: sec.items.map(() => false),
-      notes: sec.items.map(b => b.note),
-      extraInfo: sec.extraInfo,
-    } satisfies Flow;
-  });
+  return days;
 }
 
 export function serializeBlocks(blocks: Block[]): string {
