@@ -130,70 +130,103 @@
     const tot = totalMin();
     const sa = startAngle();
     const elapsed = elapsedMin();
+    const nowMin = nowMinutes();
     const ri = s.hollow ? Ri : 0;
     const labelDefer: { lx: number; ly: number; fillText: string; text: string }[] = [];
 
-    let cumMin = 0;
-    s.blocks.forEach((b, i) => {
-      const segStartMin = cumMin;
-      const segEndMin = cumMin + b.minutes;
-      const a0 = sa + (segStartMin / s.clockSpan) * 360;
-      const a1 = sa + (segEndMin / s.clockSpan) * 360;
-      const baseColor = cs[i % cs.length];
-      const isPast = elapsed >= segEndMin;
-      const isActive = elapsed >= segStartMin && elapsed < segEndMin;
+    const use12hAgenda = s.clockSpan === 720 && agendaItems.length > 0;
 
-      if (isActive) {
-        const splitAngle = sa + (elapsed / s.clockSpan) * 360;
-        const pastP = document.createElementNS(NS, 'path');
-        pastP.setAttribute('d', arcPath(a0, splitAngle, R, ri));
-        pastP.setAttribute('fill', baseColor + dimSuffix);
-        svgEl.appendChild(pastP);
-        const liveP = document.createElementNS(NS, 'path');
-        liveP.setAttribute('d', arcPath(splitAngle, a1, R, ri));
-        liveP.setAttribute('fill', baseColor);
-        svgEl.appendChild(liveP);
-      } else {
-        const path = document.createElementNS(NS, 'path');
-        path.setAttribute('d', arcPath(a0, a1, R, ri));
-        path.setAttribute('fill', isPast ? baseColor + dimSuffix : baseColor);
-        svgEl.appendChild(path);
-      }
-
-      if (i > 0) {
-        const [x0, y0] = polar(a0, ri || 0);
-        const [x1, y1] = polar(a0, R);
-        const hit = document.createElementNS(NS, 'line');
-        hit.setAttribute('x1', String(x0)); hit.setAttribute('y1', String(y0));
-        hit.setAttribute('x2', String(x1)); hit.setAttribute('y2', String(y1));
-        hit.setAttribute('stroke', 'transparent');
-        hit.setAttribute('stroke-width', '32');
-        hit.setAttribute('pointer-events', 'stroke');
-        hit.style.cursor = 'grab';
-        (hit as any)._boundaryIdx = i - 1;
-        hit.addEventListener('pointerdown', startBoundaryDrag);
-        svgEl.appendChild(hit);
-      }
-
-      const midAngle = (a0 + a1) / 2;
-      let lx: number, ly: number;
-      if (s.textOutside) {
-        [lx, ly] = polar(midAngle, R + 22);
-      } else {
-        const rText = ri > 0 ? (R + ri) / 2 : R / 2;
-        [lx, ly] = polar(midAngle, rText);
-      }
-      const fillText = labelColorFor(baseColor, i, isPast, s.palette, s.dark);
-      let labelText = truncate(b.title, 14);
-      if (s.segMinutesMode === 'planned') {
-        labelText += ` ${b.minutes}m`;
-      } else if (s.segMinutesMode === 'remaining') {
-        const mins = isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEndMin - elapsed)) : b.minutes;
-        labelText += ` ${mins}m kvar`;
-      }
-      labelDefer.push({ lx, ly, fillText, text: labelText });
-      cumMin = segEndMin;
-    });
+    if (use12hAgenda) {
+      // 12h mode: render agenda sessions at absolute clock positions
+      const periodStart = Math.floor(nowMin / 720) * 720;
+      agendaItems.forEach((item, i) => {
+        const itemEnd = item.startMin + item.totalMin;
+        if (itemEnd <= periodStart || item.startMin >= periodStart + 720) return;
+        const clampStart = Math.max(item.startMin, periodStart);
+        const clampEnd = Math.min(itemEnd, periodStart + 720);
+        const a0 = ((clampStart - periodStart) / 720) * 360;
+        const a1 = ((clampEnd - periodStart) / 720) * 360;
+        if (a1 - a0 < 0.1) return;
+        const baseColor = cs[i % cs.length];
+        const isPast = nowMin >= itemEnd;
+        const isActive = nowMin >= item.startMin && nowMin < itemEnd;
+        if (isActive) {
+          const splitAngle = ((nowMin - periodStart) / 720) * 360;
+          if (splitAngle > a0) {
+            const pastP = document.createElementNS(NS, 'path');
+            pastP.setAttribute('d', arcPath(a0, Math.min(splitAngle, a1), R, ri));
+            pastP.setAttribute('fill', baseColor + dimSuffix);
+            svgEl.appendChild(pastP);
+          }
+          if (splitAngle < a1) {
+            const liveP = document.createElementNS(NS, 'path');
+            liveP.setAttribute('d', arcPath(Math.max(splitAngle, a0), a1, R, ri));
+            liveP.setAttribute('fill', baseColor);
+            svgEl.appendChild(liveP);
+          }
+        } else {
+          const path = document.createElementNS(NS, 'path');
+          path.setAttribute('d', arcPath(a0, a1, R, ri));
+          path.setAttribute('fill', isPast ? baseColor + dimSuffix : baseColor);
+          svgEl.appendChild(path);
+        }
+        const midAngle = (a0 + a1) / 2;
+        const [lx, ly] = s.textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R * 0.65);
+        const fillText = labelColorFor(baseColor, i, isPast, s.palette, s.dark);
+        labelDefer.push({ lx, ly, fillText, text: truncate(item.flow.title, 14) });
+      });
+    } else {
+      // 1h/2h mode: render s.blocks as relative sectors
+      let cumMin = 0;
+      s.blocks.forEach((b, i) => {
+        const segStartMin = cumMin;
+        const segEndMin = cumMin + b.minutes;
+        const a0 = sa + (segStartMin / s.clockSpan) * 360;
+        const a1 = sa + (segEndMin / s.clockSpan) * 360;
+        const baseColor = cs[i % cs.length];
+        const isPast = elapsed >= segEndMin;
+        const isActive = elapsed >= segStartMin && elapsed < segEndMin;
+        if (isActive) {
+          const splitAngle = sa + (elapsed / s.clockSpan) * 360;
+          const pastP = document.createElementNS(NS, 'path');
+          pastP.setAttribute('d', arcPath(a0, splitAngle, R, ri));
+          pastP.setAttribute('fill', baseColor + dimSuffix);
+          svgEl.appendChild(pastP);
+          const liveP = document.createElementNS(NS, 'path');
+          liveP.setAttribute('d', arcPath(splitAngle, a1, R, ri));
+          liveP.setAttribute('fill', baseColor);
+          svgEl.appendChild(liveP);
+        } else {
+          const path = document.createElementNS(NS, 'path');
+          path.setAttribute('d', arcPath(a0, a1, R, ri));
+          path.setAttribute('fill', isPast ? baseColor + dimSuffix : baseColor);
+          svgEl.appendChild(path);
+        }
+        if (i > 0) {
+          const [x0, y0] = polar(a0, ri || 0);
+          const [x1, y1] = polar(a0, R);
+          const hit = document.createElementNS(NS, 'line');
+          hit.setAttribute('x1', String(x0)); hit.setAttribute('y1', String(y0));
+          hit.setAttribute('x2', String(x1)); hit.setAttribute('y2', String(y1));
+          hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '32');
+          hit.setAttribute('pointer-events', 'stroke'); hit.style.cursor = 'grab';
+          (hit as any)._boundaryIdx = i - 1;
+          hit.addEventListener('pointerdown', startBoundaryDrag);
+          svgEl.appendChild(hit);
+        }
+        const midAngle = (a0 + a1) / 2;
+        const [lx, ly] = s.textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R / 2);
+        const fillText = labelColorFor(baseColor, i, isPast, s.palette, s.dark);
+        let labelText = truncate(b.title, 14);
+        if (s.segMinutesMode === 'planned') { labelText += ` ${b.minutes}m`; }
+        else if (s.segMinutesMode === 'remaining') {
+          const mins = isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEndMin - elapsed)) : b.minutes;
+          labelText += ` ${mins}m kvar`;
+        }
+        labelDefer.push({ lx, ly, fillText, text: labelText });
+        cumMin = segEndMin;
+      });
+    }
 
     if (s.hollow) {
       const c = document.createElementNS(NS, 'circle');
@@ -234,7 +267,7 @@
       }
     }
 
-    {
+    if (!use12hAgenda) {
       const [sx0, sy0] = polar(sa, ri || 0);
       const [sx1, sy1] = polar(sa, R);
       const shit = document.createElementNS(NS, 'line');
@@ -244,20 +277,19 @@
       shit.setAttribute('pointer-events', 'stroke'); shit.style.cursor = 'grab';
       shit.addEventListener('pointerdown', startStartDrag);
       svgEl.appendChild(shit);
-    }
-
-    const lessonSpan = (tot / s.clockSpan) * 360;
-    if (lessonSpan < 360 - 2) {
-      const aEnd = sa + lessonSpan;
-      const [ex0, ey0] = polar(aEnd, ri || 0);
-      const [ex1, ey1] = polar(aEnd, R);
-      const ehit = document.createElementNS(NS, 'line');
-      ehit.setAttribute('x1', String(ex0)); ehit.setAttribute('y1', String(ey0));
-      ehit.setAttribute('x2', String(ex1)); ehit.setAttribute('y2', String(ey1));
-      ehit.setAttribute('stroke', 'transparent'); ehit.setAttribute('stroke-width', '36');
-      ehit.setAttribute('pointer-events', 'stroke'); ehit.style.cursor = 'grab';
-      ehit.addEventListener('pointerdown', startEndDrag);
-      svgEl.appendChild(ehit);
+      const lessonSpan = (tot / s.clockSpan) * 360;
+      if (lessonSpan < 360 - 2) {
+        const aEnd = sa + lessonSpan;
+        const [ex0, ey0] = polar(aEnd, ri || 0);
+        const [ex1, ey1] = polar(aEnd, R);
+        const ehit = document.createElementNS(NS, 'line');
+        ehit.setAttribute('x1', String(ex0)); ehit.setAttribute('y1', String(ey0));
+        ehit.setAttribute('x2', String(ex1)); ehit.setAttribute('y2', String(ey1));
+        ehit.setAttribute('stroke', 'transparent'); ehit.setAttribute('stroke-width', '36');
+        ehit.setAttribute('pointer-events', 'stroke'); ehit.style.cursor = 'grab';
+        ehit.addEventListener('pointerdown', startEndDrag);
+        svgEl.appendChild(ehit);
+      }
     }
 
     const drawMark = (ang: number, len: number, w: number, op: number) => {
@@ -293,7 +325,7 @@
     }
 
     {
-      const ang = (nowMinutes() % s.clockSpan / s.clockSpan) * 360;
+      const ang = (nowMin % s.clockSpan / s.clockSpan) * 360;
       const innerR = 30, tipR = R + 2, baseWidth = 22;
       const [tx, ty] = polar(ang, tipR);
       const aRad = (ang - 90) * Math.PI / 180;
