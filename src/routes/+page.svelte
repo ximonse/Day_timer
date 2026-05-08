@@ -29,7 +29,7 @@
 
   let nowMinLive = $state(nowMinutes());
   let lastAutoLoadKey = $state('');
-  let mobileTab = $state<'klocka'|'delar'|'plan'>('klocka');
+  let mobileTab = $state<'timer'|'delar'|'plan'>('timer');
   let nowText = $state('--:--');
   let leftText = $state('');
   let popoverOpen = $state(false);
@@ -118,7 +118,7 @@
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
-    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-klocka', 'm-delar', 'm-plan');
+    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-timer', 'm-delar', 'm-plan');
     if (s.palette) document.body.classList.add(s.palette);
     if (s.dark && s.palette !== 'psychedelic') document.body.classList.add('dark');
     if (s.sbCollapsed) document.body.classList.add('sb-collapsed');
@@ -998,7 +998,7 @@ Regler:
       <button class="icon" onclick={(e) => { e.stopPropagation(); popoverOpen = !popoverOpen; }} title="Visningsalternativ">⚙︎</button>
       <button class="icon" onclick={() => { s.showControls = !s.showControls; appState.persist(); }} title="Inställningar">⚒︎</button>
       <div class="toolbar-spacer"></div>
-      <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : '1h'}</button>
+      <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : ''}</button>
       <div class="toolbar-spacer"></div>
       <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
       <div class="warn-dots">
@@ -1190,11 +1190,11 @@ Regler:
   </button>
 
   <nav class="mobile-tabs">
-    <button class:active={mobileTab === 'klocka'} onclick={() => { mobileTab = 'klocka'; syncBodyClasses(); }}>
-      <span>◷</span> Klocka
-    </button>
     <button class:active={mobileTab === 'delar'} onclick={() => { mobileTab = 'delar'; syncBodyClasses(); }}>
       <span>☰</span> Delar
+    </button>
+    <button class:active={mobileTab === 'timer'} onclick={() => { mobileTab = 'timer'; syncBodyClasses(); }}>
+      <span>◷</span> Timer
     </button>
     <button class:active={mobileTab === 'plan'} onclick={() => { mobileTab = 'plan'; syncBodyClasses(); }}>
       <span>▦</span> Plan
