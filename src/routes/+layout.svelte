@@ -79,6 +79,8 @@
   :global(body.dark #darkToggle), :global(body.psychedelic #darkToggle) { opacity: 0.4; }
   :global(body.dark #darkToggle:hover), :global(body.psychedelic #darkToggle:hover) { opacity: 0.85; }
   :global(.app) { display: flex; width: 100%; height: 100vh; overflow: hidden; }
+  :global(.sidebar), :global(.main) { scrollbar-width: none; }
+  :global(.sidebar::-webkit-scrollbar), :global(.main::-webkit-scrollbar), :global(.agenda::-webkit-scrollbar) { display: none; }
   :global(.sidebar) { width: 260px; min-width: 160px; max-width: 720px; background: var(--panel); border-right: 1px solid var(--border); padding: 20px 16px; position: relative; transition: margin-left .25s ease; overflow-y: auto; flex-shrink: 0; height: 100%; }
   :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 8px; position: relative; overflow-y: auto; height: 100%; }
   :global(body.sb-collapsed .sidebar) { margin-left: calc(-1 * var(--sb-w, 260px)); }
@@ -148,7 +150,9 @@
   :global(.agenda) {
     width: 280px; min-width: 160px; max-width: 720px; background: var(--panel);
     border-left: 1px solid var(--border); padding: 20px 14px;
-    overflow-y: auto; flex-shrink: 0; transition: margin-right .25s ease; height: 100%;
+    display: flex; flex-direction: column;
+    overflow: hidden; flex-shrink: 0; transition: margin-right .25s ease; height: 100%;
+    scrollbar-width: none;
   }
   :global(body:not(.ag-open) .agenda) { margin-right: calc(-1 * var(--ag-w, 280px)); }
   :global(.agenda-toggle-btn) {
@@ -159,29 +163,30 @@
     font-size: 16px; font-weight: 600; z-index: 50; transition: right .25s ease;
   }
   :global(body:not(.ag-open) .agenda-toggle-btn) { right: 8px; }
-  :global(.agenda-list) { display: flex; flex-direction: column; }
-  :global(.agenda-item) {
-    border-radius: 0 10px 10px 0; padding: 10px 12px 10px 12px; cursor: pointer;
-    transition: background .12s; user-select: none; border-left: 11px solid transparent;
+  :global(.agenda-timeline) {
+    flex: 1; min-height: 0; position: relative; overflow: hidden;
   }
-  :global(.agenda-item:hover) { background: var(--pill); }
-  :global(.agenda-item.active) { background: var(--pill); }
-  :global(.agenda-drag-handle) {
-    height: 10px; cursor: ns-resize; display: flex; align-items: center;
-    justify-content: center; user-select: none; touch-action: none;
+  :global(.agenda-block) {
+    position: absolute; left: 0; right: 0;
+    border-radius: 0 8px 8px 0; border-left: 11px solid transparent;
+    padding: 2px 8px; cursor: pointer; overflow: hidden;
+    transition: background .12s; user-select: none; box-sizing: border-box;
+    display: flex; align-items: center; gap: 6px;
   }
-  :global(.agenda-drag-handle::after) {
-    content: ''; width: 44px; height: 3px; background: var(--border);
-    border-radius: 2px; opacity: 0; transition: opacity .15s;
+  :global(.agenda-block:hover) { background: var(--pill); }
+  :global(.agenda-block.active) { background: var(--pill); }
+  :global(.agenda-block.past) { opacity: .4; }
+  :global(.agenda-drag-edge) {
+    position: absolute; left: 0; right: 0; height: 14px;
+    transform: translateY(-7px); cursor: ns-resize; z-index: 5;
+    border-radius: 3px; transition: background .15s; touch-action: none;
   }
-  :global(.agenda-drag-handle:hover::after) { opacity: 1; }
-  :global(.agenda-drag-handle.dragging::after) { opacity: 1; }
-  :global(.agenda-item-head) { display: flex; align-items: baseline; gap: 10px; }
-  :global(.agenda-time) { font-size: 16px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; min-width: 48px; flex-shrink: 0; }
-  :global(.agenda-name) { flex: 1; font-size: 30px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  :global(.agenda-dur) { font-size: 16px; color: var(--muted); flex-shrink: 0; }
-  :global(.agenda-subs) { padding-left: 58px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
-  :global(.agenda-sub) { font-size: 20px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  :global(.agenda-drag-edge:hover), :global(.agenda-drag-edge.dragging) {
+    background: var(--border); opacity: .6;
+  }
+  :global(.agenda-time) { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; flex-shrink: 0; }
+  :global(.agenda-name) { flex: 1; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.agenda-dur) { font-size: 12px; color: var(--muted); flex-shrink: 0; }
   :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
   :global(.agenda-input) {
     width: 100%; min-height: 120px; resize: vertical;
