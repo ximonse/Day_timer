@@ -241,8 +241,8 @@
     :global(.mobile-tabs button.active) { color: var(--fg); }
     :global(.mobile-tabs button.active span) { color: var(--accent); }
     /* Visa rätt sektion beroende på aktiv flik */
-    :global(body.m-klocka .sidebar) { display: none; }
-    :global(body.m-klocka .resize-handle-sb) { display: none; }
+    :global(body.m-timer .sidebar) { display: none; }
+    :global(body.m-timer .resize-handle-sb) { display: none; }
     :global(body.m-delar .main) { display: none; }
     :global(body.m-delar .resize-handle-sb) { display: none; }
     :global(body.m-plan .main) { display: none; }
@@ -250,7 +250,7 @@
     :global(body.m-plan .resize-handle-sb) { display: none; }
     :global(body.m-plan .agenda) { display: flex !important; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); }
     /* Ge utrymme för flikraden */
-    :global(body.m-klocka .main), :global(body.m-delar .sidebar), :global(body.m-plan .agenda) {
+    :global(body.m-timer .main), :global(body.m-delar .sidebar), :global(body.m-plan .agenda) {
       padding-bottom: 60px;
     }
   }
@@ -298,6 +298,6 @@
     :global(.sidebar) { display: flex; width: 240px; min-width: 0; height: 100%; border-right: 1px solid var(--border); border-bottom: none; order: 0; padding: 8px 10px 60px; overflow-y: auto; }
     :global(.seglist .row) { font-size: 16px; padding: 4px 6px; }
     :global(.mobile-tabs) { flex-direction: column; width: 52px; height: 100%; border-top: none; border-right: 1px solid var(--border); bottom: 0; left: auto; right: 0; }
-    :global(body.m-klocka .sidebar), :global(body.m-delar .main) { display: flex; }
+    :global(body.m-timer .sidebar), :global(body.m-delar .main) { display: flex; }
   }
 </style>
