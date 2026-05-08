@@ -170,10 +170,20 @@
           path.setAttribute('fill', isPast ? baseColor + dimSuffix : baseColor);
           svgEl.appendChild(path);
         }
+        // transparent hit-area for click-to-load
+        const hit = document.createElementNS(NS, 'path');
+        hit.setAttribute('d', arcPath(a0, a1, R, ri));
+        hit.setAttribute('fill', 'transparent');
+        hit.style.cursor = 'pointer';
+        hit.addEventListener('click', () => loadAgendaFlow(item.flow, item.startMin));
+        svgEl.appendChild(hit);
+
         const midAngle = (a0 + a1) / 2;
         const [lx, ly] = s.textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R * 0.65);
         const fillText = labelColorFor(baseColor, i, isPast, s.palette, s.dark);
-        labelDefer.push({ lx, ly, fillText, text: truncate(item.flow.title, 14) });
+        const timeLabel = fmtHM(item.startMin);
+        const nameLabel = truncate(item.flow.title, 10);
+        labelDefer.push({ lx, ly, fillText, text: `${nameLabel} ${timeLabel}` });
       });
     } else {
       // 1h/2h mode: render s.blocks as relative sectors
@@ -826,7 +836,9 @@ Regler:
 
   $effect(() => {
     const _ = JSON.stringify(s.blocks) + s.palette + s.dark + s.hollow + s.textOutside +
-      s.showMin + s.showFive + s.showQuarter + s.showSegLabels + s.showCenterEnd + s.segMinutesMode + s.clockSpan;
+      s.showMin + s.showFive + s.showQuarter + s.showSegLabels + s.showCenterEnd + s.segMinutesMode + s.clockSpan +
+      s.agendaText + s.agendaDate;
+    agendaItems; // track agenda for 12h mode
     renderClock();
   });
 
