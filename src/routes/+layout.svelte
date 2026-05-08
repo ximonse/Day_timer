@@ -212,9 +212,24 @@
   :global(.logged-in-row .username) { flex: 1; font-weight: 600; color: var(--menu-fg); }
   :global(.logout-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }
   :global(.logout-btn:hover) { background: var(--menu-surface); color: var(--menu-fg); }
-  @media (max-width: 800px) {
-    :global(.agenda) { display: none; }
-    :global(.agenda-toggle-btn) { display: none; }
+  /* ── Mobil flikrad (dold på desktop) ── */
+  :global(.mobile-tabs) {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: var(--panel); border-top: 1px solid var(--border);
+    height: 52px;
+  }
+  :global(.mobile-tabs button) {
+    flex: 1; background: transparent; border: 0; color: var(--muted);
+    font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+    padding: 6px 4px 8px; display: flex; flex-direction: column;
+    align-items: center; gap: 1px;
+  }
+  :global(.mobile-tabs button span) { font-size: 16px; line-height: 1; }
+  :global(.mobile-tabs button.active) { color: var(--fg); }
+  :global(.mobile-tabs button.active::after) {
+    content: ''; display: block; width: 20px; height: 2px;
+    background: var(--accent); border-radius: 1px;
   }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
@@ -232,22 +247,69 @@
   :global(.help-close) { position: absolute; top: 8px; right: 12px; background: transparent; border: 0; color: var(--fg); font-size: 28px; cursor: pointer; line-height: 1; }
 
   @media (max-width: 800px) {
-    :global(.app) { flex-direction: column; height: auto; overflow: visible; }
-    :global(.sidebar) { width: 100%; max-width: 100%; min-width: 0; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 12px 14px; order: 2; }
-    :global(.main) { height: auto; overflow: visible; }
-    :global(body.sb-collapsed .sidebar) { margin-left: 0; padding: 0; border-bottom: none; max-height: 0; overflow: hidden; }
-    :global(.seglist .row) { font-size: 20px; padding: 6px 8px; gap: 8px; }
-    :global(.seglist .dot) { width: 12px; height: 12px; margin-top: 4px; }
-    :global(.seglist .min) { font-size: 16px; margin-top: 2px; }
+    /* Layout */
+    :global(.app) { flex-direction: column; height: auto; overflow: visible; padding-bottom: 52px; }
+    :global(.main) { order: 1; height: auto; overflow: visible; padding: 8px 8px 12px; gap: 6px; }
+    :global(.sidebar) { order: 2; width: 100%; max-width: 100%; min-width: 0; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 12px 14px; }
+    :global(.agenda) { display: none; }
+    :global(.agenda-toggle-btn) { display: none; }
+    :global(.collapse-btn) { display: none; }
     :global(.resize-handle-sb), :global(.resize-handle-ag) { display: none; }
-    :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
-    :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
-    :global(.main) { order: 1; padding: 8px 8px 12px; gap: 6px; }
+
+    /* Flikbaserad visning */
+    :global(body.m-klocka .sidebar) { display: none; }
+    :global(body.m-delar .main) { display: none; }
+    :global(body.m-plan .main) { display: none; }
+    :global(body.m-plan .sidebar) { display: none; }
+    :global(body.m-plan .agenda) {
+      display: flex; flex-direction: column;
+      width: 100%; max-width: 100%; border-left: none;
+      border-top: 1px solid var(--border); height: auto; overflow: hidden;
+      padding: 12px 14px;
+    }
+    :global(body.m-plan .agenda-timeline) { flex: 1; min-height: 50vh; }
+
+    /* Mobil flikrad synlig */
+    :global(.mobile-tabs) { display: flex; }
+
+    /* Typsnitt & storlekar */
     :global(.lesson-title) { position: static; font-size: 28px; letter-spacing: -1px; max-width: 100%; text-align: center; }
     :global(.top-time .now) { font-size: 40px; letter-spacing: -1px; }
     :global(.top-time .left) { font-size: 14px; }
-    :global(svg.clock) { width: min(95vw, 70vh); height: min(95vw, 70vh); }
-    :global(.collapse-btn), :global(body.sb-collapsed .collapse-btn) { position: fixed; left: auto; right: 8px; top: 8px; transform: none; z-index: 60; }
+    :global(svg.clock) { width: min(92vw, 72vh); height: min(92vw, 72vh); }
+    :global(.seglist .row) { font-size: 20px; padding: 6px 8px; gap: 8px; }
+    :global(.seglist .dot) { width: 12px; height: 12px; margin-top: 4px; }
+    :global(.seglist .min) { font-size: 16px; margin-top: 2px; }
+    :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
+    :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
     :global(.controls) { width: 100%; max-width: 100%; }
+  }
+
+  /* ── Landscape-telefon (bred men låg skärm) ── */
+  @media (orientation: landscape) and (max-height: 500px) {
+    :global(.app) { flex-direction: row; height: 100vh; overflow: hidden; padding-bottom: 0; }
+    :global(.mobile-tabs) { display: none; }
+    :global(.collapse-btn), :global(.agenda-toggle-btn) { display: none; }
+    :global(.main) {
+      order: 1; flex: 0 0 auto; width: 48vh; height: 100vh;
+      overflow-y: auto; padding: 4px 6px; gap: 4px;
+    }
+    :global(svg.clock) { width: min(44vh, 48vw); height: min(44vh, 48vw); }
+    :global(.top-time .now) { font-size: 22px; letter-spacing: -1px; }
+    :global(.top-time .left) { font-size: 11px; margin-top: 2px; }
+    :global(.lesson-title) { position: static; font-size: 16px; letter-spacing: 0; max-width: 100%; text-align: center; }
+    :global(.main-header) { display: flex; align-items: center; gap: 8px; justify-content: center; }
+    :global(.sidebar) {
+      order: 2; flex: 1; width: auto; max-width: none; height: 100vh;
+      border-right: none; border-left: 1px solid var(--border);
+      border-bottom: none; overflow-y: auto; padding: 8px 10px;
+    }
+    :global(body.sb-collapsed .sidebar) { display: none; margin: 0; }
+    :global(.agenda) { display: none; }
+    :global(.resize-handle-sb), :global(.resize-handle-ag) { display: none; }
+    :global(.controls) { width: 100%; max-width: 100%; }
+    :global(.seglist .row) { font-size: 17px; padding: 4px 6px; gap: 6px; }
+    :global(.seglist .dot) { width: 10px; height: 10px; margin-top: 3px; }
+    :global(.seglist .min) { font-size: 14px; }
   }
 </style>
