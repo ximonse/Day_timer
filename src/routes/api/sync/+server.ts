@@ -3,7 +3,7 @@ import { json, error } from '@sveltejs/kit';
 
 const redis = new Redis({
   url: process.env.daytimer_KV_REST_API_URL!,
-  token: process.env.daytimer_KV_REST_API_TOKEN!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
 export async function GET({ url }: { url: URL }) {
