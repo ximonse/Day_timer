@@ -777,6 +777,40 @@ Regler:
 
 [Klistra in dina aktiviteter här]`;
 
+  function startSidebarResize(e: PointerEvent) {
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    window.addEventListener('pointermove', onSidebarResize);
+    window.addEventListener('pointerup', endSidebarResize);
+  }
+  function onSidebarResize(e: PointerEvent) {
+    if (!sidebarEl) return;
+    const newW = Math.max(160, Math.min(720, e.clientX - sidebarEl.getBoundingClientRect().left));
+    sidebarEl.style.width = newW + 'px';
+    document.documentElement.style.setProperty('--sb-w', newW + 'px');
+  }
+  function endSidebarResize() {
+    window.removeEventListener('pointermove', onSidebarResize);
+    window.removeEventListener('pointerup', endSidebarResize);
+  }
+
+  function startAgendaResize(e: PointerEvent) {
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    window.addEventListener('pointermove', onAgendaResize);
+    window.addEventListener('pointerup', endAgendaResize);
+  }
+  function onAgendaResize(e: PointerEvent) {
+    if (!agendaEl) return;
+    const newW = Math.max(160, Math.min(720, agendaEl.getBoundingClientRect().right - e.clientX));
+    agendaEl.style.width = newW + 'px';
+    document.documentElement.style.setProperty('--ag-w', newW + 'px');
+  }
+  function endAgendaResize() {
+    window.removeEventListener('pointermove', onAgendaResize);
+    window.removeEventListener('pointerup', endAgendaResize);
+  }
+
   onMount(() => {
     if (!localStorage.getItem('day_timer_v1')) {
       const d = new Date();
@@ -864,6 +898,7 @@ Regler:
     }));
     s.extraInfo = flow.extraInfo || '';
     s.startMin = flow.startMin ?? computedStart;
+    s.clockSpan = 60;
     warnedSet.clear();
     if (titleInput) titleInput.value = s.dayTitle;
     if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
@@ -874,7 +909,6 @@ Regler:
 
 <div class="app">
   <aside class="sidebar" bind:this={sidebarEl}>
-    {#if s.dayTitle}<h3>{s.dayTitle}</h3>{/if}
     <div class="seglist">
       {#each s.blocks as b, i (b.id)}
         {@const elapsed = elapsedMin()}
@@ -902,6 +936,7 @@ Regler:
     </div>
   </aside>
 
+  <div class="resize-handle-sb" onpointerdown={startSidebarResize}></div>
   <button class="collapse-btn" onclick={toggleCollapse} title="Dölj panel">
     {s.sbCollapsed ? '›' : '‹'}
   </button>
@@ -1047,6 +1082,7 @@ Regler:
     {/if}
   </main>
 
+  <div class="resize-handle-ag" onpointerdown={startAgendaResize}></div>
   <aside class="agenda" bind:this={agendaEl}>
     <div class="agenda-input-header">
       <span class="agenda-input-label">Dagplan</span>
