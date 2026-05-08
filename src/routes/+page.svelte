@@ -22,9 +22,12 @@
   let loggedInUser = $state('');
   let agendaInputOpen = $state(true);
   let savedAgendaMsg = $state('');
-  let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; startMinB: number } | null>(null);
+  let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; startMinB: number; containerH: number } | null>(null);
   let agendaEl = $state<HTMLElement>(null!);
+  let timelineEl = $state<HTMLElement>(null!);
+  const TIMELINE_SCALE = 1 / 720; // fraction of container per minute (12h = 100%)
 
+  let nowMinLive = $state(nowMinutes());
   let nowText = $state('--:--');
   let leftText = $state('');
   let popoverOpen = $state(false);
@@ -305,13 +308,6 @@
     const drawMark = (ang: number, len: number, w: number, op: number) => {
       const [mx0, my0] = polar(ang, R);
       const [mx1, my1] = polar(ang, R - len);
-      const halo = document.createElementNS(NS, 'line');
-      halo.setAttribute('x1', String(mx0)); halo.setAttribute('y1', String(my0));
-      halo.setAttribute('x2', String(mx1)); halo.setAttribute('y2', String(my1));
-      halo.setAttribute('stroke', '#ffffff'); halo.setAttribute('stroke-width', String(w + 2.5));
-      halo.setAttribute('stroke-linecap', 'round'); halo.setAttribute('opacity', '0.38');
-      halo.setAttribute('pointer-events', 'none');
-      svgEl.appendChild(halo);
       const l = document.createElementNS(NS, 'line');
       l.setAttribute('x1', String(mx0)); l.setAttribute('y1', String(my0));
       l.setAttribute('x2', String(mx1)); l.setAttribute('y2', String(my1));
@@ -571,6 +567,7 @@
 
   function tick() {
     const now = new Date();
+    nowMinLive = nowMinutes();
     nowText = pad(now.getHours()) + ':' + pad(now.getMinutes());
     const tot = totalMin();
     const nowMin = nowMinutes();
@@ -703,8 +700,9 @@
   }
 
   function startAgendaDrag(e: PointerEvent, i: number) {
-    if (!agendaDays || !selectedDay) return;
+    if (!agendaDays || !selectedDay || !timelineEl) return;
     e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const dayIdx = agendaDays.indexOf(selectedDay);
     if (dayIdx < 0) return;
     agendaDragState = {
@@ -712,6 +710,7 @@
       startY: e.clientY,
       startMinA: agendaItems[i].totalMin,
       startMinB: agendaItems[i + 1]?.totalMin ?? 0,
+      containerH: timelineEl.clientHeight,
     };
     window.addEventListener('pointermove', onAgendaDrag);
     window.addEventListener('pointerup', endAgendaDrag);
@@ -720,7 +719,7 @@
   function onAgendaDrag(e: PointerEvent) {
     const d = agendaDragState;
     if (!d || !agendaDays) return;
-    const deltaMin = Math.round((e.clientY - d.startY) * 0.8);
+    const deltaMin = Math.round((e.clientY - d.startY) / d.containerH * 720);
     const total = d.startMinA + d.startMinB;
     const newA = Math.max(5, Math.min(total - 5, d.startMinA + deltaMin));
     const newB = total - newA;
@@ -1113,30 +1112,31 @@ Regler:
     {#if agendaItems.length === 0}
       <p class="agenda-empty">Skriv in dagplanen ovan, eller spara flöden via ⚒︎-panelen.</p>
     {:else}
-      <div class="agenda-list">
+      {@const windowStart = Math.floor(agendaItems[0].startMin / 60) * 60}
+      <div class="agenda-timeline" bind:this={timelineEl}>
         {#each agendaItems as item, ai (item.startMin + item.flow.title)}
-          {@const isActive = s.dayTitle === item.flow.title && s.startMin === item.startMin}
           {@const itemColor = sectorColors[ai % sectorColors.length]}
-          <div class="agenda-item" class:active={isActive}
-               style="border-left-color: {itemColor}"
+          {@const isPast = nowMinLive >= item.startMin + item.totalMin}
+          {@const isActive = nowMinLive >= item.startMin && nowMinLive < item.startMin + item.totalMin}
+          {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
+          {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
+          <div class="agenda-block"
+               class:past={isPast}
+               class:active={isActive}
+               style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
                onclick={() => item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id)}>
-            <div class="agenda-item-head">
-              <span class="agenda-time">{fmtHM(item.startMin)}</span>
-              <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
-              <span class="agenda-dur">{item.totalMin}m</span>
-            </div>
-            {#if item.flow.parts.length > 0}
-              <div class="agenda-subs">
-                {#each item.flow.parts as part, pi}
-                  <span class="agenda-sub">· {part} {item.flow.minutes[pi]}m</span>
-                {/each}
-              </div>
-            {/if}
+            <span class="agenda-time">{fmtHM(item.startMin)}</span>
+            <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
+            <span class="agenda-dur">{item.totalMin}m</span>
           </div>
           {#if ai < agendaItems.length - 1 && item.fromText}
-            <div class="agenda-drag-handle"
-                 class:dragging={agendaDragState?.i === ai}
-                 onpointerdown={(e) => startAgendaDrag(e, ai)}></div>
+            {@const next = agendaItems[ai + 1]}
+            {#if next.startMin === item.startMin + item.totalMin}
+              <div class="agenda-drag-edge"
+                   class:dragging={agendaDragState?.i === ai}
+                   style="top: {((item.startMin + item.totalMin - windowStart) / 720 * 100).toFixed(3)}%"
+                   onpointerdown={(e) => startAgendaDrag(e, ai)}></div>
+            {/if}
           {/if}
         {/each}
       </div>

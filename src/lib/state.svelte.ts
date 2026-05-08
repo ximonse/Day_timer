@@ -68,7 +68,7 @@ function defaultState(): AppState {
     showCenterEnd: true,
     hollow: true,
     textOutside: false,
-    showMin: false,
+    showMin: true,
     showFive: true,
     showQuarter: true,
     segMinutesMode: 'planned',
