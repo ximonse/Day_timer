@@ -112,6 +112,10 @@
   :global(.toolbar:hover) { opacity: 1; }
   :global(.toolbar button.icon) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: 999px; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
   :global(.toolbar button.icon:hover) { background: var(--pill); color: var(--fg); }
+  :global(.toolbar-spacer) { flex: 1; min-width: 4px; }
+  :global(.toolbar .clock-span-btn) { font-size: 12px; font-weight: 700; letter-spacing: -.3px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; min-width: 30px; text-align: center; border: 1px solid var(--border); background: var(--pill); color: var(--fg); opacity: 1; }
+  :global(.toolbar .clock-span-btn:hover) { background: var(--pill-on); color: var(--pill-on-fg); }
+  :global(.toolbar .clock-span-btn.active) { background: var(--pill-on); color: var(--pill-on-fg); border-color: var(--pill-on); }
   :global(.warn-dots) { display: flex; gap: 4px; padding: 0 6px; border-left: 1px solid var(--border); }
   :global(.warn-dots .wd) { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; cursor: pointer; background: transparent; color: var(--border); padding: 0; }
   :global(.warn-dots .wd.on) { background: currentColor; }
@@ -151,7 +155,7 @@
     width: 280px; min-width: 160px; max-width: 720px; background: var(--panel);
     border-left: 1px solid var(--border); padding: 20px 14px;
     display: flex; flex-direction: column;
-    overflow: hidden; flex-shrink: 0; transition: margin-right .25s ease; height: 100%;
+    overflow-y: auto; flex-shrink: 0; transition: margin-right .25s ease; height: 100%;
     scrollbar-width: none;
   }
   :global(body:not(.ag-open) .agenda) { margin-right: calc(-1 * var(--ag-w, 280px)); }
@@ -212,9 +216,43 @@
   :global(.logged-in-row .username) { flex: 1; font-weight: 600; color: var(--menu-fg); }
   :global(.logout-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }
   :global(.logout-btn:hover) { background: var(--menu-surface); color: var(--menu-fg); }
+  /* ── Mobilflikar ── */
+  :global(.mobile-tabs) { display: none; }
   @media (max-width: 800px) {
     :global(.agenda) { display: none; }
     :global(.agenda-toggle-btn) { display: none; }
+    :global(.collapse-btn) { display: none; }
+    :global(.mobile-tabs) {
+      display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+      background: var(--panel); border-top: 1px solid var(--border);
+      height: 52px;
+    }
+    :global(.mobile-tabs button) {
+      flex: 1; background: transparent; border: 0; color: var(--muted);
+      font-size: 11px; font-weight: 600; cursor: pointer; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; font-family: inherit; padding: 4px 0;
+    }
+    :global(.mobile-tabs button span) {
+      font-size: 18px; line-height: 1;
+      font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif;
+      font-variant-emoji: text;
+    }
+    :global(.mobile-tabs button.active) { color: var(--fg); }
+    :global(.mobile-tabs button.active span) { color: var(--accent); }
+    /* Visa rätt sektion beroende på aktiv flik */
+    :global(body.m-timer .sidebar) { display: none; }
+    :global(body.m-timer .resize-handle-sb) { display: none; }
+    :global(body.m-delar .main) { display: none; }
+    :global(body.m-delar .resize-handle-sb) { display: none; }
+    :global(body.m-plan .main) { display: none; }
+    :global(body.m-plan .sidebar) { display: none; }
+    :global(body.m-plan .resize-handle-sb) { display: none; }
+    :global(body.m-plan .agenda) { display: flex !important; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); }
+    /* Ge utrymme för flikraden */
+    :global(body.m-timer .main), :global(body.m-delar .sidebar), :global(body.m-plan .agenda) {
+      padding-bottom: 60px;
+    }
   }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
@@ -242,12 +280,24 @@
     :global(.resize-handle-sb), :global(.resize-handle-ag) { display: none; }
     :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
     :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
-    :global(.main) { order: 1; padding: 8px 8px 12px; gap: 6px; }
+    :global(.main) { order: 1; padding: 8px 8px 64px; gap: 6px; }
     :global(.lesson-title) { position: static; font-size: 28px; letter-spacing: -1px; max-width: 100%; text-align: center; }
     :global(.top-time .now) { font-size: 40px; letter-spacing: -1px; }
     :global(.top-time .left) { font-size: 14px; }
     :global(svg.clock) { width: min(95vw, 70vh); height: min(95vw, 70vh); }
-    :global(.collapse-btn), :global(body.sb-collapsed .collapse-btn) { position: fixed; left: auto; right: 8px; top: 8px; transform: none; z-index: 60; }
     :global(.controls) { width: 100%; max-width: 100%; }
+  }
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    :global(.app) { flex-direction: row; height: 100vh; overflow: hidden; }
+    :global(.main) { padding: 6px; gap: 4px; }
+    :global(svg.clock) { width: 48vh; height: 48vh; }
+    :global(.top-time .now) { font-size: 28px; }
+    :global(.top-time .left) { font-size: 12px; margin-top: 2px; }
+    :global(.lesson-title) { font-size: 20px; }
+    :global(.sidebar) { display: flex; width: 240px; min-width: 0; height: 100%; border-right: 1px solid var(--border); border-bottom: none; order: 0; padding: 8px 10px 60px; overflow-y: auto; }
+    :global(.seglist .row) { font-size: 16px; padding: 4px 6px; }
+    :global(.mobile-tabs) { flex-direction: column; width: 52px; height: 100%; border-top: none; border-right: 1px solid var(--border); bottom: 0; left: auto; right: 0; }
+    :global(body.m-timer .sidebar), :global(body.m-delar .main) { display: flex; }
   }
 </style>
