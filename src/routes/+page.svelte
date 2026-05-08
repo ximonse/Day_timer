@@ -28,6 +28,8 @@
   const TIMELINE_SCALE = 1 / 720; // fraction of container per minute (12h = 100%)
 
   let nowMinLive = $state(nowMinutes());
+  let lastAutoLoadKey = $state('');
+  let mobileTab = $state<'timer'|'delar'|'plan'>('timer');
   let nowText = $state('--:--');
   let leftText = $state('');
   let popoverOpen = $state(false);
@@ -116,11 +118,12 @@
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
-    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open');
+    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-timer', 'm-delar', 'm-plan');
     if (s.palette) document.body.classList.add(s.palette);
     if (s.dark && s.palette !== 'psychedelic') document.body.classList.add('dark');
     if (s.sbCollapsed) document.body.classList.add('sb-collapsed');
     if (s.agendaOpen) document.body.classList.add('ag-open');
+    document.body.classList.add('m-' + mobileTab);
   }
 
   function renderClock() {
@@ -576,6 +579,7 @@
     } else {
       leftText = fmtLeft((s.startMin + tot) - nowMin);
     }
+    checkAutoLoad();
     renderClock();
     checkWarnings();
   }
@@ -863,7 +867,7 @@ Regler:
   });
 
   $effect(() => {
-    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen;
+    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab;
     if (typeof document !== 'undefined') syncBodyClasses();
   });
 
@@ -882,6 +886,41 @@ Regler:
 
   function toggleAgenda() {
     s.agendaOpen = !s.agendaOpen;
+    appState.persist();
+  }
+
+  function cycleClockSpan() {
+    s.clockSpan = s.clockSpan === 720 ? 60 : 720;
+    appState.persist();
+  }
+
+  function checkAutoLoad() {
+    if (!agendaItems.length) return;
+    const nowMin = nowMinutes();
+    const active = agendaItems.find(item =>
+      nowMin >= item.startMin && nowMin < item.startMin + item.totalMin
+    );
+    if (!active) return;
+    const key = `${active.startMin}-${active.flow.title}`;
+    if (key === lastAutoLoadKey) return;
+    lastAutoLoadKey = key;
+    s.dayTitle = active.flow.title;
+    s.blocks = active.flow.parts.map((title, i) => ({
+      id: uid(),
+      title,
+      minutes: active.flow.minutes[i] ?? 45,
+      note: active.flow.notes?.[i] ?? '',
+      warning: active.flow.warnings?.[i] ?? false,
+      pinned: (active.flow.minutes[i] ?? 0) > 0,
+    }));
+    s.extraInfo = active.flow.extraInfo || '';
+    s.startMin = active.flow.startMin ?? active.startMin;
+    warnedSet.clear();
+    if (titleInput) titleInput.value = s.dayTitle;
+    if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
+    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
+    updateTimeFeedback();
+    renderEndControl();
     appState.persist();
   }
 
@@ -958,6 +997,9 @@ Regler:
     <div class="toolbar">
       <button class="icon" onclick={(e) => { e.stopPropagation(); popoverOpen = !popoverOpen; }} title="Visningsalternativ">⚙︎</button>
       <button class="icon" onclick={() => { s.showControls = !s.showControls; appState.persist(); }} title="Inställningar">⚒︎</button>
+      <div class="toolbar-spacer"></div>
+      <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : ''}</button>
+      <div class="toolbar-spacer"></div>
       <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
       <div class="warn-dots">
         {#each s.blocks as b, i (b.id)}
@@ -1146,6 +1188,18 @@ Regler:
   <button class="agenda-toggle-btn" onclick={toggleAgenda} title="Dagagenda">
     {s.agendaOpen ? '›' : '‹'}
   </button>
+
+  <nav class="mobile-tabs">
+    <button class:active={mobileTab === 'delar'} onclick={() => { mobileTab = 'delar'; syncBodyClasses(); }}>
+      <span>☰</span> Delar
+    </button>
+    <button class:active={mobileTab === 'timer'} onclick={() => { mobileTab = 'timer'; syncBodyClasses(); }}>
+      <span>◷</span> Timer
+    </button>
+    <button class:active={mobileTab === 'plan'} onclick={() => { mobileTab = 'plan'; syncBodyClasses(); }}>
+      <span>▦</span> Plan
+    </button>
+  </nav>
 </div>
 
 <div class="theme-dots">
