@@ -29,6 +29,7 @@
 
   let nowMinLive = $state(nowMinutes());
   let lastAutoLoadKey = $state('');
+  let mobileTab = $state<'klocka'|'delar'|'plan'>('klocka');
   let nowText = $state('--:--');
   let leftText = $state('');
   let popoverOpen = $state(false);
@@ -117,11 +118,12 @@
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
-    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open');
+    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-klocka', 'm-delar', 'm-plan');
     if (s.palette) document.body.classList.add(s.palette);
     if (s.dark && s.palette !== 'psychedelic') document.body.classList.add('dark');
     if (s.sbCollapsed) document.body.classList.add('sb-collapsed');
     if (s.agendaOpen) document.body.classList.add('ag-open');
+    document.body.classList.add('m-' + mobileTab);
   }
 
   function renderClock() {
@@ -865,7 +867,7 @@ Regler:
   });
 
   $effect(() => {
-    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen;
+    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab;
     if (typeof document !== 'undefined') syncBodyClasses();
   });
 
@@ -1186,6 +1188,18 @@ Regler:
   <button class="agenda-toggle-btn" onclick={toggleAgenda} title="Dagagenda">
     {s.agendaOpen ? '›' : '‹'}
   </button>
+
+  <nav class="mobile-tabs">
+    <button class:active={mobileTab === 'klocka'} onclick={() => { mobileTab = 'klocka'; syncBodyClasses(); }}>
+      <span>◷</span> Klocka
+    </button>
+    <button class:active={mobileTab === 'delar'} onclick={() => { mobileTab = 'delar'; syncBodyClasses(); }}>
+      <span>☰</span> Delar
+    </button>
+    <button class:active={mobileTab === 'plan'} onclick={() => { mobileTab = 'plan'; syncBodyClasses(); }}>
+      <span>▦</span> Plan
+    </button>
+  </nav>
 </div>
 
 <div class="theme-dots">
