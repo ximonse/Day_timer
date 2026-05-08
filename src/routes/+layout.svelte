@@ -155,7 +155,7 @@
     width: 280px; min-width: 160px; max-width: 720px; background: var(--panel);
     border-left: 1px solid var(--border); padding: 20px 14px;
     display: flex; flex-direction: column;
-    overflow: hidden; flex-shrink: 0; transition: margin-right .25s ease; height: 100%;
+    overflow-y: auto; flex-shrink: 0; transition: margin-right .25s ease; height: 100%;
     scrollbar-width: none;
   }
   :global(body:not(.ag-open) .agenda) { margin-right: calc(-1 * var(--ag-w, 280px)); }
