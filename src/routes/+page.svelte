@@ -837,7 +837,14 @@
         ...day,
         flows: day.flows.map((flow, fi) => {
           if (fi === d.i) return setFlowMinutes(flow, newA);
-          if (fi === d.i + 1) return setFlowMinutes(flow, newB);
+          if (fi === d.i + 1) {
+            const updated = setFlowMinutes(flow, newB);
+            // Om flow har explicit starttid (HH:MM) måste vi uppdatera den så att
+            // konsekutivitetsvillkoret next.startMin === prev.startMin + prev.total håller.
+            // Annars försvinner drag-handtagen direkt efter första draget.
+            if (flow.startMin !== undefined) return { ...updated, startMin: agendaItems[d.i].startMin + newA };
+            return updated;
+          }
           return flow;
         }),
       };
