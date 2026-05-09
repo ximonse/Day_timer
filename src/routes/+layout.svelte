@@ -112,6 +112,10 @@
   :global(.toolbar:hover) { opacity: 1; }
   :global(.toolbar button.icon) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: 999px; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
   :global(.toolbar button.icon:hover) { background: var(--pill); color: var(--fg); }
+  :global(.toolbar-spacer) { flex: 1; min-width: 4px; }
+  :global(.toolbar .clock-span-btn) { font-size: 12px; font-weight: 700; letter-spacing: -.3px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; min-width: 30px; text-align: center; border: 1px solid var(--border); background: var(--pill); color: var(--fg); opacity: 1; }
+  :global(.toolbar .clock-span-btn:hover) { background: var(--pill-on); color: var(--pill-on-fg); }
+  :global(.toolbar .clock-span-btn.active) { background: var(--pill-on); color: var(--pill-on-fg); border-color: var(--pill-on); }
   :global(.warn-dots) { display: flex; gap: 4px; padding: 0 6px; border-left: 1px solid var(--border); }
   :global(.warn-dots .wd) { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; cursor: pointer; background: transparent; color: var(--border); padding: 0; }
   :global(.warn-dots .wd.on) { background: currentColor; }
@@ -151,7 +155,7 @@
     width: 280px; min-width: 160px; max-width: 720px; background: var(--panel);
     border-left: 1px solid var(--border); padding: 20px 14px;
     display: flex; flex-direction: column;
-    overflow: hidden; flex-shrink: 0; transition: margin-right .25s ease; height: 100%;
+    overflow-y: auto; flex-shrink: 0; transition: margin-right .25s ease; height: 100%;
     scrollbar-width: none;
   }
   :global(body:not(.ag-open) .agenda) { margin-right: calc(-1 * var(--ag-w, 280px)); }
@@ -164,7 +168,7 @@
   }
   :global(body:not(.ag-open) .agenda-toggle-btn) { right: 8px; }
   :global(.agenda-timeline) {
-    flex: 1; min-height: 0; position: relative; overflow: hidden;
+    height: 1200px; position: relative; flex-shrink: 0;
   }
   :global(.agenda-block) {
     position: absolute; left: 0; right: 0;
@@ -212,24 +216,48 @@
   :global(.logged-in-row .username) { flex: 1; font-weight: 600; color: var(--menu-fg); }
   :global(.logout-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }
   :global(.logout-btn:hover) { background: var(--menu-surface); color: var(--menu-fg); }
-  /* ── Mobil flikrad (dold på desktop) ── */
-  :global(.mobile-tabs) {
-    display: none;
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
-    background: var(--panel); border-top: 1px solid var(--border);
-    height: 52px;
-  }
-  :global(.mobile-tabs button) {
-    flex: 1; background: transparent; border: 0; color: var(--muted);
-    font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
-    padding: 6px 4px 8px; display: flex; flex-direction: column;
-    align-items: center; gap: 1px;
-  }
-  :global(.mobile-tabs button span) { font-size: 16px; line-height: 1; }
-  :global(.mobile-tabs button.active) { color: var(--fg); }
-  :global(.mobile-tabs button.active::after) {
-    content: ''; display: block; width: 20px; height: 2px;
-    background: var(--accent); border-radius: 1px;
+  /* ── Mobilflikar ── */
+  :global(.mobile-tabs) { display: none; }
+  @media (max-width: 800px) {
+    :global(.agenda) { display: none; }
+    :global(.agenda-toggle-btn) { display: none; }
+    :global(.collapse-btn) { display: none; }
+    :global(.mobile-tabs) {
+      display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+      background: var(--panel); border-top: 1px solid var(--border);
+      height: 52px;
+    }
+    :global(.mobile-tabs button) {
+      flex: 1; background: transparent; border: 0; color: var(--muted);
+      font-size: 11px; font-weight: 600; cursor: pointer; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; font-family: inherit; padding: 4px 0;
+    }
+    :global(.mobile-tabs button span) {
+      font-size: 18px; line-height: 1;
+      font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif;
+      font-variant-emoji: text;
+    }
+    :global(.mobile-tabs button.active) { color: var(--fg); }
+    :global(.mobile-tabs button.active span) { color: var(--accent); }
+    /* Visa rätt sektion beroende på aktiv flik */
+    :global(body.m-timer .sidebar) { display: none; }
+    :global(body.m-timer .resize-handle-sb) { display: none; }
+    :global(body.m-delar .main) { display: none; }
+    :global(body.m-delar .resize-handle-sb) { display: none; }
+    :global(body.m-plan .main) { display: none; }
+    :global(body.m-plan .sidebar) { display: none; }
+    :global(body.m-plan .resize-handle-sb) { display: none; }
+    :global(body.m-plan .agenda) {
+      display: flex !important; flex-direction: column;
+      width: 100%; max-width: 100%; border-left: none;
+      border-top: 1px solid var(--border); overflow: hidden;
+    }
+    :global(body.m-plan .agenda-timeline) { flex: 1; min-height: 50vh; }
+    /* Ge utrymme för flikraden */
+    :global(body.m-timer .main), :global(body.m-delar .sidebar), :global(body.m-plan .agenda) {
+      padding-bottom: 60px;
+    }
   }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
@@ -256,23 +284,8 @@
     :global(.collapse-btn) { display: none; }
     :global(.resize-handle-sb), :global(.resize-handle-ag) { display: none; }
 
-    /* Flikbaserad visning */
-    :global(body.m-klocka .sidebar) { display: none; }
-    :global(body.m-delar .main) { display: none; }
-    :global(body.m-plan .main) { display: none; }
-    :global(body.m-plan .sidebar) { display: none; }
-    :global(body.m-plan .agenda) {
-      display: flex; flex-direction: column;
-      width: 100%; max-width: 100%; border-left: none;
-      border-top: 1px solid var(--border); height: auto; overflow: hidden;
-      padding: 12px 14px;
-    }
-    :global(body.m-plan .agenda-timeline) { flex: 1; min-height: 50vh; }
-
-    /* Mobil flikrad synlig */
-    :global(.mobile-tabs) { display: flex; }
-
-    /* Typsnitt & storlekar */
+    :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
+    :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
     :global(.lesson-title) { position: static; font-size: 28px; letter-spacing: -1px; max-width: 100%; text-align: center; }
     :global(.top-time .now) { font-size: 40px; letter-spacing: -1px; }
     :global(.top-time .left) { font-size: 14px; }
@@ -280,8 +293,6 @@
     :global(.seglist .row) { font-size: 20px; padding: 6px 8px; gap: 8px; }
     :global(.seglist .dot) { width: 12px; height: 12px; margin-top: 4px; }
     :global(.seglist .min) { font-size: 16px; margin-top: 2px; }
-    :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
-    :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
     :global(.controls) { width: 100%; max-width: 100%; }
   }
 
@@ -298,7 +309,6 @@
     :global(.top-time .now) { font-size: 22px; letter-spacing: -1px; }
     :global(.top-time .left) { font-size: 11px; margin-top: 2px; }
     :global(.lesson-title) { position: static; font-size: 16px; letter-spacing: 0; max-width: 100%; text-align: center; }
-    :global(.main-header) { display: flex; align-items: center; gap: 8px; justify-content: center; }
     :global(.sidebar) {
       order: 2; flex: 1; width: auto; max-width: none; height: 100vh;
       border-right: none; border-left: 1px solid var(--border);
