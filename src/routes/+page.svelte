@@ -49,6 +49,45 @@
   let syncStatusError = $state(false);
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
 
+  type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'custom';
+  interface AiConfig { provider: AiProvider; apiKey: string; baseUrl: string; customModel: string; }
+  let aiConfig = $state<AiConfig>({ provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '' });
+  let aiKeyVisible = $state(false);
+  let aiPanelOpen = $state(false);
+  let aiInput = $state('');
+  let aiLoading = $state(false);
+  let aiError = $state('');
+  let agendaAiInput = $state('');
+  let agendaAiLoading = $state(false);
+  let agendaAiError = $state('');
+  let agendaAiOpen = $state(false);
+
+  const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
+    anthropic: 'Claude (Anthropic)',
+    openai: 'GPT (OpenAI)',
+    gemini: 'Gemini (Google)',
+    custom: 'Anpassad (OpenAI-komp.)'
+  };
+  const AI_KEY_PLACEHOLDERS: Record<AiProvider, string> = {
+    anthropic: 'sk-ant-...',
+    openai: 'sk-...',
+    gemini: 'AIza...',
+    custom: 'API-nyckel'
+  };
+
+  function saveAiConfig() {
+    localStorage.setItem('daytimer_ai_config', JSON.stringify(aiConfig));
+    localStorage.removeItem('daytimer_ai_key'); // migrate away from old key
+  }
+  function clearAiConfig() {
+    aiConfig = { provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '' };
+    localStorage.removeItem('daytimer_ai_config');
+    localStorage.removeItem('daytimer_ai_key');
+  }
+
+  // derived shorthand used in templates
+  const aiApiKey = $derived(aiConfig.apiKey);
+
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
 
@@ -705,6 +744,56 @@
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
 
+  function aiPayload(extra: Record<string, unknown>) {
+    return {
+      provider: aiConfig.provider,
+      apiKey: aiConfig.apiKey,
+      ...(aiConfig.provider === 'custom' ? { baseUrl: aiConfig.baseUrl, customModel: aiConfig.customModel } : {}),
+      ...extra
+    };
+  }
+
+  async function runAiParts() {
+    if (!aiInput.trim()) return;
+    aiLoading = true; aiError = '';
+    try {
+      const res = await fetch('/api/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(aiPayload({ message: aiInput, mode: 'parts', context: { startMin: s.startMin } }))
+      });
+      const data = await res.json();
+      if (data.error) { aiError = data.error; return; }
+      if (partsArea) {
+        partsArea.value = data.text;
+        partsArea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      aiPanelOpen = false;
+      aiInput = '';
+    } catch { aiError = 'Nätverksfel'; }
+    finally { aiLoading = false; }
+  }
+
+  async function runAiAgenda() {
+    if (!agendaAiInput.trim()) return;
+    agendaAiLoading = true; agendaAiError = '';
+    try {
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const res = await fetch('/api/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(aiPayload({ message: agendaAiInput, mode: 'agenda', context: { date: todayISO } }))
+      });
+      const data = await res.json();
+      if (data.error) { agendaAiError = data.error; return; }
+      s.agendaText = data.text;
+      appState.persist();
+      agendaAiOpen = false;
+      agendaAiInput = '';
+    } catch { agendaAiError = 'Nätverksfel'; }
+    finally { agendaAiLoading = false; }
+  }
+
   function setFlowMinutes(flow: Flow, newTotal: number): Flow {
     const oldTotal = flow.minutes.reduce((a, b) => a + b, 0);
     if (oldTotal === 0) return { ...flow, minutes: flow.minutes.map(() => Math.max(1, Math.round(newTotal / flow.minutes.length))) };
@@ -759,7 +848,7 @@
     appState.persist();
   }
 
-  const AI_PROMPT = `Du är en assistent som hjälper mig planera närmsta timmen eller mindre.
+  const AI_PROMPT_PARTS = `Du är en assistent som hjälper mig planera närmsta timmen eller mindre.
 Jag beskriver vad jag ska göra, i valfri ordning och hur informellt som helst.
 
 Returnera BARA en färdig lista i det här formatet — inget annat, inga förklaringar:
@@ -790,6 +879,45 @@ Regler:
 ---
 
 [Klistra in dina aktiviteter här]`;
+
+  const AI_PROMPT_AGENDA = `Du är en assistent som hjälper mig planera hela eller delar av en dag.
+Jag beskriver vad jag ska göra — hur informellt som helst.
+
+Returnera BARA en dagplan i exakt det här formatet — inget annat, inga förklaringar:
+
+@260509
+#Morgonrutin 07:00
+Vakna 5m
+Toa 5m
+Frukost 20m
+- kolla inte skärm
+
+#Arbetspass 09:00
+Planering 10m
+Epost 20m
+Djuparbete 60m
+- stäng av notiser
+
+& Glöm inte: möte kl 14
+
+Format:
+- @YYMMDD = datum (exempel: @260509 för 9 maj 2026)
+- #Rubrik HH:MM = session med starttid (rubrik max 3 ord)
+- Aktivitet Nm = aktivitet med tid
+- - notering = underpunkt utan tid
+- & kommentar = notering för hela dagen (sist i texten)
+- Realistiska minutuppskattningar
+- Lägg till pauser och övergångar om det behövs
+- Namn på svenska, korta (max 3 ord per aktivitet)
+- Inga förklaringar, ingen inledning — bara planen
+
+---
+
+[Beskriv din dag här]`;
+
+  const currentAiPrompt = $derived(
+    s.agendaOpen && s.clockSpan === 720 ? AI_PROMPT_AGENDA : AI_PROMPT_PARTS
+  );
 
   function startSidebarResize(e: PointerEvent) {
     e.preventDefault();
@@ -852,6 +980,14 @@ Regler:
     if (savedKey) s.syncKey = savedKey;
     const savedUser = localStorage.getItem('timer-login-user');
     if (savedUser) loggedInUser = savedUser;
+    const savedAiConfig = localStorage.getItem('daytimer_ai_config');
+    if (savedAiConfig) {
+      try { aiConfig = { ...aiConfig, ...JSON.parse(savedAiConfig) }; } catch { /* ignore */ }
+    } else {
+      // migrate from old single-key format
+      const oldKey = localStorage.getItem('daytimer_ai_key');
+      if (oldKey) { aiConfig = { provider: 'anthropic', apiKey: oldKey, baseUrl: '', customModel: '' }; saveAiConfig(); }
+    }
     renderEndControl();
     updateTimeFeedback();
     tick();
@@ -1062,7 +1198,7 @@ Regler:
           <label style="display:flex;align-items:center;gap:8px;">
             Lektionsdelar (en per rad)
             <button onclick={() => {
-              navigator.clipboard.writeText(AI_PROMPT).then(() => {
+              navigator.clipboard.writeText(currentAiPrompt).then(() => {
                 copyBtnText = '✓ Kopierad';
                 setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
               });
@@ -1071,6 +1207,20 @@ Regler:
           <textarea bind:this={partsArea} placeholder="Genomgång&#10;Eget arbete&#10;Avslut" oninput={handlePartsInput}></textarea>
           <div class="feedback" bind:this={partsFeedback}>1 del</div>
           <div class="feedback" style="opacity:.65;margin-top:4px;">#Rubrik &nbsp;·&nbsp; Aktivitet 10m &nbsp;·&nbsp; - notering &nbsp;·&nbsp; &amp;kommentar</div>
+          {#if aiApiKey}
+            <div class="ai-panel">
+              <button class="ai-panel-toggle" onclick={() => aiPanelOpen = !aiPanelOpen}>
+                {aiPanelOpen ? '▲' : '▼'} Planera med AI
+              </button>
+              {#if aiPanelOpen}
+                <textarea class="ai-input" placeholder="Beskriv vad du vill planera... t.ex. &quot;45-minuterslektion om bråk för åk 5&quot;" bind:value={aiInput}></textarea>
+                {#if aiError}<div class="ai-error">{aiError}</div>{/if}
+                <button class="quickstart ai-generate-btn" onclick={runAiParts} disabled={aiLoading || !aiInput.trim()}>
+                  {aiLoading ? 'Tänker...' : 'Generera ▶'}
+                </button>
+              {/if}
+            </div>
+          {/if}
         </div>
         <div>
           <label>Info-ruta (fri text, visas som egen ruta i sidopanelen)</label>
@@ -1137,6 +1287,41 @@ Regler:
           {/if}
           <div class="sync-status" style="color:{syncStatusError ? '#c0392b' : 'var(--muted)'}">{syncStatusText}</div>
         </div>
+
+        <div class="ai-key-section">
+          <label>AI-planering</label>
+          <select class="sync-input ai-provider-select"
+            value={aiConfig.provider}
+            onchange={(e) => { aiConfig.provider = (e.target as HTMLSelectElement).value as AiProvider; aiKeyVisible = false; saveAiConfig(); }}>
+            {#each Object.entries(AI_PROVIDER_LABELS) as [val, label]}
+              <option value={val}>{label}</option>
+            {/each}
+          </select>
+          {#if aiApiKey}
+            <div class="ai-key-row">
+              <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
+              <button class="ai-key-btn" onclick={() => aiKeyVisible = !aiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
+              <button class="ai-key-btn" onclick={clearAiConfig}>✕</button>
+            </div>
+            {#if aiKeyVisible}
+              <input type="password" class="sync-input" placeholder={AI_KEY_PLACEHOLDERS[aiConfig.provider]}
+                value={aiConfig.apiKey}
+                onchange={(e) => { aiConfig.apiKey = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+            {/if}
+          {:else}
+            <input type="password" class="sync-input" placeholder={AI_KEY_PLACEHOLDERS[aiConfig.provider]}
+              onchange={(e) => { aiConfig.apiKey = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+            <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel för att aktivera AI-planering</div>
+          {/if}
+          {#if aiConfig.provider === 'custom'}
+            <input type="text" class="sync-input" placeholder="Bas-URL, t.ex. https://api.mistral.ai/v1"
+              value={aiConfig.baseUrl}
+              onchange={(e) => { aiConfig.baseUrl = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+            <input type="text" class="sync-input" placeholder="Modell, t.ex. mistral-small-latest"
+              value={aiConfig.customModel}
+              onchange={(e) => { aiConfig.customModel = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+          {/if}
+        </div>
       </div>
     {/if}
   </main>
@@ -1156,9 +1341,25 @@ Regler:
         value={s.agendaText}
         oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
       ></textarea>
-      <button class="agenda-save-btn" onclick={saveAgenda}>
-        {savedAgendaMsg || '💾 Spara dagplan'}
-      </button>
+      <div class="agenda-save-row">
+        <button class="agenda-save-btn" onclick={saveAgenda}>
+          {savedAgendaMsg || '💾 Spara dagplan'}
+        </button>
+        {#if aiApiKey}
+          <button class="agenda-save-btn agenda-ai-btn" onclick={() => agendaAiOpen = !agendaAiOpen}>
+            ✨ AI-dagplan
+          </button>
+        {/if}
+      </div>
+      {#if agendaAiOpen && aiApiKey}
+        <div class="agenda-ai-panel">
+          <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;" bind:value={agendaAiInput}></textarea>
+          {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
+          <button class="quickstart ai-generate-btn" onclick={runAiAgenda} disabled={agendaAiLoading || !agendaAiInput.trim()}>
+            {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
+          </button>
+        </div>
+      {/if}
     {/if}
 
     {#if agendaDays && agendaDays.length > 0}
