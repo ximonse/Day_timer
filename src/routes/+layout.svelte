@@ -185,7 +185,7 @@
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
   :global(.agenda-drag-edge) {
-    position: absolute; left: 0; right: 0; height: 20px;
+    position: absolute; left: 0; right: 50%; height: 20px;
     transform: translateY(-10px); cursor: ns-resize; z-index: 5;
     touch-action: none; display: flex; align-items: center; justify-content: center;
   }
