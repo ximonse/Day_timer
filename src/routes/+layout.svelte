@@ -67,6 +67,8 @@
     position: fixed; top: 10px; right: 10px; z-index: 55;
     display: flex; gap: 7px; align-items: center;
   }
+  :global(.theme-trigger) { display: none; }
+  :global(.theme-panel) { display: flex; gap: 7px; align-items: center; }
   :global(.theme-dot) { width: 9px; height: 9px; border-radius: 50%; border: 0; padding: 0; opacity: 0.3; cursor: pointer; transition: opacity .2s; }
   :global(.theme-dot:hover) { opacity: 0.7; }
   :global(.theme-dot.active) { opacity: 0.9; }
@@ -138,6 +140,8 @@
   :global(#quickStartBtn) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); border-color: var(--menu-pill-on); font-weight: 600; padding: 12px 16px; font-size: 15px; }
   :global(#quickStartBtn:hover) { background: #26221d; border-color: #26221d; }
   :global(.flows) { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
+  :global(.flows-toggle) { background: transparent; border: 0; color: var(--menu-muted); cursor: pointer; font-size: 13px; font-weight: 600; padding: 4px 0; text-align: left; font-family: inherit; }
+  :global(.flows-toggle:hover) { color: var(--menu-fg); }
   :global(.flow-list) { display: flex; flex-direction: column; gap: 4px; }
   :global(.flow-item) { display: flex; align-items: center; gap: 8px; background: var(--menu-pill); border-radius: 8px; padding: 4px 4px 4px 12px; }
   :global(.flow-item .flow-name) { flex: 1; background: transparent; border: 0; color: var(--menu-fg); cursor: pointer; text-align: left; padding: 8px 0; font-size: 15px; font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -181,7 +185,7 @@
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
   :global(.agenda-drag-edge) {
-    position: absolute; left: 0; right: 0; height: 14px;
+    position: absolute; left: 0; right: 50%; height: 14px;
     transform: translateY(-7px); cursor: ns-resize; z-index: 5;
     border-radius: 3px; transition: background .15s; touch-action: none;
   }
@@ -253,6 +257,23 @@
     :global(body.m-timer .main), :global(body.m-delar .sidebar), :global(body.m-plan .agenda) {
       padding-bottom: 60px;
     }
+    /* Temaväljare som dropdown på mobil */
+    :global(.theme-dots) { z-index: 200; }
+    :global(.theme-panel) { display: none; }
+    :global(.theme-dots.open .theme-panel) {
+      display: flex; flex-direction: row; flex-wrap: wrap; align-items: center;
+      gap: 10px; position: absolute; top: 22px; right: 0;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    }
+    :global(.theme-dots.open .theme-dot) { width: 20px; height: 20px; }
+    :global(.theme-dots.open #darkToggle) { width: 28px; height: 18px; font-size: 11px; border-radius: 9px; }
+    :global(.theme-trigger) {
+      display: block; width: 12px; height: 12px; border-radius: 50%;
+      border: 0; padding: 0; opacity: 0.45; cursor: pointer; transition: opacity .2s;
+    }
+    :global(.theme-trigger:hover), :global(.theme-dots.open .theme-trigger) { opacity: 0.85; }
   }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
