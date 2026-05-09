@@ -23,7 +23,9 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.55.0",
+		"@google/genai": "^1.0.1",
 		"@sveltejs/adapter-vercel": "^6.3.3",
-		"@upstash/redis": "^1.38.0"
+		"@upstash/redis": "^1.38.0",
+		"openai": "^4.98.0"
 	}
 }
