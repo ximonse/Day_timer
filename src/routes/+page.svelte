@@ -81,7 +81,7 @@
     localStorage.removeItem('daytimer_ai_key'); // migrate away from old key
   }
   function clearAiConfig() {
-    aiConfig = { provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '' };
+    aiConfig = { provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '', planMode: 'helpful' };
     localStorage.removeItem('daytimer_ai_config');
     localStorage.removeItem('daytimer_ai_key');
   }
@@ -990,7 +990,7 @@ Format:
     } else {
       // migrate from old single-key format
       const oldKey = localStorage.getItem('daytimer_ai_key');
-      if (oldKey) { aiConfig = { provider: 'anthropic', apiKey: oldKey, baseUrl: '', customModel: '' }; saveAiConfig(); }
+      if (oldKey) { aiConfig = { provider: 'anthropic', apiKey: oldKey, baseUrl: '', customModel: '', planMode: 'helpful' }; saveAiConfig(); }
     }
     renderEndControl();
     updateTimeFeedback();
@@ -1518,7 +1518,7 @@ Format:
     <ul>
       <li>Öppna <span class="ico">⚒︎</span> och scrolla ner till <b>AI-planering</b>.</li>
       <li>Välj provider: <b>Claude</b>, <b>GPT</b>, <b>Gemini</b> eller <b>Anpassad</b> (valfri OpenAI-kompatibel, t.ex. Mistral, Groq).</li>
-      <li>Klistra in din API-nyckel — sparas lokalt, skickas aldrig vidare.</li>
+      <li>Klistra in din API-nyckel — sparas lokalt, skickas till vår server enbart för att nå vald AI-leverantör.</li>
       <li>Klicka <b>▽ Planera med AI</b> under aktivitets­fältet → beskriv på fritt språk → schemat fylls i automatiskt.</li>
       <li>I agendapanelen: klicka <b>✨ AI-dagplan</b> för att generera ett fler­dagars schema.</li>
       <li><b>AI-prompt</b>-knappen bredvid aktivitetsfältet kopierar en prompt du kan klistra in i valfritt AI-verktyg manuellt.</li>

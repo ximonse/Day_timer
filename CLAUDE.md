@@ -25,7 +25,7 @@ En tidigare Claude-session försökte bygga det direkt från en vag beskrivning 
 
 ```
 daytimer_KV_REST_API_URL=
-daytimer_KV_REST_API_TOKEN=
+UPSTASH_REDIS_REST_TOKEN=
 ```
 
 ---
