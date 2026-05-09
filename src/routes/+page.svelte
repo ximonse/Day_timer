@@ -81,7 +81,7 @@
     localStorage.removeItem('daytimer_ai_key'); // migrate away from old key
   }
   function clearAiConfig() {
-    aiConfig = { provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '' };
+    aiConfig = { provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '', planMode: 'helpful' };
     localStorage.removeItem('daytimer_ai_config');
     localStorage.removeItem('daytimer_ai_key');
   }
@@ -825,7 +825,9 @@
   function onAgendaDrag(e: PointerEvent) {
     const d = agendaDragState;
     if (!d || !agendaDays) return;
-    const deltaMin = Math.round((e.clientY - d.startY) / d.containerH * 720);
+    const deltaY = e.clientY - d.startY;
+    if (Math.abs(deltaY) < 4) return;
+    const deltaMin = Math.round(deltaY / d.containerH * 720);
     const total = d.startMinA + d.startMinB;
     const newA = Math.max(5, Math.min(total - 5, d.startMinA + deltaMin));
     const newB = total - newA;
@@ -988,7 +990,7 @@ Format:
     } else {
       // migrate from old single-key format
       const oldKey = localStorage.getItem('daytimer_ai_key');
-      if (oldKey) { aiConfig = { provider: 'anthropic', apiKey: oldKey, baseUrl: '', customModel: '' }; saveAiConfig(); }
+      if (oldKey) { aiConfig = { provider: 'anthropic', apiKey: oldKey, baseUrl: '', customModel: '', planMode: 'helpful' }; saveAiConfig(); }
     }
     renderEndControl();
     updateTimeFeedback();
@@ -1095,11 +1097,13 @@ Format:
   }
 
   function goToTimerNow() {
+    const now = nowMinutes();
     if (agendaDays) {
-      const now = nowMinutes();
       const active = agendaItems.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
-      if (active) loadAgendaFlow(active.flow, active.startMin);
+      if (active) { loadAgendaFlow(active.flow, active.startMin); mobileTab = 'timer'; syncBodyClasses(); return; }
     }
+    s.startMin = Math.floor(now / 60) * 60;
+    appState.persist();
     mobileTab = 'timer'; syncBodyClasses();
   }
 </script>
@@ -1514,7 +1518,7 @@ Format:
     <ul>
       <li>Öppna <span class="ico">⚒︎</span> och scrolla ner till <b>AI-planering</b>.</li>
       <li>Välj provider: <b>Claude</b>, <b>GPT</b>, <b>Gemini</b> eller <b>Anpassad</b> (valfri OpenAI-kompatibel, t.ex. Mistral, Groq).</li>
-      <li>Klistra in din API-nyckel — sparas lokalt, skickas aldrig vidare.</li>
+      <li>Klistra in din API-nyckel — sparas lokalt, skickas till vår server enbart för att nå vald AI-leverantör.</li>
       <li>Klicka <b>▽ Planera med AI</b> under aktivitets­fältet → beskriv på fritt språk → schemat fylls i automatiskt.</li>
       <li>I agendapanelen: klicka <b>✨ AI-dagplan</b> för att generera ett fler­dagars schema.</li>
       <li><b>AI-prompt</b>-knappen bredvid aktivitetsfältet kopierar en prompt du kan klistra in i valfritt AI-verktyg manuellt.</li>
