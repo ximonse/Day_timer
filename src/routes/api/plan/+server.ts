@@ -6,8 +6,29 @@ import { GoogleGenAI } from '@google/genai';
 import { env } from '$env/dynamic/private';
 
 type Provider = 'anthropic' | 'openai' | 'gemini' | 'custom';
+type PlanMode = 'strict' | 'helpful';
 
-const PARTS_SYSTEM = `Du är en assistent som hjälper användaren planera en session (timmen eller mindre).
+const PARTS_STRICT = `Du är en assistent som formaterar aktivitetslistor för en visuell timer.
+
+Returnera BARA en färdig lista i det här formatet — inget annat, inga förklaringar:
+
+Frukost 20m
+
+Promenad 30m
+- ta med nycklar
+
+& Kom ihåg: möte kl 9.
+
+Regler:
+- Inkludera EXAKT de aktiviteter användaren nämner — lägg inte till, ta inte bort något
+- Om användaren anger en tid, använd den. Om inte, uppskatta realistiskt
+- Namn på svenska, korta (max 3 ord)
+- Underpunkter börjar med - och har ingen tid
+- Ny rad mellan varje aktivitet
+- Kommentarer börjar med & i början av raden
+- Inga rubriker, ingen inledning, ingen avslutning — bara listan`;
+
+const PARTS_HELPFUL = `Du är en assistent som hjälper användaren planera en session (timmen eller mindre).
 Användaren beskriver vad de ska göra — hur informellt som helst.
 
 Returnera BARA en färdig lista i det här formatet — inget annat, inga förklaringar:
@@ -19,23 +40,53 @@ Toa 5m
 
 Medicin 2m
 
-Frukost 15m
+Frukost 20m
 - kolla inte skärm
+
+Paus 5m
 
 & Kom ihåg att det är möte kl 9.
 
 Regler:
-- Realistiska minutuppskattningar baserat på aktiviteten
+- Realistiska minutuppskattningar — hellre lite generöst än för snävt
 - Rimlig ordning (t.ex. vakna → toa → medicin → frukost)
-- Lägg till 2–3 aktiviteter om användaren troligen glömt men som passar sammanhanget
+- Lägg till 2–3 aktiviteter om användaren troligen glömt men som passar (t.ex. toa, förberedelse, ställtid)
+- Lägg in en kort paus (3–5m) om sessionen är 45 min eller längre
+- Lägg till en minut eller två ställtid om det är aktiviteter som kräver förberedelse eller förflyttning
 - Namn på svenska, korta (max 3 ord)
-- Underpunkter måste börja med ett streck: -
-- Underpunkter har ingen tid
+- Underpunkter börjar med - och har ingen tid
 - Ny rad mellan varje aktivitet
-- Kommentarer under listan börjar med & i början av raden
+- Kommentarer börjar med & i början av raden
 - Inga rubriker, ingen inledning, ingen avslutning — bara listan`;
 
-function agendaSystemPrompt(todayISO: string): string {
+function agendaStrictPrompt(todayISO: string): string {
+  return `Du är en assistent som formaterar dagplaner för en visuell timer.
+Dagens datum är ${todayISO}.
+
+Returnera BARA en dagplan i exakt det här formatet — inget annat, inga förklaringar:
+
+@${todayISO.replace(/-/g, '').slice(2)}
+#Morgonrutin 07:00
+Vakna 5m
+Frukost 20m
+
+#Arbetspass 09:00
+Djuparbete 90m
+
+& Möte kl 14
+
+Regler:
+- Inkludera EXAKT de sessioner och aktiviteter användaren nämner — lägg inte till, ta inte bort
+- Om starttid anges, använd den. Om inte, uppskatta rimligt
+- Om tider saknas, uppskatta realistiskt per aktivitet
+- @YYMMDD för datum, #Rubrik HH:MM för session (rubrik max 3 ord)
+- Aktiviteter med tid: Aktivitet Nm. Underpunkter: - notering
+- Kommentarer för hela dagen börjar med &
+- Namn på svenska, korta (max 3 ord)
+- Inga förklaringar, ingen inledning — bara planen`;
+}
+
+function agendaHelpfulPrompt(todayISO: string): string {
   return `Du är en assistent som hjälper användaren planera hela eller delar av en dag.
 Användaren beskriver sina aktiviteter och sessioner — hur informellt som helst.
 Dagens datum är ${todayISO}.
@@ -48,25 +99,28 @@ Vakna 5m
 Toa 5m
 Frukost 20m
 - kolla inte skärm
+Förberedelse 10m
 
 #Arbetspass 09:00
 Planering 10m
 Epost 20m
 Djuparbete 60m
 - stäng av notiser
+Paus 10m
+Uppföljning 15m
 
 & Glöm inte: möte kl 14
 
 Regler:
-- Använd formatet @YYMMDD för datum (exempel: @260509 för 2026-05-09)
-- Använd #Rubrik HH:MM för varje session (rubrik max 3 ord)
-- Aktiviteter med tid: Aktivitet Nm (t.ex. "Frukost 20m")
-- Underpunkter börjar med -
+- Realistiska minutuppskattningar — hellre lite generöst än för snävt
+- @YYMMDD för datum, #Rubrik HH:MM för session (rubrik max 3 ord)
+- Lägg in ställtid och förberedelse om aktiviteten kräver det
+- Lägg till en paus (5–10m) i sessioner som är 60 min eller längre
+- Lägg till korta övergångsaktiviteter om användaren hoppar mellan olika saker
+- Rimlig ordning med pauser och återhämtning — en dag ska vara hållbar
+- Aktiviteter med tid: Aktivitet Nm. Underpunkter: - notering (ingen tid)
 - Kommentarer för hela dagen börjar med &
-- Realistiska minutuppskattningar
-- Rimlig ordning och pauser mellan sessioner
-- Lägg till nödvändiga övergångsaktiviteter om de saknas
-- Namn på svenska, korta (max 3 ord per aktivitet)
+- Namn på svenska, korta (max 3 ord)
 - Inga förklaringar, ingen inledning — bara planen`;
 }
 
@@ -106,11 +160,12 @@ async function callGemini(apiKey: string, systemPrompt: string, message: string)
 }
 
 export const POST: RequestHandler = async ({ request }) => {
-  const { provider = 'anthropic', apiKey, message, mode, context, baseUrl, customModel } = await request.json() as {
+  const { provider = 'anthropic', apiKey, message, mode, planMode = 'helpful', context, baseUrl, customModel } = await request.json() as {
     provider?: Provider;
     apiKey?: string;
     message: string;
     mode: 'parts' | 'agenda';
+    planMode?: PlanMode;
     context?: { startMin?: number; date?: string };
     baseUrl?: string;
     customModel?: string;
@@ -120,7 +175,13 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!message?.trim()) return json({ error: 'Inget meddelande' }, { status: 400 });
 
   const todayISO = context?.date ?? new Date().toISOString().slice(0, 10);
-  const systemPrompt = mode === 'agenda' ? agendaSystemPrompt(todayISO) : PARTS_SYSTEM;
+  let systemPrompt: string;
+  if (mode === 'agenda') {
+    systemPrompt = planMode === 'strict' ? agendaStrictPrompt(todayISO) : agendaHelpfulPrompt(todayISO);
+  } else {
+    systemPrompt = planMode === 'strict' ? PARTS_STRICT : PARTS_HELPFUL;
+  }
+
   const key = apiKey?.trim() ?? '';
 
   try {
@@ -132,7 +193,6 @@ export const POST: RequestHandler = async ({ request }) => {
     } else if (provider === 'gemini') {
       text = await callGemini(key, systemPrompt, message);
     } else {
-      // custom: OpenAI-compatible endpoint
       if (!baseUrl?.trim()) return json({ error: 'Bas-URL krävs för anpassad provider' }, { status: 400 });
       text = await callOpenAI(key, systemPrompt, message, baseUrl.trim(), customModel?.trim() || undefined);
     }
