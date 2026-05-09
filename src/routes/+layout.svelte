@@ -299,7 +299,8 @@
   :global(.help-modal.open) { display: flex; }
   :global(.help-card) { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 16px; padding: 28px 32px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; line-height: 1.45; }
   :global(.help-card h2) { margin: 0 0 14px; font-size: 24px; font-weight: 600; }
-  :global(.help-card ul) { padding-left: 20px; margin: 0 0 14px; }
+  :global(.help-card h3) { margin: 16px 0 6px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  :global(.help-card ul) { padding-left: 20px; margin: 0 0 4px; }
   :global(.help-card li) { margin-bottom: 10px; font-size: 15px; }
   :global(.help-card code) { background: var(--pill); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
   :global(.help-foot) { font-size: 13px; color: var(--muted); margin: 0; }
