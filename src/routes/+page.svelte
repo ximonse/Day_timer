@@ -1097,11 +1097,13 @@ Format:
   }
 
   function goToTimerNow() {
+    const now = nowMinutes();
     if (agendaDays) {
-      const now = nowMinutes();
       const active = agendaItems.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
-      if (active) loadAgendaFlow(active.flow, active.startMin);
+      if (active) { loadAgendaFlow(active.flow, active.startMin); mobileTab = 'timer'; syncBodyClasses(); return; }
     }
+    s.startMin = Math.floor(now / 60) * 60;
+    appState.persist();
     mobileTab = 'timer'; syncBodyClasses();
   }
 </script>
