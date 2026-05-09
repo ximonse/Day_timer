@@ -229,6 +229,10 @@
   :global(.ai-generate-btn) { align-self: flex-start; font-size: 13px; padding: 7px 14px; }
   :global(.ai-generate-btn:disabled) { opacity: .5; cursor: default; }
   :global(.ai-error) { font-size: 12px; color: #c0392b; padding: 4px 6px; background: rgba(192,57,43,.08); border-radius: 5px; }
+  :global(.ai-mode-row) { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  :global(.ai-mode-btn) { font-size: 11px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--menu-border); background: transparent; color: var(--menu-muted); cursor: pointer; font-family: inherit; font-weight: 500; transition: background .12s; }
+  :global(.ai-mode-btn.on) { background: var(--menu-pill-on, var(--pill-on)); color: var(--menu-pill-on-fg, var(--pill-on-fg)); border-color: transparent; }
+  :global(.ai-mode-hint) { font-size: 11px; color: var(--menu-muted); opacity: .8; }
   :global(.logged-in-row) { display: flex; align-items: center; gap: 8px; font-size: 13px; }
   :global(.logged-in-row .username) { flex: 1; font-weight: 600; color: var(--menu-fg); }
   :global(.logout-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }
