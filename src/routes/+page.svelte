@@ -1080,6 +1080,16 @@ Format:
     if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback(); renderEndControl(); appState.persist();
+    mobileTab = 'timer'; syncBodyClasses();
+  }
+
+  function goToTimerNow() {
+    if (agendaDays) {
+      const now = nowMinutes();
+      const active = agendaItems.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
+      if (active) loadAgendaFlow(active.flow, active.startMin);
+    }
+    mobileTab = 'timer'; syncBodyClasses();
   }
 </script>
 
@@ -1414,7 +1424,7 @@ Format:
     <button class:active={mobileTab === 'delar'} onclick={() => { mobileTab = 'delar'; syncBodyClasses(); }}>
       <span>☰</span> Delar
     </button>
-    <button class:active={mobileTab === 'timer'} onclick={() => { mobileTab = 'timer'; syncBodyClasses(); }}>
+    <button class:active={mobileTab === 'timer'} onclick={goToTimerNow}>
       <span>◷</span> Timer
     </button>
     <button class:active={mobileTab === 'plan'} onclick={() => { mobileTab = 'plan'; syncBodyClasses(); }}>
