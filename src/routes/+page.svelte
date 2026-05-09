@@ -50,8 +50,9 @@
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
 
   type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'custom';
-  interface AiConfig { provider: AiProvider; apiKey: string; baseUrl: string; customModel: string; }
-  let aiConfig = $state<AiConfig>({ provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '' });
+  type AiPlanMode = 'strict' | 'helpful';
+  interface AiConfig { provider: AiProvider; apiKey: string; baseUrl: string; customModel: string; planMode: AiPlanMode; }
+  let aiConfig = $state<AiConfig>({ provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '', planMode: 'helpful' });
   let aiKeyVisible = $state(false);
   let aiPanelOpen = $state(false);
   let aiInput = $state('');
@@ -748,6 +749,7 @@
     return {
       provider: aiConfig.provider,
       apiKey: aiConfig.apiKey,
+      planMode: aiConfig.planMode,
       ...(aiConfig.provider === 'custom' ? { baseUrl: aiConfig.baseUrl, customModel: aiConfig.customModel } : {}),
       ...extra
     };
@@ -1214,6 +1216,15 @@ Format:
               </button>
               {#if aiPanelOpen}
                 <textarea class="ai-input" placeholder="Beskriv vad du vill planera... t.ex. &quot;45-minuterslektion om bråk för åk 5&quot;" bind:value={aiInput}></textarea>
+                <div class="ai-mode-row">
+                  <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
+                    onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
+                  <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
+                    onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
+                  <span class="ai-mode-hint">
+                    {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
+                  </span>
+                </div>
                 {#if aiError}<div class="ai-error">{aiError}</div>{/if}
                 <button class="quickstart ai-generate-btn" onclick={runAiParts} disabled={aiLoading || !aiInput.trim()}>
                   {aiLoading ? 'Tänker...' : 'Generera ▶'}
@@ -1354,6 +1365,15 @@ Format:
       {#if agendaAiOpen && aiApiKey}
         <div class="agenda-ai-panel">
           <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;" bind:value={agendaAiInput}></textarea>
+          <div class="ai-mode-row">
+            <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
+              onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
+            <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
+              onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
+            <span class="ai-mode-hint">
+              {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
+            </span>
+          </div>
           {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
           <button class="quickstart ai-generate-btn" onclick={runAiAgenda} disabled={agendaAiLoading || !agendaAiInput.trim()}>
             {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
