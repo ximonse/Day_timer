@@ -185,12 +185,21 @@
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
   :global(.agenda-drag-edge) {
-    position: absolute; left: 0; right: 50%; height: 14px;
-    transform: translateY(-7px); cursor: ns-resize; z-index: 5;
-    border-radius: 3px; transition: background .15s; touch-action: none;
+    position: absolute; left: 0; right: 50%; height: 20px;
+    transform: translateY(-10px); cursor: ns-resize; z-index: 5;
+    touch-action: none; display: flex; align-items: center; justify-content: center;
   }
-  :global(.agenda-drag-edge:hover), :global(.agenda-drag-edge.dragging) {
-    background: var(--border); opacity: .6;
+  :global(.agenda-drag-edge::after) {
+    content: ''; display: block; width: 36px; height: 3px;
+    border-radius: 2px; background: var(--border); opacity: 0.45;
+    transition: opacity .15s, width .15s;
+  }
+  :global(.agenda-drag-edge:hover::after), :global(.agenda-drag-edge.dragging::after) {
+    opacity: 1; width: 56px;
+  }
+  @media (pointer: coarse) {
+    :global(.agenda-drag-edge) { height: 44px; transform: translateY(-22px); }
+    :global(.agenda-drag-edge::after) { width: 48px; height: 4px; opacity: 0.5; }
   }
   :global(.agenda-time) { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; flex-shrink: 0; }
   :global(.agenda-name) { flex: 1; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

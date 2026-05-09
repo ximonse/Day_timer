@@ -25,7 +25,7 @@ En tidigare Claude-session försökte bygga det direkt från en vag beskrivning 
 
 ```
 daytimer_KV_REST_API_URL=
-daytimer_KV_REST_API_TOKEN=
+UPSTASH_REDIS_REST_TOKEN=
 ```
 
 ---
@@ -321,3 +321,32 @@ En tredje kolumn till höger om main-klockan.
 - Delar: teman, färgpaletter, klock-logik, inmatningsformat
 - Skiljer sig: the_timer = 1h fokustimer. Day_timer = utbyggbar dagplanering
 - Ska kännas som samma app-familj grafiskt
+
+---
+
+## Teknisk skuld — beslutad strategi
+
+Från kodanalys (maj 2026). Prioritering och beslutsrationale nedskrivet för att inte återupptäckas.
+
+### Gör nu
+- **Tester för `parse.ts` och `clock.ts`** — rena funktioner, inga beroenden, hög risk att tyst gå sönder. Vitest installerat, tester i `src/lib/*.test.ts`.
+
+### Gör inkrementellt (inte som eget projekt)
+- **Extrahera komponenter ur `+page.svelte`** (1500+ rader) — bryts ut naturligt när delar ändå ska växa. Närmast: AI-panelen (förändras när AI-distributionen löses) och AgendaPanel. Aldrig ett "refaktoreringssprint" — alltid kopplat till faktisk feature-work.
+
+### Lämna tills vidare
+- **`renderClock()` som imperativ DOM-manipulation** — 250 rader `document.createElementNS` inuti Svelte. Fungerar, är klockans kärna, full omskrivning till deklarativ SVG är ett stort riskfyllt jobb utan tillräcklig motivering just nu.
+
+### Löst
+- ✅ TypeScript-fel: `planMode` saknades i `clearAiConfig()` och gammal-nyckel-migrering
+- ✅ Env-variabel i sync: `UPSTASH_REDIS_REST_TOKEN` (inte `daytimer_KV_REST_API_TOKEN`)
+- ✅ Hjälptext API-nyckel: formulering korrigerad
+
+### Känd skuld som accepterats
+- `(hit as any)._boundaryIdx` — drag-state på DOM-element. Pragmatiskt, funkar i nuvarande renderingsmodell.
+- Inga tester för `renderClock()` — omöjligt utan att skriva om den, och omskrivning är inte prioriterad.
+- Sync utan konflikthantering — medvetet designval för nu (delad lösenfras-modell).
+
+### Testramverk
+- **Vitest** — kör med `npm test`
+- Testfiler: `src/lib/parse.test.ts`, `src/lib/clock.test.ts`
