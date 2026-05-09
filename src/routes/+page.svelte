@@ -1446,16 +1446,67 @@ Format:
   onclick={(e) => { if ((e.target as Element).classList.contains('help-modal')) helpOpen = false; }}>
   <div class="help-card">
     <button class="help-close" onclick={() => helpOpen = false} title="Stäng">×</button>
-    <h2>Så här använder du timern</h2>
+    <h2>Så här använder du Day Timer</h2>
+
+    <h3>Grunderna</h3>
     <ul>
-      <li><b>Skapa en aktivitet</b> via verktygsikonen (<span class="ico">⚒︎</span>). Skriv en rad per moment. Lägg <code>-</code> framför en rad för en underrubrik.</li>
-      <li><b>Dra för att ändra tid</b> — håll musen på gränsen mellan två sektorer och dra.</li>
-      <li><b>Snabbstart</b> startar aktiviteten från och med nu.</li>
-      <li><b>Visningsalternativ</b> (<span class="ico">⚙︎</span>): toggla minuter, rubriker, markeringar.</li>
-      <li><b>Ljudvarning</b> — klicka på en färgad punkt i minimenyn för att aktivera varning.</li>
-      <li><b>Allt sparas automatiskt</b> i webbläsaren.</li>
+      <li><b>Skapa ett schema</b> via <span class="ico">⚒︎</span> — skriv aktiviteter i textfältet, en per rad.</li>
+      <li><b>Dra för att ändra tid</b> — håll på gränsen mellan två sektorer och dra.</li>
+      <li><b>Snabbstart</b> ⚡︎ ställer in starttid till just nu.</li>
+      <li><b>Allt sparas automatiskt</b> i webbläsaren (ingen inloggning krävs).</li>
     </ul>
-    <p class="help-foot">Tips: klockan följer faktisk klocktid, visaren är alltid rätt.</p>
+
+    <h3>Inmatningsformat</h3>
+    <ul>
+      <li><code>#Rubrik</code> — sätter dag­titeln (visas i klockan och sidopanelen)</li>
+      <li><code>Frukost 20m</code> — aktivitet med fast tid (pinnad)</li>
+      <li><code>Promenad</code> — aktivitet utan tid (fördelas automatiskt)</li>
+      <li><code>- ta med vatten</code> — undernotering på föregående aktivitet</li>
+      <li><code>&amp;Kom ihåg möte kl 9</code> — kommentar som visas som egen ruta</li>
+    </ul>
+
+    <h3>Klockvyer</h3>
+    <ul>
+      <li><b>1h-vy</b> (standard) — visar kommande timme, minutvisare.</li>
+      <li><b>2h-vy</b> — slå på i <span class="ico">⚙︎</span>. Visar två timmar.</li>
+      <li><b>12h-vy</b> — slå på i <span class="ico">⚙︎</span>. Visar hela dagen med timvisare. Kombinera med Dagplan.</li>
+    </ul>
+
+    <h3>Dagplan (agenda)</h3>
+    <ul>
+      <li>Öppna agendapanelen med <b>▷</b>-knappen till höger om klockan.</li>
+      <li>Skriv in planen med <code>@YYMMDD</code> för datum, <code>#Rubrik HH:MM</code> för session.</li>
+      <li>Klicka på ett block i tidslinjen för att ladda den sessionen i klockan.</li>
+      <li>Bläddra mellan dagar med <b>‹ ›</b>-pilarna.</li>
+    </ul>
+
+    <h3>AI-planering</h3>
+    <ul>
+      <li>Öppna <span class="ico">⚒︎</span> och scrolla ner till <b>AI-planering</b>.</li>
+      <li>Välj provider: <b>Claude</b>, <b>GPT</b>, <b>Gemini</b> eller <b>Anpassad</b> (valfri OpenAI-kompatibel, t.ex. Mistral, Groq).</li>
+      <li>Klistra in din API-nyckel — sparas lokalt, skickas aldrig vidare.</li>
+      <li>Klicka <b>▽ Planera med AI</b> under aktivitets­fältet → beskriv på fritt språk → schemat fylls i automatiskt.</li>
+      <li>I agendapanelen: klicka <b>✨ AI-dagplan</b> för att generera ett fler­dagars schema.</li>
+      <li><b>AI-prompt</b>-knappen bredvid aktivitetsfältet kopierar en prompt du kan klistra in i valfritt AI-verktyg manuellt.</li>
+    </ul>
+
+    <h3>Flöden &amp; synkronisering</h3>
+    <ul>
+      <li><b>Spara flöde</b> 💾 sparar det aktuella schemat lokalt som ett återanvändbart flöde.</li>
+      <li><b>Logga in</b> med namn + lösenord för att synka flöden mellan enheter.</li>
+      <li><b>☁ Ladda / ☁ Spara</b> hämtar resp. skickar upp dina flöden till molnet.</li>
+    </ul>
+
+    <h3>Utseende</h3>
+    <ul>
+      <li><b>Paletter</b> — färgpunkterna längst ner till höger byter tema.</li>
+      <li><b>Mörkt läge</b> — ☽/☀-knappen bredvid paletterna.</li>
+      <li><b>Toggle-pills</b> (<span class="ico">⚙︎</span>) styr vad som visas: tid kvar, etiketter, markeringar m.m.</li>
+      <li><b>Mobilvy</b> — flikarna Timer / Delar / Plan längst ner på skärmen.</li>
+    </ul>
+
+    <p class="help-foot" style="margin-top:12px">Genväg: <code>Alt+Shift+R</code> återställer timern (all data raderas).</p>
+    <p class="help-foot">Klockan följer faktisk klocktid — visaren är alltid rätt.</p>
     <p class="help-foot">Frågor? Mejla <a href="mailto:timer@ximon.se">timer@ximon.se</a></p>
   </div>
 </div>
