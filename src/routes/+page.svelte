@@ -825,7 +825,9 @@
   function onAgendaDrag(e: PointerEvent) {
     const d = agendaDragState;
     if (!d || !agendaDays) return;
-    const deltaMin = Math.round((e.clientY - d.startY) / d.containerH * 720);
+    const deltaY = e.clientY - d.startY;
+    if (Math.abs(deltaY) < 4) return;
+    const deltaMin = Math.round(deltaY / d.containerH * 720);
     const total = d.startMinA + d.startMinB;
     const newA = Math.max(5, Math.min(total - 5, d.startMinA + deltaMin));
     const newB = total - newA;
