@@ -1,7 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 import { env } from '$env/dynamic/private';
+
+type Provider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 
 const PARTS_SYSTEM = `Du är en assistent som hjälper användaren planera en session (timmen eller mindre).
 Användaren beskriver vad de ska göra — hur informellt som helst.
@@ -66,31 +70,72 @@ Regler:
 - Inga förklaringar, ingen inledning — bara planen`;
 }
 
+async function callAnthropic(apiKey: string, systemPrompt: string, message: string): Promise<string> {
+  const key = env.ANTHROPIC_API_KEY || apiKey;
+  const client = new Anthropic({ apiKey: key });
+  const res = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: message }]
+  });
+  return res.content[0].type === 'text' ? res.content[0].text : '';
+}
+
+async function callOpenAI(apiKey: string, systemPrompt: string, message: string, baseUrl?: string, model?: string): Promise<string> {
+  const client = new OpenAI({ apiKey, ...(baseUrl ? { baseURL: baseUrl } : {}) });
+  const res = await client.chat.completions.create({
+    model: model || 'gpt-4o-mini',
+    max_tokens: 1024,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: message }
+    ]
+  });
+  return res.choices[0]?.message?.content ?? '';
+}
+
+async function callGemini(apiKey: string, systemPrompt: string, message: string): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey });
+  const res = await ai.models.generateContent({
+    model: 'gemini-2.0-flash-lite',
+    config: { systemInstruction: systemPrompt },
+    contents: message
+  });
+  return res.text ?? '';
+}
+
 export const POST: RequestHandler = async ({ request }) => {
-  const { apiKey, message, mode, context } = await request.json() as {
+  const { provider = 'anthropic', apiKey, message, mode, context, baseUrl, customModel } = await request.json() as {
+    provider?: Provider;
     apiKey?: string;
     message: string;
     mode: 'parts' | 'agenda';
     context?: { startMin?: number; date?: string };
+    baseUrl?: string;
+    customModel?: string;
   };
 
-  const key = env.ANTHROPIC_API_KEY || apiKey;
-  if (!key) return json({ error: 'Ingen API-nyckel konfigurerad' }, { status: 400 });
+  if (!apiKey?.trim() && provider !== 'anthropic') return json({ error: 'Ingen API-nyckel angiven' }, { status: 400 });
   if (!message?.trim()) return json({ error: 'Inget meddelande' }, { status: 400 });
 
   const todayISO = context?.date ?? new Date().toISOString().slice(0, 10);
   const systemPrompt = mode === 'agenda' ? agendaSystemPrompt(todayISO) : PARTS_SYSTEM;
+  const key = apiKey?.trim() ?? '';
 
   try {
-    const client = new Anthropic({ apiKey: key });
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: message }]
-    });
-
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    let text = '';
+    if (provider === 'anthropic') {
+      text = await callAnthropic(key, systemPrompt, message);
+    } else if (provider === 'openai') {
+      text = await callOpenAI(key, systemPrompt, message);
+    } else if (provider === 'gemini') {
+      text = await callGemini(key, systemPrompt, message);
+    } else {
+      // custom: OpenAI-compatible endpoint
+      if (!baseUrl?.trim()) return json({ error: 'Bas-URL krävs för anpassad provider' }, { status: 400 });
+      text = await callOpenAI(key, systemPrompt, message, baseUrl.trim(), customModel?.trim() || undefined);
+    }
     return json({ text });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Okänt fel';

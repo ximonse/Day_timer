@@ -39,7 +39,9 @@
   let syncStatusError = $state(false);
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
 
-  let aiApiKey = $state('');
+  type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'custom';
+  interface AiConfig { provider: AiProvider; apiKey: string; baseUrl: string; customModel: string; }
+  let aiConfig = $state<AiConfig>({ provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '' });
   let aiKeyVisible = $state(false);
   let aiPanelOpen = $state(false);
   let aiInput = $state('');
@@ -49,6 +51,32 @@
   let agendaAiLoading = $state(false);
   let agendaAiError = $state('');
   let agendaAiOpen = $state(false);
+
+  const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
+    anthropic: 'Claude (Anthropic)',
+    openai: 'GPT (OpenAI)',
+    gemini: 'Gemini (Google)',
+    custom: 'Anpassad (OpenAI-komp.)'
+  };
+  const AI_KEY_PLACEHOLDERS: Record<AiProvider, string> = {
+    anthropic: 'sk-ant-...',
+    openai: 'sk-...',
+    gemini: 'AIza...',
+    custom: 'API-nyckel'
+  };
+
+  function saveAiConfig() {
+    localStorage.setItem('daytimer_ai_config', JSON.stringify(aiConfig));
+    localStorage.removeItem('daytimer_ai_key'); // migrate away from old key
+  }
+  function clearAiConfig() {
+    aiConfig = { provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '' };
+    localStorage.removeItem('daytimer_ai_config');
+    localStorage.removeItem('daytimer_ai_key');
+  }
+
+  // derived shorthand used in templates
+  const aiApiKey = $derived(aiConfig.apiKey);
 
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
@@ -705,10 +733,13 @@
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
 
-  function saveAiKey(key: string) {
-    aiApiKey = key.trim();
-    if (aiApiKey) localStorage.setItem('daytimer_ai_key', aiApiKey);
-    else localStorage.removeItem('daytimer_ai_key');
+  function aiPayload(extra: Record<string, unknown>) {
+    return {
+      provider: aiConfig.provider,
+      apiKey: aiConfig.apiKey,
+      ...(aiConfig.provider === 'custom' ? { baseUrl: aiConfig.baseUrl, customModel: aiConfig.customModel } : {}),
+      ...extra
+    };
   }
 
   async function runAiParts() {
@@ -718,7 +749,7 @@
       const res = await fetch('/api/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: aiApiKey, message: aiInput, mode: 'parts', context: { startMin: s.startMin } })
+        body: JSON.stringify(aiPayload({ message: aiInput, mode: 'parts', context: { startMin: s.startMin } }))
       });
       const data = await res.json();
       if (data.error) { aiError = data.error; return; }
@@ -740,7 +771,7 @@
       const res = await fetch('/api/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: aiApiKey, message: agendaAiInput, mode: 'agenda', context: { date: todayISO } })
+        body: JSON.stringify(aiPayload({ message: agendaAiInput, mode: 'agenda', context: { date: todayISO } }))
       });
       const data = await res.json();
       if (data.error) { agendaAiError = data.error; return; }
@@ -938,8 +969,14 @@ Format:
     if (savedKey) s.syncKey = savedKey;
     const savedUser = localStorage.getItem('timer-login-user');
     if (savedUser) loggedInUser = savedUser;
-    const savedAiKey = localStorage.getItem('daytimer_ai_key');
-    if (savedAiKey) aiApiKey = savedAiKey;
+    const savedAiConfig = localStorage.getItem('daytimer_ai_config');
+    if (savedAiConfig) {
+      try { aiConfig = { ...aiConfig, ...JSON.parse(savedAiConfig) }; } catch { /* ignore */ }
+    } else {
+      // migrate from old single-key format
+      const oldKey = localStorage.getItem('daytimer_ai_key');
+      if (oldKey) { aiConfig = { provider: 'anthropic', apiKey: oldKey, baseUrl: '', customModel: '' }; saveAiConfig(); }
+    }
     renderEndControl();
     updateTimeFeedback();
     tick();
@@ -1234,21 +1271,37 @@ Format:
         </div>
 
         <div class="ai-key-section">
-          <label>Claude API-nyckel (AI-planering)</label>
+          <label>AI-planering</label>
+          <select class="sync-input ai-provider-select"
+            value={aiConfig.provider}
+            onchange={(e) => { aiConfig.provider = (e.target as HTMLSelectElement).value as AiProvider; aiKeyVisible = false; saveAiConfig(); }}>
+            {#each Object.entries(AI_PROVIDER_LABELS) as [val, label]}
+              <option value={val}>{label}</option>
+            {/each}
+          </select>
           {#if aiApiKey}
             <div class="ai-key-row">
-              <span class="ai-key-masked">🔑 {aiApiKey.slice(0,8)}···{aiApiKey.slice(-4)}</span>
+              <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
               <button class="ai-key-btn" onclick={() => aiKeyVisible = !aiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
-              <button class="ai-key-btn" onclick={() => saveAiKey('')}>✕</button>
+              <button class="ai-key-btn" onclick={clearAiConfig}>✕</button>
             </div>
             {#if aiKeyVisible}
-              <input type="password" class="sync-input" placeholder="sk-ant-..." value={aiApiKey}
-                onchange={(e) => saveAiKey((e.target as HTMLInputElement).value)} />
+              <input type="password" class="sync-input" placeholder={AI_KEY_PLACEHOLDERS[aiConfig.provider]}
+                value={aiConfig.apiKey}
+                onchange={(e) => { aiConfig.apiKey = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
             {/if}
           {:else}
-            <input type="password" class="sync-input" placeholder="sk-ant-..."
-              onchange={(e) => saveAiKey((e.target as HTMLInputElement).value)} />
-            <div class="sync-status" style="color:var(--muted)">Klistra in din nyckel för att aktivera AI-planering</div>
+            <input type="password" class="sync-input" placeholder={AI_KEY_PLACEHOLDERS[aiConfig.provider]}
+              onchange={(e) => { aiConfig.apiKey = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+            <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel för att aktivera AI-planering</div>
+          {/if}
+          {#if aiConfig.provider === 'custom'}
+            <input type="text" class="sync-input" placeholder="Bas-URL, t.ex. https://api.mistral.ai/v1"
+              value={aiConfig.baseUrl}
+              onchange={(e) => { aiConfig.baseUrl = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+            <input type="text" class="sync-input" placeholder="Modell, t.ex. mistral-small-latest"
+              value={aiConfig.customModel}
+              onchange={(e) => { aiConfig.customModel = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
           {/if}
         </div>
       </div>
