@@ -8,6 +8,14 @@
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
 
+  function clickOutside(node: HTMLElement, cb: () => void) {
+    function handle(e: MouseEvent) {
+      if (!node.contains(e.target as Node)) cb();
+    }
+    document.addEventListener('click', handle, true);
+    return { destroy() { document.removeEventListener('click', handle, true); } };
+  }
+
   let svgEl = $state<SVGSVGElement>(null!);
   let sidebarEl = $state<HTMLElement>(null!);
   let flashEl = $state<HTMLElement>(null!);
@@ -32,6 +40,8 @@
   let mobileTab = $state<'timer'|'delar'|'plan'>('timer');
   let nowText = $state('--:--');
   let leftText = $state('');
+  let flowsOpen = $state(false);
+  let themePickerOpen = $state(false);
   let popoverOpen = $state(false);
   let helpOpen = $state(false);
   let copyBtnText = $state('AI-prompt');
@@ -610,6 +620,7 @@
     };
     if (existing) { Object.assign(existing, data); }
     else { s.flows.push(data); }
+    flowsOpen = true;
     appState.persist();
   }
 
@@ -1089,14 +1100,21 @@ Regler:
 
         <div class="flows">
           <button class="quickstart" onclick={saveFlow}><span class="ico">💾︎</span> Spara flöde</button>
-          <div class="flow-list">
-            {#each s.flows as f (f.id)}
-              <div class="flow-item">
-                <button class="flow-name" onclick={() => loadFlow(f.id)}>{f.title || '(utan rubrik)'}</button>
-                <button class="flow-del" onclick={() => deleteFlow(f.id)}><span class="ico">🗑︎</span></button>
+          {#if s.flows.length > 0}
+            <button class="flows-toggle" onclick={() => flowsOpen = !flowsOpen}>
+              Sparade flöden {flowsOpen ? '▾' : '▸'}
+            </button>
+            {#if flowsOpen}
+              <div class="flow-list">
+                {#each s.flows as f (f.id)}
+                  <div class="flow-item">
+                    <button class="flow-name" onclick={() => loadFlow(f.id)}>{f.title || '(utan rubrik)'}</button>
+                    <button class="flow-del" onclick={() => deleteFlow(f.id)}><span class="ico">🗑︎</span></button>
+                  </div>
+                {/each}
               </div>
-            {/each}
-          </div>
+            {/if}
+          {/if}
         </div>
 
         <div class="login-form">
@@ -1202,16 +1220,23 @@ Regler:
   </nav>
 </div>
 
-<div class="theme-dots">
-  {#each PALETTES as p}
-    <button class="theme-dot" class:active={s.palette === p}
-      style="background:{PALETTE_COLORS[p]}" title={p}
-      onclick={() => { s.palette = p; syncBodyClasses(); appState.persist(); }}
-    ></button>
-  {/each}
-  <button id="darkToggle" class:active={s.dark} title="Dag/Natt"
-    onclick={() => { if (s.palette !== 'psychedelic') { s.dark = !s.dark; syncBodyClasses(); appState.persist(); } }}
-  >{s.dark ? '☾' : '☀'}</button>
+<div class="theme-dots" class:open={themePickerOpen}
+  use:clickOutside={() => { themePickerOpen = false; }}>
+  <button class="theme-trigger"
+    style="background:{PALETTE_COLORS[s.palette]}"
+    onclick={() => themePickerOpen = !themePickerOpen}
+    title="Välj tema"></button>
+  <div class="theme-panel">
+    {#each PALETTES as p}
+      <button class="theme-dot" class:active={s.palette === p}
+        style="background:{PALETTE_COLORS[p]}" title={p}
+        onclick={() => { s.palette = p; syncBodyClasses(); appState.persist(); themePickerOpen = false; }}
+      ></button>
+    {/each}
+    <button id="darkToggle" class:active={s.dark} title="Dag/Natt"
+      onclick={() => { if (s.palette !== 'psychedelic') { s.dark = !s.dark; syncBodyClasses(); appState.persist(); } }}
+    >{s.dark ? '☾' : '☀'}</button>
+  </div>
 </div>
 
 <div class="flash" bind:this={flashEl}></div>
