@@ -336,13 +336,13 @@
     if (!use12hAgenda) {
       const [sx0, sy0] = polar(sa, ri || 0);
       const [sx1, sy1] = polar(sa, R);
-      const shit = document.createElementNS(NS, 'line');
-      shit.setAttribute('x1', String(sx0)); shit.setAttribute('y1', String(sy0));
-      shit.setAttribute('x2', String(sx1)); shit.setAttribute('y2', String(sy1));
-      shit.setAttribute('stroke', 'transparent'); shit.setAttribute('stroke-width', '36');
-      shit.setAttribute('pointer-events', 'stroke'); shit.style.cursor = 'grab';
-      shit.addEventListener('pointerdown', startStartDrag);
-      svgEl.appendChild(shit);
+      const startHit = document.createElementNS(NS, 'line');
+      startHit.setAttribute('x1', String(sx0)); startHit.setAttribute('y1', String(sy0));
+      startHit.setAttribute('x2', String(sx1)); startHit.setAttribute('y2', String(sy1));
+      startHit.setAttribute('stroke', 'transparent'); startHit.setAttribute('stroke-width', '36');
+      startHit.setAttribute('pointer-events', 'stroke'); startHit.style.cursor = 'grab';
+      startHit.addEventListener('pointerdown', startStartDrag);
+      svgEl.appendChild(startHit);
       const lessonSpan = (tot / s.clockSpan) * 360;
       if (lessonSpan < 360 - 2) {
         const aEnd = sa + lessonSpan;
