@@ -1381,9 +1381,9 @@ Format:
 
     <div class="toolbar">
       <button class="icon" onclick={(e) => { e.stopPropagation(); popoverOpen = !popoverOpen; }} title="Visningsalternativ">⚙︎</button>
-      <button class="icon" onclick={() => { s.showControls = !s.showControls; appState.persist(); }} title="Inställningar">⚒︎</button>
+      <button class="icon" onclick={() => { s.showControls = !s.showControls; appState.persist(); }} title="Inställningar">📝</button>
       <div class="toolbar-spacer"></div>
-      <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : ''}</button>
+      <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : '1h'}</button>
       <div class="toolbar-spacer"></div>
       <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
       <div class="warn-dots">

@@ -115,9 +115,9 @@
   :global(.toolbar button.icon) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; padding: 4px 8px; border-radius: 999px; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
   :global(.toolbar button.icon:hover) { background: var(--pill); color: var(--fg); }
   :global(.toolbar-spacer) { flex: 1; min-width: 4px; }
-  :global(.toolbar .clock-span-btn) { font-size: 12px; font-weight: 700; letter-spacing: -.3px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; min-width: 30px; text-align: center; border: 1px solid var(--border); background: var(--pill); color: var(--fg); opacity: 1; }
-  :global(.toolbar .clock-span-btn:hover) { background: var(--pill-on); color: var(--pill-on-fg); }
-  :global(.toolbar .clock-span-btn.active) { background: var(--pill-on); color: var(--pill-on-fg); border-color: var(--pill-on); }
+  :global(.toolbar .clock-span-btn) { font-size: 12px; font-weight: 700; letter-spacing: -.3px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; min-width: 30px; text-align: center; border: 1px solid var(--border); background: var(--pill-on); color: var(--pill-on-fg); border-color: var(--pill-on); }
+  :global(.toolbar .clock-span-btn:hover) { opacity: .8; }
+  :global(.toolbar .clock-span-btn.active) { background: transparent; color: var(--muted); border-color: var(--border); font-weight: 500; }
   :global(.warn-dots) { display: flex; gap: 4px; padding: 0 6px; border-left: 1px solid var(--border); }
   :global(.warn-dots .wd) { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; cursor: pointer; background: transparent; color: var(--border); padding: 0; }
   :global(.warn-dots .wd.on) { background: currentColor; }
