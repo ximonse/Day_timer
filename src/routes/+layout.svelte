@@ -87,13 +87,13 @@
   :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 8px; position: relative; overflow-y: auto; height: 100%; }
   :global(body.sb-collapsed .sidebar) { margin-left: calc(-1 * var(--sb-w, 260px)); }
 :global(.seglist) { display: flex; flex-direction: column; gap: 4px; }
-  :global(.seglist .row) { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 29px; font-weight: 400; line-height: 1.2; }
+  :global(.seglist .row) { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 50px; font-weight: 400; line-height: 1.2; }
   :global(.seglist .row.active) { background: var(--pill); font-weight: 500; }
   :global(.seglist .row.past) { opacity: .45; }
   :global(.seglist .dot) { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
   :global(.seglist .name) { flex: 1; overflow: hidden; overflow-wrap: break-word; white-space: normal; }
   :global(.seglist .min) { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; }
-  :global(.seglist .note) { color: var(--muted); font-size: 22px; line-height: 1.2; padding: 0 12px 8px 50px; white-space: pre-wrap; }
+  :global(.seglist .note) { color: var(--muted); font-size: 33px; line-height: 1.2; padding: 0 12px 8px 50px; white-space: pre-wrap; }
   :global(.seglist .infobox) { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: #ffffff; color: #1a1410; border: 1px solid #b8b0a4; font-size: 26px; line-height: 1.35; white-space: pre-wrap; font-style: italic; }
   :global(.dark .seglist .infobox) { background: #ececec; color: #000000; border: none; }
   :global(.collapse-btn) { position: fixed; top: 50%; left: calc(var(--sb-w, 260px) - 14px); transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--panel); color: var(--fg); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; z-index: 50; transition: left .25s ease; }
@@ -104,9 +104,9 @@
   }
   :global(.resize-handle-sb:hover), :global(.resize-handle-ag:hover) { background: var(--border); }
   :global(.main-header) { position: relative; width: 100%; }
-  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: 72px; font-weight: 200; line-height: 1; letter-spacing: -2px; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: 87px; font-weight: 500; line-height: 1; letter-spacing: -2px; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.top-time) { text-align: center; }
-  :global(.top-time .now) { font-size: 72px; font-weight: 200; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+  :global(.top-time .now) { font-size: 87px; font-weight: 500; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
   :global(.clock-wrap) { position: relative; }
   :global(svg.clock) { display: block; user-select: none; touch-action: none; overflow: visible; width: min(85vh, 50vw); height: min(85vh, 50vw); }
@@ -176,7 +176,7 @@
   }
   :global(.agenda-block) {
     position: absolute; left: 0; right: 0;
-    border-radius: 0 8px 8px 0; border-left: 11px solid transparent;
+    border-radius: 0 8px 8px 0; border-left: 35px solid transparent;
     padding: 2px 8px; cursor: pointer; overflow: hidden;
     transition: background .12s; user-select: none; box-sizing: border-box;
     display: flex; align-items: center; gap: 6px;
@@ -184,22 +184,13 @@
   :global(.agenda-block:hover) { background: var(--pill); }
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
-  :global(.agenda-drag-edge) {
-    position: absolute; left: 0; right: 50%; height: 20px;
-    transform: translateY(-10px); cursor: ns-resize; z-index: 5;
-    touch-action: none; display: flex; align-items: center; justify-content: center;
+  :global(.agenda-drag-top) {
+    position: absolute; top: 0; left: 0; width: 50%; height: 50%;
+    cursor: ns-resize; touch-action: none; z-index: 2;
   }
-  :global(.agenda-drag-edge::after) {
-    content: ''; display: block; width: 36px; height: 3px;
-    border-radius: 2px; background: var(--border); opacity: 0.45;
-    transition: opacity .15s, width .15s;
-  }
-  :global(.agenda-drag-edge:hover::after), :global(.agenda-drag-edge.dragging::after) {
-    opacity: 1; width: 56px;
-  }
-  @media (pointer: coarse) {
-    :global(.agenda-drag-edge) { height: 44px; transform: translateY(-22px); }
-    :global(.agenda-drag-edge::after) { width: 48px; height: 4px; opacity: 0.5; }
+  :global(.agenda-drag-bottom) {
+    position: absolute; bottom: 0; left: 0; width: 50%; height: 50%;
+    cursor: ns-resize; touch-action: none; z-index: 2;
   }
   :global(.agenda-time) { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; flex-shrink: 0; }
   :global(.agenda-name) { flex: 1; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
