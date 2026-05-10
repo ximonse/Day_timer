@@ -330,7 +330,6 @@
   :global(body.view-mode .agenda-drag-top) { display: none; }
   :global(body.view-mode .agenda-drag-bottom) { display: none; }
   :global(body.view-mode .agenda-input-header) { display: none; }
-  :global(body.view-mode .agenda-input-wrap) { display: none; }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
   :global(.flash.on) { opacity: .35; }

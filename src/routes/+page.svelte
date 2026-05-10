@@ -1629,52 +1629,54 @@ Format:
 
   <div class="resize-handle-ag" onpointerdown={startAgendaResize}></div>
   <aside class="agenda" bind:this={agendaEl}>
-    <div class="agenda-input-header">
-      <span class="agenda-input-label">Dagplan</span>
-      <button class="agenda-input-toggle" onclick={() => agendaInputOpen = !agendaInputOpen}>
-        {agendaInputOpen ? '△ Dölj' : '▽ Redigera'}
-      </button>
-    </div>
-    {#if agendaInputOpen}
-      <textarea
-        class="agenda-input"
-        placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
-        value={s.agendaText}
-        oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
-      ></textarea>
-      <div class="agenda-save-row">
-        <button class="agenda-save-btn" onclick={saveAgenda}>
-          {savedAgendaMsg || '💾 Spara dagplan'}
+    {#if !isViewMode}
+      <div class="agenda-input-header">
+        <span class="agenda-input-label">Dagplan</span>
+        <button class="agenda-input-toggle" onclick={() => agendaInputOpen = !agendaInputOpen}>
+          {agendaInputOpen ? '△ Dölj' : '▽ Redigera'}
         </button>
-        <button class="agenda-save-btn" onclick={() => {
-          navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
-            copyAgendaPromptText = '✓ Kopierad';
-            setTimeout(() => { copyAgendaPromptText = 'AI-prompt'; }, 1500);
-          });
-        }}>{copyAgendaPromptText}</button>
-        {#if aiApiKey}
-          <button class="agenda-save-btn agenda-ai-btn" onclick={() => agendaAiOpen = !agendaAiOpen}>
-            ✨ AI-dagplan
-          </button>
-        {/if}
       </div>
-      {#if agendaAiOpen && aiApiKey}
-        <div class="agenda-ai-panel">
-          <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;" bind:value={agendaAiInput}></textarea>
-          <div class="ai-mode-row">
-            <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
-              onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
-            <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
-              onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
-            <span class="ai-mode-hint">
-              {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
-            </span>
-          </div>
-          {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
-          <button class="quickstart ai-generate-btn" onclick={runAiAgenda} disabled={agendaAiLoading || !agendaAiInput.trim()}>
-            {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
+      {#if agendaInputOpen}
+        <textarea
+          class="agenda-input"
+          placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
+          value={s.agendaText}
+          oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
+        ></textarea>
+        <div class="agenda-save-row">
+          <button class="agenda-save-btn" onclick={saveAgenda}>
+            {savedAgendaMsg || '💾 Spara dagplan'}
           </button>
+          <button class="agenda-save-btn" onclick={() => {
+            navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
+              copyAgendaPromptText = '✓ Kopierad';
+              setTimeout(() => { copyAgendaPromptText = 'AI-prompt'; }, 1500);
+            });
+          }}>{copyAgendaPromptText}</button>
+          {#if aiApiKey}
+            <button class="agenda-save-btn agenda-ai-btn" onclick={() => agendaAiOpen = !agendaAiOpen}>
+              ✨ AI-dagplan
+            </button>
+          {/if}
         </div>
+        {#if agendaAiOpen && aiApiKey}
+          <div class="agenda-ai-panel">
+            <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;" bind:value={agendaAiInput}></textarea>
+            <div class="ai-mode-row">
+              <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
+                onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
+              <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
+                onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
+              <span class="ai-mode-hint">
+                {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
+              </span>
+            </div>
+            {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
+            <button class="quickstart ai-generate-btn" onclick={runAiAgenda} disabled={agendaAiLoading || !agendaAiInput.trim()}>
+              {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
+            </button>
+          </div>
+        {/if}
       {/if}
     {/if}
 
