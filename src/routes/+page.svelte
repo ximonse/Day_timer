@@ -1132,20 +1132,22 @@ Format:
     // View mode: load shared state and start polling
     const vt = new URLSearchParams(location.search).get('view');
     let viewPollId: ReturnType<typeof setInterval> | null = null;
+    let viewVisibilityHandler: (() => void) | null = null;
     if (vt) {
       isViewMode = true;
       viewToken = vt;
       document.body.classList.add('view-mode');
       loadSharedState(vt);
       viewPollId = setInterval(() => loadSharedState(vt), 30000);
-      document.addEventListener('visibilitychange', () => {
+      viewVisibilityHandler = () => {
         if (document.hidden) {
           if (viewPollId) { clearInterval(viewPollId); viewPollId = null; }
         } else {
           loadSharedState(vt);
           viewPollId = setInterval(() => loadSharedState(vt), 30000);
         }
-      });
+      };
+      document.addEventListener('visibilitychange', viewVisibilityHandler);
     }
 
     const savedShare = localStorage.getItem('daytimer_share_token');
@@ -1156,16 +1158,23 @@ Format:
       s.startMin = d.getHours() * 60;
       s.showControls = true;
     }
+    // On touch devices with narrow viewport (iPad portrait range), close agenda to avoid crowding
+    if (navigator.maxTouchPoints > 1 && window.innerWidth < 1100 && window.innerWidth > 800) {
+      s.agendaOpen = false;
+      appState.persist();
+    }
     syncBodyClasses();
     if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
     if (titleInput) titleInput.value = s.dayTitle || '';
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
+    const resizeObservers: ResizeObserver[] = [];
     if (sidebarEl && window.ResizeObserver) {
       const ro = new ResizeObserver(() => {
         document.documentElement.style.setProperty('--sb-w', sidebarEl.offsetWidth + 'px');
       });
       ro.observe(sidebarEl);
       document.documentElement.style.setProperty('--sb-w', sidebarEl.offsetWidth + 'px');
+      resizeObservers.push(ro);
     }
     if (agendaEl && window.ResizeObserver) {
       const ro = new ResizeObserver(() => {
@@ -1173,6 +1182,7 @@ Format:
       });
       ro.observe(agendaEl);
       document.documentElement.style.setProperty('--ag-w', agendaEl.offsetWidth + 'px');
+      resizeObservers.push(ro);
     }
     const savedKey = localStorage.getItem(SYNC_KEY_STORAGE);
     if (savedKey) s.syncKey = savedKey;
@@ -1207,6 +1217,8 @@ Format:
     return () => {
       clearInterval(id);
       if (viewPollId) clearInterval(viewPollId);
+      if (viewVisibilityHandler) document.removeEventListener('visibilitychange', viewVisibilityHandler);
+      resizeObservers.forEach(ro => ro.disconnect());
       document.removeEventListener('click', handleOutsideClick);
       window.removeEventListener('keydown', handleKeydown);
     };
@@ -1228,14 +1240,16 @@ Format:
       if (id) { clearInterval(id); id = null; }
     }
 
-    startPush();
-    document.addEventListener('visibilitychange', () => {
+    function onVisibility() {
       document.hidden ? stopPush() : (pushShareState(), startPush());
-    });
+    }
+
+    startPush();
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       stopPush();
-      document.removeEventListener('visibilitychange', startPush);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   });
 
@@ -1287,6 +1301,8 @@ Format:
     if (titleInput) titleInput.value = s.dayTitle;
     if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
+    const fi = selectedDay?.flows.indexOf(active.flow) ?? -1;
+    activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
     updateTimeFeedback();
     renderEndControl();
     appState.persist();

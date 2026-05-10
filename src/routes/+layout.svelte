@@ -11,13 +11,14 @@
 
 <style>
   :global(*) { box-sizing: border-box; }
+  :global(html) { overscroll-behavior: none; }
   :global(html, body) {
     margin: 0; padding: 0;
     background: var(--bg); color: var(--fg);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     transition: background .3s, color .3s;
   }
-  :global(body) { min-height: 100vh; display: flex; }
+  :global(body) { min-height: 100vh; min-height: 100dvh; display: flex; overscroll-behavior: none; }
 
   :global(:root) {
     --bg: #f4f1de; --fg: #3d405b; --panel: #ece9d5; --border: #c8c5b5;
@@ -80,7 +81,7 @@
   :global(body.dark .theme-dot.active), :global(body.psychedelic .theme-dot.active) { opacity: 1; }
   :global(body.dark #darkToggle), :global(body.psychedelic #darkToggle) { opacity: 0.4; }
   :global(body.dark #darkToggle:hover), :global(body.psychedelic #darkToggle:hover) { opacity: 0.85; }
-  :global(.app) { display: flex; width: 100%; height: 100vh; overflow: hidden; }
+  :global(.app) { display: flex; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; }
   :global(.sidebar), :global(.main) { scrollbar-width: none; }
   :global(.sidebar::-webkit-scrollbar), :global(.main::-webkit-scrollbar), :global(.agenda::-webkit-scrollbar) { display: none; }
   :global(.sidebar) { width: 260px; min-width: 160px; max-width: 720px; background: var(--panel); border-right: 1px solid var(--border); padding: 20px 16px; position: relative; transition: margin-left .25s ease; overflow-y: auto; flex-shrink: 0; height: 100%; }
@@ -101,6 +102,7 @@
   :global(.resize-handle-sb), :global(.resize-handle-ag) {
     width: 5px; cursor: ew-resize; flex-shrink: 0; height: 100%;
     background: transparent; transition: background .15s; z-index: 5;
+    touch-action: none;
   }
   :global(.resize-handle-sb:hover), :global(.resize-handle-ag:hover) { background: var(--border); }
   :global(.main-header) { position: relative; width: 100%; }
@@ -364,8 +366,18 @@
     :global(.controls) { width: 100%; max-width: 100%; }
   }
 
+  /* iPad portrait och liknande (801–1100px) — ge panelerna lagom bredd */
+  @media (min-width: 801px) and (max-width: 1100px) {
+    :global(.sidebar) { width: 200px; }
+    :global(.agenda) { width: 200px; }
+    :global(.controls) { width: min(300px, 100%); }
+    :global(.lesson-title) { font-size: 60px; }
+    :global(.top-time .now) { font-size: 60px; }
+    :global(svg.clock) { width: min(80vh, 45vw); height: min(80vh, 45vw); }
+  }
+
   @media (orientation: landscape) and (max-height: 500px) {
-    :global(.app) { flex-direction: row; height: 100vh; overflow: hidden; }
+    :global(.app) { flex-direction: row; height: 100vh; height: 100dvh; overflow: hidden; }
     :global(.main) { padding: 6px; gap: 4px; }
     :global(svg.clock) { width: 48vh; height: 48vh; }
     :global(.top-time .now) { font-size: 28px; }
