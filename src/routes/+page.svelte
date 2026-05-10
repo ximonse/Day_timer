@@ -1429,7 +1429,17 @@ Format:
           const d = new Date();
           s.startMin = d.getHours() * 60 + d.getMinutes();
           if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
-          warnedSet.clear(); renderEndControl(); updateTimeFeedback(); appState.persist();
+          warnedSet.clear(); renderEndControl(); updateTimeFeedback();
+          const f: Flow = {
+            id: uid(), title: s.dayTitle || 'Session',
+            startMin: s.startMin,
+            parts: s.blocks.map(b => b.title),
+            minutes: s.blocks.map(b => b.minutes),
+            warnings: s.blocks.map(b => b.warning),
+            notes: s.blocks.map(b => b.note),
+            extraInfo: s.extraInfo,
+          };
+          addFlowToAgendaToday(f);
         }}><span class="ico">⚡︎</span> Snabbstart nu</button>
         <div>
           <label style="display:flex;align-items:center;gap:8px;">
