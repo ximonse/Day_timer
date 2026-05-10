@@ -535,28 +535,29 @@
     renderEndControl(); renderClock();
   }
 
+  function syncTimerToAgenda() {
+    if (!activeAgendaFlow || !agendaDays) return;
+    const { dayIdx, flowIdx } = activeAgendaFlow;
+    if (!agendaDays[dayIdx]?.flows[flowIdx]) return;
+    const newDays = agendaDays.map((d, di) => di !== dayIdx ? d : {
+      ...d,
+      flows: d.flows.map((f, fi) => fi !== flowIdx ? f : {
+        ...f,
+        startMin: s.startMin,
+        minutes: s.blocks.map(b => b.minutes),
+        parts: s.blocks.map(b => b.title),
+        notes: s.blocks.map(b => b.note),
+        warnings: s.blocks.map(b => b.warning),
+      }),
+    });
+    s.agendaText = serializeAgenda(newDays);
+  }
+
   function endDrag() {
     drag = null;
     window.removeEventListener('pointermove', onDrag);
     window.removeEventListener('pointerup', endDrag);
-    if (activeAgendaFlow && agendaDays) {
-      const { dayIdx, flowIdx } = activeAgendaFlow;
-      const day = agendaDays[dayIdx];
-      if (day?.flows[flowIdx]) {
-        const newDays = agendaDays.map((d, di) => di !== dayIdx ? d : {
-          ...d,
-          flows: d.flows.map((f, fi) => fi !== flowIdx ? f : {
-            ...f,
-            startMin: s.startMin,
-            minutes: s.blocks.map(b => b.minutes),
-            parts: s.blocks.map(b => b.title),
-            notes: s.blocks.map(b => b.note),
-            warnings: s.blocks.map(b => b.warning),
-          }),
-        });
-        s.agendaText = serializeAgenda(newDays);
-      }
-    }
+    syncTimerToAgenda();
     appState.persist();
   }
 
@@ -1490,7 +1491,8 @@ Format:
               const [h, m] = (e.target as HTMLInputElement).value.split(':').map(Number);
               if (isNaN(h) || isNaN(m)) return;
               s.startMin = h * 60 + m; warnedSet.clear();
-              renderEndControl(); updateTimeFeedback(); appState.persist();
+              renderEndControl(); updateTimeFeedback();
+              syncTimerToAgenda(); appState.persist();
             }} />
           </div>
           <div>

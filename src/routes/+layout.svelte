@@ -177,9 +177,9 @@
   :global(.agenda-block) {
     position: absolute; left: 0; right: 0;
     border-radius: 0 8px 8px 0; border-left: 35px solid transparent;
-    padding: 2px 8px; cursor: pointer; overflow: hidden;
+    padding: 4px 8px; cursor: pointer; overflow: hidden;
     transition: background .12s; user-select: none; box-sizing: border-box;
-    display: flex; align-items: center; gap: 6px;
+    display: flex; flex-direction: column; align-items: flex-start;
   }
   :global(.agenda-block:hover) { background: var(--pill); }
   :global(.agenda-block.active) { background: var(--pill); }
@@ -193,7 +193,7 @@
     cursor: ns-resize; touch-action: none; z-index: 2;
   }
   :global(.agenda-time) { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; flex-shrink: 0; }
-  :global(.agenda-name) { flex: 1; font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.agenda-name) { flex: 1; width: 100%; font-size: 30px; font-weight: 500; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; }
   :global(.agenda-dur) { font-size: 12px; color: var(--muted); flex-shrink: 0; }
   :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
   :global(.agenda-input) {
