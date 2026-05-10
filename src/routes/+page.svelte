@@ -782,12 +782,18 @@
     };
   }
 
+  let lastPushedHash = '';
+
   async function pushShareState() {
     if (!shareToken) return;
+    const state = buildShareState();
+    const hash = JSON.stringify(state);
+    if (hash === lastPushedHash) return;
+    lastPushedHash = hash;
     try {
       await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildShareState()),
+        body: hash,
       });
     } catch { /* silent */ }
   }
@@ -1019,7 +1025,7 @@ Epost 20m
 Djuparbete 60m
 - stäng av notiser
 
-& Glöm inte: möte kl 14
+& Glöm inte: möte kl 14 imorgon
 
 Format:
 - @YYMMDD = datum (exempel: @260509 för 9 maj 2026)
@@ -1083,7 +1089,15 @@ Format:
       viewToken = vt;
       document.body.classList.add('view-mode');
       loadSharedState(vt);
-      viewPollId = setInterval(() => loadSharedState(vt), 10000);
+      viewPollId = setInterval(() => loadSharedState(vt), 30000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          if (viewPollId) { clearInterval(viewPollId); viewPollId = null; }
+        } else {
+          loadSharedState(vt);
+          viewPollId = setInterval(() => loadSharedState(vt), 30000);
+        }
+      });
     }
 
     const savedShare = localStorage.getItem('daytimer_share_token');
@@ -1156,8 +1170,24 @@ Format:
 
   $effect(() => {
     if (!shareToken) return;
-    const id = setInterval(pushShareState, 20000);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setInterval> | null = null;
+
+    function startPush() {
+      if (!id) id = setInterval(pushShareState, 60000);
+    }
+    function stopPush() {
+      if (id) { clearInterval(id); id = null; }
+    }
+
+    startPush();
+    document.addEventListener('visibilitychange', () => {
+      document.hidden ? stopPush() : (pushShareState(), startPush());
+    });
+
+    return () => {
+      stopPush();
+      document.removeEventListener('visibilitychange', startPush);
+    };
   });
 
   $effect(() => {
