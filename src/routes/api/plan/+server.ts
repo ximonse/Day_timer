@@ -194,7 +194,10 @@ export const POST: RequestHandler = async ({ request }) => {
       text = await callGemini(key, systemPrompt, message);
     } else {
       if (!baseUrl?.trim()) return json({ error: 'Bas-URL krävs för anpassad provider' }, { status: 400 });
-      text = await callOpenAI(key, systemPrompt, message, baseUrl.trim(), customModel?.trim() || undefined);
+      let parsedUrl: URL;
+      try { parsedUrl = new URL(baseUrl.trim()); } catch { return json({ error: 'Ogiltig bas-URL' }, { status: 400 }); }
+      if (parsedUrl.protocol !== 'https:') return json({ error: 'Bas-URL måste använda https://' }, { status: 400 });
+      text = await callOpenAI(key, systemPrompt, message, parsedUrl.toString(), customModel?.trim() || undefined);
     }
     return json({ text });
   } catch (err: unknown) {
