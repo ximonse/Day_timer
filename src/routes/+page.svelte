@@ -30,7 +30,9 @@
   let loggedInUser = $state('');
   let agendaInputOpen = $state(true);
   let savedAgendaMsg = $state('');
-  let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; startMinB: number; containerH: number } | null>(null);
+  let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
+  let activeAgendaFlow = $state<{ dayIdx: number; flowIdx: number } | null>(null);
+  let agendaDragMoved = false;
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
   const TIMELINE_SCALE = 1 / 720; // fraction of container per minute (12h = 100%)
@@ -394,10 +396,12 @@
       const halfW = baseWidth / 2;
       const bx1 = cxB + px * halfW, by1 = cyB + py * halfW;
       const bx2 = cxB - px * halfW, by2 = cyB - py * halfW;
+      const nowInView = nowMin >= s.startMin && nowMin < s.startMin + s.clockSpan;
       const spike = document.createElementNS(NS, 'polygon');
       spike.setAttribute('points', `${tx},${ty} ${bx1},${by1} ${bx2},${by2}`);
       spike.setAttribute('fill', handDark); spike.setAttribute('stroke', handLight);
       spike.setAttribute('stroke-width', '1.5'); spike.setAttribute('stroke-linejoin', 'round');
+      spike.setAttribute('opacity', nowInView ? '1' : '0.1');
       svgEl.appendChild(spike);
     }
 
@@ -527,6 +531,24 @@
     drag = null;
     window.removeEventListener('pointermove', onDrag);
     window.removeEventListener('pointerup', endDrag);
+    if (activeAgendaFlow && agendaDays) {
+      const { dayIdx, flowIdx } = activeAgendaFlow;
+      const day = agendaDays[dayIdx];
+      if (day?.flows[flowIdx]) {
+        const newDays = agendaDays.map((d, di) => di !== dayIdx ? d : {
+          ...d,
+          flows: d.flows.map((f, fi) => fi !== flowIdx ? f : {
+            ...f,
+            startMin: s.startMin,
+            minutes: s.blocks.map(b => b.minutes),
+            parts: s.blocks.map(b => b.title),
+            notes: s.blocks.map(b => b.note),
+            warnings: s.blocks.map(b => b.warning),
+          }),
+        });
+        s.agendaText = serializeAgenda(newDays);
+      }
+    }
     appState.persist();
   }
 
@@ -665,6 +687,7 @@
   }
 
   function loadFlow(id: string) {
+    activeAgendaFlow = null;
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
     s.dayTitle = f.title;
@@ -805,17 +828,26 @@
     return { ...flow, minutes: scaled };
   }
 
-  function startAgendaDrag(e: PointerEvent, i: number) {
+  function startAgendaDrag(e: PointerEvent, i: number, edge: 'top' | 'bottom') {
     if (!agendaDays || !selectedDay || !timelineEl) return;
     e.preventDefault();
+    e.stopPropagation();
+    agendaDragMoved = false;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const dayIdx = agendaDays.indexOf(selectedDay);
     if (dayIdx < 0) return;
+    const item = agendaItems[i];
+    const prev = agendaItems[i - 1];
+    const next = agendaItems[i + 1];
     agendaDragState = {
       i, dayIdx,
       startY: e.clientY,
-      startMinA: agendaItems[i].totalMin,
-      startMinB: agendaItems[i + 1]?.totalMin ?? 0,
+      startMinA: item.totalMin,
+      blockStart: item.startMin,
+      blockEnd: item.startMin + item.totalMin,
+      clampMin: prev ? prev.startMin + prev.totalMin + 5 : 0,
+      clampMax: next ? next.startMin - 5 : 24 * 60,
+      edge,
       containerH: timelineEl.clientHeight,
     };
     window.addEventListener('pointermove', onAgendaDrag);
@@ -828,17 +860,20 @@
     const deltaY = e.clientY - d.startY;
     if (Math.abs(deltaY) < 4) return;
     const deltaMin = Math.round(deltaY / d.containerH * 720);
-    const total = d.startMinA + d.startMinB;
-    const newA = Math.max(5, Math.min(total - 5, d.startMinA + deltaMin));
-    const newB = total - newA;
+    agendaDragMoved = true;
     const newDays = agendaDays.map((day, di) => {
       if (di !== d.dayIdx) return day;
       return {
         ...day,
         flows: day.flows.map((flow, fi) => {
-          if (fi === d.i) return setFlowMinutes(flow, newA);
-          if (fi === d.i + 1) return setFlowMinutes(flow, newB);
-          return flow;
+          if (fi !== d.i) return flow;
+          if (d.edge === 'bottom') {
+            const newEnd = Math.max(d.blockStart + 5, Math.min(d.clampMax, d.blockStart + d.startMinA + deltaMin));
+            return setFlowMinutes(flow, newEnd - d.blockStart);
+          } else {
+            const newStart = Math.max(d.clampMin, Math.min(d.blockEnd - 5, d.blockStart + deltaMin));
+            return { ...setFlowMinutes(flow, d.blockEnd - newStart), startMin: newStart };
+          }
         }),
       };
     });
@@ -849,6 +884,7 @@
     agendaDragState = null;
     window.removeEventListener('pointermove', onAgendaDrag);
     window.removeEventListener('pointerup', endAgendaDrag);
+    setTimeout(() => { agendaDragMoved = false; }, 0);
     appState.persist();
   }
 
@@ -1092,6 +1128,8 @@ Format:
     if (titleInput) titleInput.value = s.dayTitle;
     if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
+    const fi = selectedDay?.flows.indexOf(flow) ?? -1;
+    activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
     updateTimeFeedback(); renderEndControl(); appState.persist();
     mobileTab = 'timer'; syncBodyClasses();
   }
@@ -1148,8 +1186,8 @@ Format:
         <div class="lesson-title">{s.dayTitle}</div>
       {/if}
       <div class="top-time">
-        <div class="now">{nowText}</div>
-        <div class="left" style="opacity:{s.showLeft ? 1 : 0}">{leftText}</div>
+        <div class="now" onclick={goToTimerNow} style="cursor:pointer" title="Visa nuvarande tid">{nowText}</div>
+        {#if s.showLeft}<div class="left">{leftText}</div>{/if}
       </div>
     </div>
 
@@ -1419,20 +1457,14 @@ Format:
                class:past={isPast}
                class:active={isActive}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
-               onclick={() => item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id)}>
-            <span class="agenda-time">{fmtHM(item.startMin)}</span>
+               onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}>
+            <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
             <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
-            <span class="agenda-dur">{item.totalMin}m</span>
-          </div>
-          {#if ai < agendaItems.length - 1 && item.fromText}
-            {@const next = agendaItems[ai + 1]}
-            {#if next.startMin === item.startMin + item.totalMin}
-              <div class="agenda-drag-edge"
-                   class:dragging={agendaDragState?.i === ai}
-                   style="top: {((item.startMin + item.totalMin - windowStart) / 720 * 100).toFixed(3)}%"
-                   onpointerdown={(e) => startAgendaDrag(e, ai)}></div>
+            {#if item.fromText}
+              <div class="agenda-drag-top" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
+              <div class="agenda-drag-bottom" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
             {/if}
-          {/if}
+          </div>
         {/each}
       </div>
     {/if}
