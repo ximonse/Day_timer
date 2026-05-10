@@ -28,6 +28,10 @@
   let loginNameInput = $state<HTMLInputElement>(null!);
   let loginPassInput = $state<HTMLInputElement>(null!);
   let loggedInUser = $state('');
+  let shareToken = $state('');
+  let shareCopyText = $state('Kopiera länk');
+  let isViewMode = $state(false);
+  let viewToken = $state('');
   let agendaInputOpen = $state(true);
   let savedAgendaMsg = $state('');
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
@@ -449,6 +453,7 @@
   }
 
   function startBoundaryDrag(e: Event) {
+    if (isViewMode) return;
     const pe = e as PointerEvent;
     pe.preventDefault();
     const i = (pe.target as any)._boundaryIdx as number;
@@ -457,12 +462,14 @@
     window.addEventListener('pointerup', endDrag);
   }
   function startEndDrag(e: Event) {
+    if (isViewMode) return;
     (e as PointerEvent).preventDefault();
     drag = { type: 'end' };
     window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag);
   }
   function startStartDrag(e: Event) {
+    if (isViewMode) return;
     const pe = e as PointerEvent;
     pe.preventDefault();
     drag = { type: 'start', startMin0: s.startMin, endMin0: s.startMin + totalMin(), pointerAng0: pointerAngle(pe) };
@@ -762,6 +769,80 @@
     appState.persist();
   }
 
+  function buildShareState() {
+    return {
+      blocks: s.blocks, dayTitle: s.dayTitle, extraInfo: s.extraInfo,
+      startMin: s.startMin, endMode: s.endMode, clockSpan: s.clockSpan,
+      palette: s.palette, dark: s.dark, showLeft: s.showLeft,
+      showCenterEnd: s.showCenterEnd, hollow: s.hollow, textOutside: s.textOutside,
+      showMin: s.showMin, showFive: s.showFive, showQuarter: s.showQuarter,
+      segMinutesMode: s.segMinutesMode, showSegNotes: s.showSegNotes,
+      showExtraInfo: s.showExtraInfo, showSegLabels: s.showSegLabels,
+      agendaText: s.agendaText, agendaDate: s.agendaDate,
+    };
+  }
+
+  async function pushShareState() {
+    if (!shareToken) return;
+    try {
+      await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildShareState()),
+      });
+    } catch { /* silent */ }
+  }
+
+  async function loadSharedState(token: string) {
+    try {
+      const res = await fetch(`/api/share?token=${encodeURIComponent(token)}`);
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d.blocks) s.blocks = d.blocks;
+      if (d.dayTitle !== undefined) s.dayTitle = d.dayTitle;
+      if (d.extraInfo !== undefined) s.extraInfo = d.extraInfo;
+      if (d.startMin !== undefined) s.startMin = d.startMin;
+      if (d.endMode) s.endMode = d.endMode;
+      if (d.clockSpan) s.clockSpan = d.clockSpan;
+      if (d.palette) s.palette = d.palette;
+      if (d.dark !== undefined) s.dark = d.dark;
+      if (d.showLeft !== undefined) s.showLeft = d.showLeft;
+      if (d.showCenterEnd !== undefined) s.showCenterEnd = d.showCenterEnd;
+      if (d.hollow !== undefined) s.hollow = d.hollow;
+      if (d.textOutside !== undefined) s.textOutside = d.textOutside;
+      if (d.showMin !== undefined) s.showMin = d.showMin;
+      if (d.showFive !== undefined) s.showFive = d.showFive;
+      if (d.showQuarter !== undefined) s.showQuarter = d.showQuarter;
+      if (d.segMinutesMode) s.segMinutesMode = d.segMinutesMode;
+      if (d.showSegNotes !== undefined) s.showSegNotes = d.showSegNotes;
+      if (d.showExtraInfo !== undefined) s.showExtraInfo = d.showExtraInfo;
+      if (d.showSegLabels !== undefined) s.showSegLabels = d.showSegLabels;
+      if (d.agendaText !== undefined) s.agendaText = d.agendaText;
+      if (d.agendaDate !== undefined) s.agendaDate = d.agendaDate;
+      syncBodyClasses();
+    } catch { /* silent */ }
+  }
+
+  function startSharing() {
+    const token = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+    shareToken = token;
+    localStorage.setItem('daytimer_share_token', token);
+    pushShareState();
+  }
+
+  async function stopSharing() {
+    if (!shareToken) return;
+    try { await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, { method: 'DELETE' }); } catch { /* silent */ }
+    shareToken = '';
+    localStorage.removeItem('daytimer_share_token');
+  }
+
+  async function copyShareLink() {
+    const link = `${location.origin}/?view=${shareToken}`;
+    await navigator.clipboard.writeText(link);
+    shareCopyText = '✓ Kopierad!';
+    setTimeout(() => { shareCopyText = 'Kopiera länk'; }, 2000);
+  }
+
   function saveAgenda() {
     appState.persist();
     savedAgendaMsg = 'Sparat ✓';
@@ -829,7 +910,7 @@
   }
 
   function startAgendaDrag(e: PointerEvent, i: number, edge: 'top' | 'bottom') {
-    if (!agendaDays || !selectedDay || !timelineEl) return;
+    if (isViewMode || !agendaDays || !selectedDay || !timelineEl) return;
     e.preventDefault();
     e.stopPropagation();
     agendaDragMoved = false;
@@ -994,6 +1075,20 @@ Format:
   }
 
   onMount(() => {
+    // View mode: load shared state and start polling
+    const vt = new URLSearchParams(location.search).get('view');
+    let viewPollId: ReturnType<typeof setInterval> | null = null;
+    if (vt) {
+      isViewMode = true;
+      viewToken = vt;
+      document.body.classList.add('view-mode');
+      loadSharedState(vt);
+      viewPollId = setInterval(() => loadSharedState(vt), 10000);
+    }
+
+    const savedShare = localStorage.getItem('daytimer_share_token');
+    if (savedShare) shareToken = savedShare;
+
     if (!localStorage.getItem('day_timer_v1')) {
       const d = new Date();
       s.startMin = d.getHours() * 60;
@@ -1048,6 +1143,7 @@ Format:
 
     return () => {
       clearInterval(id);
+      if (viewPollId) clearInterval(viewPollId);
       document.removeEventListener('click', handleOutsideClick);
       window.removeEventListener('keydown', handleKeydown);
     };
@@ -1056,6 +1152,12 @@ Format:
   $effect(() => {
     const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab;
     if (typeof document !== 'undefined') syncBodyClasses();
+  });
+
+  $effect(() => {
+    if (!shareToken) return;
+    const id = setInterval(pushShareState, 20000);
+    return () => clearInterval(id);
   });
 
   $effect(() => {
@@ -1179,6 +1281,10 @@ Format:
   <button class="collapse-btn" onclick={toggleCollapse} title="Dölj panel">
     {s.sbCollapsed ? '›' : '‹'}
   </button>
+
+  {#if isViewMode}
+    <div class="live-badge">● Live</div>
+  {/if}
 
   <main class="main">
     <div class="main-header">
@@ -1349,6 +1455,19 @@ Format:
             <button class="quickstart" onclick={login}>Logga in & synka</button>
           {/if}
           <div class="sync-status" style="color:{syncStatusError ? '#c0392b' : 'var(--muted)'}">{syncStatusText}</div>
+        </div>
+
+        <div class="share-section">
+          <label>Dela session</label>
+          {#if shareToken}
+            <div class="share-link-row">
+              <span class="share-link-text">{location.origin}/?view={shareToken}</span>
+              <button class="ai-key-btn" onclick={copyShareLink}>{shareCopyText}</button>
+            </div>
+            <button class="quickstart" onclick={stopSharing}>Sluta dela</button>
+          {:else}
+            <button class="quickstart" onclick={startSharing}>Starta delning</button>
+          {/if}
         </div>
 
         <div class="ai-key-section">
