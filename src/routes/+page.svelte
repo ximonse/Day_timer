@@ -694,8 +694,44 @@
     appState.persist();
   }
 
+  function addFlowToAgendaToday(f: Flow) {
+    const today = new Date().toISOString().slice(0, 10);
+    const flowToAdd: Flow = { ...f, id: uid(), startMin: s.startMin };
+    let days: AgendaDay[] = agendaDays
+      ? agendaDays.map(d => ({ ...d, flows: [...d.flows] }))
+      : [];
+
+    let dayIdx = days.findIndex(d => d.date === today);
+    if (dayIdx < 0) {
+      const insertAt = days.findIndex(d => d.date !== null && d.date > today);
+      const newDay: AgendaDay = { date: today, flows: [] };
+      if (insertAt < 0) { days.push(newDay); dayIdx = days.length - 1; }
+      else { days.splice(insertAt, 0, newDay); dayIdx = insertAt; }
+    }
+
+    const dayFlows = [...days[dayIdx].flows];
+    // Replace flow with same startMin or same title, otherwise insert sorted by time
+    const replaceIdx = dayFlows.findIndex(
+      fl => fl.startMin === s.startMin || fl.title === f.title
+    );
+    let flowIdx: number;
+    if (replaceIdx >= 0) {
+      dayFlows[replaceIdx] = flowToAdd;
+      flowIdx = replaceIdx;
+    } else {
+      const insertAt = dayFlows.findIndex(fl => (fl.startMin ?? 0) > s.startMin);
+      if (insertAt < 0) { dayFlows.push(flowToAdd); flowIdx = dayFlows.length - 1; }
+      else { dayFlows.splice(insertAt, 0, flowToAdd); flowIdx = insertAt; }
+    }
+
+    days[dayIdx] = { ...days[dayIdx], flows: dayFlows };
+    s.agendaText = serializeAgenda(days);
+    s.agendaDate = today;
+    activeAgendaFlow = { dayIdx, flowIdx };
+    appState.persist();
+  }
+
   function loadFlow(id: string) {
-    activeAgendaFlow = null;
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
     s.dayTitle = f.title;
@@ -708,7 +744,8 @@
     warnedSet.clear();
     if (titleInput) titleInput.value = s.dayTitle;
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
-    updateTimeFeedback(); renderEndControl(); appState.persist();
+    updateTimeFeedback(); renderEndControl();
+    addFlowToAgendaToday(f);
   }
 
   function deleteFlow(id: string) {
