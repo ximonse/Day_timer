@@ -297,6 +297,35 @@
     :global(.theme-trigger:hover), :global(.theme-dots.open .theme-trigger) { opacity: 0.85; }
   }
 
+  /* ── Dela-sektion ── */
+  :global(.share-section) { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
+  :global(.share-section label) { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--menu-muted); }
+  :global(.share-link-row) { display: flex; align-items: center; gap: 6px; }
+  :global(.share-link-text) { flex: 1; font-size: 11px; font-family: monospace; color: var(--menu-fg); opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Live-badge ── */
+  :global(.live-badge) {
+    position: fixed; top: 12px; right: 16px; z-index: 80;
+    background: #e03030; color: #fff;
+    font-size: 13px; font-weight: 700; letter-spacing: .3px;
+    padding: 4px 12px; border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    pointer-events: none;
+  }
+
+  /* ── View-mode: dölj kontroller ── */
+  :global(body.view-mode .toolbar-inner .icon) { display: none; }
+  :global(body.view-mode .settings-popover) { display: none; }
+  :global(body.view-mode .controls-panel) { display: none; }
+  :global(body.view-mode .collapse-btn) { display: none; }
+  :global(body.view-mode .mobile-tabs) { display: none; }
+  :global(body.view-mode .resize-handle-sb) { pointer-events: none; }
+  :global(body.view-mode .resize-handle-ag) { pointer-events: none; }
+  :global(body.view-mode .agenda-drag-top) { display: none; }
+  :global(body.view-mode .agenda-drag-bottom) { display: none; }
+  :global(body.view-mode .agenda-input-header) { display: none; }
+  :global(body.view-mode .agenda-input-wrap) { display: none; }
+
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
   :global(.flash.on) { opacity: .35; }
   :global(.help-modal) { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
