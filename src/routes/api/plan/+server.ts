@@ -3,7 +3,6 @@ import type { RequestHandler } from './$types';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
-import { env } from '$env/dynamic/private';
 
 type Provider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 type PlanMode = 'strict' | 'helpful';
@@ -125,8 +124,7 @@ Regler:
 }
 
 async function callAnthropic(apiKey: string, systemPrompt: string, message: string): Promise<string> {
-  const key = env.ANTHROPIC_API_KEY || apiKey;
-  const client = new Anthropic({ apiKey: key });
+  const client = new Anthropic({ apiKey });
   const res = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
@@ -171,7 +169,7 @@ export const POST: RequestHandler = async ({ request }) => {
     customModel?: string;
   };
 
-  if (!apiKey?.trim() && provider !== 'anthropic') return json({ error: 'Ingen API-nyckel angiven' }, { status: 400 });
+  if (!apiKey?.trim()) return json({ error: 'Ingen API-nyckel angiven' }, { status: 400 });
   if (!message?.trim()) return json({ error: 'Inget meddelande' }, { status: 400 });
 
   const todayISO = context?.date ?? new Date().toISOString().slice(0, 10);
