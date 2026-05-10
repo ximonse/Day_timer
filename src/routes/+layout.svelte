@@ -127,6 +127,10 @@
   :global(.pill.on) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); }
   :global(.controls) { background: var(--menu-panel); border: 1px solid var(--menu-border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; width: min(360px, 100%); color: var(--menu-fg); }
   :global(.controls label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  :global(.step-section) { display: flex; gap: 10px; align-items: flex-start; background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 10px; padding: 10px 12px; }
+  :global(.step-section--action) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--menu-surface)); }
+  :global(.step-num) { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  :global(.step-body) { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   :global(.controls input[type=text]), :global(.controls input[type=time]), :global(.controls input[type=number]), :global(.controls textarea) { background: var(--menu-surface); color: var(--menu-fg); border: 1px solid var(--menu-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; width: 100%; font-family: inherit; }
   :global(.controls textarea) { min-height: 100px; resize: vertical; line-height: 1.4; }
   :global(.row2) { display: flex; gap: 8px; }
