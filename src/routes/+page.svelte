@@ -40,7 +40,7 @@
   let agendaDragMoved = false;
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
-  const TIMELINE_SCALE = 1 / 720; // fraction of container per minute (12h = 100%)
+
 
   let nowMinLive = $state(nowMinutes());
   let lastAutoLoadKey = $state('');
@@ -1689,7 +1689,7 @@ Format:
     {/if}
 
     {#if agendaItems.length === 0}
-      <p class="agenda-empty">Skriv in dagplanen ovan, eller spara flöden via ⚒︎-panelen.</p>
+      <p class="agenda-empty">Skriv in dagplanen ovan, eller spara flöden via ✎-panelen.</p>
     {:else}
       {@const windowStart = Math.floor(agendaItems[0].startMin / 60) * 60}
       <div class="agenda-timeline" bind:this={timelineEl}>
@@ -1762,7 +1762,7 @@ Format:
 
     <h3>Grunderna</h3>
     <ul>
-      <li><b>Skapa ett schema</b> via <span class="ico">⚒︎</span> — skriv aktiviteter i textfältet, en per rad.</li>
+      <li><b>Skapa ett schema</b> via <span class="ico">✎</span> — skriv aktiviteter i textfältet, en per rad.</li>
       <li><b>Dra för att ändra tid</b> — håll på gränsen mellan två sektorer och dra.</li>
       <li><b>Snabbstart</b> ⚡︎ ställer in starttid till just nu.</li>
       <li><b>Allt sparas automatiskt</b> i webbläsaren (ingen inloggning krävs).</li>
@@ -1794,7 +1794,7 @@ Format:
 
     <h3>AI-planering</h3>
     <ul>
-      <li>Öppna <span class="ico">⚒︎</span> och scrolla ner till <b>AI-planering</b>.</li>
+      <li>Öppna <span class="ico">✎</span> och scrolla ner till <b>AI-planering</b>.</li>
       <li>Välj provider: <b>Claude</b>, <b>GPT</b>, <b>Gemini</b> eller <b>Anpassad</b> (valfri OpenAI-kompatibel, t.ex. Mistral, Groq).</li>
       <li>Klistra in din API-nyckel — sparas lokalt, skickas till vår server enbart för att nå vald AI-leverantör.</li>
       <li>Klicka <b>▽ Planera med AI</b> under aktivitets­fältet → beskriv på fritt språk → schemat fylls i automatiskt.</li>
