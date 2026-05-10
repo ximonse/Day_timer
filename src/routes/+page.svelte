@@ -34,6 +34,7 @@
   let viewToken = $state('');
   let agendaInputOpen = $state(true);
   let savedAgendaMsg = $state('');
+  let copyAgendaPromptText = $state('AI-prompt');
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let activeAgendaFlow = $state<{ dayIdx: number; flowIdx: number } | null>(null);
   let agendaDragMoved = false;
@@ -851,6 +852,15 @@
 
   function saveAgenda() {
     appState.persist();
+    if (agendaDays && agendaItems.length > 0) {
+      const now = nowMinutes();
+      const active = agendaItems.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
+      if (active) {
+        loadAgendaFlow(active.flow, active.startMin);
+      } else {
+        activeAgendaFlow = null;
+      }
+    }
     savedAgendaMsg = 'Sparat ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
@@ -1557,6 +1567,12 @@ Format:
         <button class="agenda-save-btn" onclick={saveAgenda}>
           {savedAgendaMsg || '💾 Spara dagplan'}
         </button>
+        <button class="agenda-save-btn" onclick={() => {
+          navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
+            copyAgendaPromptText = '✓ Kopierad';
+            setTimeout(() => { copyAgendaPromptText = 'AI-prompt'; }, 1500);
+          });
+        }}>{copyAgendaPromptText}</button>
         {#if aiApiKey}
           <button class="agenda-save-btn agenda-ai-btn" onclick={() => agendaAiOpen = !agendaAiOpen}>
             ✨ AI-dagplan
