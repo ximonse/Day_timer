@@ -4,6 +4,7 @@
   import { PALETTES, PALETTE_COLORS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
+  import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
@@ -29,6 +30,7 @@
   let loginPassInput = $state<HTMLInputElement>(null!);
   let loggedInUser = $state('');
   let shareToken = $state('');
+  let shareOwnerToken = $state('');
   let shareCopyText = $state('Kopiera länk');
   let isViewMode = $state(false);
   let viewToken = $state('');
@@ -755,7 +757,7 @@
     appState.persist();
   }
 
-  const SYNC_KEY_STORAGE = 'timer-sync-key';
+  const SYNC_TOKEN_STORAGE = 'timer-sync-token';
   let syncStatusTimer: ReturnType<typeof setTimeout>;
 
   function showSyncStatus(msg: string, isError = false) {
@@ -765,10 +767,12 @@
   }
 
   async function syncLoad() {
-    const key = s.syncKey || '';
-    if (!key) { showSyncStatus('Inte inloggad', true); return; }
+    const token = s.syncKey || '';
+    if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
     try {
-      const res = await fetch('/api/sync?key=' + encodeURIComponent(key));
+      const res = await fetch('/api/sync', {
+        headers: { 'x-sync-token': token }
+      });
       if (!res.ok) throw new Error();
       const data = await res.json();
       s.flows = data.flows || []; appState.persist(); showSyncStatus('Flöden laddade ✓');
@@ -776,11 +780,15 @@
   }
 
   async function syncSave() {
-    const key = s.syncKey || '';
-    if (!key) { showSyncStatus('Inte inloggad', true); return; }
+    const token = s.syncKey || '';
+    if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
     try {
-      const res = await fetch('/api/sync?key=' + encodeURIComponent(key), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-sync-token': token
+        },
         body: JSON.stringify({ flows: s.flows || [] }),
       });
       if (!res.ok) throw new Error();
@@ -788,22 +796,22 @@
     } catch { showSyncStatus('Kunde inte spara', true); }
   }
 
-  function login() {
+  async function login() {
     const name = loginNameInput?.value.trim() ?? '';
     const pass = loginPassInput?.value.trim() ?? '';
     if (!name || !pass) { showSyncStatus('Ange namn och lösenord', true); return; }
-    s.syncKey = name + ':' + pass;
+    s.syncKey = await deriveSyncToken(name, pass);
     loggedInUser = name;
-    localStorage.setItem(SYNC_KEY_STORAGE, s.syncKey);
+    localStorage.setItem(SYNC_TOKEN_STORAGE, s.syncKey);
     localStorage.setItem('timer-login-user', name);
     appState.persist();
-    syncLoad();
+    await syncLoad();
   }
 
   function logout() {
     loggedInUser = '';
     s.syncKey = '';
-    localStorage.removeItem(SYNC_KEY_STORAGE);
+    localStorage.removeItem(SYNC_TOKEN_STORAGE);
     localStorage.removeItem('timer-login-user');
     appState.persist();
   }
@@ -824,16 +832,20 @@
   let lastPushedHash = '';
 
   async function pushShareState() {
-    if (!shareToken) return;
+    if (!shareToken || !shareOwnerToken) return;
     const state = buildShareState();
     const hash = JSON.stringify(state);
     if (hash === lastPushedHash) return;
-    lastPushedHash = hash;
     try {
       await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-share-owner': shareOwnerToken
+        },
         body: hash,
       });
+      lastPushedHash = hash;
     } catch { /* silent */ }
   }
 
@@ -868,17 +880,28 @@
   }
 
   function startSharing() {
-    const token = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-    shareToken = token;
-    localStorage.setItem('daytimer_share_token', token);
+    const tokens = createShareTokens();
+    shareToken = tokens.viewToken;
+    shareOwnerToken = tokens.ownerToken;
+    localStorage.setItem('daytimer_share_token', tokens.viewToken);
+    localStorage.setItem('daytimer_share_owner_token', tokens.ownerToken);
+    lastPushedHash = '';
     pushShareState();
   }
 
   async function stopSharing() {
-    if (!shareToken) return;
-    try { await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, { method: 'DELETE' }); } catch { /* silent */ }
+    if (!shareToken || !shareOwnerToken) return;
+    try {
+      await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
+        method: 'DELETE',
+        headers: { 'x-share-owner': shareOwnerToken }
+      });
+    } catch { /* silent */ }
     shareToken = '';
+    shareOwnerToken = '';
+    lastPushedHash = '';
     localStorage.removeItem('daytimer_share_token');
+    localStorage.removeItem('daytimer_share_owner_token');
   }
 
   async function copyShareLink() {
@@ -1151,7 +1174,14 @@ Format:
     }
 
     const savedShare = localStorage.getItem('daytimer_share_token');
-    if (savedShare) shareToken = savedShare;
+    const savedShareOwner = localStorage.getItem('daytimer_share_owner_token');
+    if (savedShare && savedShareOwner) {
+      shareToken = savedShare;
+      shareOwnerToken = savedShareOwner;
+    } else {
+      localStorage.removeItem('daytimer_share_token');
+      localStorage.removeItem('daytimer_share_owner_token');
+    }
 
     if (!localStorage.getItem('day_timer_v1')) {
       const d = new Date();
@@ -1184,8 +1214,28 @@ Format:
       document.documentElement.style.setProperty('--ag-w', agendaEl.offsetWidth + 'px');
       resizeObservers.push(ro);
     }
-    const savedKey = localStorage.getItem(SYNC_KEY_STORAGE);
-    if (savedKey) s.syncKey = savedKey;
+    const savedToken = localStorage.getItem(SYNC_TOKEN_STORAGE);
+    const migrateLegacyToken = async () => {
+      const sourceToken: string = savedToken || s.syncKey || '';
+      if (!sourceToken) return;
+      const existingHashedToken = validateSyncToken(sourceToken) ? sourceToken : null;
+      if (existingHashedToken) {
+        s.syncKey = existingHashedToken;
+        return;
+      }
+      const legacyToken = sourceToken;
+      const idx = legacyToken.indexOf(':');
+      if (idx > 0) {
+        const name = legacyToken.slice(0, idx);
+        const pass = legacyToken.slice(idx + 1);
+        if (name && pass) {
+          s.syncKey = await deriveSyncToken(name, pass);
+          localStorage.setItem(SYNC_TOKEN_STORAGE, s.syncKey);
+          appState.persist();
+        }
+      }
+    };
+    void migrateLegacyToken();
     const savedUser = localStorage.getItem('timer-login-user');
     if (savedUser) loggedInUser = savedUser;
     const savedAiConfig = localStorage.getItem('daytimer_ai_config');
