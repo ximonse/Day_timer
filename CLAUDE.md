@@ -32,8 +32,9 @@ UPSTASH_REDIS_REST_TOKEN=
 
 ## Nuläge (vad som är klart)
 
-Hela Phase A är klar — en fungerande, byggbar SvelteKit-kopia av the_timer:
+**Senast uppdaterad: maj 2026**
 
+### Phase A — Klar
 - ✅ Layout: sidebar vänster + main höger, kollapsbar sidebar
 - ✅ SVG-klocka: exakt samma geometri (360×360, CX/CY=180, R=155, Ri=65)
 - ✅ Alla 6 paletter med exakta CSS-variabler och clock theme-värden
@@ -51,7 +52,21 @@ Hela Phase A är klar — en fungerande, byggbar SvelteKit-kopia av the_timer:
 - ✅ Mobilresponsiv (<800px: sidebar under klockan)
 - ✅ localStorage-persistens (`day_timer_v1`)
 - ✅ Cloud sync via `/api/sync` → Upstash Redis (prefix `daytimer:`)
-- ✅ Bygger rent: 0 errors, 6 warnings (alla a11y, inget funktionellt)
+
+### Phase B — Implementerat
+- ✅ **Klockvy 1h/2h/12h** — `s.clockSpan: 60 | 120 | 720`, cykling via toolbar-knapp; klockvisaren dämpas om nuvarande tid är utanför vyn
+- ✅ **Agenda-panel** (höger kolumn) — tidslinje med drag-gränser per block (övre halvan = starttid, undre = sluttid, höger halva = scroll-safe)
+- ✅ **Timer↔Agenda-synk** (tvåvägs):
+  - Dra i timern → agendablock uppdateras
+  - Ändra starttid i menyn → agendablock uppdateras
+  - Klicka agendablock → laddar in i timern, `activeAgendaFlow` trackas
+  - Spara ny dagplan → auto-laddar aktuellt tidsblock i timern
+- ✅ **Snabbstart → Agenda** — klick på "Snabbstart nu" skapar agendablock för idag
+- ✅ **Ladda flöde → Agenda** — laddar man ett sparat flöde läggs det in i agendans idag-post
+- ✅ **Klocktid klickbar** — klick på `HH:MM` hoppar till aktuellt block eller timme
+- ✅ **Live-delning** (`/api/share`) — ägare genererar token, mottagare öppnar `/?view=TOKEN`; read-only vy, 30s poll, 60s push, bara vid ändring, pausar med Page Visibility API
+- ✅ **AI-planering** — OpenAI/Anthropic/Gemini/custom för session och heldagsplan; "Kopiera prompt"-knapp utan API-nyckel
+- ✅ **Onboarding** — steg 1/2/3 med nummerbrickor i kontrollpanelen; öppnas automatiskt vid första besöket
 
 **Git:** `main`-branchen på `https://github.com/ximonse/Day_timer.git`
 
@@ -65,12 +80,16 @@ src/
     theme.ts          — clockTheme() + SECTOR_COLORS + labelColorFor()
     state.svelte.ts   — AppState med alla ~20 flaggor, Svelte 5 $state
     clock.ts          — polar(), arcPath(), fmtHM(), nowMinutes(), truncate()
-    parse.ts          — parseParts(), serializeBlocks()
+    parse.ts          — parseParts(), serializeBlocks(), parseAgenda(), serializeAgenda()
   routes/
-    +layout.svelte    — global CSS (exakt kopia från the_timer)
-    +page.svelte      — hela UI: sidebar + main + toolbar + modals
+    +layout.svelte    — global CSS
+    +page.svelte      — hela UI: sidebar + main + agenda + toolbar + modals (~1700 rader)
     api/sync/
-      +server.ts      — GET/POST mot Upstash Redis
+      +server.ts      — GET/POST mot Upstash Redis (cross-device sync)
+    api/share/
+      +server.ts      — GET/POST/DELETE för live-delning (Redis TTL 48h)
+    api/plan/
+      +server.ts      — AI-planering proxy (OpenAI/Anthropic/Gemini/custom)
 ```
 
 ---
@@ -258,51 +277,29 @@ Stämmer dessa av mot the_timer (`/home/user/the_timer/index.html`) innan du byg
 
 ---
 
-## Phase B — Nästa steg (i prioritetsordning)
+## Phase B — Status
 
-### B1: 2h-vy
-Klockan visar 2 timmar istället för 1. Minutvisaren fortfarande.
-- `state.clockSpan: 60 | 120` (default 60)
-- `startAngle = ((startMin % clockSpan) / clockSpan) * 360`
-- `degPerMin = 360 / clockSpan`
-- Lägg till toggle-pill: "2h-vy"
+### Klart
+- ✅ B1: Klockvy 1h/2h/12h (`clockSpan: 60|120|720`)
+- ✅ B2: 12h-vy med timvisare, dämpas utanför vyn
+- ✅ B3: Agenda-panel med tidslinje och drag
+- ✅ B7: Live-delning via Redis (`/api/share`, `?view=TOKEN`)
 
-### B2: 12h-vy (timvisare)
-Klockan visar hela dagen (720 min). Timvisare istället för minutvisare.
-- `state.clockSpan: 60 | 120 | 720`
-- Pointer-arm följer timmar: `(nowMin % 720 / 720) * 360`
-- Tick-märken: timmar, kvart-timmar
-- Centerlabel: datum + dag
+### Kvar (möjliga nästa steg)
 
-### B3: Agenda-panel (höger kolumn)
-En tredje kolumn till höger om main-klockan.
-- Visar block som tidslinje med klockslag
-- Knappas ihop/ut precis som sidebar
-- Används i 12h-läget för att se hela dagen
-
-### B4: Redigera block direkt
-- Long-press på ett block i sidopanelen → inline edit (titel, tid)
+**B4: Redigera block direkt**
+- Long-press på block i sidopanelen → inline edit (titel, tid)
 - Drag-to-reorder i sidopanelen
-- Lägg till / ta bort block via +-knapp i sidopanelen
 
-### B5: Emoji-stöd
-- Om titeln är bara en emoji: visa den stor i sektorn (48px SVG-text)
-- Bildstöd: `<image>` i SVG om titeln är en URL
+**B5: Emoji-stöd**
+- Titel = bara emoji → visa den stor (48px) i klocksektorn
 
-### B6: Bibliotek
+**B6: Bibliotek**
 - Färdiga rutiner (Lektion 60m, Morgon, Kväll)
-- Sparas lokalt + kan synkas
-- UI: rullgardin eller panel med kategorier
+- UI: rullgardin eller panel i kontrollpanelen
 
-### B7: URL-delning
-- Schema kodat i URL (base64) — ingen inloggning
-- `?s=eyJibG9ja3...` i URL → laddar schema automatiskt
-- Kopieringsknapp i kontrollpanelen
-
-### B8: Kalenderimport
-- ICS-fil eller Google Calendar URL
-- Importerar dagens händelser som block
-- Kräver 12h-vyn (B2)
+**B8: Kalenderimport**
+- ICS-fil eller Google Calendar URL → importera som agendablock
 
 ---
 
@@ -341,6 +338,9 @@ Från kodanalys (maj 2026). Prioritering och beslutsrationale nedskrivet för at
 - ✅ TypeScript-fel: `planMode` saknades i `clearAiConfig()` och gammal-nyckel-migrering
 - ✅ Env-variabel i sync: `UPSTASH_REDIS_REST_TOKEN` (inte `daytimer_KV_REST_API_TOKEN`)
 - ✅ Hjälptext API-nyckel: formulering korrigerad
+- ✅ Agenda↔Timer-synk: tvåvägs via `activeAgendaFlow` + `syncTimerToAgenda()`
+- ✅ Spara dagplan slår igenom direkt (auto-laddar rätt tidsblock)
+- ✅ Redis-förbrukning: Page Visibility API + hash-diff + längre intervall (60s/30s)
 
 ### Känd skuld som accepterats
 - `(hit as any)._boundaryIdx` — drag-state på DOM-element. Pragmatiskt, funkar i nuvarande renderingsmodell.

@@ -1,42 +1,113 @@
-# sv
+# Day_timer
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Visuell lektions- och dagstimer för lärare. SvelteKit-port av [the_timer](https://github.com/ximonse/the_timer), utbyggd med agenda, flöden och live-delning.
 
-## Creating a project
+**Deploy:** [Vercel](https://vercel.com) · **Repo:** `ximonse/Day_timer`
 
-If you're seeing this, you've probably already done this step. Congrats!
+---
 
-```sh
-# create a new project
-npx sv create my-app
+## Funktioner
+
+### Timer
+- SVG-klocka i 1h- eller 12h-vy med sektorer per aktivitet
+- Drag-interaktion: justera blockgränser, starttid och sluttid direkt på klockan
+- 6 färgpaletter + mörkt läge
+- Audio-varning 2 min före + vid segmentslut, flash-overlay
+- 11 toggle-alternativ (minuter, labels, hollow, textOutside m.m.)
+
+### Agenda
+- Heldagsplanering med eget textformat (`@datum`, `#Session 09:00`, `Aktivitet 10m`)
+- Tidslinje-vy med drag för att flytta och ändra längd på block
+- Tvåvägssynk: dra i timern → agendan uppdateras, ändra starttid i menyn → agendan uppdateras
+- Klicka på ett agendablock → laddar in i timern
+- Klicka på klocktiden → hoppar till aktuellt tidsblock
+
+### Flöden
+- Spara namngivna sessioner (t.ex. "Genomgång 60m")
+- Ladda ett flöde → skapar automatiskt ett agendablock för idag
+- Snabbstart: skriv rubrik + delar → klicka "Snabbstart nu" → direkt i agendan
+
+### Live-delning (read-only)
+- Ägaren klickar "Starta delning" → länk genereras
+- Mottagaren öppnar `/?view=TOKEN` → ser timern + agendan i realtid
+- Ägaren pushar var 60:e sekund (bara vid faktisk förändring), mottagaren pollar var 30:e sekund
+- Pausas automatiskt när fliken är gömd (Page Visibility API)
+- Redis TTL 48h — auto-expire om ägaren slutar dela
+
+### Cloud sync
+- Kors-enhetssynk via Upstash Redis med valfri lösenfras
+- `☁ Spara` / `☁ Ladda` i kontrollpanelen
+
+### AI-planering
+- Stöd för OpenAI, Anthropic, Google Gemini och egna modeller
+- "Planera med AI" i timerkontrollen (sessionsnivå)
+- "AI-dagplan" i agendapanelen (heldagsnivå)
+- "AI-prompt"-knapp i båda för att kopiera prompten till valfri AI utan API-nyckel
+
+---
+
+## Stack
+
+- **SvelteKit** + TypeScript, Svelte 5 runes (`$state`, `$derived`, `$effect`)
+- **@sveltejs/adapter-vercel**
+- **Upstash Redis** via `@upstash/redis` (sync + share)
+- **Vitest** för enhetstester (`src/lib/*.test.ts`)
+- Inga CSS-ramverk
+
+## Env-variabler
+
+```
+daytimer_KV_REST_API_URL=      # Upstash Redis REST URL
+UPSTASH_REDIS_REST_TOKEN=      # Upstash Redis REST token
 ```
 
-To recreate this project with the same configuration:
+## Köra lokalt
 
 ```sh
-# recreate this project
-npx sv@0.15.2 create --template minimal --types ts --install npm day_timer
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
-
-To create a production version of your app:
+## Tester
 
 ```sh
-npm run build
+npm test
 ```
 
-You can preview the production build with `npm run preview`.
+## Projektstruktur
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```
+src/
+  lib/
+    theme.ts          — clockTheme(), SECTOR_COLORS, labelColorFor()
+    state.svelte.ts   — AppState, alla ~20 flaggor, Svelte 5 $state
+    clock.ts          — polar(), arcPath(), fmtHM(), nowMinutes(), truncate()
+    parse.ts          — parseParts(), serializeBlocks(), parseAgenda(), serializeAgenda()
+  routes/
+    +layout.svelte    — global CSS
+    +page.svelte      — hela UI
+    api/sync/         — GET/POST mot Upstash Redis (cross-device sync)
+    api/share/        — GET/POST/DELETE för live-delning (Redis, 48h TTL)
+    api/plan/         — AI-planering proxy
+```
+
+## Inmatningsformat
+
+```
+#Morgonrutin          → sessionstitel
+Genomgång 10m         → block med tid
+Eget arbete           → block utan tid (auto-fördelas)
+- ta med boken        → notering på föregående block
+& Glöm ej: möte kl 9 → infotext för hela sessionen
+```
+
+Dagplan (agendapanelen):
+```
+@260510
+#Lektion 1 08:00
+Genomgång 15m
+Eget arbete 30m
+Avslut 5m
+
+#Rast 08:50
+```
