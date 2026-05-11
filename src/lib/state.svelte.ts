@@ -18,6 +18,7 @@ export interface Flow {
   notes: string[];
   extraInfo: string;
   startMin?: number;
+  lastUsed?: number;
 }
 
 export interface AppState {
