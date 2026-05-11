@@ -741,6 +741,7 @@
   function loadFlow(id: string) {
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
+    f.lastUsed = Date.now();
     s.dayTitle = f.title;
     s.blocks = f.parts.map((title, i) => ({
       id: Math.random().toString(36).slice(2, 9),
@@ -753,6 +754,7 @@
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback(); renderEndControl();
     addFlowToAgendaToday(f);
+    appState.persist();
   }
 
   function deleteFlow(id: string) {
@@ -931,29 +933,6 @@
   }
 
   function saveAgenda() {
-    // Extract all sessions from the agenda text and upsert them into s.flows
-    if (agendaDays) {
-      if (!s.flows) s.flows = [];
-      for (const day of agendaDays) {
-        for (const flow of day.flows) {
-          const title = flow.title.trim();
-          if (!title) continue;
-          const existing = s.flows.find(f => f.title === title);
-          const flowData = {
-            id: existing ? existing.id : 'f-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-            title,
-            parts: [...flow.parts],
-            minutes: [...flow.minutes],
-            warnings: [...flow.warnings],
-            notes: [...flow.notes],
-            extraInfo: flow.extraInfo || '',
-          };
-          if (existing) { Object.assign(existing, flowData); }
-          else { s.flows.push(flowData); }
-        }
-      }
-    }
-
     appState.persist();
 
     if (agendaDays && agendaItems.length > 0) {
@@ -1633,14 +1612,20 @@ Format:
         <div class="feedback" bind:this={timeFeedback}></div>
 
         <div class="flows">
-          <button class="quickstart" onclick={saveFlow}><span class="ico">💾︎</span> {savedFlowMsg || 'Spara flöde'}</button>
-          {#if s.flows.length > 0}
+          <label>Mallar</label>
+          <button class="quickstart" onclick={saveFlow}
+            title="Sparar nuvarande schema som en återanvändbar mall">
+            <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
+          </button>
+          {#if s.flows.length === 0}
+            <p class="flows-hint">Inga mallar sparade. Klicka ovan för att spara det aktiva schemat.</p>
+          {:else}
             <button class="flows-toggle" onclick={() => flowsOpen = !flowsOpen}>
-              Sparade flöden {flowsOpen ? '▾' : '▸'}
+              Sparade mallar {flowsOpen ? '▾' : '▸'}
             </button>
             {#if flowsOpen}
               <div class="flow-list">
-                {#each s.flows as f (f.id)}
+                {#each [...s.flows].sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0)) as f (f.id)}
                   <div class="flow-item">
                     <button class="flow-name" onclick={() => loadFlow(f.id)}>{f.title || '(utan rubrik)'}</button>
                     <button class="flow-del" onclick={() => deleteFlow(f.id)}><span class="ico">🗑︎</span></button>
@@ -1653,6 +1638,7 @@ Format:
 
         <div class="login-form">
           {#if loggedInUser}
+            <label>Synkronisering</label>
             <div class="logged-in-row">
               <span class="username">👤 {loggedInUser}</span>
               <button class="logout-btn" onclick={logout}>Logga ut</button>
@@ -1740,8 +1726,9 @@ Format:
           oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
         ></textarea>
         <div class="agenda-save-row">
-          <button class="agenda-save-btn" onclick={saveAgenda}>
-            {savedAgendaMsg || '💾 Spara dagplan'}
+          <button class="agenda-save-btn" onclick={saveAgenda}
+            title="Sparar dagplanen och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
+            {savedAgendaMsg || '📅 Spara dagplan'}
           </button>
           <button class="agenda-save-btn" onclick={() => {
             navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
