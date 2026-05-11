@@ -53,7 +53,6 @@
   let timelineEl = $state<HTMLElement>(null!);
   let agendaDraft = $state('');
   let locked = $state(false);
-  let editingTitle = $state(false);
   let titleDraftValue = $state('');
 
 
@@ -1623,25 +1622,18 @@ Format:
   <main class="main">
     <div class="main-header">
       {#if !isViewMode && !locked}
-        {#if editingTitle}
-          <input class="lesson-title-input" use:focusOnMount
-            value={titleDraftValue}
-            oninput={(e) => { titleDraftValue = (e.target as HTMLInputElement).value; }}
-            onblur={(e) => {
-              const v = (e.target as HTMLInputElement).value.trim();
-              if (v) { s.dayTitle = v; appState.persist(); }
-              editingTitle = false;
-            }}
-            onkeydown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
-              if (e.key === 'Escape') { editingTitle = false; }
-            }}
-          />
-        {:else}
-          <div class="lesson-title" class:empty={!s.dayTitle} onclick={() => { titleDraftValue = s.dayTitle; editingTitle = true; }} title="Klicka för att redigera rubrik">
-            {s.dayTitle || 'Rubrik…'}
-          </div>
-        {/if}
+        <input class="lesson-title lesson-title-editable"
+          placeholder="Rubrik…"
+          value={titleDraftValue || s.dayTitle}
+          onfocus={() => { titleDraftValue = s.dayTitle; }}
+          oninput={(e) => { titleDraftValue = (e.target as HTMLInputElement).value; }}
+          onblur={(e) => {
+            const v = (e.target as HTMLInputElement).value.trim();
+            if (v !== s.dayTitle) { s.dayTitle = v; appState.persist(); }
+            titleDraftValue = '';
+          }}
+          onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+        />
       {:else if s.dayTitle}
         <div class="lesson-title">{s.dayTitle}</div>
       {/if}

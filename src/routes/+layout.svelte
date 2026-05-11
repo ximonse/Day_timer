@@ -119,9 +119,10 @@
   }
   :global(.resize-handle-sb:hover), :global(.resize-handle-ag:hover) { background: var(--border); }
   :global(.main-header) { position: relative; width: 100%; }
-  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
-  :global(.lesson-title.empty) { color: var(--muted); opacity: .35; cursor: text; }
-  :global(.lesson-title-input) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; width: 38%; background: transparent; border: none; border-bottom: 2px solid var(--accent); outline: none; font-family: inherit; padding: 0; }
+  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.lesson-title-editable) { background: transparent; border: none; outline: none; font-family: inherit; padding: 0; cursor: text; width: 38%; }
+  :global(.lesson-title-editable:focus) { border-bottom: 2px solid var(--accent); }
+  :global(.lesson-title-editable::placeholder) { color: var(--muted); opacity: .35; }
   :global(.top-time) { text-align: center; }
   :global(.top-time .now) { font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; letter-spacing: -0.025em; line-height: 1; font-variant-numeric: tabular-nums; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
