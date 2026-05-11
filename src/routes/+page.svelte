@@ -52,6 +52,8 @@
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
   let agendaDraft = $state('');
+  let locked = $state(false);
+  let editingTitle = $state(false);
 
 
   let nowMinLive = $state(nowMinutes());
@@ -232,12 +234,13 @@
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
-    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-timer', 'm-delar', 'm-plan');
+    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-timer', 'm-delar', 'm-plan', 'page-locked');
     if (s.palette) document.body.classList.add(s.palette);
     if (s.dark && s.palette !== 'psychedelic') document.body.classList.add('dark');
     if (s.sbCollapsed) document.body.classList.add('sb-collapsed');
     if (s.agendaOpen) document.body.classList.add('ag-open');
     document.body.classList.add('m-' + mobileTab);
+    if (locked) document.body.classList.add('page-locked');
   }
 
   function renderClock() {
@@ -1439,7 +1442,7 @@ Format:
   });
 
   $effect(() => {
-    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab;
+    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab + locked;
     if (typeof document !== 'undefined') syncBodyClasses();
   });
 
@@ -1614,7 +1617,19 @@ Format:
 
   <main class="main">
     <div class="main-header">
-      {#if s.dayTitle}
+      {#if !isViewMode && !locked}
+        {#if editingTitle}
+          <input class="lesson-title-input" use:focusOnMount
+            value={s.dayTitle}
+            onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v) { s.dayTitle = v; appState.persist(); } editingTitle = false; }}
+            onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+          />
+        {:else}
+          <div class="lesson-title" class:empty={!s.dayTitle} onclick={() => editingTitle = true} title="Klicka för att redigera rubrik">
+            {s.dayTitle || 'Rubrik…'}
+          </div>
+        {/if}
+      {:else if s.dayTitle}
         <div class="lesson-title">{s.dayTitle}</div>
       {/if}
       <div class="top-time">
@@ -1634,6 +1649,7 @@ Format:
       <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : '1h'}</button>
       <div class="toolbar-spacer"></div>
       <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
+      <button class="icon lock-btn" class:locked onclick={() => locked = !locked} title={locked ? 'Lås upp' : 'Lås sidan'}>{locked ? '○' : '⊠'}</button>
       <div class="warn-dots">
         {#each s.blocks as b, i (b.id)}
           {@const ct = clockTheme(s.palette, s.dark)}
