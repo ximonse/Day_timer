@@ -106,9 +106,9 @@
   }
   :global(.resize-handle-sb:hover), :global(.resize-handle-ag:hover) { background: var(--border); }
   :global(.main-header) { position: relative; width: 100%; }
-  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 4.5cqi, 72px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.top-time) { text-align: center; }
-  :global(.top-time .now) { font-size: 87px; font-weight: 500; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+  :global(.top-time .now) { font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; letter-spacing: -0.025em; line-height: 1; font-variant-numeric: tabular-nums; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
   :global(.clock-wrap) { position: relative; }
   :global(svg.clock) { display: block; user-select: none; touch-action: none; overflow: visible; width: min(85vh, 50vw); height: min(85vh, 50vw); }
@@ -199,7 +199,7 @@
     position: absolute; bottom: 0; left: 0; width: 50%; height: 50%;
     cursor: ns-resize; touch-action: none; z-index: 2;
   }
-  :global(.agenda-time) { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; flex-shrink: 0; }
+  :global(.agenda-time) { position: absolute; top: 3px; left: 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; pointer-events: none; }
   :global(.agenda-name) { flex: 1; width: 100%; font-size: 30px; font-weight: 500; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; }
   :global(.agenda-dur) { font-size: 12px; color: var(--muted); flex-shrink: 0; }
   :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
@@ -370,7 +370,6 @@
     :global(.sidebar) { width: 200px; }
     :global(.agenda) { width: 200px; }
     :global(.controls) { width: min(300px, 100%); }
-    :global(.top-time .now) { font-size: 60px; }
     :global(svg.clock) { width: min(80vh, 45vw); height: min(80vh, 45vw); }
   }
 
