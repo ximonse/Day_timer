@@ -603,6 +603,7 @@
       ...d,
       flows: d.flows.map((f, fi) => fi !== flowIdx ? f : {
         ...f,
+        title: s.dayTitle,
         startMin: s.startMin,
         minutes: s.blocks.map(b => b.minutes),
         parts: s.blocks.map(b => b.title),
@@ -1629,7 +1630,7 @@ Format:
           oninput={(e) => { titleDraftValue = (e.target as HTMLInputElement).value; }}
           onblur={(e) => {
             const v = (e.target as HTMLInputElement).value.trim();
-            if (v !== s.dayTitle) { s.dayTitle = v; appState.persist(); }
+            if (v !== s.dayTitle) { s.dayTitle = v; syncTimerToAgenda(); appState.persist(); }
             titleDraftValue = '';
           }}
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
