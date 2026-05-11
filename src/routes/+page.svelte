@@ -36,6 +36,7 @@
   let viewToken = $state('');
   let agendaInputOpen = $state(true);
   let savedAgendaMsg = $state('');
+  let savedFlowMsg = $state('');
   let copyAgendaPromptText = $state('AI-prompt');
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let activeAgendaFlow = $state<{ dayIdx: number; flowIdx: number } | null>(null);
@@ -695,6 +696,9 @@
     else { s.flows.push(data); }
     flowsOpen = true;
     appState.persist();
+    savedFlowMsg = 'Sparat ✓';
+    setTimeout(() => { savedFlowMsg = ''; }, 2000);
+    if (loggedInUser) syncSave();
   }
 
   function addFlowToAgendaToday(f: Flow) {
@@ -737,6 +741,7 @@
   function loadFlow(id: string) {
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
+    f.lastUsed = Date.now();
     s.dayTitle = f.title;
     s.blocks = f.parts.map((title, i) => ({
       id: Math.random().toString(36).slice(2, 9),
@@ -749,6 +754,7 @@
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback(); renderEndControl();
     addFlowToAgendaToday(f);
+    appState.persist();
   }
 
   function deleteFlow(id: string) {
@@ -775,7 +781,18 @@
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      s.flows = data.flows || []; appState.persist(); showSyncStatus('Flöden laddade ✓');
+      // Merge flows: cloud wins for same ID, keep local-only flows
+      const cloudFlows: Flow[] = data.flows || [];
+      const cloudIds = new Set(cloudFlows.map((f: Flow) => f.id));
+      const localOnly = (s.flows || []).filter(f => !cloudIds.has(f.id));
+      s.flows = [...cloudFlows, ...localOnly];
+      // Restore agenda from cloud if it has content
+      if (data.agendaText) {
+        s.agendaText = data.agendaText;
+        s.agendaDate = data.agendaDate || '';
+      }
+      appState.persist();
+      showSyncStatus('Laddat från moln ✓');
     } catch { showSyncStatus('Kunde inte ladda', true); }
   }
 
@@ -789,7 +806,11 @@
           'Content-Type': 'application/json',
           'x-sync-token': token
         },
-        body: JSON.stringify({ flows: s.flows || [] }),
+        body: JSON.stringify({
+          flows: s.flows || [],
+          agendaText: s.agendaText || '',
+          agendaDate: s.agendaDate || '',
+        }),
       });
       if (!res.ok) throw new Error();
       showSyncStatus('Sparat till moln ✓');
@@ -913,6 +934,7 @@
 
   function saveAgenda() {
     appState.persist();
+
     if (agendaDays && agendaItems.length > 0) {
       const now = nowMinutes();
       const active = agendaItems.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
@@ -922,6 +944,9 @@
         activeAgendaFlow = null;
       }
     }
+
+    if (loggedInUser) syncSave();
+
     savedAgendaMsg = 'Sparat ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
@@ -1587,14 +1612,20 @@ Format:
         <div class="feedback" bind:this={timeFeedback}></div>
 
         <div class="flows">
-          <button class="quickstart" onclick={saveFlow}><span class="ico">💾︎</span> Spara flöde</button>
-          {#if s.flows.length > 0}
+          <label>Mallar</label>
+          <button class="quickstart" onclick={saveFlow}
+            title="Sparar nuvarande schema som en återanvändbar mall">
+            <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
+          </button>
+          {#if s.flows.length === 0}
+            <p class="flows-hint">Inga mallar sparade. Klicka ovan för att spara det aktiva schemat.</p>
+          {:else}
             <button class="flows-toggle" onclick={() => flowsOpen = !flowsOpen}>
-              Sparade flöden {flowsOpen ? '▾' : '▸'}
+              Sparade mallar {flowsOpen ? '▾' : '▸'}
             </button>
             {#if flowsOpen}
               <div class="flow-list">
-                {#each s.flows as f (f.id)}
+                {#each [...s.flows].sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0)) as f (f.id)}
                   <div class="flow-item">
                     <button class="flow-name" onclick={() => loadFlow(f.id)}>{f.title || '(utan rubrik)'}</button>
                     <button class="flow-del" onclick={() => deleteFlow(f.id)}><span class="ico">🗑︎</span></button>
@@ -1607,6 +1638,7 @@ Format:
 
         <div class="login-form">
           {#if loggedInUser}
+            <label>Synkronisering</label>
             <div class="logged-in-row">
               <span class="username">👤 {loggedInUser}</span>
               <button class="logout-btn" onclick={logout}>Logga ut</button>
@@ -1694,8 +1726,9 @@ Format:
           oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
         ></textarea>
         <div class="agenda-save-row">
-          <button class="agenda-save-btn" onclick={saveAgenda}>
-            {savedAgendaMsg || '💾 Spara dagplan'}
+          <button class="agenda-save-btn" onclick={saveAgenda}
+            title="Sparar dagplanen och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
+            {savedAgendaMsg || '📅 Spara dagplan'}
           </button>
           <button class="agenda-save-btn" onclick={() => {
             navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
