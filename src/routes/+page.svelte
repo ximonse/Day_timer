@@ -51,6 +51,7 @@
   let editingBlockField = $state<'name' | 'min' | null>(null);
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
+  let agendaDraft = $state('');
 
 
   let nowMinLive = $state(nowMinutes());
@@ -128,7 +129,9 @@
   }
 
   const agendaDays = $derived.by<AgendaDay[] | null>(() => {
-    const txt = activeAgendaText();
+    const stored = activeAgendaText();
+    const draft = agendaDraft.trim();
+    const txt = draft ? mergeAgendaDays(stored, draft) : stored;
     return txt.trim() ? parseAgenda(txt) : null;
   });
 
@@ -992,6 +995,10 @@
   }
 
   function saveAgenda() {
+    if (agendaDraft.trim()) {
+      setActiveAgendaText(mergeAgendaDays(activeAgendaText(), agendaDraft));
+      agendaDraft = '';
+    }
     appState.persist();
 
     if (agendaDays && agendaItems.length > 0) {
@@ -1413,6 +1420,7 @@ Format:
       if (e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'S' || e.key === 's')) {
         e.preventDefault();
         if (!isViewMode) {
+          agendaDraft = '';
           s.agendaView = s.agendaView === 'school' ? 'private' : 'school';
           appState.persist();
         }
@@ -1657,7 +1665,7 @@ Format:
         <button class="pill" class:on={s.showExtraInfo} onclick={() => { s.showExtraInfo = !s.showExtraInfo; appState.persist(); }}>Info-ruta i sidopanel <span>•</span></button>
         <button class="pill" class:on={s.showSegLabels} onclick={() => { s.showSegLabels = !s.showSegLabels; appState.persist(); }}>Visa rubriker <span>•</span></button>
         {#if !isViewMode}
-          <button class="pill" class:on={s.agendaView === 'private'} onclick={() => { s.agendaView = s.agendaView === 'school' ? 'private' : 'school'; appState.persist(); }}>Privat kalender <span>•</span></button>
+          <button class="pill" class:on={s.agendaView === 'private'} onclick={() => { agendaDraft = ''; s.agendaView = s.agendaView === 'school' ? 'private' : 'school'; appState.persist(); }}>Privat kalender <span>•</span></button>
         {/if}
       </div>
     </div>
@@ -1873,16 +1881,15 @@ Format:
         <textarea
           class="agenda-input"
           placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
-          value={activeAgendaText()}
-          oninput={(e) => { setActiveAgendaText((e.target as HTMLTextAreaElement).value); appState.persist(); }}
+          value={agendaDraft}
+          oninput={(e) => { agendaDraft = (e.target as HTMLTextAreaElement).value; }}
           onpaste={(e) => {
             const pasted = e.clipboardData?.getData('text') ?? '';
-            const merged = mergeAgendaDays(activeAgendaText(), pasted);
+            const merged = mergeAgendaDays(agendaDraft, pasted);
             if (merged !== pasted) {
               e.preventDefault();
-              setActiveAgendaText(merged);
+              agendaDraft = merged;
               (e.target as HTMLTextAreaElement).value = merged;
-              appState.persist();
             }
           }}
         ></textarea>
