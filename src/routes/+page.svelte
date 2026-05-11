@@ -115,20 +115,12 @@
 
   const sectorColors = $derived(clockTheme(s.palette, s.dark).colors);
 
-  function activeAgendaText(): string {
-    return s.agendaView === 'school' ? s.agendaText : s.agendaText2;
-  }
-  function activeAgendaDate(): string {
-    return s.agendaView === 'school' ? s.agendaDate : s.agendaDate2;
-  }
-  function setActiveAgendaText(v: string) {
-    if (s.agendaView === 'school') s.agendaText = v;
-    else s.agendaText2 = v;
-  }
-  function setActiveAgendaDate(v: string) {
-    if (s.agendaView === 'school') s.agendaDate = v;
-    else s.agendaDate2 = v;
-  }
+  function schoolPrimary() { return s.agendaView === 'school' || s.agendaView === 'school+private'; }
+  function activeAgendaText(): string { return schoolPrimary() ? s.agendaText : s.agendaText2; }
+  function activeAgendaDate(): string { return schoolPrimary() ? s.agendaDate : s.agendaDate2; }
+  function setActiveAgendaText(v: string) { if (schoolPrimary()) s.agendaText = v; else s.agendaText2 = v; }
+  function setActiveAgendaDate(v: string) { if (schoolPrimary()) s.agendaDate = v; else s.agendaDate2 = v; }
+  function hasOverlay() { return s.agendaView === 'school+private' || s.agendaView === 'private+school'; }
 
   const agendaDays = $derived.by<AgendaDay[] | null>(() => {
     const stored = activeAgendaText();
@@ -151,7 +143,8 @@
   });
 
   const overlayDays = $derived.by<AgendaDay[] | null>(() => {
-    const otherText = s.agendaView === 'school' ? s.agendaText2 : s.agendaText;
+    if (!hasOverlay()) return null;
+    const otherText = schoolPrimary() ? s.agendaText2 : s.agendaText;
     return otherText.trim() ? parseAgenda(otherText) : null;
   });
 
@@ -761,7 +754,7 @@
 
   function addFlowToAgendaToday(f: Flow) {
     // Always add flows to school calendar
-    if (s.agendaView !== 'school') s.agendaView = 'school';
+    if (!schoolPrimary()) s.agendaView = 'school';
     const today = new Date().toISOString().slice(0, 10);
     const flowToAdd: Flow = { ...f, id: uid(), startMin: s.startMin };
     let days: AgendaDay[] = agendaDays
@@ -1424,8 +1417,9 @@ Format:
       if (e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'S' || e.key === 's')) {
         e.preventDefault();
         if (!isViewMode) {
+          const order = ['school', 'school+private', 'private', 'private+school'] as const;
           agendaDraft = '';
-          s.agendaView = s.agendaView === 'school' ? 'private' : 'school';
+          s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
           appState.persist();
         }
       }
@@ -1687,7 +1681,12 @@ Format:
         <button class="pill" class:on={s.showExtraInfo} onclick={() => { s.showExtraInfo = !s.showExtraInfo; appState.persist(); }}>Info-ruta i sidopanel <span>•</span></button>
         <button class="pill" class:on={s.showSegLabels} onclick={() => { s.showSegLabels = !s.showSegLabels; appState.persist(); }}>Visa rubriker <span>•</span></button>
         {#if !isViewMode}
-          <button class="pill" class:on={s.agendaView === 'private'} onclick={() => { agendaDraft = ''; s.agendaView = s.agendaView === 'school' ? 'private' : 'school'; appState.persist(); }}>Privat kalender <span>•</span></button>
+          <button class="pill" class:on={s.agendaView !== 'school'} onclick={() => {
+            const order = ['school', 'school+private', 'private', 'private+school'] as const;
+            agendaDraft = '';
+            s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
+            appState.persist();
+          }}>{{ school: 'Jobb', 'school+private': 'Jobb + fritid', private: 'Fritid', 'private+school': 'Fritid + jobb' }[s.agendaView]} <span>•</span></button>
         {/if}
       </div>
     </div>
@@ -1957,8 +1956,8 @@ Format:
       <div class="agenda-nav">
         <button class="agenda-nav-btn" onclick={prevDay} disabled={selectedDayIdx <= 0}>‹</button>
         <span class="agenda-date-label">{fmtAgendaDate(selectedDay?.date ?? null)}</span>
-        {#if s.agendaView === 'private' && !isViewMode}
-          <span class="agenda-mode-badge">Privat</span>
+        {#if !schoolPrimary() && !isViewMode}
+          <span class="agenda-mode-badge">Fritid</span>
         {/if}
         <button class="agenda-nav-btn" onclick={nextDay} disabled={selectedDayIdx >= (agendaDays.length - 1)}>›</button>
       </div>
@@ -1968,7 +1967,7 @@ Format:
       <p class="agenda-empty">Skriv in dagplanen ovan, eller spara flöden via ✎-panelen.</p>
     {:else}
       {@const windowStart = Math.floor(agendaItems[0].startMin / 60) * 60}
-      <div class="agenda-timeline" bind:this={timelineEl}>
+      <div class="agenda-timeline" class:has-overlay={overlayItems.length > 0} bind:this={timelineEl}>
         {#each agendaItems as item, ai (item.startMin + item.flow.title)}
           {@const itemColor = sectorColors[ai % sectorColors.length]}
           {@const isPast = nowMinLive >= item.startMin + item.totalMin}
