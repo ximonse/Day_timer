@@ -1550,8 +1550,20 @@ Format:
   function goToTimerNow() {
     const now = nowMinutes();
     if (agendaDays && selectedDay) {
-      let t = selectedDay.flows[0]?.startMin ?? now;
-      for (const flow of selectedDay.flows) {
+      const flows = selectedDay.flows;
+      // Derive day-start independently of s.startMin (which changes on manual loads).
+      // Strategy: find the first flow with an explicit time and work backwards.
+      let t: number;
+      const firstExplicitIdx = flows.findIndex(f => f.startMin !== undefined);
+      if (firstExplicitIdx >= 0) {
+        t = flows[firstExplicitIdx].startMin!;
+        for (let i = firstExplicitIdx - 1; i >= 0; i--) {
+          t -= flows[i].minutes.reduce((a, b) => a + b, 0);
+        }
+      } else {
+        t = s.startMin;
+      }
+      for (const flow of flows) {
         if (flow.startMin !== undefined) t = flow.startMin;
         const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
         if (now >= t && now < t + totalMin) {
