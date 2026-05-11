@@ -1590,8 +1590,38 @@ Format:
         t += totalMin;
       }
     }
-    s.startMin = Math.floor(now / 60) * 60;
+    // No block covers now — create one from the current timer state
+    const roundedNow = Math.round(now / 5) * 5;
+    const newFlow: Flow = {
+      id: uid(),
+      title: s.dayTitle || 'Session',
+      startMin: roundedNow,
+      parts: s.blocks.map(b => b.title),
+      minutes: s.blocks.map(b => b.minutes),
+      warnings: s.blocks.map(b => b.warning),
+      notes: s.blocks.map(b => b.note),
+      extraInfo: s.extraInfo,
+      lastUsed: Date.now(),
+    };
+    const today = new Date().toISOString().slice(0, 10);
+    const existingText = activeAgendaText();
+    const days = existingText.trim() ? parseAgenda(existingText) : [];
+    let todayEntry = days.find(d => d.date === today);
+    if (!todayEntry) {
+      todayEntry = { date: today, flows: [] };
+      const insertAt = days.findIndex(d => d.date !== null && d.date > today);
+      if (insertAt < 0) days.push(todayEntry);
+      else days.splice(insertAt, 0, todayEntry);
+    }
+    const insertFlowAt = todayEntry.flows.findIndex(
+      f => f.startMin !== undefined && f.startMin > roundedNow
+    );
+    if (insertFlowAt < 0) todayEntry.flows.push(newFlow);
+    else todayEntry.flows.splice(insertFlowAt, 0, newFlow);
+    setActiveAgendaText(serializeAgenda(days));
+    setActiveAgendaDate(today);
     lastAutoLoadKey = '';
+    loadAgendaFlow(newFlow, roundedNow);
     appState.persist();
     mobileTab = 'timer'; syncBodyClasses();
   }
