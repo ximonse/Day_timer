@@ -36,6 +36,7 @@
   let viewToken = $state('');
   let agendaInputOpen = $state(true);
   let savedAgendaMsg = $state('');
+  let savedFlowMsg = $state('');
   let copyAgendaPromptText = $state('AI-prompt');
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let activeAgendaFlow = $state<{ dayIdx: number; flowIdx: number } | null>(null);
@@ -695,6 +696,9 @@
     else { s.flows.push(data); }
     flowsOpen = true;
     appState.persist();
+    savedFlowMsg = 'Sparat ✓';
+    setTimeout(() => { savedFlowMsg = ''; }, 2000);
+    if (loggedInUser) syncSave();
   }
 
   function addFlowToAgendaToday(f: Flow) {
@@ -775,7 +779,18 @@
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      s.flows = data.flows || []; appState.persist(); showSyncStatus('Flöden laddade ✓');
+      // Merge flows: cloud wins for same ID, keep local-only flows
+      const cloudFlows: Flow[] = data.flows || [];
+      const cloudIds = new Set(cloudFlows.map((f: Flow) => f.id));
+      const localOnly = (s.flows || []).filter(f => !cloudIds.has(f.id));
+      s.flows = [...cloudFlows, ...localOnly];
+      // Restore agenda from cloud if it has content
+      if (data.agendaText) {
+        s.agendaText = data.agendaText;
+        s.agendaDate = data.agendaDate || '';
+      }
+      appState.persist();
+      showSyncStatus('Laddat från moln ✓');
     } catch { showSyncStatus('Kunde inte ladda', true); }
   }
 
@@ -789,7 +804,11 @@
           'Content-Type': 'application/json',
           'x-sync-token': token
         },
-        body: JSON.stringify({ flows: s.flows || [] }),
+        body: JSON.stringify({
+          flows: s.flows || [],
+          agendaText: s.agendaText || '',
+          agendaDate: s.agendaDate || '',
+        }),
       });
       if (!res.ok) throw new Error();
       showSyncStatus('Sparat till moln ✓');
@@ -912,7 +931,31 @@
   }
 
   function saveAgenda() {
+    // Extract all sessions from the agenda text and upsert them into s.flows
+    if (agendaDays) {
+      if (!s.flows) s.flows = [];
+      for (const day of agendaDays) {
+        for (const flow of day.flows) {
+          const title = flow.title.trim();
+          if (!title) continue;
+          const existing = s.flows.find(f => f.title === title);
+          const flowData = {
+            id: existing ? existing.id : 'f-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+            title,
+            parts: [...flow.parts],
+            minutes: [...flow.minutes],
+            warnings: [...flow.warnings],
+            notes: [...flow.notes],
+            extraInfo: flow.extraInfo || '',
+          };
+          if (existing) { Object.assign(existing, flowData); }
+          else { s.flows.push(flowData); }
+        }
+      }
+    }
+
     appState.persist();
+
     if (agendaDays && agendaItems.length > 0) {
       const now = nowMinutes();
       const active = agendaItems.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
@@ -922,6 +965,9 @@
         activeAgendaFlow = null;
       }
     }
+
+    if (loggedInUser) syncSave();
+
     savedAgendaMsg = 'Sparat ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
@@ -1587,7 +1633,7 @@ Format:
         <div class="feedback" bind:this={timeFeedback}></div>
 
         <div class="flows">
-          <button class="quickstart" onclick={saveFlow}><span class="ico">💾︎</span> Spara flöde</button>
+          <button class="quickstart" onclick={saveFlow}><span class="ico">💾︎</span> {savedFlowMsg || 'Spara flöde'}</button>
           {#if s.flows.length > 0}
             <button class="flows-toggle" onclick={() => flowsOpen = !flowsOpen}>
               Sparade flöden {flowsOpen ? '▾' : '▸'}
