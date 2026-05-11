@@ -207,7 +207,10 @@
   :global(.agenda-block:hover) { background: var(--pill); }
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
-  :global(.agenda-block.ghost) { opacity: .22; pointer-events: none; border-left-style: dashed; }
+  :global(.agenda-timeline.has-overlay .agenda-block:not(.ghost)) { right: 37%; }
+  :global(.agenda-block.ghost) { left: 65%; right: 0; border-left-width: 8px; opacity: .55; pointer-events: none; }
+  :global(.agenda-block.ghost .agenda-name) { font-size: 14px; font-weight: 500; }
+  :global(.agenda-block.ghost .agenda-time) { font-size: 10px; }
   :global(.agenda-mode-badge) {
     font-size: 10px; font-weight: 600; letter-spacing: .04em;
     padding: 1px 6px; border-radius: 8px;
