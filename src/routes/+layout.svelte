@@ -92,8 +92,21 @@
   :global(.seglist .row.active) { background: var(--pill); font-weight: 500; }
   :global(.seglist .row.past) { opacity: .45; }
   :global(.seglist .dot) { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
-  :global(.seglist .name) { flex: 1; overflow: hidden; overflow-wrap: break-word; white-space: normal; }
-  :global(.seglist .min) { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; }
+  :global(.seglist .name) { flex: 1; overflow: hidden; overflow-wrap: break-word; white-space: normal; cursor: text; }
+  :global(.seglist .min) { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; cursor: text; }
+  :global(.seglist .inline-edit) {
+    background: transparent; border: none; border-bottom: 1px solid var(--muted);
+    color: var(--fg); font: inherit; padding: 0; outline: none; min-width: 0;
+  }
+  :global(.seglist .name-inp) { flex: 1; font-size: inherit; font-weight: inherit; }
+  :global(.seglist .min-inp) { width: 5ch; text-align: right; font-size: 20px; font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 500; flex-shrink: 0; margin-top: 4px; }
+  :global(.seg-add-btn) {
+    display: block; width: 100%; margin-top: 4px; padding: 6px 10px;
+    background: none; border: 1px dashed var(--border); border-radius: 8px;
+    color: var(--muted); font-size: 13px; cursor: pointer; text-align: center;
+    transition: opacity .12s; opacity: .38;
+  }
+  :global(.seg-add-btn:hover) { opacity: .8; }
   :global(.seglist .note) { color: var(--muted); font-size: 33px; line-height: 1.2; padding: 0 12px 8px 50px; white-space: pre-wrap; }
   :global(.seglist .infobox) { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: #ffffff; color: #1a1410; border: 1px solid #b8b0a4; font-size: 26px; line-height: 1.35; white-space: pre-wrap; font-style: italic; }
   :global(.dark .seglist .infobox) { background: #ececec; color: #000000; border: none; }
@@ -191,6 +204,20 @@
   :global(.agenda-block:hover) { background: var(--pill); }
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
+  :global(.agenda-block.ghost) { opacity: .22; pointer-events: none; border-left-style: dashed; }
+  :global(.agenda-mode-badge) {
+    font-size: 10px; font-weight: 600; letter-spacing: .04em;
+    padding: 1px 6px; border-radius: 8px;
+    background: var(--accent); color: var(--bg); opacity: .75;
+  }
+  :global(.agenda-del-btn) {
+    position: absolute; top: 3px; right: 4px; z-index: 3;
+    background: none; border: none; cursor: pointer; padding: 2px 4px;
+    font-size: 13px; line-height: 1; color: var(--fg);
+    opacity: 0; transition: opacity .15s;
+  }
+  :global(.agenda-block:hover .agenda-del-btn) { opacity: .55; }
+  :global(.agenda-del-btn:hover) { opacity: 1 !important; }
   :global(.agenda-drag-top) {
     position: absolute; top: 0; left: 0; width: 50%; height: 50%;
     cursor: ns-resize; touch-action: none; z-index: 2;

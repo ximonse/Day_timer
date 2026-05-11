@@ -17,6 +17,12 @@
     return { destroy() { document.removeEventListener('click', handle, true); } };
   }
 
+  function focusOnMount(node: HTMLInputElement) {
+    node.focus();
+    node.select();
+    return {};
+  }
+
   let svgEl = $state<SVGSVGElement>(null!);
   let sidebarEl = $state<HTMLElement>(null!);
   let flashEl = $state<HTMLElement>(null!);
@@ -41,6 +47,8 @@
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let activeAgendaFlow = $state<{ dayIdx: number; flowIdx: number } | null>(null);
   let agendaDragMoved = false;
+  let editingBlockId = $state<string | null>(null);
+  let editingBlockField = $state<'name' | 'min' | null>(null);
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
 
@@ -104,20 +112,42 @@
 
   const sectorColors = $derived(clockTheme(s.palette, s.dark).colors);
 
-  const agendaDays = $derived.by<AgendaDay[] | null>(() =>
-    s.agendaText.trim() ? parseAgenda(s.agendaText) : null
-  );
+  function activeAgendaText(): string {
+    return s.agendaView === 'school' ? s.agendaText : s.agendaText2;
+  }
+  function activeAgendaDate(): string {
+    return s.agendaView === 'school' ? s.agendaDate : s.agendaDate2;
+  }
+  function setActiveAgendaText(v: string) {
+    if (s.agendaView === 'school') s.agendaText = v;
+    else s.agendaText2 = v;
+  }
+  function setActiveAgendaDate(v: string) {
+    if (s.agendaView === 'school') s.agendaDate = v;
+    else s.agendaDate2 = v;
+  }
+
+  const agendaDays = $derived.by<AgendaDay[] | null>(() => {
+    const txt = activeAgendaText();
+    return txt.trim() ? parseAgenda(txt) : null;
+  });
 
   const selectedDay = $derived.by<AgendaDay | null>(() => {
     if (!agendaDays?.length) return null;
-    if (s.agendaDate) {
-      const hit = agendaDays.find(d => d.date === s.agendaDate);
+    const date = activeAgendaDate();
+    if (date) {
+      const hit = agendaDays.find(d => d.date === date);
       if (hit) return hit;
     }
     const today = new Date().toISOString().slice(0, 10);
     return agendaDays.find(d => d.date === today)
       ?? agendaDays.find(d => d.date === null)
       ?? agendaDays[0];
+  });
+
+  const overlayDays = $derived.by<AgendaDay[] | null>(() => {
+    const otherText = s.agendaView === 'school' ? s.agendaText2 : s.agendaText;
+    return otherText.trim() ? parseAgenda(otherText) : null;
   });
 
   const selectedDayIdx = $derived.by(() =>
@@ -137,6 +167,27 @@
     });
   });
 
+  const overlayItems = $derived.by(() => {
+    if (!overlayDays) return [];
+    const activeDate = activeAgendaDate();
+    const today = new Date().toISOString().slice(0, 10);
+    const target = activeDate || today;
+    const day = overlayDays.find(d => d.date === target)
+      ?? overlayDays.find(d => d.date === today)
+      ?? overlayDays.find(d => d.date === null)
+      ?? overlayDays[0]
+      ?? null;
+    if (!day) return [];
+    let t = s.startMin;
+    return day.flows.map(flow => {
+      if (flow.startMin !== undefined) t = flow.startMin;
+      const startMin = t;
+      const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
+      t += totalMin;
+      return { flow, startMin, totalMin };
+    });
+  });
+
   function fmtAgendaDate(iso: string | null): string {
     if (!iso) return 'Odaterat';
     const [y, m, d] = iso.split('-').map(Number);
@@ -148,12 +199,12 @@
 
   function prevDay() {
     if (!agendaDays || selectedDayIdx <= 0) return;
-    s.agendaDate = agendaDays[selectedDayIdx - 1].date ?? '';
+    setActiveAgendaDate(agendaDays[selectedDayIdx - 1].date ?? '');
     appState.persist();
   }
   function nextDay() {
     if (!agendaDays || selectedDayIdx >= agendaDays.length - 1) return;
-    s.agendaDate = agendaDays[selectedDayIdx + 1].date ?? '';
+    setActiveAgendaDate(agendaDays[selectedDayIdx + 1].date ?? '');
     appState.persist();
   }
 
@@ -553,7 +604,7 @@
         warnings: s.blocks.map(b => b.warning),
       }),
     });
-    s.agendaText = serializeAgenda(newDays);
+    setActiveAgendaText(serializeAgenda(newDays));
   }
 
   function endDrag() {
@@ -702,6 +753,8 @@
   }
 
   function addFlowToAgendaToday(f: Flow) {
+    // Always add flows to school calendar
+    if (s.agendaView !== 'school') s.agendaView = 'school';
     const today = new Date().toISOString().slice(0, 10);
     const flowToAdd: Flow = { ...f, id: uid(), startMin: s.startMin };
     let days: AgendaDay[] = agendaDays
@@ -732,8 +785,8 @@
     }
 
     days[dayIdx] = { ...days[dayIdx], flows: dayFlows };
-    s.agendaText = serializeAgenda(days);
-    s.agendaDate = today;
+    setActiveAgendaText(serializeAgenda(days));
+    setActiveAgendaDate(today);
     activeAgendaFlow = { dayIdx, flowIdx };
     appState.persist();
   }
@@ -791,6 +844,10 @@
         s.agendaText = data.agendaText;
         s.agendaDate = data.agendaDate || '';
       }
+      if (data.agendaText2) {
+        s.agendaText2 = data.agendaText2;
+        s.agendaDate2 = data.agendaDate2 || '';
+      }
       appState.persist();
       showSyncStatus('Laddat från moln ✓');
     } catch { showSyncStatus('Kunde inte ladda', true); }
@@ -810,6 +867,8 @@
           flows: s.flows || [],
           agendaText: s.agendaText || '',
           agendaDate: s.agendaDate || '',
+          agendaText2: s.agendaText2 || '',
+          agendaDate2: s.agendaDate2 || '',
         }),
       });
       if (!res.ok) throw new Error();
@@ -951,6 +1010,71 @@
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
 
+  // Merge pasted agenda text with existing: new date-sections replace matching dates, others are kept
+  function mergeAgendaDays(existing: string, incoming: string): string {
+    const newDays = parseAgenda(incoming);
+    if (newDays.length === 0) return incoming;
+    const hasDates = newDays.some(d => d.date !== null);
+    if (!existing.trim()) return incoming;
+    // If pasted text has no dates, tag it with today so it doesn't wipe existing dated entries
+    if (!hasDates) {
+      const t = new Date().toISOString().slice(0, 10);
+      const [y, m, d] = t.split('-');
+      return mergeAgendaDays(existing, `@${y.slice(2)}${m}${d}\n${incoming}`);
+    }
+    const baseDays = parseAgenda(existing);
+    const merged = [...baseDays];
+    for (const day of newDays) {
+      const idx = merged.findIndex(d => d.date === day.date);
+      if (idx >= 0) {
+        merged[idx] = day;
+      } else {
+        const insertAt = merged.findIndex(d => d.date !== null && day.date !== null && d.date > day.date);
+        if (insertAt < 0) merged.push(day);
+        else merged.splice(insertAt, 0, day);
+      }
+    }
+    return serializeAgenda(merged);
+  }
+
+  function deleteAgendaItem(flowIdx: number) {
+    if (!agendaDays || selectedDayIdx < 0) return;
+    const days = agendaDays.map((d, i) =>
+      i === selectedDayIdx
+        ? { ...d, flows: d.flows.filter((_, j) => j !== flowIdx) }
+        : d
+    );
+    setActiveAgendaText(serializeAgenda(days));
+    appState.persist();
+  }
+
+  function startBlockEdit(id: string, field: 'name' | 'min') {
+    if (isViewMode) return;
+    editingBlockId = id;
+    editingBlockField = field;
+  }
+
+  function commitBlockEdit() {
+    editingBlockId = null;
+    editingBlockField = null;
+    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
+    updateTimeFeedback();
+    renderEndControl();
+    appState.persist();
+  }
+
+  function addBlock() {
+    if (isViewMode) return;
+    const newId = uid();
+    s.blocks = [...s.blocks, { id: newId, title: 'Ny aktivitet', minutes: 10, note: '', warning: false, pinned: false }];
+    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
+    updateTimeFeedback();
+    renderEndControl();
+    appState.persist();
+    editingBlockId = newId;
+    editingBlockField = 'name';
+  }
+
   function aiPayload(extra: Record<string, unknown>) {
     return {
       provider: aiConfig.provider,
@@ -994,7 +1118,7 @@
       });
       const data = await res.json();
       if (data.error) { agendaAiError = data.error; return; }
-      s.agendaText = data.text;
+      setActiveAgendaText(data.text);
       appState.persist();
       agendaAiOpen = false;
       agendaAiInput = '';
@@ -1060,7 +1184,7 @@
         }),
       };
     });
-    s.agendaText = serializeAgenda(newDays);
+    setActiveAgendaText(serializeAgenda(newDays));
   }
 
   function endAgendaDrag() {
@@ -1286,6 +1410,13 @@ Format:
         e.preventDefault();
         if (confirm('Återställ timern? All sparad data raderas.')) appState.reset();
       }
+      if (e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'S' || e.key === 's')) {
+        e.preventDefault();
+        if (!isViewMode) {
+          s.agendaView = s.agendaView === 'school' ? 'private' : 'school';
+          appState.persist();
+        }
+      }
     }
     window.addEventListener('keydown', handleKeydown);
 
@@ -1331,7 +1462,7 @@ Format:
   $effect(() => {
     const _ = JSON.stringify(s.blocks) + s.palette + s.dark + s.hollow + s.textOutside +
       s.showMin + s.showFive + s.showQuarter + s.showSegLabels + s.showCenterEnd + s.segMinutesMode + s.clockSpan +
-      s.agendaText + s.agendaDate;
+      s.agendaText + s.agendaDate + s.agendaText2 + s.agendaDate2 + s.agendaView;
     agendaItems; // track agenda for 12h mode
     renderClock();
   });
@@ -1430,17 +1561,34 @@ Format:
         {@const isPast = elapsed >= segEnd}
         <div class="row" class:active={isActive} class:past={isPast}>
           <span class="dot" style="background:{ct.colors[i % 8]}"></span>
-          <span class="name">{b.title}</span>
-          {#if s.segMinutesMode === 'planned'}
-            <span class="min">{b.minutes}m</span>
+          {#if editingBlockId === b.id && editingBlockField === 'name'}
+            <input class="inline-edit name-inp" use:focusOnMount
+              value={b.title}
+              onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v) b.title = v; commitBlockEdit(); }}
+              onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+              onclick={(e) => e.stopPropagation()} />
+          {:else}
+            <span class="name" onclick={() => startBlockEdit(b.id, 'name')}>{b.title}</span>
+          {/if}
+          {#if editingBlockId === b.id && editingBlockField === 'min'}
+            <input class="inline-edit min-inp" type="number" min="1" use:focusOnMount
+              value={b.minutes}
+              onblur={(e) => { const v = parseInt((e.target as HTMLInputElement).value); if (v > 0) { b.minutes = v; b.pinned = true; } commitBlockEdit(); }}
+              onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+              onclick={(e) => e.stopPropagation()} />
+          {:else if s.segMinutesMode === 'planned'}
+            <span class="min" onclick={() => startBlockEdit(b.id, 'min')}>{b.minutes}m</span>
           {:else if s.segMinutesMode === 'remaining'}
-            <span class="min">{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsed)) : b.minutes}m kvar</span>
+            <span class="min" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsed)) : b.minutes}m kvar</span>
           {/if}
         </div>
         {#if b.note && s.showSegNotes}
           <div class="note">{b.note}</div>
         {/if}
       {/each}
+      {#if !isViewMode}
+        <button class="seg-add-btn" onclick={addBlock}>+</button>
+      {/if}
       {#if s.extraInfo && s.showExtraInfo}
         <div class="infobox">{s.extraInfo}</div>
       {/if}
@@ -1508,6 +1656,9 @@ Format:
         <button class="pill" class:on={s.showSegNotes} onclick={() => { s.showSegNotes = !s.showSegNotes; appState.persist(); }}>Underrubriker i sidopanel <span>•</span></button>
         <button class="pill" class:on={s.showExtraInfo} onclick={() => { s.showExtraInfo = !s.showExtraInfo; appState.persist(); }}>Info-ruta i sidopanel <span>•</span></button>
         <button class="pill" class:on={s.showSegLabels} onclick={() => { s.showSegLabels = !s.showSegLabels; appState.persist(); }}>Visa rubriker <span>•</span></button>
+        {#if !isViewMode}
+          <button class="pill" class:on={s.agendaView === 'private'} onclick={() => { s.agendaView = s.agendaView === 'school' ? 'private' : 'school'; appState.persist(); }}>Privat kalender <span>•</span></button>
+        {/if}
       </div>
     </div>
 
@@ -1722,8 +1873,18 @@ Format:
         <textarea
           class="agenda-input"
           placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
-          value={s.agendaText}
-          oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
+          value={activeAgendaText()}
+          oninput={(e) => { setActiveAgendaText((e.target as HTMLTextAreaElement).value); appState.persist(); }}
+          onpaste={(e) => {
+            const pasted = e.clipboardData?.getData('text') ?? '';
+            const merged = mergeAgendaDays(activeAgendaText(), pasted);
+            if (merged !== pasted) {
+              e.preventDefault();
+              setActiveAgendaText(merged);
+              (e.target as HTMLTextAreaElement).value = merged;
+              appState.persist();
+            }
+          }}
         ></textarea>
         <div class="agenda-save-row">
           <button class="agenda-save-btn" onclick={saveAgenda}
@@ -1767,6 +1928,9 @@ Format:
       <div class="agenda-nav">
         <button class="agenda-nav-btn" onclick={prevDay} disabled={selectedDayIdx <= 0}>‹</button>
         <span class="agenda-date-label">{fmtAgendaDate(selectedDay?.date ?? null)}</span>
+        {#if s.agendaView === 'private' && !isViewMode}
+          <span class="agenda-mode-badge">Privat</span>
+        {/if}
         <button class="agenda-nav-btn" onclick={nextDay} disabled={selectedDayIdx >= (agendaDays.length - 1)}>›</button>
       </div>
     {/if}
@@ -1789,10 +1953,20 @@ Format:
                onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}>
             <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
             <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
-            {#if item.fromText}
+            {#if item.fromText && !isViewMode}
+              <button class="agenda-del-btn" onclick={(e) => { e.stopPropagation(); deleteAgendaItem(ai); }} title="Ta bort block">🗑</button>
               <div class="agenda-drag-top" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
               <div class="agenda-drag-bottom" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
             {/if}
+          </div>
+        {/each}
+        {#each overlayItems as item (item.startMin + item.flow.title + '-overlay')}
+          {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
+          {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
+          <div class="agenda-block ghost"
+               style="top: {topPct}%; height: {heightPct}%; border-left-color: var(--muted)">
+            <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
+            <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
           </div>
         {/each}
       </div>
