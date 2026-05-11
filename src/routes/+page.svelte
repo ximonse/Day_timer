@@ -1448,6 +1448,10 @@ Format:
   });
 
   $effect(() => {
+    if (titleInput) titleInput.value = s.dayTitle || '';
+  });
+
+  $effect(() => {
     if (!shareToken) return;
     let id: ReturnType<typeof setInterval> | null = null;
 
@@ -1621,9 +1625,17 @@ Format:
       {#if !isViewMode && !locked}
         {#if editingTitle}
           <input class="lesson-title-input" use:focusOnMount
-            bind:value={titleDraftValue}
-            onblur={() => { const v = titleDraftValue.trim(); if (v) { s.dayTitle = v; if (titleInput) titleInput.value = v; appState.persist(); } editingTitle = false; }}
-            onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+            value={titleDraftValue}
+            oninput={(e) => { titleDraftValue = (e.target as HTMLInputElement).value; }}
+            onblur={(e) => {
+              const v = (e.target as HTMLInputElement).value.trim();
+              if (v) { s.dayTitle = v; appState.persist(); }
+              editingTitle = false;
+            }}
+            onkeydown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
+              if (e.key === 'Escape') { editingTitle = false; }
+            }}
           />
         {:else}
           <div class="lesson-title" class:empty={!s.dayTitle} onclick={() => { titleDraftValue = s.dayTitle; editingTitle = true; }} title="Klicka för att redigera rubrik">
