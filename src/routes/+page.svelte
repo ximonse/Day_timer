@@ -54,6 +54,7 @@
   let agendaDraft = $state('');
   let locked = $state(false);
   let editingTitle = $state(false);
+  let titleDraftValue = $state('');
 
 
   let nowMinLive = $state(nowMinutes());
@@ -1620,12 +1621,12 @@ Format:
       {#if !isViewMode && !locked}
         {#if editingTitle}
           <input class="lesson-title-input" use:focusOnMount
-            value={s.dayTitle}
-            onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v) { s.dayTitle = v; appState.persist(); } editingTitle = false; }}
+            bind:value={titleDraftValue}
+            onblur={() => { const v = titleDraftValue.trim(); if (v) { s.dayTitle = v; if (titleInput) titleInput.value = v; appState.persist(); } editingTitle = false; }}
             onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
           />
         {:else}
-          <div class="lesson-title" class:empty={!s.dayTitle} onclick={() => editingTitle = true} title="Klicka för att redigera rubrik">
+          <div class="lesson-title" class:empty={!s.dayTitle} onclick={() => { titleDraftValue = s.dayTitle; editingTitle = true; }} title="Klicka för att redigera rubrik">
             {s.dayTitle || 'Rubrik…'}
           </div>
         {/if}
