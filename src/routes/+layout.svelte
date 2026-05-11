@@ -103,10 +103,10 @@
   :global(.seg-add-btn) {
     display: block; width: 100%; margin-top: 4px; padding: 6px 10px;
     background: none; border: 1px dashed var(--border); border-radius: 8px;
-    color: var(--muted); font-size: 13px; cursor: pointer; text-align: left;
-    transition: border-color .12s, color .12s;
+    color: var(--muted); font-size: 13px; cursor: pointer; text-align: center;
+    transition: opacity .12s; opacity: .38;
   }
-  :global(.seg-add-btn:hover) { border-color: var(--accent); color: var(--accent); }
+  :global(.seg-add-btn:hover) { opacity: .8; }
   :global(.seglist .note) { color: var(--muted); font-size: 33px; line-height: 1.2; padding: 0 12px 8px 50px; white-space: pre-wrap; }
   :global(.seglist .infobox) { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: #ffffff; color: #1a1410; border: 1px solid #b8b0a4; font-size: 26px; line-height: 1.35; white-space: pre-wrap; font-style: italic; }
   :global(.dark .seglist .infobox) { background: #ececec; color: #000000; border: none; }
@@ -204,6 +204,12 @@
   :global(.agenda-block:hover) { background: var(--pill); }
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
+  :global(.agenda-block.ghost) { opacity: .22; pointer-events: none; border-left-style: dashed; }
+  :global(.agenda-mode-badge) {
+    font-size: 10px; font-weight: 600; letter-spacing: .04em;
+    padding: 1px 6px; border-radius: 8px;
+    background: var(--accent); color: var(--bg); opacity: .75;
+  }
   :global(.agenda-del-btn) {
     position: absolute; top: 3px; right: 4px; z-index: 3;
     background: none; border: none; cursor: pointer; padding: 2px 4px;
