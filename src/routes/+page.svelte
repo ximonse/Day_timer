@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { appState, uid, type Flow } from '$lib/state.svelte.js';
   import { PALETTES, PALETTE_COLORS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
@@ -54,6 +54,7 @@
   let agendaDraft = $state('');
   let locked = $state(false);
   let titleDraftValue = $state('');
+  let agendaDayStart = $state(s.startMin);
 
 
   let nowMinLive = $state(nowMinutes());
@@ -1446,6 +1447,21 @@ Format:
   });
 
   $effect(() => {
+    if (!selectedDay) return;
+    const flows = selectedDay.flows;
+    const firstExplicitIdx = flows.findIndex(f => f.startMin !== undefined);
+    if (firstExplicitIdx >= 0) {
+      let t = flows[firstExplicitIdx].startMin!;
+      for (let i = firstExplicitIdx - 1; i >= 0; i--) {
+        t -= flows[i].minutes.reduce((a, b) => a + b, 0);
+      }
+      agendaDayStart = t;
+    } else {
+      agendaDayStart = untrack(() => s.startMin);
+    }
+  });
+
+  $effect(() => {
     if (!shareToken) return;
     let id: ReturnType<typeof setInterval> | null = null;
 
@@ -1561,7 +1577,7 @@ Format:
           t -= flows[i].minutes.reduce((a, b) => a + b, 0);
         }
       } else {
-        t = s.startMin;
+        t = agendaDayStart;
       }
       for (const flow of flows) {
         if (flow.startMin !== undefined) t = flow.startMin;
@@ -1575,6 +1591,7 @@ Format:
       }
     }
     s.startMin = Math.floor(now / 60) * 60;
+    lastAutoLoadKey = '';
     appState.persist();
     mobileTab = 'timer'; syncBodyClasses();
   }
