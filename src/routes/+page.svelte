@@ -1549,9 +1549,18 @@ Format:
 
   function goToTimerNow() {
     const now = nowMinutes();
-    if (agendaDays) {
-      const active = agendaItems.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
-      if (active) { loadAgendaFlow(active.flow, active.startMin); mobileTab = 'timer'; syncBodyClasses(); return; }
+    if (agendaDays && selectedDay) {
+      let t = selectedDay.flows[0]?.startMin ?? now;
+      for (const flow of selectedDay.flows) {
+        if (flow.startMin !== undefined) t = flow.startMin;
+        const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
+        if (now >= t && now < t + totalMin) {
+          loadAgendaFlow(flow, t);
+          mobileTab = 'timer'; syncBodyClasses();
+          return;
+        }
+        t += totalMin;
+      }
     }
     s.startMin = Math.floor(now / 60) * 60;
     appState.persist();
