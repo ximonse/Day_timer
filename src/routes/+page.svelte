@@ -17,6 +17,12 @@
     return { destroy() { document.removeEventListener('click', handle, true); } };
   }
 
+  function focusOnMount(node: HTMLInputElement) {
+    node.focus();
+    node.select();
+    return {};
+  }
+
   let svgEl = $state<SVGSVGElement>(null!);
   let sidebarEl = $state<HTMLElement>(null!);
   let flashEl = $state<HTMLElement>(null!);
@@ -41,6 +47,8 @@
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let activeAgendaFlow = $state<{ dayIdx: number; flowIdx: number } | null>(null);
   let agendaDragMoved = false;
+  let editingBlockId = $state<string | null>(null);
+  let editingBlockField = $state<'name' | 'min' | null>(null);
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
 
@@ -951,6 +959,65 @@
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
 
+  // Merge pasted agenda text with existing: new date-sections replace matching dates, others are kept
+  function mergeAgendaDays(existing: string, incoming: string): string {
+    const newDays = parseAgenda(incoming);
+    if (newDays.length === 0) return incoming;
+    const hasDates = newDays.some(d => d.date !== null);
+    if (!hasDates || !existing.trim()) return incoming;
+    const baseDays = parseAgenda(existing);
+    const merged = [...baseDays];
+    for (const day of newDays) {
+      const idx = merged.findIndex(d => d.date === day.date);
+      if (idx >= 0) {
+        merged[idx] = day;
+      } else {
+        const insertAt = merged.findIndex(d => d.date !== null && day.date !== null && d.date > day.date);
+        if (insertAt < 0) merged.push(day);
+        else merged.splice(insertAt, 0, day);
+      }
+    }
+    return serializeAgenda(merged);
+  }
+
+  function deleteAgendaItem(flowIdx: number) {
+    if (!agendaDays || selectedDayIdx < 0) return;
+    const days = agendaDays.map((d, i) =>
+      i === selectedDayIdx
+        ? { ...d, flows: d.flows.filter((_, j) => j !== flowIdx) }
+        : d
+    );
+    s.agendaText = serializeAgenda(days);
+    appState.persist();
+  }
+
+  function startBlockEdit(id: string, field: 'name' | 'min') {
+    if (isViewMode) return;
+    editingBlockId = id;
+    editingBlockField = field;
+  }
+
+  function commitBlockEdit() {
+    editingBlockId = null;
+    editingBlockField = null;
+    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
+    updateTimeFeedback();
+    renderEndControl();
+    appState.persist();
+  }
+
+  function addBlock() {
+    if (isViewMode) return;
+    const newId = uid();
+    s.blocks = [...s.blocks, { id: newId, title: 'Ny aktivitet', minutes: 10, note: '', warning: false, pinned: false }];
+    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
+    updateTimeFeedback();
+    renderEndControl();
+    appState.persist();
+    editingBlockId = newId;
+    editingBlockField = 'name';
+  }
+
   function aiPayload(extra: Record<string, unknown>) {
     return {
       provider: aiConfig.provider,
@@ -1430,17 +1497,34 @@ Format:
         {@const isPast = elapsed >= segEnd}
         <div class="row" class:active={isActive} class:past={isPast}>
           <span class="dot" style="background:{ct.colors[i % 8]}"></span>
-          <span class="name">{b.title}</span>
-          {#if s.segMinutesMode === 'planned'}
-            <span class="min">{b.minutes}m</span>
+          {#if editingBlockId === b.id && editingBlockField === 'name'}
+            <input class="inline-edit name-inp" use:focusOnMount
+              value={b.title}
+              onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v) b.title = v; commitBlockEdit(); }}
+              onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+              onclick={(e) => e.stopPropagation()} />
+          {:else}
+            <span class="name" onclick={() => startBlockEdit(b.id, 'name')}>{b.title}</span>
+          {/if}
+          {#if editingBlockId === b.id && editingBlockField === 'min'}
+            <input class="inline-edit min-inp" type="number" min="1" use:focusOnMount
+              value={b.minutes}
+              onblur={(e) => { const v = parseInt((e.target as HTMLInputElement).value); if (v > 0) { b.minutes = v; b.pinned = true; } commitBlockEdit(); }}
+              onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+              onclick={(e) => e.stopPropagation()} />
+          {:else if s.segMinutesMode === 'planned'}
+            <span class="min" onclick={() => startBlockEdit(b.id, 'min')}>{b.minutes}m</span>
           {:else if s.segMinutesMode === 'remaining'}
-            <span class="min">{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsed)) : b.minutes}m kvar</span>
+            <span class="min" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsed)) : b.minutes}m kvar</span>
           {/if}
         </div>
         {#if b.note && s.showSegNotes}
           <div class="note">{b.note}</div>
         {/if}
       {/each}
+      {#if !isViewMode}
+        <button class="seg-add-btn" onclick={addBlock}>+ Lägg till</button>
+      {/if}
       {#if s.extraInfo && s.showExtraInfo}
         <div class="infobox">{s.extraInfo}</div>
       {/if}
@@ -1724,6 +1808,16 @@ Format:
           placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
           value={s.agendaText}
           oninput={(e) => { s.agendaText = (e.target as HTMLTextAreaElement).value; appState.persist(); }}
+          onpaste={(e) => {
+            const pasted = e.clipboardData?.getData('text') ?? '';
+            const merged = mergeAgendaDays(s.agendaText, pasted);
+            if (merged !== pasted) {
+              e.preventDefault();
+              s.agendaText = merged;
+              (e.target as HTMLTextAreaElement).value = merged;
+              appState.persist();
+            }
+          }}
         ></textarea>
         <div class="agenda-save-row">
           <button class="agenda-save-btn" onclick={saveAgenda}
@@ -1789,7 +1883,8 @@ Format:
                onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}>
             <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
             <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
-            {#if item.fromText}
+            {#if item.fromText && !isViewMode}
+              <button class="agenda-del-btn" onclick={(e) => { e.stopPropagation(); deleteAgendaItem(ai); }} title="Ta bort block">🗑</button>
               <div class="agenda-drag-top" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
               <div class="agenda-drag-bottom" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
             {/if}
