@@ -46,6 +46,9 @@ export interface AppState {
   agendaOpen: boolean;
   agendaText: string;
   agendaDate: string;
+  agendaText2: string;
+  agendaDate2: string;
+  agendaView: 'school' | 'private';
   showControls: boolean;
   flows: Flow[];
 }
@@ -80,6 +83,9 @@ function defaultState(): AppState {
     agendaOpen: false,
     agendaText: '',
     agendaDate: '',
+    agendaText2: '',
+    agendaDate2: '',
+    agendaView: 'school',
     showControls: true,
     flows: [],
   };
