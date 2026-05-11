@@ -119,7 +119,9 @@
   }
   :global(.resize-handle-sb:hover), :global(.resize-handle-ag:hover) { background: var(--border); }
   :global(.main-header) { position: relative; width: 100%; }
-  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
+  :global(.lesson-title.empty) { color: var(--muted); opacity: .35; cursor: text; }
+  :global(.lesson-title-input) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; width: 38%; background: transparent; border: none; border-bottom: 2px solid var(--accent); outline: none; font-family: inherit; padding: 0; }
   :global(.top-time) { text-align: center; }
   :global(.top-time .now) { font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; letter-spacing: -0.025em; line-height: 1; font-variant-numeric: tabular-nums; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
@@ -357,6 +359,19 @@
   :global(body.view-mode .resize-handle-ag) { pointer-events: none; }
   :global(body.view-mode .agenda-drag-top) { display: none; }
   :global(body.view-mode .agenda-drag-bottom) { display: none; }
+
+  /* ── Lås-läge ── */
+  :global(.lock-btn) { opacity: .18; font-size: 14px !important; }
+  :global(.lock-btn:hover) { opacity: .5; }
+  :global(.lock-btn.locked) { opacity: .55; }
+  :global(body.page-locked button:not(.lock-btn)) { pointer-events: none !important; }
+  :global(body.page-locked input) { pointer-events: none !important; user-select: none; }
+  :global(body.page-locked textarea) { pointer-events: none !important; user-select: none; }
+  :global(body.page-locked .resize-handle-sb) { pointer-events: none !important; }
+  :global(body.page-locked .resize-handle-ag) { pointer-events: none !important; }
+  :global(body.page-locked .agenda-drag-top) { pointer-events: none !important; }
+  :global(body.page-locked .agenda-drag-bottom) { pointer-events: none !important; }
+  :global(body.page-locked .lesson-title) { pointer-events: none !important; cursor: default; }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
   :global(.flash.on) { opacity: .35; }
