@@ -1410,7 +1410,7 @@ Format:
         e.preventDefault();
         if (confirm('Återställ timern? All sparad data raderas.')) appState.reset();
       }
-      if (e.ctrlKey && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+      if (e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'S' || e.key === 's')) {
         e.preventDefault();
         if (!isViewMode) {
           s.agendaView = s.agendaView === 'school' ? 'private' : 'school';
