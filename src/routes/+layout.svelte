@@ -85,7 +85,7 @@
   :global(.sidebar), :global(.main) { scrollbar-width: none; }
   :global(.sidebar::-webkit-scrollbar), :global(.main::-webkit-scrollbar), :global(.agenda::-webkit-scrollbar) { display: none; }
   :global(.sidebar) { width: 260px; min-width: 160px; max-width: 720px; background: var(--panel); border-right: 1px solid var(--border); padding: 20px 16px; position: relative; transition: margin-left .25s ease; overflow-y: auto; flex-shrink: 0; height: 100%; }
-  :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 8px; position: relative; overflow-y: auto; height: 100%; }
+  :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 8px; position: relative; overflow-y: auto; height: 100%; container-type: inline-size; }
   :global(body.sb-collapsed .sidebar) { margin-left: calc(-1 * var(--sb-w, 260px)); }
 :global(.seglist) { display: flex; flex-direction: column; gap: 4px; }
   :global(.seglist .row) { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 50px; font-weight: 400; line-height: 1.2; }
@@ -106,7 +106,7 @@
   }
   :global(.resize-handle-sb:hover), :global(.resize-handle-ag:hover) { background: var(--border); }
   :global(.main-header) { position: relative; width: 100%; }
-  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: 87px; font-weight: 500; line-height: 1; letter-spacing: -2px; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 4.5cqi, 72px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.top-time) { text-align: center; }
   :global(.top-time .now) { font-size: 87px; font-weight: 500; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
@@ -370,7 +370,6 @@
     :global(.sidebar) { width: 200px; }
     :global(.agenda) { width: 200px; }
     :global(.controls) { width: min(300px, 100%); }
-    :global(.lesson-title) { font-size: 60px; }
     :global(.top-time .now) { font-size: 60px; }
     :global(svg.clock) { width: min(80vh, 45vw); height: min(80vh, 45vw); }
   }
