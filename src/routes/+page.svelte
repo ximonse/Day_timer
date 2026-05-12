@@ -55,7 +55,24 @@
   let locked = $state(false);
   let titleDraftValue = $state('');
   let agendaDayStart = $state(s.startMin);
+  type SessionSource = 'free' | 'template' | 'agenda';
+  let currentSessionSource = $state<SessionSource>('free');
+  let currentSessionSourceName = $state('');
 
+  const sessionSourceCopy: Record<SessionSource, { label: string; hint: string }> = {
+    free: {
+      label: 'Fristående session',
+      hint: 'Ändringar sparas lokalt men uppdaterar ingen mall eller dagplan automatiskt.',
+    },
+    template: {
+      label: 'Från mall',
+      hint: 'Mallen påverkas inte när du redigerar. Välj “Spara som mall” om ändringarna ska bli en mall.',
+    },
+    agenda: {
+      label: 'Från dagplan',
+      hint: 'Ändringar här uppdaterar den länkade dagplanssessionen.',
+    },
+  };
 
   let nowMinLive = $state(nowMinutes());
   let lastAutoLoadKey = $state('');
@@ -728,6 +745,7 @@
     if (result.extraInfo) s.extraInfo = result.extraInfo;
     updateTimeFeedback();
     renderEndControl();
+    syncTimerToAgenda();
     appState.persist();
   }
 
@@ -753,7 +771,7 @@
     if (loggedInUser) syncSave();
   }
 
-  function addFlowToAgendaToday(f: Flow) {
+  function addFlowToAgendaToday(f: Flow, linkCurrentSession = true) {
     // Always add flows to school calendar
     if (!schoolPrimary()) s.agendaView = 'school';
     const today = new Date().toISOString().slice(0, 10);
@@ -788,7 +806,11 @@
     days[dayIdx] = { ...days[dayIdx], flows: dayFlows };
     setActiveAgendaText(serializeAgenda(days));
     setActiveAgendaDate(today);
-    activeAgendaFlow = { dayIdx, flowIdx };
+    if (linkCurrentSession) {
+      activeAgendaFlow = { dayIdx, flowIdx };
+      currentSessionSource = 'agenda';
+      currentSessionSourceName = f.title || 'Session';
+    }
     appState.persist();
   }
 
@@ -807,7 +829,9 @@
     if (titleInput) titleInput.value = s.dayTitle;
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback(); renderEndControl();
-    addFlowToAgendaToday(f);
+    activeAgendaFlow = null;
+    currentSessionSource = 'template';
+    currentSessionSourceName = f.title || 'Mall';
     appState.persist();
   }
 
@@ -1535,6 +1559,8 @@ Format:
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     const fi = selectedDay?.flows.indexOf(active.flow) ?? -1;
     activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
+    currentSessionSource = activeAgendaFlow ? 'agenda' : 'free';
+    currentSessionSourceName = active.flow.title || 'Session';
     updateTimeFeedback();
     renderEndControl();
     appState.persist();
@@ -1559,6 +1585,8 @@ Format:
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     const fi = selectedDay?.flows.indexOf(flow) ?? -1;
     activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
+    currentSessionSource = activeAgendaFlow ? 'agenda' : 'free';
+    currentSessionSourceName = flow.title || 'Session';
     updateTimeFeedback(); renderEndControl(); appState.persist();
     mobileTab = 'timer'; syncBodyClasses();
   }
@@ -1761,12 +1789,18 @@ Format:
 
     {#if s.showControls}
       <div class="controls">
+        <div class="session-source-badge" title={sessionSourceCopy[currentSessionSource].hint}>
+          <span>{sessionSourceCopy[currentSessionSource].label}</span>
+          {#if currentSessionSourceName}
+            <strong>{currentSessionSourceName}</strong>
+          {/if}
+        </div>
         <div class="step-section">
           <div class="step-num">1</div>
           <div class="step-body">
             <label>Rubrik</label>
             <input type="text" bind:this={titleInput} placeholder="Matematik"
-              oninput={(e) => { s.dayTitle = (e.target as HTMLInputElement).value; appState.persist(); }} />
+              oninput={(e) => { s.dayTitle = (e.target as HTMLInputElement).value; syncTimerToAgenda(); appState.persist(); }} />
           </div>
         </div>
 
@@ -1875,8 +1909,11 @@ Format:
               <div class="flow-list">
                 {#each [...s.flows].sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0)) as f (f.id)}
                   <div class="flow-item">
-                    <button class="flow-name" onclick={() => loadFlow(f.id)}>{f.title || '(utan rubrik)'}</button>
-                    <button class="flow-del" onclick={() => deleteFlow(f.id)}><span class="ico">🗑︎</span></button>
+                    <button class="flow-name" onclick={() => loadFlow(f.id)} title="Ladda mallen i klockan utan att ändra dagplanen">
+                      {f.title || '(utan rubrik)'}
+                    </button>
+                    <button class="flow-agenda" onclick={() => addFlowToAgendaToday(f, false)} title="Lägg mallen i dagens dagplan utan att ladda den">+ Dagplan</button>
+                    <button class="flow-del" onclick={() => deleteFlow(f.id)} title="Radera mall"><span class="ico">🗑︎</span></button>
                   </div>
                 {/each}
               </div>
@@ -1892,8 +1929,8 @@ Format:
               <button class="logout-btn" onclick={logout}>Logga ut</button>
             </div>
             <div class="sync-row">
-              <button class="quickstart sync-btn" onclick={syncLoad}>☁ Ladda</button>
-              <button class="quickstart sync-btn" onclick={syncSave}>☁ Spara</button>
+              <button class="quickstart sync-btn" onclick={syncLoad} title="Hämta molnkopian till denna enhet">☁ Hämta</button>
+              <button class="quickstart sync-btn" onclick={syncSave} title="Skicka denna enhets kopia till molnet">☁ Skicka</button>
             </div>
           {:else}
             <label>Synkronisering</label>
@@ -1961,9 +1998,9 @@ Format:
   <aside class="agenda" bind:this={agendaEl}>
     {#if !isViewMode}
       <div class="agenda-input-header">
-        <span class="agenda-input-label">Dagplan</span>
+        <span class="agenda-input-label">Importera/klistra in dagplan</span>
         <button class="agenda-input-toggle" onclick={() => agendaInputOpen = !agendaInputOpen}>
-          {agendaInputOpen ? '△ Dölj' : '▽ Redigera'}
+          {agendaInputOpen ? '△ Dölj import' : '▽ Importera'}
         </button>
       </div>
       {#if agendaInputOpen}
@@ -1984,8 +2021,8 @@ Format:
         ></textarea>
         <div class="agenda-save-row">
           <button class="agenda-save-btn" onclick={saveAgenda}
-            title="Sparar dagplanen och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
-            {savedAgendaMsg || '📅 Spara dagplan'}
+            title="Importerar texten till dagplanen och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
+            {savedAgendaMsg || '📅 Importera till dagplan'}
           </button>
           <button class="agenda-save-btn" onclick={() => {
             navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
@@ -2032,18 +2069,26 @@ Format:
     {/if}
 
     {#if agendaItems.length === 0}
-      <p class="agenda-empty">Skriv in dagplanen ovan, eller spara flöden via ✎-panelen.</p>
+      <p class="agenda-empty">Importera en dagplan ovan eller lägg till en sparad mall via ✎-panelen.</p>
     {:else}
       {@const windowStart = Math.floor(agendaItems[0].startMin / 60) * 60}
+      {@const selectedIso = selectedDay?.date ?? null}
+      {@const todayIso = new Date().toISOString().slice(0, 10)}
+      {@const selectedIsPastDay = selectedIso !== null && selectedIso < todayIso}
+      {@const selectedIsFutureDay = selectedIso !== null && selectedIso > todayIso}
+      {@const selectedIsTodayOrUndated = selectedIso === null || selectedIso === todayIso}
       <div class="agenda-timeline" class:has-overlay={overlayItems.length > 0} bind:this={timelineEl}>
         {#each agendaItems as item, ai (item.startMin + item.flow.title)}
           {@const itemColor = sectorColors[ai % sectorColors.length]}
-          {@const isPast = nowMinLive >= item.startMin + item.totalMin}
-          {@const isActive = nowMinLive >= item.startMin && nowMinLive < item.startMin + item.totalMin}
+          {@const itemEnd = item.startMin + item.totalMin}
+          {@const isPast = selectedIsPastDay || (selectedIsTodayOrUndated && nowMinLive >= itemEnd)}
+          {@const isActive = selectedIsTodayOrUndated && nowMinLive >= item.startMin && nowMinLive < itemEnd}
+          {@const isFuture = selectedIsFutureDay || (selectedIsTodayOrUndated && nowMinLive < item.startMin)}
           {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
           {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
           <div class="agenda-block"
                class:past={isPast}
+               class:future={isFuture}
                class:active={isActive}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
                onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}>
@@ -2140,7 +2185,7 @@ Format:
     <h3>Dagplan (agenda)</h3>
     <ul>
       <li>Öppna agendapanelen med <b>▷</b>-knappen till höger om klockan.</li>
-      <li>Skriv in planen med <code>@YYMMDD</code> för datum, <code>#Rubrik HH:MM</code> för session.</li>
+      <li>Importfältet är för att klistra in/merge:a textplaner: <code>@YYMMDD</code> för datum, <code>#Rubrik HH:MM</code> för session.</li>
       <li>Klicka på ett block i tidslinjen för att ladda den sessionen i klockan.</li>
       <li>Bläddra mellan dagar med <b>‹ ›</b>-pilarna.</li>
     </ul>
@@ -2157,9 +2202,11 @@ Format:
 
     <h3>Flöden &amp; synkronisering</h3>
     <ul>
-      <li><b>Spara flöde</b> 💾 sparar det aktuella schemat lokalt som ett återanvändbart flöde.</li>
-      <li><b>Logga in</b> med namn + lösenord för att synka flöden mellan enheter.</li>
-      <li><b>☁ Ladda / ☁ Spara</b> hämtar resp. skickar upp dina flöden till molnet.</li>
+      <li><b>Spara som mall</b> 💾 sparar det aktuella schemat lokalt som en återanvändbar mall.</li>
+      <li><b>Använd en mall</b> genom att klicka på mallens namn. Det laddar klockan men ändrar inte dagplanen.</li>
+      <li><b>+ Dagplan</b> lägger en mall i dagens dagplan som en separat, tydlig åtgärd.</li>
+      <li><b>Logga in</b> med namn + lösenord för att synka mallar och dagplaner mellan enheter.</li>
+      <li><b>☁ Hämta / ☁ Skicka</b> hämtar molnkopian resp. skickar denna enhets kopia till molnet.</li>
     </ul>
 
     <h3>Utseende</h3>

@@ -168,9 +168,14 @@
   :global(.flow-item) { display: flex; align-items: center; gap: 8px; background: var(--menu-pill); border-radius: 8px; padding: 4px 4px 4px 12px; }
   :global(.flow-item .flow-name) { flex: 1; background: transparent; border: 0; color: var(--menu-fg); cursor: pointer; text-align: left; padding: 8px 0; font-size: 15px; font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.flow-item .flow-name:hover) { text-decoration: underline; }
+  :global(.flow-item .flow-agenda) { background: var(--menu-surface); border: 1px solid var(--menu-border); color: var(--menu-muted); cursor: pointer; font-size: 12px; font-weight: 650; padding: 6px 9px; border-radius: 999px; flex-shrink: 0; font-family: inherit; }
+  :global(.flow-item .flow-agenda:hover) { background: var(--menu-pill-on); border-color: var(--menu-pill-on); color: var(--menu-pill-on-fg); }
   :global(.flow-item .flow-del) { background: transparent; border: 0; color: var(--menu-muted); cursor: pointer; font-size: 14px; padding: 6px 10px; border-radius: 6px; flex-shrink: 0; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
   :global(.flow-item .flow-del:hover) { background: #e7ddcf; color: var(--menu-fg); }
   :global(.flows-hint) { font-size: 13px; color: var(--menu-muted); margin: 2px 0 0; }
+  :global(.session-source-badge) { display: flex; align-items: center; gap: 7px; align-self: flex-start; background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 999px; color: var(--menu-muted); font-size: 12px; padding: 5px 10px; max-width: 100%; }
+  :global(.session-source-badge span) { font-weight: 750; color: var(--menu-fg); white-space: nowrap; }
+  :global(.session-source-badge strong) { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.sync-section) { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
   :global(.sync-input) { width: 100%; padding: 9px 12px; border: 1px solid var(--menu-border); border-radius: 8px; background: var(--menu-surface); color: var(--menu-fg); font-size: 15px; font-family: inherit; }
   :global(.sync-input:focus) { outline: 2px solid #4a443c; outline-offset: 1px; }
@@ -205,8 +210,8 @@
     display: flex; flex-direction: column; align-items: flex-start;
   }
   :global(.agenda-block:hover) { background: var(--pill); }
-  :global(.agenda-block.active) { background: var(--pill); }
-  :global(.agenda-block.past) { opacity: .4; }
+  :global(.agenda-block.active) { background: var(--pill); opacity: 1; }
+  :global(.agenda-block.past), :global(.agenda-block.future) { opacity: .42; }
   :global(.agenda-timeline.has-overlay .agenda-block:not(.ghost)) { right: 37%; }
   :global(.agenda-block.ghost) { left: 65%; right: 0; border-left-width: 8px; opacity: .55; pointer-events: none; }
   :global(.agenda-block.ghost .agenda-name) { font-size: 14px; font-weight: 500; }
