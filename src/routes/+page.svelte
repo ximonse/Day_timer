@@ -40,7 +40,7 @@
   let shareCopyText = $state('Kopiera länk');
   let isViewMode = $state(false);
   let viewToken = $state('');
-  let agendaInputOpen = $state(true);
+  let agendaInputOpen = $state(false);
   let savedAgendaMsg = $state('');
   let savedFlowMsg = $state('');
   let copyAgendaPromptText = $state('AI-prompt');
@@ -49,6 +49,8 @@
   let agendaDragMoved = false;
   let editingBlockId = $state<string | null>(null);
   let editingBlockField = $state<'name' | 'min' | null>(null);
+  let editingAgendaItem = $state<{ flowIdx: number; field: 'title' | 'start' } | null>(null);
+  let agendaDraftMode = $state<'edit' | 'append'>('edit');
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
   let agendaDraft = $state('');
@@ -992,11 +994,21 @@
     setTimeout(() => { shareCopyText = 'Kopiera länk'; }, 2000);
   }
 
-  function saveAgenda() {
-    if (agendaDraft.trim()) {
-      setActiveAgendaText(mergeAgendaDays(activeAgendaText(), agendaDraft));
-      agendaDraft = '';
+  function openAgendaEditor(mode: 'edit' | 'append' = 'edit') {
+    agendaDraftMode = mode;
+    agendaDraft = mode === 'edit' ? activeAgendaText() : '';
+    agendaInputOpen = true;
+  }
+
+  function toggleAgendaEditor() {
+    if (agendaInputOpen) {
+      agendaInputOpen = false;
+      return;
     }
+    openAgendaEditor('edit');
+  }
+
+  function persistAgendaChanges() {
     appState.persist();
 
     if (agendaDays && agendaItems.length > 0) {
@@ -1010,9 +1022,53 @@
     }
 
     if (loggedInUser) syncSave();
+  }
+
+  function saveAgenda() {
+    if (agendaDraft.trim()) {
+      const nextAgenda = agendaDraftMode === 'edit'
+        ? agendaDraft
+        : mergeAgendaDays(activeAgendaText(), agendaDraft);
+      setActiveAgendaText(nextAgenda);
+      agendaDraft = '';
+      agendaDraftMode = 'edit';
+      agendaInputOpen = false;
+    }
+
+    persistAgendaChanges();
 
     savedAgendaMsg = 'Sparat ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
+  }
+
+  function updateAgendaFlow(flowIdx: number, updater: (flow: Flow) => Flow) {
+    if (!agendaDays || selectedDayIdx < 0) return;
+    const days = agendaDays.map((day, di) => di === selectedDayIdx
+      ? { ...day, flows: day.flows.map((flow, fi) => fi === flowIdx ? updater(flow) : flow) }
+      : day
+    );
+    setActiveAgendaText(serializeAgenda(days));
+    persistAgendaChanges();
+  }
+
+  function startAgendaItemEdit(e: Event, flowIdx: number, field: 'title' | 'start') {
+    e.stopPropagation();
+    if (isViewMode) return;
+    editingAgendaItem = { flowIdx, field };
+  }
+
+  function commitAgendaTitle(flowIdx: number, value: string) {
+    const title = value.trim();
+    if (title) updateAgendaFlow(flowIdx, flow => ({ ...flow, title }));
+    editingAgendaItem = null;
+  }
+
+  function commitAgendaStart(flowIdx: number, value: string) {
+    const [h, m] = value.split(':').map(Number);
+    if (!isNaN(h) && !isNaN(m)) {
+      updateAgendaFlow(flowIdx, flow => ({ ...flow, startMin: h * 60 + m }));
+    }
+    editingAgendaItem = null;
   }
 
   // Merge pasted agenda text with existing: new date-sections replace matching dates, others are kept
@@ -1420,6 +1476,7 @@ Format:
         if (!isViewMode) {
           const order = ['school', 'school+private', 'private', 'private+school'] as const;
           agendaDraft = '';
+          agendaInputOpen = false;
           s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
           appState.persist();
         }
@@ -1752,6 +1809,7 @@ Format:
           <button class="pill" class:on={s.agendaView !== 'school'} onclick={() => {
             const order = ['school', 'school+private', 'private', 'private+school'] as const;
             agendaDraft = '';
+            agendaInputOpen = false;
             s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
             appState.persist();
           }}>{{ school: 'Jobb', 'school+private': 'Jobb + fritid', private: 'Fritid', 'private+school': 'Fritid + jobb' }[s.agendaView]} <span>•</span></button>
@@ -1860,22 +1918,22 @@ Format:
         <div class="feedback" bind:this={timeFeedback}></div>
 
         <div class="flows">
-          <label>Mallar</label>
+          <label>Passmallar</label>
           <button class="quickstart" onclick={saveFlow}
-            title="Sparar nuvarande schema som en återanvändbar mall">
-            <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
+            title="Sparar timerdelarna som en återanvändbar passmall. Dagplanen påverkas inte.">
+            <span class="ico">💾︎</span> {savedFlowMsg || 'Spara timer som mall'}
           </button>
           {#if s.flows.length === 0}
-            <p class="flows-hint">Inga mallar sparade. Klicka ovan för att spara det aktiva schemat.</p>
+            <p class="flows-hint">Inga passmallar sparade. Klicka ovan för att spara timerdelarna utan att ändra dagplanen.</p>
           {:else}
             <button class="flows-toggle" onclick={() => flowsOpen = !flowsOpen}>
-              Sparade mallar {flowsOpen ? '▾' : '▸'}
+              Sparade passmallar {flowsOpen ? '▾' : '▸'}
             </button>
             {#if flowsOpen}
               <div class="flow-list">
                 {#each [...s.flows].sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0)) as f (f.id)}
                   <div class="flow-item">
-                    <button class="flow-name" onclick={() => loadFlow(f.id)}>{f.title || '(utan rubrik)'}</button>
+                    <button class="flow-name" onclick={() => loadFlow(f.id)} title="Laddar mallen i timern och lägger in den i dagens dagplan">{f.title || '(utan rubrik)'}</button>
                     <button class="flow-del" onclick={() => deleteFlow(f.id)}><span class="ico">🗑︎</span></button>
                   </div>
                 {/each}
@@ -1962,14 +2020,21 @@ Format:
     {#if !isViewMode}
       <div class="agenda-input-header">
         <span class="agenda-input-label">Dagplan</span>
-        <button class="agenda-input-toggle" onclick={() => agendaInputOpen = !agendaInputOpen}>
-          {agendaInputOpen ? '△ Dölj' : '▽ Redigera'}
+        <button class="agenda-input-toggle" onclick={toggleAgendaEditor}
+          title="Öppna hela dagplanen som text för redigering">
+          {agendaInputOpen ? '△ Stäng text' : '▽ Redigera text'}
+        </button>
+        <button class="agenda-input-toggle agenda-add-text-btn" onclick={() => openAgendaEditor('append')}
+          title="Klistra in eller skriv nya datum utan att ersätta befintlig dagplan">
+          + Lägg till
         </button>
       </div>
       {#if agendaInputOpen}
         <textarea
           class="agenda-input"
-          placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
+          placeholder={agendaDraftMode === 'edit'
+            ? '@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;...'
+            : 'Klistra in nya datum här. Matchande datum ersätts, övriga dagar behålls.'}
           value={agendaDraft}
           oninput={(e) => { agendaDraft = (e.target as HTMLTextAreaElement).value; }}
           onpaste={(e) => {
@@ -1984,8 +2049,10 @@ Format:
         ></textarea>
         <div class="agenda-save-row">
           <button class="agenda-save-btn" onclick={saveAgenda}
-            title="Sparar dagplanen och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
-            {savedAgendaMsg || '📅 Spara dagplan'}
+            title={agendaDraftMode === 'edit'
+              ? 'Sparar texten som hela dagplanen. Mallbiblioteket påverkas inte.'
+              : 'Lägger till texten i dagplanen. Matchande datum ersätts. Mallbiblioteket påverkas inte.'}>
+            {savedAgendaMsg || (agendaDraftMode === 'edit' ? '📅 Spara ändringar' : '📅 Lägg till dagplan')}
           </button>
           <button class="agenda-save-btn" onclick={() => {
             navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
@@ -2047,12 +2114,36 @@ Format:
                class:active={isActive}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
                onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}>
-            <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
-            <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
+            {#if item.fromText && !isViewMode && editingAgendaItem?.flowIdx === ai && editingAgendaItem.field === 'start'}
+              <input class="agenda-inline-edit agenda-time-edit" type="time" use:focusOnMount
+                value={fmtHM(item.startMin)}
+                onblur={(e) => commitAgendaStart(ai, (e.target as HTMLInputElement).value)}
+                onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+                onclick={(e) => e.stopPropagation()} />
+            {:else if item.fromText && !isViewMode}
+              <button type="button" class="agenda-time agenda-edit-trigger"
+                title="Klicka för att ändra starttid"
+                onclick={(e) => startAgendaItemEdit(e, ai, 'start')}>{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</button>
+            {:else}
+              <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
+            {/if}
+            {#if item.fromText && !isViewMode && editingAgendaItem?.flowIdx === ai && editingAgendaItem.field === 'title'}
+              <input class="agenda-inline-edit agenda-title-edit" use:focusOnMount
+                value={item.flow.title}
+                onblur={(e) => commitAgendaTitle(ai, (e.target as HTMLInputElement).value)}
+                onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+                onclick={(e) => e.stopPropagation()} />
+            {:else if item.fromText && !isViewMode}
+              <button type="button" class="agenda-name agenda-edit-trigger"
+                title="Klicka för att byta rubrik"
+                onclick={(e) => startAgendaItemEdit(e, ai, 'title')}>{item.flow.title || '(utan rubrik)'}</button>
+            {:else}
+              <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
+            {/if}
             {#if item.fromText && !isViewMode}
               <button class="agenda-del-btn" onclick={(e) => { e.stopPropagation(); deleteAgendaItem(ai); }} title="Ta bort block">🗑</button>
-              <div class="agenda-drag-top" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
-              <div class="agenda-drag-bottom" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
+              <div class="agenda-drag-top" title="Dra för att ändra start" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
+              <div class="agenda-drag-bottom" title="Dra för att ändra längd" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
             {/if}
           </div>
         {/each}
@@ -2140,8 +2231,9 @@ Format:
     <h3>Dagplan (agenda)</h3>
     <ul>
       <li>Öppna agendapanelen med <b>▷</b>-knappen till höger om klockan.</li>
-      <li>Skriv in planen med <code>@YYMMDD</code> för datum, <code>#Rubrik HH:MM</code> för session.</li>
-      <li>Klicka på ett block i tidslinjen för att ladda den sessionen i klockan.</li>
+      <li>Klicka <b>Redigera text</b> för att ändra hela dagplanen, eller <b>+ Lägg till</b> för att klistra in nya datum utan att ersätta övriga dagar.</li>
+      <li>Skriv planen med <code>@YYMMDD</code> för datum, <code>#Rubrik HH:MM</code> för session.</li>
+      <li>Klicka på ett blocks rubrik eller starttid för snabbredigering; klicka på resten av blocket för att ladda sessionen i klockan.</li>
       <li>Bläddra mellan dagar med <b>‹ ›</b>-pilarna.</li>
     </ul>
 
@@ -2157,9 +2249,10 @@ Format:
 
     <h3>Flöden &amp; synkronisering</h3>
     <ul>
-      <li><b>Spara flöde</b> 💾 sparar det aktuella schemat lokalt som ett återanvändbart flöde.</li>
-      <li><b>Logga in</b> med namn + lösenord för att synka flöden mellan enheter.</li>
-      <li><b>☁ Ladda / ☁ Spara</b> hämtar resp. skickar upp dina flöden till molnet.</li>
+      <li><b>Spara timer som mall</b> 💾 sparar det aktuella timerschemat som en återanvändbar passmall utan att ändra dagplanen.</li>
+      <li>Att ladda en passmall fyller timern och lägger in passet i dagens dagplan.</li>
+      <li><b>Logga in</b> med namn + lösenord för att synka passmallar och dagplaner mellan enheter.</li>
+      <li><b>☁ Ladda / ☁ Spara</b> hämtar resp. skickar upp dina data till molnet.</li>
     </ul>
 
     <h3>Utseende</h3>
