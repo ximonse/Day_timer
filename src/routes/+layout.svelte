@@ -232,9 +232,20 @@
     position: absolute; bottom: 0; left: 0; width: 50%; height: 50%;
     cursor: ns-resize; touch-action: none; z-index: 2;
   }
-  :global(.agenda-time) { position: absolute; top: 3px; left: 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; pointer-events: none; }
-  :global(.agenda-name) { flex: 1; width: 100%; font-size: 30px; font-weight: 500; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; }
+  :global(.agenda-time) { position: absolute; top: 3px; left: 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; z-index: 3; }
+  :global(.agenda-name) { flex: 1; width: 100%; font-size: 30px; font-weight: 500; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; position: relative; z-index: 3; }
+  :global(.agenda-edit-trigger) { border: 0; background: transparent; color: inherit; font-family: inherit; padding: 0; cursor: text; }
+  :global(button.agenda-time) { pointer-events: auto; }
   :global(.agenda-dur) { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  :global(.agenda-inline-edit) {
+    position: relative; z-index: 4; width: 100%; box-sizing: border-box;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); color: var(--fg); font-family: inherit;
+    padding: 3px 6px; box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  }
+  :global(.agenda-time-edit) { position: absolute; top: 2px; left: 6px; width: 82px; font-size: 12px; }
+  :global(.agenda-title-edit) { margin: auto 0; text-align: center; font-size: clamp(14px, 9cqi, 24px); font-weight: 500; }
+  :global(.agenda-add-text-btn) { flex-shrink: 0; }
   :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
   :global(.agenda-input) {
     width: 100%; min-height: 120px; resize: vertical;
