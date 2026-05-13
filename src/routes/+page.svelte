@@ -235,6 +235,10 @@
   function setActiveSection(section: AppSection) {
     s.activeSection = section;
     if (section === 'plan') s.agendaOpen = true;
+    if (typeof window !== 'undefined' && window.innerWidth <= 800) {
+      mobileTab = section === 'plan' ? 'plan' : 'timer';
+      syncBodyClasses();
+    }
     appState.persist();
   }
 
@@ -2165,14 +2169,17 @@ Format:
   </button>
 
   <nav class="mobile-tabs">
-    <button class:active={mobileTab === 'delar'} onclick={() => { mobileTab = 'delar'; syncBodyClasses(); }}>
-      <span>☰</span> Delar
+    <button class:active={s.activeSection === 'now' && mobileTab === 'timer'} onclick={() => { s.activeSection = 'now'; mobileTab = 'timer'; syncBodyClasses(); appState.persist(); }}>
+      <span>◷</span> Nu
     </button>
-    <button class:active={mobileTab === 'timer'} onclick={goToTimerNow}>
-      <span>◷</span> Timer
-    </button>
-    <button class:active={mobileTab === 'plan'} onclick={() => { mobileTab = 'plan'; syncBodyClasses(); }}>
+    <button class:active={s.activeSection === 'plan' && mobileTab === 'plan'} onclick={() => { s.activeSection = 'plan'; s.agendaOpen = true; mobileTab = 'plan'; syncBodyClasses(); appState.persist(); }}>
       <span>▦</span> Plan
+    </button>
+    <button class:active={s.activeSection === 'library'} onclick={() => { s.activeSection = 'library'; mobileTab = 'timer'; syncBodyClasses(); appState.persist(); }}>
+      <span>⌘</span> Bibliotek
+    </button>
+    <button class:active={s.activeSection === 'workspace'} onclick={() => { s.activeSection = 'workspace'; mobileTab = 'timer'; syncBodyClasses(); appState.persist(); }}>
+      <span>⋯</span> Mer
     </button>
   </nav>
 </div>
