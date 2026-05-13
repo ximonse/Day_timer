@@ -1,5 +1,7 @@
 import { type Palette } from './theme.js';
 
+export type AppSection = 'now' | 'plan' | 'library' | 'workspace';
+
 export interface Block {
   id: string;
   title: string;
@@ -51,6 +53,7 @@ export interface AppState {
   agendaView: 'school' | 'school+private' | 'private' | 'private+school';
   showControls: boolean;
   flows: Flow[];
+  activeSection: AppSection;
 }
 
 export function uid() {
@@ -88,6 +91,7 @@ function defaultState(): AppState {
     agendaView: 'school',
     showControls: true,
     flows: [],
+    activeSection: 'now',
   };
 }
 
