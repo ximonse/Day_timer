@@ -5,6 +5,7 @@
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO } from '$lib/date.js';
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
+  import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
@@ -67,6 +68,11 @@
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
   let agendaDraft = $state('');
+  let icsDraft = $state('');
+  let icsImportOpen = $state(false);
+  let icsPreviewEvents = $state<IcsEvent[]>([]);
+  let icsPreviewSummary = $state('');
+  let icsImportError = $state('');
   let locked = $state(false);
   let titleDraftValue = $state('');
   let agendaDayStart = $state(s.startMin);
@@ -294,6 +300,13 @@
   const selectedAgendaSourceLabel = $derived.by(() => agendaMetaLabel(selectedAgendaMeta));
   const selectedAgendaSourceHelp = $derived.by(() => agendaMetaHelp(selectedAgendaMeta));
   const selectedAgendaCanDetach = $derived.by(() => !!selectedAgendaMeta && selectedAgendaMeta.source !== 'manual');
+  const icsCanImport = $derived.by(() => icsPreviewEvents.some(event => !event.allDay));
+  const icsPreviewLines = $derived.by(() =>
+    icsPreviewEvents.slice(0, 6).map(event => {
+      const timeLabel = event.allDay ? 'Heldag' : `${fmtHM(event.startMin)}–${fmtHM(event.endMin)}`;
+      return `${event.date} • ${timeLabel} • ${event.title}`;
+    })
+  );
 
   const planSaveLabel = $derived.by(() => {
     if (!selectedAgendaDetails) return 'Valj ett block for att borja redigera.';
@@ -1020,6 +1033,37 @@
     if (loggedInUser) syncSave();
   }
 
+  function mergeAgendaDayData(existing: string, incoming: AgendaDay[]): AgendaDay[] {
+    const baseDays = existing.trim() ? parseAgenda(existing) : [];
+    const dayMap = new Map<string, AgendaDay>();
+
+    for (const day of baseDays) {
+      dayMap.set(day.date ?? `undated-${dayMap.size}`, { ...day, flows: [...day.flows] });
+    }
+
+    for (const day of incoming) {
+      const key = day.date ?? `undated-${dayMap.size}`;
+      const existingDay = dayMap.get(key);
+      if (!existingDay) {
+        dayMap.set(key, { ...day, flows: [...day.flows] });
+        continue;
+      }
+
+      const mergedFlows = [...existingDay.flows];
+      for (const flow of day.flows) {
+        const replaceIdx = mergedFlows.findIndex(existingFlow =>
+          existingFlow.startMin === flow.startMin && existingFlow.title === flow.title
+        );
+        if (replaceIdx >= 0) mergedFlows[replaceIdx] = flow;
+        else mergedFlows.push(flow);
+      }
+      mergedFlows.sort((a, b) => (a.startMin ?? 0) - (b.startMin ?? 0) || a.title.localeCompare(b.title));
+      dayMap.set(key, { ...existingDay, flows: mergedFlows });
+    }
+
+    return [...dayMap.values()].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+  }
+
   function deleteFlow(id: string) {
     if (!confirm(`Radera flödet?`)) return;
     s.flows = s.flows.filter(f => f.id !== id);
@@ -1256,6 +1300,61 @@
 
     savedAgendaMsg = 'Sparat ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
+  }
+
+  function previewIcsImport() {
+    const parsed = parseIcsEvents(icsDraft);
+    icsPreviewEvents = parsed;
+    const timed = parsed.filter(event => !event.allDay).length;
+    const allDay = parsed.filter(event => event.allDay).length;
+    icsImportError = '';
+    if (parsed.length === 0) {
+      icsPreviewSummary = '';
+      icsImportError = 'Ingen kalenderhandelse kunde lasas. Kontrollera att du klistrat in en riktig .ics-fil.';
+      return;
+    }
+    icsPreviewSummary = `${parsed.length} handelser hittades: ${timed} tidsatta och ${allDay} heldag.`;
+  }
+
+  function resetIcsPreview() {
+    icsPreviewEvents = [];
+    icsPreviewSummary = '';
+    icsImportError = '';
+  }
+
+  function importPreviewedIcs() {
+    const importDays = icsEventsToAgendaDays(icsPreviewEvents);
+    if (importDays.length === 0) {
+      icsImportError = 'Det finns inga tidsatta kalenderhandelser att importera an.';
+      return;
+    }
+
+    const merged = mergeAgendaDayData(activeAgendaText(), importDays);
+    setActiveAgendaText(serializeAgenda(merged));
+
+    for (const day of importDays) {
+      for (const flow of day.flows) {
+        setAgendaMeta(
+          makeAgendaMetaKeyForFlow(day.date ?? null, flow, flow.startMin ?? s.startMin),
+          { source: 'import', label: 'ICS-import' }
+        );
+      }
+    }
+
+    if (importDays[0]?.date) setActiveAgendaDate(importDays[0].date);
+    icsImportError = '';
+    savedAgendaMsg = 'ICS importerad ✓';
+    setTimeout(() => { savedAgendaMsg = ''; }, 2000);
+    appState.persist();
+    if (loggedInUser) syncSave();
+  }
+
+  async function readIcsFile(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    icsDraft = await file.text();
+    previewIcsImport();
   }
 
   // Merge pasted agenda text with existing: new date-sections replace matching dates, others are kept
@@ -2171,6 +2270,13 @@ Format:
         {agendaInputOpen}
         {agendaDraft}
         {savedAgendaMsg}
+        {icsImportOpen}
+        {icsDraft}
+        icsSummary={icsPreviewSummary}
+        {icsPreviewLines}
+        icsError={icsImportError}
+        icsHasPreview={icsPreviewEvents.length > 0}
+        {icsCanImport}
         {copyAgendaPromptText}
         hasAiKey={!!aiApiKey}
         {agendaAiOpen}
@@ -2190,6 +2296,11 @@ Format:
           }
         }}
         onSave={saveAgenda}
+        onToggleIcsOpen={() => icsImportOpen = !icsImportOpen}
+        onIcsDraftChange={(value) => { icsDraft = value; resetIcsPreview(); }}
+        onIcsFileChange={readIcsFile}
+        onPreviewIcs={previewIcsImport}
+        onImportIcs={importPreviewedIcs}
         onCopyPrompt={() => {
           navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
             copyAgendaPromptText = '✓ Kopierad';
