@@ -48,7 +48,14 @@
   let savedFlowMsg = $state('');
   let copyAgendaPromptText = $state('AI-prompt');
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
-  let activeAgendaFlow = $state<{ dayIdx: number; flowIdx: number } | null>(null);
+  type AgendaFlowRef = {
+    date: string | null;
+    title: string;
+    startMin: number;
+    totalMin: number;
+    partCount: number;
+  };
+  let activeAgendaFlowRef = $state<AgendaFlowRef | null>(null);
   type SessionSource =
     | { kind: 'unscheduled' }
     | { kind: 'template'; templateId: string; title: string }
@@ -131,6 +138,57 @@
 
   const sectorColors = $derived(clockTheme(s.palette, s.dark).colors);
 
+  function totalFlowMinutes(flow: Flow): number {
+    return flow.minutes.reduce((sum, minutes) => sum + minutes, 0);
+  }
+
+  function deriveAgendaDayStart(day: AgendaDay, fallbackStart: number): number {
+    const firstExplicitIdx = day.flows.findIndex(f => f.startMin !== undefined);
+    if (firstExplicitIdx < 0) return fallbackStart;
+    let t = day.flows[firstExplicitIdx].startMin!;
+    for (let i = firstExplicitIdx - 1; i >= 0; i--) {
+      t -= totalFlowMinutes(day.flows[i]);
+    }
+    return t;
+  }
+
+  function buildAgendaItemsForDay(day: AgendaDay, fallbackStart: number) {
+    let t = deriveAgendaDayStart(day, fallbackStart);
+    return day.flows.map((flow, flowIdx) => {
+      if (flow.startMin !== undefined) t = flow.startMin;
+      const startMin = t;
+      const totalMin = totalFlowMinutes(flow);
+      t += totalMin;
+      return { day, flow, flowIdx, startMin, totalMin };
+    });
+  }
+
+  function makeAgendaFlowRef(date: string | null, flow: Flow, startMin: number): AgendaFlowRef {
+    return {
+      date,
+      title: flow.title,
+      startMin,
+      totalMin: totalFlowMinutes(flow),
+      partCount: flow.parts.length
+    };
+  }
+
+  function resolveAgendaFlowRef(days: AgendaDay[] | null, ref: AgendaFlowRef | null) {
+    if (!days || !ref) return null;
+    const dayIdx = days.findIndex(d => d.date === ref.date);
+    if (dayIdx < 0) return null;
+    const day = days[dayIdx];
+    const items = buildAgendaItemsForDay(day, ref.startMin);
+    const exact = items.find(item => item.startMin === ref.startMin && item.flow.title === ref.title);
+    if (exact) return { ...exact, dayIdx };
+    const fallback = items.find(item =>
+      item.flow.title === ref.title &&
+      item.totalMin === ref.totalMin &&
+      item.flow.parts.length === ref.partCount
+    );
+    return fallback ? { ...fallback, dayIdx } : null;
+  }
+
   function schoolPrimary() { return s.agendaView === 'school' || s.agendaView === 'school+private'; }
   function activeAgendaText(): string { return schoolPrimary() ? s.agendaText : s.agendaText2; }
   function activeAgendaDate(): string { return schoolPrimary() ? s.agendaDate : s.agendaDate2; }
@@ -166,16 +224,7 @@
     agendaDays && selectedDay ? agendaDays.indexOf(selectedDay) : -1
   );
 
-  const selectedAgendaDetails = $derived.by(() => {
-    if (!activeAgendaFlow || !agendaDays) return null;
-    const day = agendaDays[activeAgendaFlow.dayIdx];
-    const flow = day?.flows[activeAgendaFlow.flowIdx];
-    if (!day || !flow) return null;
-    const computed = agendaItems.find(item => item.flow === flow);
-    const startMin = flow.startMin ?? computed?.startMin ?? s.startMin;
-    const totalMin = flow.minutes.reduce((sum, minutes) => sum + minutes, 0);
-    return { day, flow, startMin, totalMin };
-  });
+  const selectedAgendaDetails = $derived.by(() => resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef));
 
   const planSaveLabel = $derived.by(() => {
     if (!selectedAgendaDetails) return 'Valj ett block for att borja redigera.';
@@ -201,14 +250,19 @@
   const agendaItems = $derived.by(() => {
     const flows = selectedDay?.flows ?? (agendaDays ? [] : s.flows);
     const fromText = agendaDays !== null;
-    let t = s.startMin;
-    return flows.map(flow => {
-      if (flow.startMin !== undefined) t = flow.startMin;
-      const startMin = t;
-      const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
-      t += totalMin;
-      return { flow, startMin, totalMin, fromText };
-    });
+    if (!selectedDay) {
+      let t = s.startMin;
+      return flows.map(flow => {
+        if (flow.startMin !== undefined) t = flow.startMin;
+        const startMin = t;
+        const totalMin = totalFlowMinutes(flow);
+        t += totalMin;
+        return { flow, startMin, totalMin, fromText };
+      });
+    }
+    return buildAgendaItemsForDay(selectedDay, agendaDayStart).map(({ flow, startMin, totalMin }) => ({
+      flow, startMin, totalMin, fromText
+    }));
   });
 
   const overlayItems = $derived.by(() => {
@@ -263,7 +317,7 @@
   }
 
   function markPlanSaved() {
-    if (!activeAgendaFlow) return;
+    if (!activeAgendaFlowRef) return;
     planLastSavedAt = Date.now();
   }
 
@@ -658,9 +712,9 @@
   }
 
   function syncTimerToAgenda() {
-    if (!activeAgendaFlow || !agendaDays) return;
-    const { dayIdx, flowIdx } = activeAgendaFlow;
-    if (!agendaDays[dayIdx]?.flows[flowIdx]) return;
+    const active = resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef);
+    if (!active || !agendaDays) return;
+    const { dayIdx, flowIdx } = active;
     const newDays = agendaDays.map((d, di) => di !== dayIdx ? d : {
       ...d,
       flows: d.flows.map((f, fi) => fi !== flowIdx ? f : {
@@ -675,6 +729,13 @@
       }),
     });
     setActiveAgendaText(serializeAgenda(newDays));
+    activeAgendaFlowRef = {
+      ...activeAgendaFlowRef!,
+      title: s.dayTitle,
+      startMin: s.startMin,
+      totalMin: totalMin(),
+      partCount: s.blocks.length
+    };
     markPlanSaved();
   }
 
@@ -841,21 +902,19 @@
     const replaceIdx = dayFlows.findIndex(
       fl => fl.startMin === s.startMin || fl.title === f.title
     );
-    let flowIdx: number;
     if (replaceIdx >= 0) {
       dayFlows[replaceIdx] = flowToAdd;
-      flowIdx = replaceIdx;
     } else {
       const insertAt = dayFlows.findIndex(fl => (fl.startMin ?? 0) > s.startMin);
-      if (insertAt < 0) { dayFlows.push(flowToAdd); flowIdx = dayFlows.length - 1; }
-      else { dayFlows.splice(insertAt, 0, flowToAdd); flowIdx = insertAt; }
+      if (insertAt < 0) { dayFlows.push(flowToAdd); }
+      else { dayFlows.splice(insertAt, 0, flowToAdd); }
     }
 
     days[dayIdx] = { ...days[dayIdx], flows: dayFlows };
     setActiveAgendaText(serializeAgenda(days));
     setActiveAgendaDate(today);
     if (activate) {
-      activeAgendaFlow = { dayIdx, flowIdx };
+      activeAgendaFlowRef = makeAgendaFlowRef(today, flowToAdd, flowToAdd.startMin ?? s.startMin);
       sessionSource = { kind: 'agenda', date: today, title: flowToAdd.title, startMin: flowToAdd.startMin ?? s.startMin };
     }
     appState.persist();
@@ -874,7 +933,7 @@
     s.extraInfo = f.extraInfo || '';
     warnedSet.clear();
     updateTimeFeedback(); renderEndControl();
-    activeAgendaFlow = null;
+    activeAgendaFlowRef = null;
     sessionSource = { kind: 'template', templateId: f.id, title: f.title };
     s.activeSection = 'now';
     appState.persist();
@@ -927,7 +986,7 @@
         s.agendaText2 = data.agendaText2;
         s.agendaDate2 = data.agendaDate2 || '';
       }
-      activeAgendaFlow = null;
+      activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
       appState.persist();
       showSyncStatus('Laddat från moln ✓');
@@ -1097,20 +1156,13 @@
         })()
       : null;
     if (daysAfterSave && dayAfterSave) {
-      let t = s.startMin;
-      const itemsAfterSave = dayAfterSave.flows.map(flow => {
-        if (flow.startMin !== undefined) t = flow.startMin;
-        const startMin = t;
-        const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
-        t += totalMin;
-        return { flow, startMin, totalMin };
-      });
+      const itemsAfterSave = buildAgendaItemsForDay(dayAfterSave, agendaDayStart);
       const now = nowMinutes();
       const active = itemsAfterSave.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
       if (active) {
         loadAgendaFlow(active.flow, active.startMin);
       } else {
-        activeAgendaFlow = null;
+        activeAgendaFlowRef = null;
         sessionSource = { kind: 'unscheduled' };
       }
     }
@@ -1156,8 +1208,8 @@
         : d
     );
     setActiveAgendaText(serializeAgenda(days));
-    if (activeAgendaFlow?.dayIdx === selectedDayIdx && activeAgendaFlow.flowIdx === flowIdx) {
-      activeAgendaFlow = null;
+    if (selectedAgendaDetails?.dayIdx === selectedDayIdx && selectedAgendaDetails.flowIdx === flowIdx) {
+      activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
     }
     appState.persist();
@@ -1231,7 +1283,7 @@
       const data = await res.json();
       if (data.error) { agendaAiError = data.error; return; }
       setActiveAgendaText(data.text);
-      activeAgendaFlow = null;
+      activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
       appState.persist();
       agendaAiOpen = false;
@@ -1632,9 +1684,10 @@ Format:
     s.extraInfo = active.flow.extraInfo || '';
     s.startMin = active.flow.startMin ?? active.startMin;
     warnedSet.clear();
-    const fi = selectedDay?.flows.indexOf(active.flow) ?? -1;
-    activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
-    sessionSource = activeAgendaFlow
+    activeAgendaFlowRef = selectedDay
+      ? makeAgendaFlowRef(selectedDay.date ?? null, active.flow, s.startMin)
+      : null;
+    sessionSource = activeAgendaFlowRef
       ? { kind: 'agenda', date: selectedDay?.date ?? null, title: active.flow.title, startMin: s.startMin }
       : { kind: 'unscheduled' };
     updateTimeFeedback();
@@ -1656,9 +1709,10 @@ Format:
     s.startMin = flow.startMin ?? computedStart;
     s.clockSpan = 60;
     warnedSet.clear();
-    const fi = selectedDay?.flows.indexOf(flow) ?? -1;
-    activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
-    sessionSource = activeAgendaFlow
+    activeAgendaFlowRef = selectedDay
+      ? makeAgendaFlowRef(selectedDay.date ?? null, flow, s.startMin)
+      : null;
+    sessionSource = activeAgendaFlowRef
       ? { kind: 'agenda', date: selectedDay?.date ?? null, title: flow.title, startMin: s.startMin }
       : { kind: 'unscheduled' };
     planLastSavedAt = Date.now();
@@ -1709,24 +1763,22 @@ Format:
     const existingText = activeAgendaText();
     const days = existingText.trim() ? parseAgenda(existingText) : [];
     let todayEntry = days.find(d => d.date === today);
-    let dayIdx = days.indexOf(todayEntry as AgendaDay);
     if (!todayEntry) {
       todayEntry = { date: today, flows: [] };
       const insertAt = days.findIndex(d => d.date !== null && d.date > today);
-      if (insertAt < 0) { days.push(todayEntry); dayIdx = days.length - 1; }
-      else { days.splice(insertAt, 0, todayEntry); dayIdx = insertAt; }
+      if (insertAt < 0) { days.push(todayEntry); }
+      else { days.splice(insertAt, 0, todayEntry); }
     }
     const insertFlowAt = todayEntry.flows.findIndex(
       f => f.startMin !== undefined && f.startMin > roundedNow
     );
-    let flowIdx: number;
-    if (insertFlowAt < 0) { todayEntry.flows.push(newFlow); flowIdx = todayEntry.flows.length - 1; }
-    else { todayEntry.flows.splice(insertFlowAt, 0, newFlow); flowIdx = insertFlowAt; }
+    if (insertFlowAt < 0) { todayEntry.flows.push(newFlow); }
+    else { todayEntry.flows.splice(insertFlowAt, 0, newFlow); }
     setActiveAgendaText(serializeAgenda(days));
     setActiveAgendaDate(today);
     lastAutoLoadKey = '';
     loadAgendaFlow(newFlow, roundedNow);
-    activeAgendaFlow = { dayIdx, flowIdx };
+    activeAgendaFlowRef = makeAgendaFlowRef(today, newFlow, roundedNow);
     sessionSource = { kind: 'agenda', date: today, title: newFlow.title, startMin: roundedNow };
     appState.persist();
   }
