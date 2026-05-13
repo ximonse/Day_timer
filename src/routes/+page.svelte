@@ -7,7 +7,9 @@
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
+  import SectionHero from '$lib/components/SectionHero.svelte';
   import PlanSelectionCard from '$lib/components/PlanSelectionCard.svelte';
+  import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
   import LibraryPanel from '$lib/components/LibraryPanel.svelte';
   import WorkspacePanel from '$lib/components/WorkspacePanel.svelte';
   import AgendaImportPanel from '$lib/components/AgendaImportPanel.svelte';
@@ -32,12 +34,7 @@
   let svgEl = $state<SVGSVGElement>(null!);
   let sidebarEl = $state<HTMLElement>(null!);
   let flashEl = $state<HTMLElement>(null!);
-  let partsArea = $state<HTMLTextAreaElement>(null!);
-  let titleInput = $state<HTMLInputElement>(null!);
-  let startTimeInput = $state<HTMLInputElement>(null!);
   let endControlEl = $state<HTMLElement>(null!);
-  let partsFeedback = $state<HTMLElement>(null!);
-  let timeFeedback = $state<HTMLElement>(null!);
   let loginName = $state('');
   let loginPass = $state('');
   let loggedInUser = $state('');
@@ -189,6 +186,17 @@
     });
     return `Sparat i dagplanen ${savedAt}`;
   });
+
+  const sectionCopy = $derived.by(() => {
+    if (s.activeSection === 'now') return 'Redigera det som körs just nu i timern.';
+    if (s.activeSection === 'plan') return 'Välj ett block i dagplanen och redigera det här.';
+    if (s.activeSection === 'library') return 'Spara och återanvänd mallar utan att blanda ihop dem med dagens plan.';
+    return 'Hantera synk, delning, AI och framtida importkällor.';
+  });
+
+  const partsFieldValue = $derived(serializeBlocks(s.blocks));
+  const partsFeedbackText = $derived(`${s.blocks.length}${s.blocks.length === 1 ? ' del' : ' delar'}`);
+  const timeFeedbackText = $derived(`${totalMin()} min → slutar ${fmtHM(s.startMin + totalMin())}`);
 
   const agendaItems = $derived.by(() => {
     const flows = selectedDay?.flows ?? (agendaDays ? [] : s.flows);
@@ -636,8 +644,7 @@
       if (newTotal > s.clockSpan) { newTotal = s.clockSpan; newStart = drag.endMin0 - newTotal; }
       s.startMin = newStart;
       scaleMinutesTo(newTotal);
-      if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
-      renderEndControl(); renderClock(); return;
+    renderEndControl(); renderClock(); return;
     }
     const targetCumMin = (rel / 360) * s.clockSpan;
     let cumBefore = 0;
@@ -713,11 +720,7 @@
     }
   }
 
-  function updateTimeFeedback() {
-    const t = totalMin();
-    if (timeFeedback) timeFeedback.textContent = `${t} min → slutar ${fmtHM(s.startMin + t)}`;
-    if (partsFeedback) partsFeedback.textContent = s.blocks.length + (s.blocks.length === 1 ? ' del' : ' delar');
-  }
+  function updateTimeFeedback() {}
 
   // ── Audio & flash ──
   let audioCtx: AudioContext | null = null;
@@ -785,9 +788,8 @@
     checkWarnings();
   }
 
-  function handlePartsInput() {
-    if (!partsArea) return;
-    const result = parseParts(partsArea.value, s.blocks);
+  function handlePartsInput(input: string) {
+    const result = parseParts(input, s.blocks);
     s.blocks = result.blocks;
     if (result.dayTitle) s.dayTitle = result.dayTitle;
     s.extraInfo = result.extraInfo;
@@ -871,8 +873,6 @@
     }));
     s.extraInfo = f.extraInfo || '';
     warnedSet.clear();
-    if (titleInput) titleInput.value = s.dayTitle;
-    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback(); renderEndControl();
     activeAgendaFlow = null;
     sessionSource = { kind: 'template', templateId: f.id, title: f.title };
@@ -1172,7 +1172,6 @@
   function commitBlockEdit() {
     editingBlockId = null;
     editingBlockField = null;
-    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback();
     renderEndControl();
     syncTimerToAgenda();
@@ -1183,7 +1182,6 @@
     if (isViewMode) return;
     const newId = uid();
     s.blocks = [...s.blocks, { id: newId, title: 'Ny aktivitet', minutes: 10, note: '', warning: false, pinned: false }];
-    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback();
     renderEndControl();
     syncTimerToAgenda();
@@ -1213,10 +1211,7 @@
       });
       const data = await res.json();
       if (data.error) { aiError = data.error; return; }
-      if (partsArea) {
-        partsArea.value = data.text;
-        partsArea.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+      handlePartsInput(data.text);
       aiPanelOpen = false;
       aiInput = '';
     } catch { aiError = 'Nätverksfel'; }
@@ -1462,9 +1457,6 @@ Format:
       appState.persist();
     }
     syncBodyClasses();
-    if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
-    if (titleInput) titleInput.value = s.dayTitle || '';
-    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     const resizeObservers: ResizeObserver[] = [];
     if (sidebarEl && window.ResizeObserver) {
       const ro = new ResizeObserver(() => {
@@ -1557,10 +1549,6 @@ Format:
   });
 
   $effect(() => {
-    if (titleInput) titleInput.value = s.dayTitle || '';
-  });
-
-  $effect(() => {
     if (!selectedDay) return;
     const flows = selectedDay.flows;
     const firstExplicitIdx = flows.findIndex(f => f.startMin !== undefined);
@@ -1644,9 +1632,6 @@ Format:
     s.extraInfo = active.flow.extraInfo || '';
     s.startMin = active.flow.startMin ?? active.startMin;
     warnedSet.clear();
-    if (titleInput) titleInput.value = s.dayTitle;
-    if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
-    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     const fi = selectedDay?.flows.indexOf(active.flow) ?? -1;
     activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
     sessionSource = activeAgendaFlow
@@ -1671,9 +1656,6 @@ Format:
     s.startMin = flow.startMin ?? computedStart;
     s.clockSpan = 60;
     warnedSet.clear();
-    if (titleInput) titleInput.value = s.dayTitle;
-    if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
-    if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     const fi = selectedDay?.flows.indexOf(flow) ?? -1;
     activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
     sessionSource = activeAgendaFlow
@@ -1886,20 +1868,7 @@ Format:
       <div class="controls">
         <SectionNav activeSection={s.activeSection} labels={SECTION_LABELS} onSelect={setActiveSection} />
 
-        <div class="section-hero">
-          <div class="section-title">{SECTION_LABELS[s.activeSection]}</div>
-          <div class="section-copy">
-            {#if s.activeSection === 'now'}
-              Redigera det som körs just nu i timern.
-            {:else if s.activeSection === 'plan'}
-              Välj ett block i dagplanen och redigera det här.
-            {:else if s.activeSection === 'library'}
-              Spara och återanvänd mallar utan att blanda ihop dem med dagens plan.
-            {:else}
-              Hantera synk, delning, AI och framtida importkällor.
-            {/if}
-          </div>
-        </div>
+        <SectionHero title={SECTION_LABELS[s.activeSection]} copy={sectionCopy} />
 
         {#if s.activeSection === 'now' || (s.activeSection === 'plan' && selectedAgendaDetails)}
           <div class="session-source" class:from-template={sessionSource.kind === 'template'} class:from-agenda={sessionSource.kind === 'agenda'}>
@@ -1920,114 +1889,62 @@ Format:
             />
           {/if}
 
-          {#if s.activeSection === 'now' || selectedAgendaDetails}
-            <div class="step-section">
-              <div class="step-num">1</div>
-              <div class="step-body">
-                <label>{s.activeSection === 'plan' ? 'Blockrubrik' : 'Rubrik'}</label>
-                <input type="text" bind:this={titleInput} placeholder="Matematik"
-                  oninput={(e) => { s.dayTitle = (e.target as HTMLInputElement).value; syncTimerToAgenda(); appState.persist(); }} />
-              </div>
-            </div>
-
-            <div class="step-section">
-              <div class="step-num">2</div>
-              <div class="step-body">
-                <label style="display:flex;align-items:center;gap:8px;">
-                  {s.activeSection === 'plan' ? 'Blockinnehåll (en rad per del)' : 'Lektionsdelar (en per rad)'}
-                  <button onclick={() => {
-                    navigator.clipboard.writeText(currentAiPrompt).then(() => {
-                      copyBtnText = '✓ Kopierad';
-                      setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
-                    });
-                  }} style="font-size:11px;padding:1px 7px;border-radius:5px;border:1px solid var(--border);background:var(--pill);color:var(--menu-muted);cursor:pointer;line-height:1.6;">{copyBtnText}</button>
-                </label>
-                <textarea bind:this={partsArea} placeholder="Genomgång&#10;Eget arbete&#10;Avslut" oninput={handlePartsInput}></textarea>
-                <div class="feedback" bind:this={partsFeedback}>1 del</div>
-                <div class="feedback" style="opacity:.65;margin-top:4px;">#Rubrik &nbsp;·&nbsp; Aktivitet 10m &nbsp;·&nbsp; - notering &nbsp;·&nbsp; &amp;kommentar</div>
-                {#if aiApiKey}
-                  <div class="ai-panel">
-                    <button class="ai-panel-toggle" onclick={() => aiPanelOpen = !aiPanelOpen}>
-                      {aiPanelOpen ? '▲' : '▼'} Planera med AI
-                    </button>
-                    {#if aiPanelOpen}
-                      <textarea class="ai-input" placeholder="Beskriv vad du vill planera... t.ex. &quot;45-minuterslektion om bråk för åk 5&quot;" bind:value={aiInput}></textarea>
-                      <div class="ai-mode-row">
-                        <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
-                          onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
-                        <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
-                          onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
-                        <span class="ai-mode-hint">
-                          {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
-                        </span>
-                      </div>
-                      {#if aiError}<div class="ai-error">{aiError}</div>{/if}
-                      <button class="quickstart ai-generate-btn" onclick={runAiParts} disabled={aiLoading || !aiInput.trim()}>
-                        {aiLoading ? 'Tänker...' : 'Generera ▶'}
-                      </button>
-                    {/if}
-                  </div>
-                {/if}
-              </div>
-            </div>
-
-            <div class="step-section step-section--action">
-              <div class="step-num">3</div>
-              <div class="step-body">
-                <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={() => {
-                  const d = new Date();
-                  s.startMin = d.getHours() * 60 + d.getMinutes();
-                  if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
-                  warnedSet.clear(); renderEndControl(); updateTimeFeedback();
-                  const f: Flow = {
-                    id: uid(), title: s.dayTitle || 'Session',
-                    startMin: s.startMin,
-                    parts: s.blocks.map(b => b.title),
-                    minutes: s.blocks.map(b => b.minutes),
-                    warnings: s.blocks.map(b => b.warning),
-                    notes: s.blocks.map(b => b.note),
-                    extraInfo: s.extraInfo,
-                  };
-                  addFlowToAgendaToday(f, true);
-                }}><span class="ico">⚡︎</span> Snabbstart nu</button>
-              </div>
-            </div>
-
-            <div>
-              <label>{s.activeSection === 'plan' ? 'Kommentar för valt block' : 'Info-ruta (fri text, visas som egen ruta i sidopanelen)'}</label>
-              <textarea placeholder="T.ex. Att ta med: bok, penna&#10;Läxa: sida 42"
-                oninput={(e) => { s.extraInfo = (e.target as HTMLTextAreaElement).value; syncTimerToAgenda(); appState.persist(); }}>{s.extraInfo}</textarea>
-            </div>
-            <div class="row2">
-              <div>
-                <label>Starttid</label>
-                <input type="time" bind:this={startTimeInput} oninput={(e) => {
-                  const [h, m] = (e.target as HTMLInputElement).value.split(':').map(Number);
-                  if (isNaN(h) || isNaN(m)) return;
-                  s.startMin = h * 60 + m; warnedSet.clear();
-                  renderEndControl(); updateTimeFeedback();
-                  syncTimerToAgenda(); appState.persist();
-                }} />
-              </div>
-              <div>
-                <label>{endMode === 'end' ? 'Sluttid' : 'Längd (min)'}</label>
-                <div bind:this={endControlEl}></div>
-              </div>
-            </div>
-            <div class="mode-toggle">
-              <button class:on={endMode === 'end'} onclick={() => { endMode = 'end'; s.endMode = 'end'; renderEndControl(); appState.persist(); }}>Sluttid</button>
-              <button class:on={endMode === 'len'} onclick={() => { endMode = 'len'; s.endMode = 'len'; renderEndControl(); appState.persist(); }}>Längd</button>
-            </div>
-            <div class="feedback" bind:this={timeFeedback}></div>
-          {:else if s.activeSection === 'plan'}
-            <div class="section-card">
-              <div class="section-card-head">
-                <strong>Redigera dagplan</strong>
-              </div>
-              <div class="section-copy">Valj forst ett block i tidslinjen till hoger. Da vet appen exakt vilket pass som ska uppdateras.</div>
-              <div class="section-copy muted">Import av ny dagplan ligger kvar i hogerpanelet, men blockredigering borjar alltid med ett val i tidslinjen.</div>
-            </div>
-          {/if}
+          <SessionEditorPanel
+            mode={s.activeSection}
+            hasSelection={!!selectedAgendaDetails}
+            titleValue={s.dayTitle}
+            partsValue={partsFieldValue}
+            extraInfoValue={s.extraInfo}
+            {copyBtnText}
+            {partsFeedbackText}
+            {timeFeedbackText}
+            hasAiKey={!!aiApiKey}
+            {aiPanelOpen}
+            {aiInput}
+            {aiError}
+            {aiLoading}
+            aiPlanMode={aiConfig.planMode}
+            startTimeValue={fmtHM(s.startMin)}
+            {endMode}
+            onTitleInput={(value) => { s.dayTitle = value; syncTimerToAgenda(); appState.persist(); }}
+            onPartsInput={handlePartsInput}
+            onCopyPrompt={() => {
+              navigator.clipboard.writeText(currentAiPrompt).then(() => {
+                copyBtnText = '✓ Kopierad';
+                setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
+              });
+            }}
+            onToggleAiPanel={() => aiPanelOpen = !aiPanelOpen}
+            onAiInputChange={(value) => aiInput = value}
+            onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
+            onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
+            onRunAi={runAiParts}
+            onQuickStart={() => {
+              const d = new Date();
+              s.startMin = d.getHours() * 60 + d.getMinutes();
+              warnedSet.clear(); renderEndControl(); updateTimeFeedback();
+              const f: Flow = {
+                id: uid(), title: s.dayTitle || 'Session',
+                startMin: s.startMin,
+                parts: s.blocks.map(b => b.title),
+                minutes: s.blocks.map(b => b.minutes),
+                warnings: s.blocks.map(b => b.warning),
+                notes: s.blocks.map(b => b.note),
+                extraInfo: s.extraInfo,
+              };
+              addFlowToAgendaToday(f, true);
+            }}
+            onExtraInfoInput={(value) => { s.extraInfo = value; syncTimerToAgenda(); appState.persist(); }}
+            onStartTimeInput={(value) => {
+              const [h, m] = value.split(':').map(Number);
+              if (isNaN(h) || isNaN(m)) return;
+              s.startMin = h * 60 + m; warnedSet.clear();
+              renderEndControl(); updateTimeFeedback();
+              syncTimerToAgenda(); appState.persist();
+            }}
+            onEndModeChange={(mode) => { endMode = mode; s.endMode = mode; renderEndControl(); appState.persist(); }}
+            onEndControlMount={(node) => { endControlEl = node ?? null!; renderEndControl(); }}
+          />
         {:else if s.activeSection === 'library'}
           <LibraryPanel
             savedFlowMsg={savedFlowMsg}
