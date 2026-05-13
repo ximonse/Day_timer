@@ -1,6 +1,12 @@
 import { type Palette } from './theme.js';
 
 export type AppSection = 'now' | 'plan' | 'library' | 'workspace';
+export type AgendaFlowSourceKind = 'manual' | 'template' | 'ai' | 'import';
+
+export interface AgendaFlowMeta {
+  source: AgendaFlowSourceKind;
+  label?: string;
+}
 
 export interface Block {
   id: string;
@@ -51,6 +57,7 @@ export interface AppState {
   agendaText2: string;
   agendaDate2: string;
   agendaView: 'school' | 'school+private' | 'private' | 'private+school';
+  agendaMeta: Record<string, AgendaFlowMeta>;
   showControls: boolean;
   flows: Flow[];
   activeSection: AppSection;
@@ -89,6 +96,7 @@ function defaultState(): AppState {
     agendaText2: '',
     agendaDate2: '',
     agendaView: 'school',
+    agendaMeta: {},
     showControls: true,
     flows: [],
     activeSection: 'now',
