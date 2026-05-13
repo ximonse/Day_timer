@@ -215,6 +215,19 @@
     return 'Manuell';
   }
 
+  function agendaMetaHelp(meta: AgendaFlowMeta | null): string {
+    if (!meta || meta.source === 'manual') {
+      return 'Det här blocket är nu ett vanligt dagplansblock utan särskild koppling.';
+    }
+    if (meta.source === 'template') {
+      return 'Blocket skapades från en mall. Ändringar här påverkar bara dagplanen, inte originalmallen.';
+    }
+    if (meta.source === 'ai') {
+      return 'Blocket skapades av AI och går nu att finjustera som ett vanligt dagplansblock.';
+    }
+    return 'Blocket kom in via import. Om du vill behandla det som helt eget kan du göra det manuellt.';
+  }
+
   function sessionAgendaMeta(): AgendaFlowMeta {
     if (sessionSource.kind === 'template') {
       return { source: 'template', label: sessionSource.title };
@@ -279,6 +292,8 @@
     return s.agendaMeta[makeAgendaMetaKeyForFlow(selectedAgendaDetails.day.date ?? null, selectedAgendaDetails.flow, selectedAgendaDetails.startMin)] ?? null;
   });
   const selectedAgendaSourceLabel = $derived.by(() => agendaMetaLabel(selectedAgendaMeta));
+  const selectedAgendaSourceHelp = $derived.by(() => agendaMetaHelp(selectedAgendaMeta));
+  const selectedAgendaCanDetach = $derived.by(() => !!selectedAgendaMeta && selectedAgendaMeta.source !== 'manual');
 
   const planSaveLabel = $derived.by(() => {
     if (!selectedAgendaDetails) return 'Valj ett block for att borja redigera.';
@@ -1804,6 +1819,21 @@ Format:
     updateTimeFeedback(); renderEndControl(); appState.persist();
   }
 
+  function detachSelectedAgendaBlock() {
+    if (!selectedAgendaDetails) return;
+    setAgendaMeta(
+      makeAgendaMetaKeyForFlow(
+        selectedAgendaDetails.day.date ?? null,
+        selectedAgendaDetails.flow,
+        selectedAgendaDetails.startMin
+      ),
+      { source: 'manual' }
+    );
+    planLastSavedAt = Date.now();
+    appState.persist();
+    if (loggedInUser) void syncSave();
+  }
+
   function goToTimerNow() {
     const now = nowMinutes();
     if (agendaDays && selectedDay) {
@@ -2021,8 +2051,11 @@ Format:
               timeRange={`${fmtHM(selectedAgendaDetails?.startMin ?? s.startMin)}–${fmtHM((selectedAgendaDetails?.startMin ?? s.startMin) + (selectedAgendaDetails?.totalMin ?? 0))}`}
               saveLabel={planSaveLabel}
               sourceLabel={selectedAgendaSourceLabel}
+              sourceHelp={selectedAgendaSourceHelp}
               agendaOpen={s.agendaOpen}
+              canDetach={selectedAgendaCanDetach}
               onToggleAgenda={() => { s.agendaOpen = !s.agendaOpen; appState.persist(); }}
+              onDetach={detachSelectedAgendaBlock}
             />
           {/if}
 
