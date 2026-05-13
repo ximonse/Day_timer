@@ -247,7 +247,18 @@
     cursor: ns-resize; touch-action: none; z-index: 2;
   }
   :global(.agenda-time) { position: absolute; top: 3px; left: 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; pointer-events: none; }
+  :global(.agenda-source-badge) {
+    position: absolute; top: 22px; left: 8px;
+    font-size: 10px; font-weight: 700; letter-spacing: .03em;
+    padding: 1px 6px; border-radius: 999px;
+    background: color-mix(in srgb, var(--menu-pill-on) 84%, white 16%);
+    color: var(--menu-pill-on-fg); pointer-events: none;
+  }
+  :global(.agenda-source-badge.template) { background: color-mix(in srgb, var(--muted) 78%, white 22%); color: #102216; }
+  :global(.agenda-source-badge.ai) { background: color-mix(in srgb, var(--accent) 82%, white 18%); color: #2b1208; }
+  :global(.agenda-source-badge.imported) { background: color-mix(in srgb, var(--pill-on) 70%, white 30%); color: var(--pill-on-fg); }
   :global(.agenda-name) { flex: 1; width: 100%; font-size: 30px; font-weight: 500; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; }
+  :global(.agenda-block.ghost .agenda-source-badge) { display: none; }
   :global(.agenda-dur) { font-size: 12px; color: var(--muted); flex-shrink: 0; }
   :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
   :global(.agenda-input) {
