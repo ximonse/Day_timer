@@ -70,6 +70,12 @@
       </button>
     {/if}
   </div>
+  <div class="feedback" style="margin-top:6px;">
+    Block i tidslinjen markeras med kallor som <strong>Import</strong>, <strong>Mall</strong> och <strong>AI</strong>.
+  </div>
+  <div class="feedback" style="opacity:.72;margin-top:4px;">
+    Om du vill gora ett importerat block helt eget, valj det i tidslinjen och klicka <strong>Gor till manuellt block</strong>.
+  </div>
   {#if agendaAiOpen && hasAiKey}
     <div class="agenda-ai-panel">
       <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;"
