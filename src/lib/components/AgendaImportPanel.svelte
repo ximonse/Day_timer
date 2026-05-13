@@ -3,6 +3,13 @@
     agendaInputOpen,
     agendaDraft,
     savedAgendaMsg,
+    icsImportOpen,
+    icsDraft,
+    icsSummary,
+    icsPreviewLines,
+    icsError,
+    icsHasPreview,
+    icsCanImport,
     copyAgendaPromptText,
     hasAiKey,
     agendaAiOpen,
@@ -14,6 +21,11 @@
     onDraftChange,
     onDraftPaste,
     onSave,
+    onToggleIcsOpen,
+    onIcsDraftChange,
+    onIcsFileChange,
+    onPreviewIcs,
+    onImportIcs,
     onCopyPrompt,
     onToggleAi,
     onAgendaAiInputChange,
@@ -24,6 +36,13 @@
     agendaInputOpen: boolean;
     agendaDraft: string;
     savedAgendaMsg: string;
+    icsImportOpen: boolean;
+    icsDraft: string;
+    icsSummary: string;
+    icsPreviewLines: string[];
+    icsError: string;
+    icsHasPreview: boolean;
+    icsCanImport: boolean;
     copyAgendaPromptText: string;
     hasAiKey: boolean;
     agendaAiOpen: boolean;
@@ -35,6 +54,11 @@
     onDraftChange: (value: string) => void;
     onDraftPaste: (event: ClipboardEvent) => void;
     onSave: () => void;
+    onToggleIcsOpen: () => void;
+    onIcsDraftChange: (value: string) => void;
+    onIcsFileChange: (event: Event) => void;
+    onPreviewIcs: () => void;
+    onImportIcs: () => void;
     onCopyPrompt: () => void;
     onToggleAi: () => void;
     onAgendaAiInputChange: (value: string) => void;
@@ -92,6 +116,48 @@
       <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={agendaAiLoading || !agendaAiInput.trim()}>
         {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
       </button>
+    </div>
+  {/if}
+{/if}
+
+<div class="agenda-input-header" style="margin-top:12px;">
+  <span class="agenda-input-label">Importera ICS-kalender</span>
+  <button class="agenda-input-toggle" onclick={onToggleIcsOpen}>
+    {icsImportOpen ? '△ Dölj' : '▽ Visa'}
+  </button>
+</div>
+{#if icsImportOpen}
+  <div class="feedback" style="margin-bottom:8px;">
+    Forsta steget previewar kalenderhandelser innan de laggs in i dagplanen.
+  </div>
+  <input type="file" accept=".ics,text/calendar" class="sync-input" onchange={onIcsFileChange} />
+  <textarea
+    class="agenda-input"
+    placeholder="Klistra in innehållet från en .ics-fil här om du hellre vill importera via text."
+    value={icsDraft}
+    oninput={(e) => onIcsDraftChange((e.target as HTMLTextAreaElement).value)}
+    style="margin-top:8px;"
+  ></textarea>
+  <div class="agenda-save-row">
+    <button class="agenda-save-btn" onclick={onPreviewIcs}>Förhandsgranska ICS</button>
+    <button class="agenda-save-btn" onclick={onImportIcs} disabled={!icsCanImport}>Lägg i dagplan</button>
+  </div>
+  {#if icsSummary}
+    <div class="feedback" style="margin-top:6px;">{icsSummary}</div>
+  {/if}
+  {#if icsPreviewLines.length > 0}
+    <div class="feedback" style="margin-top:6px;">
+      {#each icsPreviewLines as line}
+        <div>{line}</div>
+      {/each}
+    </div>
+  {/if}
+  {#if icsError}
+    <div class="ai-error" style="margin-top:6px;">{icsError}</div>
+  {/if}
+  {#if icsHasPreview}
+    <div class="feedback" style="opacity:.72;margin-top:4px;">
+      Heldagshandelser visas i previewn men importeras inte an i den har versionen.
     </div>
   {/if}
 {/if}
