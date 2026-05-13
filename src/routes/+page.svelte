@@ -10,6 +10,7 @@
   import PlanSelectionCard from '$lib/components/PlanSelectionCard.svelte';
   import LibraryPanel from '$lib/components/LibraryPanel.svelte';
   import WorkspacePanel from '$lib/components/WorkspacePanel.svelte';
+  import AgendaImportPanel from '$lib/components/AgendaImportPanel.svelte';
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
@@ -2079,64 +2080,41 @@ Format:
   <div class="resize-handle-ag" onpointerdown={startAgendaResize}></div>
   <aside class="agenda" bind:this={agendaEl}>
     {#if !isViewMode && s.activeSection === 'plan'}
-      <div class="agenda-input-header">
-        <span class="agenda-input-label">Importera ny dagplan</span>
-        <button class="agenda-input-toggle" onclick={() => agendaInputOpen = !agendaInputOpen}>
-          {agendaInputOpen ? '△ Dölj' : '▽ Redigera'}
-        </button>
-      </div>
-      {#if agendaInputOpen}
-        <textarea
-          class="agenda-input"
-          placeholder="Klistra in ny dagplan här. Texten slås ihop med sparad dagplan när du klickar Spara.&#10;&#10;@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
-          value={agendaDraft}
-          oninput={(e) => { agendaDraft = (e.target as HTMLTextAreaElement).value; }}
-          onpaste={(e) => {
-            const pasted = e.clipboardData?.getData('text') ?? '';
-            const merged = mergeAgendaDays(agendaDraft, pasted);
-            if (merged !== pasted) {
-              e.preventDefault();
-              agendaDraft = merged;
-              (e.target as HTMLTextAreaElement).value = merged;
-            }
-          }}
-        ></textarea>
-        <div class="agenda-save-row">
-          <button class="agenda-save-btn" onclick={saveAgenda}
-            title="Importerar texten till sparad dagplan och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
-            {savedAgendaMsg || '📅 Spara dagplan'}
-          </button>
-          <button class="agenda-save-btn" onclick={() => {
-            navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
-              copyAgendaPromptText = '✓ Kopierad';
-              setTimeout(() => { copyAgendaPromptText = 'AI-prompt'; }, 1500);
-            });
-          }}>{copyAgendaPromptText}</button>
-          {#if aiApiKey}
-            <button class="agenda-save-btn agenda-ai-btn" onclick={() => agendaAiOpen = !agendaAiOpen}>
-              ✨ AI-dagplan
-            </button>
-          {/if}
-        </div>
-        {#if agendaAiOpen && aiApiKey}
-          <div class="agenda-ai-panel">
-            <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;" bind:value={agendaAiInput}></textarea>
-            <div class="ai-mode-row">
-              <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
-                onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
-              <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
-                onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
-              <span class="ai-mode-hint">
-                {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
-              </span>
-            </div>
-            {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
-            <button class="quickstart ai-generate-btn" onclick={runAiAgenda} disabled={agendaAiLoading || !agendaAiInput.trim()}>
-              {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
-            </button>
-          </div>
-        {/if}
-      {/if}
+      <AgendaImportPanel
+        {agendaInputOpen}
+        {agendaDraft}
+        {savedAgendaMsg}
+        {copyAgendaPromptText}
+        hasAiKey={!!aiApiKey}
+        {agendaAiOpen}
+        {agendaAiInput}
+        aiPlanMode={aiConfig.planMode}
+        {agendaAiError}
+        {agendaAiLoading}
+        onToggleOpen={() => agendaInputOpen = !agendaInputOpen}
+        onDraftChange={(value) => agendaDraft = value}
+        onDraftPaste={(e) => {
+          const pasted = e.clipboardData?.getData('text') ?? '';
+          const merged = mergeAgendaDays(agendaDraft, pasted);
+          if (merged !== pasted) {
+            e.preventDefault();
+            agendaDraft = merged;
+            (e.target as HTMLTextAreaElement).value = merged;
+          }
+        }}
+        onSave={saveAgenda}
+        onCopyPrompt={() => {
+          navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
+            copyAgendaPromptText = '✓ Kopierad';
+            setTimeout(() => { copyAgendaPromptText = 'AI-prompt'; }, 1500);
+          });
+        }}
+        onToggleAi={() => agendaAiOpen = !agendaAiOpen}
+        onAgendaAiInputChange={(value) => agendaAiInput = value}
+        onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
+        onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
+        onRunAi={runAiAgenda}
+      />
     {:else if !isViewMode}
       <div class="agenda-section-note">
         Dagplanen visas här som översikt. Byt till sektionen <strong>Plan</strong> för att importera, ändra block och arbeta med kalenderflödet.
