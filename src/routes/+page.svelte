@@ -6,6 +6,10 @@
   import { localDateISO } from '$lib/date.js';
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
+  import SectionNav from '$lib/components/SectionNav.svelte';
+  import PlanSelectionCard from '$lib/components/PlanSelectionCard.svelte';
+  import LibraryPanel from '$lib/components/LibraryPanel.svelte';
+  import WorkspacePanel from '$lib/components/WorkspacePanel.svelte';
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
@@ -33,8 +37,8 @@
   let endControlEl = $state<HTMLElement>(null!);
   let partsFeedback = $state<HTMLElement>(null!);
   let timeFeedback = $state<HTMLElement>(null!);
-  let loginNameInput = $state<HTMLInputElement>(null!);
-  let loginPassInput = $state<HTMLInputElement>(null!);
+  let loginName = $state('');
+  let loginPass = $state('');
   let loggedInUser = $state('');
   let shareToken = $state('');
   let shareOwnerToken = $state('');
@@ -932,8 +936,8 @@
   }
 
   async function login() {
-    const name = loginNameInput?.value.trim() ?? '';
-    const pass = loginPassInput?.value.trim() ?? '';
+    const name = loginName.trim();
+    const pass = loginPass.trim();
     if (!name || !pass) { showSyncStatus('Ange namn och lösenord', true); return; }
     s.syncKey = await deriveSyncToken(name, pass);
     loggedInUser = name;
@@ -1860,13 +1864,7 @@ Format:
 
     {#if s.showControls}
       <div class="controls">
-        <nav class="section-nav" aria-label="Appsektioner">
-          {#each (Object.keys(SECTION_LABELS) as AppSection[]) as section}
-            <button class="section-tab" class:active={s.activeSection === section} onclick={() => setActiveSection(section)}>
-              {SECTION_LABELS[section]}
-            </button>
-          {/each}
-        </nav>
+        <SectionNav activeSection={s.activeSection} labels={SECTION_LABELS} onSelect={setActiveSection} />
 
         <div class="section-hero">
           <div class="section-title">{SECTION_LABELS[s.activeSection]}</div>
@@ -1889,22 +1887,14 @@ Format:
           </div>
 
           {#if s.activeSection === 'plan'}
-            <div class="section-card">
-              <div class="section-card-head">
-                <strong>Valt dagplansblock</strong>
-                <button class="ai-key-btn" onclick={() => { s.agendaOpen = !s.agendaOpen; appState.persist(); }}>
-                  {s.agendaOpen ? 'Dölj tidslinje' : 'Visa tidslinje'}
-                </button>
-              </div>
-              {#if selectedAgendaDetails}
-                <div class="section-copy">
-                  {selectedAgendaDetails.flow.title || '(utan rubrik)'} • {fmtAgendaDate(selectedAgendaDetails.day.date)} • {fmtHM(selectedAgendaDetails.startMin)}–{fmtHM(selectedAgendaDetails.startMin + selectedAgendaDetails.totalMin)}
-                </div>
-                <div class="section-copy muted">Ändringar i fälten nedan sparas tillbaka till det markerade blocket.</div>
-              {:else}
-                <div class="section-copy">Klicka på ett block i dagplanen till höger för att börja redigera ett specifikt pass.</div>
-              {/if}
-            </div>
+            <PlanSelectionCard
+              hasSelection={!!selectedAgendaDetails}
+              title={selectedAgendaDetails?.flow.title || '(utan rubrik)'}
+              dateLabel={fmtAgendaDate(selectedAgendaDetails?.day.date ?? null)}
+              timeRange={`${fmtHM(selectedAgendaDetails?.startMin ?? s.startMin)}–${fmtHM((selectedAgendaDetails?.startMin ?? s.startMin) + (selectedAgendaDetails?.totalMin ?? 0))}`}
+              agendaOpen={s.agendaOpen}
+              onToggleAgenda={() => { s.agendaOpen = !s.agendaOpen; appState.persist(); }}
+            />
           {/if}
 
           <div class="step-section">
@@ -2006,109 +1996,49 @@ Format:
           </div>
           <div class="feedback" bind:this={timeFeedback}></div>
         {:else if s.activeSection === 'library'}
-          <div class="flows">
-            <label>Mallar</label>
-            <button class="quickstart" onclick={saveFlow}
-              title="Sparar nuvarande schema som en återanvändbar mall">
-              <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
-            </button>
-            <p class="flows-hint">Här sparar du återanvändbara upplägg. Ladda i timern eller lägg till direkt i dagens plan.</p>
-            {#if s.flows.length === 0}
-              <p class="flows-hint">Inga mallar sparade ännu.</p>
-            {:else}
-              <button class="flows-toggle" onclick={() => flowsOpen = !flowsOpen}>
-                Sparade mallar {flowsOpen ? '▾' : '▸'}
-              </button>
-              {#if flowsOpen}
-                <div class="flow-list">
-                  {#each [...s.flows].sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0)) as f (f.id)}
-                    <div class="flow-item">
-                      <button class="flow-name" onclick={() => loadFlow(f.id)} title="Ladda mallen i timern utan att ändra dagplanen">{f.title || '(utan rubrik)'}</button>
-                      <button class="flow-add" onclick={() => addTemplateToAgendaToday(f.id)} title="Lägg till mallen i dagens dagplan">＋</button>
-                      <button class="flow-del" onclick={() => deleteFlow(f.id)}><span class="ico">🗑︎</span></button>
-                    </div>
-                  {/each}
-                </div>
-              {/if}
-            {/if}
-          </div>
+          <LibraryPanel
+            savedFlowMsg={savedFlowMsg}
+            flows={s.flows}
+            flowsOpen={flowsOpen}
+            onSaveFlow={saveFlow}
+            onToggleFlows={() => flowsOpen = !flowsOpen}
+            onLoadFlow={loadFlow}
+            onAddToAgenda={addTemplateToAgendaToday}
+            onDeleteFlow={deleteFlow}
+          />
         {:else}
-          <div class="section-card">
-            <div class="section-card-head">
-              <strong>Synk och arbetsyta</strong>
-            </div>
-            <div class="section-copy">Här ligger sådant som hör till kontot och appens infrastruktur, inte till ett enskilt block.</div>
-          </div>
-
-          <div class="login-form">
-            {#if loggedInUser}
-              <label>Synkronisering</label>
-              <div class="logged-in-row">
-                <span class="username">👤 {loggedInUser}</span>
-                <button class="logout-btn" onclick={logout}>Logga ut</button>
-              </div>
-              <div class="sync-row">
-                <button class="quickstart sync-btn" onclick={syncLoad}>☁ Ladda</button>
-                <button class="quickstart sync-btn" onclick={syncSave}>☁ Spara</button>
-              </div>
-            {:else}
-              <label>Synkronisering</label>
-              <input type="text" class="sync-input" bind:this={loginNameInput}
-                placeholder="Namn" autocomplete="username" spellcheck="false" />
-              <input type="password" class="sync-input" bind:this={loginPassInput}
-                placeholder="Lösenord" autocomplete="current-password" />
-              <button class="quickstart" onclick={login}>Logga in & synka</button>
-            {/if}
-            <div class="sync-status" style="color:{syncStatusError ? '#c0392b' : 'var(--muted)'}">{syncStatusText}</div>
-          </div>
-
-          <div class="share-section">
-            <label>Dela session</label>
-            {#if shareToken}
-              <div class="share-link-row">
-                <span class="share-link-text">{location.origin}/?view={shareToken}</span>
-                <button class="ai-key-btn" onclick={copyShareLink}>{shareCopyText}</button>
-              </div>
-              <button class="quickstart" onclick={stopSharing}>Sluta dela</button>
-            {:else}
-              <button class="quickstart" onclick={startSharing}>Starta delning</button>
-            {/if}
-          </div>
-
-          <div class="ai-key-section">
-            <label>AI-planering</label>
-            <select class="sync-input ai-provider-select"
-              value={aiConfig.provider}
-              onchange={(e) => { aiConfig.provider = (e.target as HTMLSelectElement).value as AiProvider; aiKeyVisible = false; saveAiConfig(); }}>
-              {#each Object.entries(AI_PROVIDER_LABELS) as [val, label]}
-                <option value={val}>{label}</option>
-              {/each}
-            </select>
-            {#if aiApiKey}
-              <div class="ai-key-row">
-                <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
-                <button class="ai-key-btn" onclick={() => aiKeyVisible = !aiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
-                <button class="ai-key-btn" onclick={clearAiConfig}>✕</button>
-              </div>
-              {#if aiKeyVisible}
-                <input type="password" class="sync-input" placeholder={AI_KEY_PLACEHOLDERS[aiConfig.provider]}
-                  value={aiConfig.apiKey}
-                  onchange={(e) => { aiConfig.apiKey = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
-              {/if}
-            {:else}
-              <input type="password" class="sync-input" placeholder={AI_KEY_PLACEHOLDERS[aiConfig.provider]}
-                onchange={(e) => { aiConfig.apiKey = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
-              <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel för att aktivera AI-planering</div>
-            {/if}
-            {#if aiConfig.provider === 'custom'}
-              <input type="text" class="sync-input" placeholder="Bas-URL, t.ex. https://api.mistral.ai/v1"
-                value={aiConfig.baseUrl}
-                onchange={(e) => { aiConfig.baseUrl = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
-              <input type="text" class="sync-input" placeholder="Modell, t.ex. mistral-small-latest"
-                value={aiConfig.customModel}
-                onchange={(e) => { aiConfig.customModel = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
-            {/if}
-          </div>
+          <WorkspacePanel
+            {loggedInUser}
+            {syncStatusText}
+            {syncStatusError}
+            {loginName}
+            {loginPass}
+            {shareToken}
+            {shareCopyText}
+            shareUrl={`${location.origin}/?view=${shareToken}`}
+            aiProvider={aiConfig.provider}
+            aiProviderLabels={AI_PROVIDER_LABELS}
+            aiKeyPlaceholders={AI_KEY_PLACEHOLDERS}
+            aiApiKey={aiApiKey}
+            aiKeyVisible={aiKeyVisible}
+            aiBaseUrl={aiConfig.baseUrl}
+            aiCustomModel={aiConfig.customModel}
+            onLogout={logout}
+            onSyncLoad={syncLoad}
+            onSyncSave={syncSave}
+            onLogin={login}
+            onLoginNameChange={(value) => loginName = value}
+            onLoginPassChange={(value) => loginPass = value}
+            onCopyShareLink={copyShareLink}
+            onStopSharing={stopSharing}
+            onStartSharing={startSharing}
+            onProviderChange={(value) => { aiConfig.provider = value as AiProvider; aiKeyVisible = false; saveAiConfig(); }}
+            onToggleAiKeyVisible={() => aiKeyVisible = !aiKeyVisible}
+            onClearAiConfig={clearAiConfig}
+            onAiApiKeyChange={(value) => { aiConfig.apiKey = value; saveAiConfig(); }}
+            onAiBaseUrlChange={(value) => { aiConfig.baseUrl = value; saveAiConfig(); }}
+            onAiCustomModelChange={(value) => { aiConfig.customModel = value; saveAiConfig(); }}
+          />
         {/if}
       </div>
     {/if}
