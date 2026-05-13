@@ -267,6 +267,7 @@
   :global(.agenda-input-label) { flex: 1; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
   :global(.agenda-input-toggle) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 7px; border-radius: 5px; font-family: inherit; }
   :global(.agenda-input-toggle:hover) { background: var(--pill); color: var(--fg); }
+  :global(.agenda-section-note) { margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--pill); color: var(--fg); font-size: 12px; line-height: 1.45; }
   :global(.agenda-save-btn) { flex: 1; padding: 7px; background: var(--pill); border: 1px solid var(--border); border-radius: 8px; color: var(--fg); font-size: 13px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; font-family: inherit; transition: background .12s; }
   :global(.agenda-save-btn:hover) { background: var(--pill-on); color: var(--pill-on-fg); }
   :global(.agenda-save-row) { display: flex; gap: 6px; }

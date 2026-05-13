@@ -2116,7 +2116,7 @@ Format:
 
   <div class="resize-handle-ag" onpointerdown={startAgendaResize}></div>
   <aside class="agenda" bind:this={agendaEl}>
-    {#if !isViewMode}
+    {#if !isViewMode && s.activeSection === 'plan'}
       <div class="agenda-input-header">
         <span class="agenda-input-label">Importera ny dagplan</span>
         <button class="agenda-input-toggle" onclick={() => agendaInputOpen = !agendaInputOpen}>
@@ -2175,6 +2175,10 @@ Format:
           </div>
         {/if}
       {/if}
+    {:else if !isViewMode}
+      <div class="agenda-section-note">
+        Dagplanen visas här som översikt. Byt till sektionen <strong>Plan</strong> för att importera, ändra block och arbeta med kalenderflödet.
+      </div>
     {/if}
 
     {#if agendaDays && agendaDays.length > 0}
