@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { appState, uid, type AppSection, type Flow } from '$lib/state.svelte.js';
+  import { appState, uid, type AgendaFlowMeta, type AppSection, type Flow } from '$lib/state.svelte.js';
   import { PALETTES, PALETTE_COLORS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO } from '$lib/date.js';
@@ -173,6 +173,47 @@
     };
   }
 
+  function makeAgendaMetaKey(date: string | null, title: string, startMin: number, totalMin: number, partCount: number): string {
+    return JSON.stringify([date ?? '', title, startMin, totalMin, partCount]);
+  }
+
+  function makeAgendaMetaKeyForFlow(date: string | null, flow: Flow, startMin: number): string {
+    return makeAgendaMetaKey(date, flow.title, startMin, totalFlowMinutes(flow), flow.parts.length);
+  }
+
+  function makeAgendaMetaKeyForRef(ref: AgendaFlowRef): string {
+    return makeAgendaMetaKey(ref.date, ref.title, ref.startMin, ref.totalMin, ref.partCount);
+  }
+
+  function setAgendaMeta(key: string, meta: AgendaFlowMeta) {
+    s.agendaMeta = { ...s.agendaMeta, [key]: meta };
+  }
+
+  function moveAgendaMeta(oldKey: string, newKey: string) {
+    if (oldKey === newKey) return;
+    const meta = s.agendaMeta[oldKey];
+    if (!meta) return;
+    const next = { ...s.agendaMeta };
+    delete next[oldKey];
+    next[newKey] = meta;
+    s.agendaMeta = next;
+  }
+
+  function agendaMetaLabel(meta: AgendaFlowMeta | null): string {
+    if (!meta) return 'Ospecificerad';
+    if (meta.source === 'template') return meta.label ? `Mall: ${meta.label}` : 'Mall';
+    if (meta.source === 'ai') return 'AI-planerad';
+    if (meta.source === 'import') return meta.label ? `Import: ${meta.label}` : 'Importerad';
+    return 'Manuellt skapad';
+  }
+
+  function sessionAgendaMeta(): AgendaFlowMeta {
+    if (sessionSource.kind === 'template') {
+      return { source: 'template', label: sessionSource.title };
+    }
+    return { source: 'manual' };
+  }
+
   function resolveAgendaFlowRef(days: AgendaDay[] | null, ref: AgendaFlowRef | null) {
     if (!days || !ref) return null;
     const dayIdx = days.findIndex(d => d.date === ref.date);
@@ -225,6 +266,11 @@
   );
 
   const selectedAgendaDetails = $derived.by(() => resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef));
+  const selectedAgendaMeta = $derived.by(() => {
+    if (!selectedAgendaDetails) return null;
+    return s.agendaMeta[makeAgendaMetaKeyForFlow(selectedAgendaDetails.day.date ?? null, selectedAgendaDetails.flow, selectedAgendaDetails.startMin)] ?? null;
+  });
+  const selectedAgendaSourceLabel = $derived.by(() => agendaMetaLabel(selectedAgendaMeta));
 
   const planSaveLabel = $derived.by(() => {
     if (!selectedAgendaDetails) return 'Valj ett block for att borja redigera.';
@@ -715,6 +761,7 @@
     const active = resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef);
     if (!active || !agendaDays) return;
     const { dayIdx, flowIdx } = active;
+    const oldKey = activeAgendaFlowRef ? makeAgendaMetaKeyForRef(activeAgendaFlowRef) : null;
     const newDays = agendaDays.map((d, di) => di !== dayIdx ? d : {
       ...d,
       flows: d.flows.map((f, fi) => fi !== flowIdx ? f : {
@@ -736,6 +783,7 @@
       totalMin: totalMin(),
       partCount: s.blocks.length
     };
+    if (oldKey && activeAgendaFlowRef) moveAgendaMeta(oldKey, makeAgendaMetaKeyForRef(activeAgendaFlowRef));
     markPlanSaved();
   }
 
@@ -882,7 +930,7 @@
     if (loggedInUser) syncSave();
   }
 
-  function addFlowToAgendaToday(f: Flow, activate = false) {
+  function addFlowToAgendaToday(f: Flow, activate = false, meta: AgendaFlowMeta | null = null) {
     const today = localDateISO();
     const flowToAdd: Flow = { ...f, id: uid(), startMin: s.startMin };
     let days: AgendaDay[] = agendaDays
@@ -913,6 +961,7 @@
     days[dayIdx] = { ...days[dayIdx], flows: dayFlows };
     setActiveAgendaText(serializeAgenda(days));
     setActiveAgendaDate(today);
+    if (meta) setAgendaMeta(makeAgendaMetaKeyForFlow(today, flowToAdd, flowToAdd.startMin ?? s.startMin), meta);
     if (activate) {
       activeAgendaFlowRef = makeAgendaFlowRef(today, flowToAdd, flowToAdd.startMin ?? s.startMin);
       sessionSource = { kind: 'agenda', date: today, title: flowToAdd.title, startMin: flowToAdd.startMin ?? s.startMin };
@@ -942,7 +991,7 @@
   function addTemplateToAgendaToday(id: string) {
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
-    addFlowToAgendaToday(f, false);
+    addFlowToAgendaToday(f, false, { source: 'template', label: f.title });
     savedFlowMsg = 'Tillagd i dagplan ✓';
     setTimeout(() => { savedFlowMsg = ''; }, 2000);
     if (loggedInUser) syncSave();
@@ -986,6 +1035,9 @@
         s.agendaText2 = data.agendaText2;
         s.agendaDate2 = data.agendaDate2 || '';
       }
+      if (data.agendaMeta && typeof data.agendaMeta === 'object') {
+        s.agendaMeta = data.agendaMeta;
+      }
       activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
       appState.persist();
@@ -1009,6 +1061,7 @@
           agendaDate: s.agendaDate || '',
           agendaText2: s.agendaText2 || '',
           agendaDate2: s.agendaDate2 || '',
+          agendaMeta: s.agendaMeta || {},
         }),
       });
       if (!res.ok) throw new Error();
@@ -1132,6 +1185,7 @@
   }
 
   function saveAgenda() {
+    const importedDays = agendaDraft.trim() ? parseAgenda(agendaDraft) : [];
     const savedText = agendaDraft.trim()
       ? mergeAgendaDays(activeAgendaText(), agendaDraft)
       : activeAgendaText();
@@ -1140,6 +1194,14 @@
       agendaDraft = '';
     }
     appState.persist();
+    if (importedDays.length > 0) {
+      for (const day of importedDays) {
+        const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
+        for (const item of items) {
+          setAgendaMeta(makeAgendaMetaKeyForFlow(day.date ?? null, item.flow, item.startMin), { source: 'import', label: 'Textimport' });
+        }
+      }
+    }
 
     const daysAfterSave = savedText.trim() ? parseAgenda(savedText) : null;
     const dayAfterSave = daysAfterSave
@@ -1283,6 +1345,13 @@
       const data = await res.json();
       if (data.error) { agendaAiError = data.error; return; }
       setActiveAgendaText(data.text);
+      const aiDays = parseAgenda(data.text);
+      for (const day of aiDays) {
+        const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
+        for (const item of items) {
+          setAgendaMeta(makeAgendaMetaKeyForFlow(day.date ?? null, item.flow, item.startMin), { source: 'ai' });
+        }
+      }
       activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
       appState.persist();
@@ -1943,6 +2012,7 @@ Format:
               dateLabel={fmtAgendaDate(selectedAgendaDetails?.day.date ?? null)}
               timeRange={`${fmtHM(selectedAgendaDetails?.startMin ?? s.startMin)}–${fmtHM((selectedAgendaDetails?.startMin ?? s.startMin) + (selectedAgendaDetails?.totalMin ?? 0))}`}
               saveLabel={planSaveLabel}
+              sourceLabel={selectedAgendaSourceLabel}
               agendaOpen={s.agendaOpen}
               onToggleAgenda={() => { s.agendaOpen = !s.agendaOpen; appState.persist(); }}
             />
@@ -1991,7 +2061,7 @@ Format:
                 notes: s.blocks.map(b => b.note),
                 extraInfo: s.extraInfo,
               };
-              addFlowToAgendaToday(f, true);
+              addFlowToAgendaToday(f, true, sessionAgendaMeta());
             }}
             onExtraInfoInput={(value) => { s.extraInfo = value; syncTimerToAgenda(); appState.persist(); }}
             onStartTimeInput={(value) => {
