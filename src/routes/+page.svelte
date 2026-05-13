@@ -1307,7 +1307,7 @@
     e.stopPropagation();
     agendaDragMoved = false;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    const dayIdx = agendaDays.indexOf(selectedDay);
+    const dayIdx = selectedDayIdx;
     if (dayIdx < 0) return;
     const item = agendaItems[i];
     const prev = agendaItems[i - 1];
@@ -1351,6 +1351,13 @@
       };
     });
     setActiveAgendaText(serializeAgenda(newDays));
+    if (selectedAgendaDetails?.dayIdx === d.dayIdx && selectedAgendaDetails.flowIdx === d.i) {
+      const updatedDay = newDays[d.dayIdx];
+      const updatedItem = buildAgendaItemsForDay(updatedDay, d.blockStart)[d.i];
+      if (updatedItem) {
+        activeAgendaFlowRef = makeAgendaFlowRef(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin);
+      }
+    }
   }
 
   function endAgendaDrag() {
