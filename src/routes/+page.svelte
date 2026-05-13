@@ -207,6 +207,14 @@
     return 'Manuellt skapad';
   }
 
+  function agendaMetaBadge(meta: AgendaFlowMeta | null): string {
+    if (!meta) return '';
+    if (meta.source === 'template') return 'Mall';
+    if (meta.source === 'ai') return 'AI';
+    if (meta.source === 'import') return 'Import';
+    return 'Manuell';
+  }
+
   function sessionAgendaMeta(): AgendaFlowMeta {
     if (sessionSource.kind === 'template') {
       return { source: 'template', label: sessionSource.title };
@@ -2189,12 +2197,18 @@ Format:
           {@const isActive = nowMinLive >= item.startMin && nowMinLive < item.startMin + item.totalMin}
           {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
           {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
+          {@const itemMeta = item.fromText && selectedDay ? s.agendaMeta[makeAgendaMetaKeyForFlow(selectedDay.date ?? null, item.flow, item.startMin)] ?? null : null}
           <div class="agenda-block"
                class:past={isPast}
                class:active={isActive}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
                onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}>
             <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
+            {#if itemMeta}
+              <span class="agenda-source-badge" class:template={itemMeta.source === 'template'} class:ai={itemMeta.source === 'ai'} class:imported={itemMeta.source === 'import'}>
+                {agendaMetaBadge(itemMeta)}
+              </span>
+            {/if}
             <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
             {#if item.fromText && !isViewMode}
               <button class="agenda-del-btn" onclick={(e) => { e.stopPropagation(); deleteAgendaItem(ai); }} title="Ta bort block">🗑</button>
