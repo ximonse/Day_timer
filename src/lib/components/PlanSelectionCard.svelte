@@ -4,6 +4,7 @@
     title,
     dateLabel,
     timeRange,
+    saveLabel,
     agendaOpen,
     onToggleAgenda
   }: {
@@ -11,6 +12,7 @@
     title: string;
     dateLabel: string;
     timeRange: string;
+    saveLabel: string;
     agendaOpen: boolean;
     onToggleAgenda: () => void;
   } = $props();
@@ -26,6 +28,7 @@
   {#if hasSelection}
     <div class="section-copy">{title} • {dateLabel} • {timeRange}</div>
     <div class="section-copy muted">Andringar i falten nedan sparas tillbaka till det markerade blocket.</div>
+    <div class="section-copy"><strong>Status:</strong> {saveLabel}</div>
   {:else}
     <div class="section-copy">Klicka pa ett block i dagplanen till hoger for att borja redigera ett specifikt pass.</div>
   {/if}

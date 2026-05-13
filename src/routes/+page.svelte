@@ -65,11 +65,12 @@
   let locked = $state(false);
   let titleDraftValue = $state('');
   let agendaDayStart = $state(s.startMin);
+  let planLastSavedAt = $state<number | null>(null);
 
 
   let nowMinLive = $state(nowMinutes());
   let lastAutoLoadKey = $state('');
-  let mobileTab = $state<'timer'|'delar'|'plan'>('timer');
+  let mobileTab = $state<'timer'|'plan'>('timer');
   let nowText = $state('--:--');
   let leftText = $state('');
   let flowsOpen = $state(false);
@@ -178,6 +179,16 @@
     return { day, flow, startMin, totalMin };
   });
 
+  const planSaveLabel = $derived.by(() => {
+    if (!selectedAgendaDetails) return 'Valj ett block for att borja redigera.';
+    if (planLastSavedAt === null) return 'Inte sparat an i dagplanen.';
+    const savedAt = new Date(planLastSavedAt).toLocaleTimeString('sv-SE', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return `Sparat i dagplanen ${savedAt}`;
+  });
+
   const agendaItems = $derived.by(() => {
     const flows = selectedDay?.flows ?? (agendaDays ? [] : s.flows);
     const fromText = agendaDays !== null;
@@ -240,6 +251,11 @@
       syncBodyClasses();
     }
     appState.persist();
+  }
+
+  function markPlanSaved() {
+    if (!activeAgendaFlow) return;
+    planLastSavedAt = Date.now();
   }
 
   function fmtLeft(left: number): string {
@@ -651,6 +667,7 @@
       }),
     });
     setActiveAgendaText(serializeAgenda(newDays));
+    markPlanSaved();
   }
 
   function endDrag() {
@@ -1661,9 +1678,9 @@ Format:
     sessionSource = activeAgendaFlow
       ? { kind: 'agenda', date: selectedDay?.date ?? null, title: flow.title, startMin: s.startMin }
       : { kind: 'unscheduled' };
-    s.activeSection = 'plan';
+    planLastSavedAt = Date.now();
+    setActiveSection('plan');
     updateTimeFeedback(); renderEndControl(); appState.persist();
-    mobileTab = 'timer'; syncBodyClasses();
   }
 
   function goToTimerNow() {
@@ -1687,7 +1704,6 @@ Format:
         const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
         if (now >= t && now < t + totalMin) {
           loadAgendaFlow(flow, t);
-          mobileTab = 'timer'; syncBodyClasses();
           return;
         }
         t += totalMin;
@@ -1730,7 +1746,6 @@ Format:
     activeAgendaFlow = { dayIdx, flowIdx };
     sessionSource = { kind: 'agenda', date: today, title: newFlow.title, startMin: roundedNow };
     appState.persist();
-    mobileTab = 'timer'; syncBodyClasses();
   }
 </script>
 
@@ -1885,120 +1900,133 @@ Format:
           </div>
         </div>
 
-        {#if s.activeSection === 'now' || s.activeSection === 'plan'}
+        {#if s.activeSection === 'now' || (s.activeSection === 'plan' && selectedAgendaDetails)}
           <div class="session-source" class:from-template={sessionSource.kind === 'template'} class:from-agenda={sessionSource.kind === 'agenda'}>
             {sessionSourceText()}
           </div>
+        {/if}
 
+        {#if s.activeSection === 'now' || s.activeSection === 'plan'}
           {#if s.activeSection === 'plan'}
             <PlanSelectionCard
               hasSelection={!!selectedAgendaDetails}
               title={selectedAgendaDetails?.flow.title || '(utan rubrik)'}
               dateLabel={fmtAgendaDate(selectedAgendaDetails?.day.date ?? null)}
               timeRange={`${fmtHM(selectedAgendaDetails?.startMin ?? s.startMin)}–${fmtHM((selectedAgendaDetails?.startMin ?? s.startMin) + (selectedAgendaDetails?.totalMin ?? 0))}`}
+              saveLabel={planSaveLabel}
               agendaOpen={s.agendaOpen}
               onToggleAgenda={() => { s.agendaOpen = !s.agendaOpen; appState.persist(); }}
             />
           {/if}
 
-          <div class="step-section">
-            <div class="step-num">1</div>
-            <div class="step-body">
-              <label>{s.activeSection === 'plan' ? 'Blockrubrik' : 'Rubrik'}</label>
-              <input type="text" bind:this={titleInput} placeholder="Matematik"
-                oninput={(e) => { s.dayTitle = (e.target as HTMLInputElement).value; syncTimerToAgenda(); appState.persist(); }} />
+          {#if s.activeSection === 'now' || selectedAgendaDetails}
+            <div class="step-section">
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <label>{s.activeSection === 'plan' ? 'Blockrubrik' : 'Rubrik'}</label>
+                <input type="text" bind:this={titleInput} placeholder="Matematik"
+                  oninput={(e) => { s.dayTitle = (e.target as HTMLInputElement).value; syncTimerToAgenda(); appState.persist(); }} />
+              </div>
             </div>
-          </div>
 
-          <div class="step-section">
-            <div class="step-num">2</div>
-            <div class="step-body">
-              <label style="display:flex;align-items:center;gap:8px;">
-                {s.activeSection === 'plan' ? 'Blockinnehåll (en rad per del)' : 'Lektionsdelar (en per rad)'}
-                <button onclick={() => {
-                  navigator.clipboard.writeText(currentAiPrompt).then(() => {
-                    copyBtnText = '✓ Kopierad';
-                    setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
-                  });
-                }} style="font-size:11px;padding:1px 7px;border-radius:5px;border:1px solid var(--border);background:var(--pill);color:var(--menu-muted);cursor:pointer;line-height:1.6;">{copyBtnText}</button>
-              </label>
-              <textarea bind:this={partsArea} placeholder="Genomgång&#10;Eget arbete&#10;Avslut" oninput={handlePartsInput}></textarea>
-              <div class="feedback" bind:this={partsFeedback}>1 del</div>
-              <div class="feedback" style="opacity:.65;margin-top:4px;">#Rubrik &nbsp;·&nbsp; Aktivitet 10m &nbsp;·&nbsp; - notering &nbsp;·&nbsp; &amp;kommentar</div>
-              {#if aiApiKey}
-                <div class="ai-panel">
-                  <button class="ai-panel-toggle" onclick={() => aiPanelOpen = !aiPanelOpen}>
-                    {aiPanelOpen ? '▲' : '▼'} Planera med AI
-                  </button>
-                  {#if aiPanelOpen}
-                    <textarea class="ai-input" placeholder="Beskriv vad du vill planera... t.ex. &quot;45-minuterslektion om bråk för åk 5&quot;" bind:value={aiInput}></textarea>
-                    <div class="ai-mode-row">
-                      <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
-                        onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
-                      <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
-                        onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
-                      <span class="ai-mode-hint">
-                        {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
-                      </span>
-                    </div>
-                    {#if aiError}<div class="ai-error">{aiError}</div>{/if}
-                    <button class="quickstart ai-generate-btn" onclick={runAiParts} disabled={aiLoading || !aiInput.trim()}>
-                      {aiLoading ? 'Tänker...' : 'Generera ▶'}
+            <div class="step-section">
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <label style="display:flex;align-items:center;gap:8px;">
+                  {s.activeSection === 'plan' ? 'Blockinnehåll (en rad per del)' : 'Lektionsdelar (en per rad)'}
+                  <button onclick={() => {
+                    navigator.clipboard.writeText(currentAiPrompt).then(() => {
+                      copyBtnText = '✓ Kopierad';
+                      setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
+                    });
+                  }} style="font-size:11px;padding:1px 7px;border-radius:5px;border:1px solid var(--border);background:var(--pill);color:var(--menu-muted);cursor:pointer;line-height:1.6;">{copyBtnText}</button>
+                </label>
+                <textarea bind:this={partsArea} placeholder="Genomgång&#10;Eget arbete&#10;Avslut" oninput={handlePartsInput}></textarea>
+                <div class="feedback" bind:this={partsFeedback}>1 del</div>
+                <div class="feedback" style="opacity:.65;margin-top:4px;">#Rubrik &nbsp;·&nbsp; Aktivitet 10m &nbsp;·&nbsp; - notering &nbsp;·&nbsp; &amp;kommentar</div>
+                {#if aiApiKey}
+                  <div class="ai-panel">
+                    <button class="ai-panel-toggle" onclick={() => aiPanelOpen = !aiPanelOpen}>
+                      {aiPanelOpen ? '▲' : '▼'} Planera med AI
                     </button>
-                  {/if}
-                </div>
-              {/if}
+                    {#if aiPanelOpen}
+                      <textarea class="ai-input" placeholder="Beskriv vad du vill planera... t.ex. &quot;45-minuterslektion om bråk för åk 5&quot;" bind:value={aiInput}></textarea>
+                      <div class="ai-mode-row">
+                        <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
+                          onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
+                        <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
+                          onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
+                        <span class="ai-mode-hint">
+                          {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
+                        </span>
+                      </div>
+                      {#if aiError}<div class="ai-error">{aiError}</div>{/if}
+                      <button class="quickstart ai-generate-btn" onclick={runAiParts} disabled={aiLoading || !aiInput.trim()}>
+                        {aiLoading ? 'Tänker...' : 'Generera ▶'}
+                      </button>
+                    {/if}
+                  </div>
+                {/if}
+              </div>
             </div>
-          </div>
 
-          <div class="step-section step-section--action">
-            <div class="step-num">3</div>
-            <div class="step-body">
-              <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={() => {
-                const d = new Date();
-                s.startMin = d.getHours() * 60 + d.getMinutes();
-                if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
-                warnedSet.clear(); renderEndControl(); updateTimeFeedback();
-                const f: Flow = {
-                  id: uid(), title: s.dayTitle || 'Session',
-                  startMin: s.startMin,
-                  parts: s.blocks.map(b => b.title),
-                  minutes: s.blocks.map(b => b.minutes),
-                  warnings: s.blocks.map(b => b.warning),
-                  notes: s.blocks.map(b => b.note),
-                  extraInfo: s.extraInfo,
-                };
-                addFlowToAgendaToday(f, true);
-              }}><span class="ico">⚡︎</span> Snabbstart nu</button>
+            <div class="step-section step-section--action">
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={() => {
+                  const d = new Date();
+                  s.startMin = d.getHours() * 60 + d.getMinutes();
+                  if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
+                  warnedSet.clear(); renderEndControl(); updateTimeFeedback();
+                  const f: Flow = {
+                    id: uid(), title: s.dayTitle || 'Session',
+                    startMin: s.startMin,
+                    parts: s.blocks.map(b => b.title),
+                    minutes: s.blocks.map(b => b.minutes),
+                    warnings: s.blocks.map(b => b.warning),
+                    notes: s.blocks.map(b => b.note),
+                    extraInfo: s.extraInfo,
+                  };
+                  addFlowToAgendaToday(f, true);
+                }}><span class="ico">⚡︎</span> Snabbstart nu</button>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label>{s.activeSection === 'plan' ? 'Kommentar för valt block' : 'Info-ruta (fri text, visas som egen ruta i sidopanelen)'}</label>
-            <textarea placeholder="T.ex. Att ta med: bok, penna&#10;Läxa: sida 42"
-              oninput={(e) => { s.extraInfo = (e.target as HTMLTextAreaElement).value; syncTimerToAgenda(); appState.persist(); }}>{s.extraInfo}</textarea>
-          </div>
-          <div class="row2">
             <div>
-              <label>Starttid</label>
-              <input type="time" bind:this={startTimeInput} oninput={(e) => {
-                const [h, m] = (e.target as HTMLInputElement).value.split(':').map(Number);
-                if (isNaN(h) || isNaN(m)) return;
-                s.startMin = h * 60 + m; warnedSet.clear();
-                renderEndControl(); updateTimeFeedback();
-                syncTimerToAgenda(); appState.persist();
-              }} />
+              <label>{s.activeSection === 'plan' ? 'Kommentar för valt block' : 'Info-ruta (fri text, visas som egen ruta i sidopanelen)'}</label>
+              <textarea placeholder="T.ex. Att ta med: bok, penna&#10;Läxa: sida 42"
+                oninput={(e) => { s.extraInfo = (e.target as HTMLTextAreaElement).value; syncTimerToAgenda(); appState.persist(); }}>{s.extraInfo}</textarea>
             </div>
-            <div>
-              <label>{endMode === 'end' ? 'Sluttid' : 'Längd (min)'}</label>
-              <div bind:this={endControlEl}></div>
+            <div class="row2">
+              <div>
+                <label>Starttid</label>
+                <input type="time" bind:this={startTimeInput} oninput={(e) => {
+                  const [h, m] = (e.target as HTMLInputElement).value.split(':').map(Number);
+                  if (isNaN(h) || isNaN(m)) return;
+                  s.startMin = h * 60 + m; warnedSet.clear();
+                  renderEndControl(); updateTimeFeedback();
+                  syncTimerToAgenda(); appState.persist();
+                }} />
+              </div>
+              <div>
+                <label>{endMode === 'end' ? 'Sluttid' : 'Längd (min)'}</label>
+                <div bind:this={endControlEl}></div>
+              </div>
             </div>
-          </div>
-          <div class="mode-toggle">
-            <button class:on={endMode === 'end'} onclick={() => { endMode = 'end'; s.endMode = 'end'; renderEndControl(); appState.persist(); }}>Sluttid</button>
-            <button class:on={endMode === 'len'} onclick={() => { endMode = 'len'; s.endMode = 'len'; renderEndControl(); appState.persist(); }}>Längd</button>
-          </div>
-          <div class="feedback" bind:this={timeFeedback}></div>
+            <div class="mode-toggle">
+              <button class:on={endMode === 'end'} onclick={() => { endMode = 'end'; s.endMode = 'end'; renderEndControl(); appState.persist(); }}>Sluttid</button>
+              <button class:on={endMode === 'len'} onclick={() => { endMode = 'len'; s.endMode = 'len'; renderEndControl(); appState.persist(); }}>Längd</button>
+            </div>
+            <div class="feedback" bind:this={timeFeedback}></div>
+          {:else if s.activeSection === 'plan'}
+            <div class="section-card">
+              <div class="section-card-head">
+                <strong>Redigera dagplan</strong>
+              </div>
+              <div class="section-copy">Valj forst ett block i tidslinjen till hoger. Da vet appen exakt vilket pass som ska uppdateras.</div>
+              <div class="section-copy muted">Import av ny dagplan ligger kvar i hogerpanelet, men blockredigering borjar alltid med ett val i tidslinjen.</div>
+            </div>
+          {/if}
         {:else if s.activeSection === 'library'}
           <LibraryPanel
             savedFlowMsg={savedFlowMsg}
@@ -2169,16 +2197,16 @@ Format:
   </button>
 
   <nav class="mobile-tabs">
-    <button class:active={s.activeSection === 'now' && mobileTab === 'timer'} onclick={() => { s.activeSection = 'now'; mobileTab = 'timer'; syncBodyClasses(); appState.persist(); }}>
+    <button class:active={s.activeSection === 'now' && mobileTab === 'timer'} onclick={() => setActiveSection('now')}>
       <span>◷</span> Nu
     </button>
-    <button class:active={s.activeSection === 'plan' && mobileTab === 'plan'} onclick={() => { s.activeSection = 'plan'; s.agendaOpen = true; mobileTab = 'plan'; syncBodyClasses(); appState.persist(); }}>
+    <button class:active={s.activeSection === 'plan' && mobileTab === 'plan'} onclick={() => setActiveSection('plan')}>
       <span>▦</span> Plan
     </button>
-    <button class:active={s.activeSection === 'library'} onclick={() => { s.activeSection = 'library'; mobileTab = 'timer'; syncBodyClasses(); appState.persist(); }}>
+    <button class:active={s.activeSection === 'library'} onclick={() => setActiveSection('library')}>
       <span>⌘</span> Bibliotek
     </button>
-    <button class:active={s.activeSection === 'workspace'} onclick={() => { s.activeSection = 'workspace'; mobileTab = 'timer'; syncBodyClasses(); appState.persist(); }}>
+    <button class:active={s.activeSection === 'workspace'} onclick={() => setActiveSection('workspace')}>
       <span>⋯</span> Mer
     </button>
   </nav>
@@ -2265,7 +2293,7 @@ Format:
       <li><b>Paletter</b> — färgpunkterna längst ner till höger byter tema.</li>
       <li><b>Mörkt läge</b> — ☽/☀-knappen bredvid paletterna.</li>
       <li><b>Toggle-pills</b> (<span class="ico">⚙︎</span>) styr vad som visas: tid kvar, etiketter, markeringar m.m.</li>
-      <li><b>Mobilvy</b> — flikarna Timer / Delar / Plan längst ner på skärmen.</li>
+      <li><b>Mobilvy</b> — flikarna Nu / Plan / Bibliotek / Mer längst ner på skärmen.</li>
     </ul>
 
     <p class="help-foot" style="margin-top:12px">Genväg: <code>Alt+Shift+R</code> återställer timern (all data raderas).</p>
