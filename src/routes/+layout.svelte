@@ -145,6 +145,18 @@
   :global(.pill.on) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); }
   :global(.controls) { background: var(--menu-panel); border: 1px solid var(--menu-border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; width: min(360px, 100%); color: var(--menu-fg); }
   :global(.controls label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  :global(.section-nav) { display: flex; gap: 6px; flex-wrap: wrap; }
+  :global(.section-tab) { border: 1px solid var(--menu-border); background: var(--menu-surface); color: var(--menu-muted); border-radius: 999px; padding: 7px 11px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  :global(.section-tab.active) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); border-color: var(--menu-pill-on); }
+  :global(.section-hero) { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--menu-border); }
+  :global(.section-title) { font-size: 18px; font-weight: 700; color: var(--menu-fg); }
+  :global(.section-copy) { font-size: 13px; line-height: 1.45; color: var(--menu-muted); }
+  :global(.section-copy.muted) { opacity: .8; }
+  :global(.section-card) { display: flex; flex-direction: column; gap: 8px; background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 10px; padding: 12px; }
+  :global(.section-card-head) { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  :global(.session-source) { font-size: 12px; font-weight: 600; color: var(--menu-muted); background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 999px; padding: 6px 10px; width: fit-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.session-source.from-template) { color: var(--menu-fg); border-color: var(--muted); }
+  :global(.session-source.from-agenda) { color: var(--menu-pill-on-fg); background: var(--menu-pill-on); border-color: var(--menu-pill-on); }
   :global(.step-section) { display: flex; gap: 10px; align-items: flex-start; background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 10px; padding: 10px 12px; }
   :global(.step-section--action) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--menu-surface)); }
   :global(.step-num) { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
@@ -168,6 +180,8 @@
   :global(.flow-item) { display: flex; align-items: center; gap: 8px; background: var(--menu-pill); border-radius: 8px; padding: 4px 4px 4px 12px; }
   :global(.flow-item .flow-name) { flex: 1; background: transparent; border: 0; color: var(--menu-fg); cursor: pointer; text-align: left; padding: 8px 0; font-size: 15px; font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.flow-item .flow-name:hover) { text-decoration: underline; }
+  :global(.flow-item .flow-add) { background: transparent; border: 1px solid var(--menu-border); color: var(--menu-muted); cursor: pointer; font-size: 14px; width: 28px; height: 28px; border-radius: 999px; flex-shrink: 0; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
+  :global(.flow-item .flow-add:hover) { background: var(--menu-surface); color: var(--menu-fg); }
   :global(.flow-item .flow-del) { background: transparent; border: 0; color: var(--menu-muted); cursor: pointer; font-size: 14px; padding: 6px 10px; border-radius: 6px; flex-shrink: 0; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
   :global(.flow-item .flow-del:hover) { background: #e7ddcf; color: var(--menu-fg); }
   :global(.flows-hint) { font-size: 13px; color: var(--menu-muted); margin: 2px 0 0; }
@@ -354,9 +368,9 @@
   }
 
   /* ── View-mode: dölj kontroller ── */
-  :global(body.view-mode .toolbar-inner .icon) { display: none; }
-  :global(body.view-mode .settings-popover) { display: none; }
-  :global(body.view-mode .controls-panel) { display: none; }
+  :global(body.view-mode .toolbar) { display: none; }
+  :global(body.view-mode .controls) { display: none; }
+  :global(body.view-mode .theme-dots) { display: none; }
   :global(body.view-mode .collapse-btn) { display: none; }
   :global(body.view-mode .mobile-tabs) { display: none; }
   :global(body.view-mode .resize-handle-sb) { pointer-events: none; }

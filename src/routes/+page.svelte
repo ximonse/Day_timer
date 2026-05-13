@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { appState, uid, type Flow } from '$lib/state.svelte.js';
+  import { appState, uid, type AppSection, type Flow } from '$lib/state.svelte.js';
   import { PALETTES, PALETTE_COLORS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
+  import { localDateISO } from '$lib/date.js';
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
 
@@ -46,6 +47,11 @@
   let copyAgendaPromptText = $state('AI-prompt');
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let activeAgendaFlow = $state<{ dayIdx: number; flowIdx: number } | null>(null);
+  type SessionSource =
+    | { kind: 'unscheduled' }
+    | { kind: 'template'; templateId: string; title: string }
+    | { kind: 'agenda'; date: string | null; title: string; startMin: number };
+  let sessionSource = $state<SessionSource>({ kind: 'unscheduled' });
   let agendaDragMoved = false;
   let editingBlockId = $state<string | null>(null);
   let editingBlockField = $state<'name' | 'min' | null>(null);
@@ -97,6 +103,12 @@
     gemini: 'AIza...',
     custom: 'API-nyckel'
   };
+  const SECTION_LABELS: Record<AppSection, string> = {
+    now: 'Nu',
+    plan: 'Plan',
+    library: 'Bibliotek',
+    workspace: 'Arbetsyta'
+  };
 
   function saveAiConfig() {
     localStorage.setItem('daytimer_ai_config', JSON.stringify(aiConfig));
@@ -125,9 +137,7 @@
 
   const agendaDays = $derived.by<AgendaDay[] | null>(() => {
     const stored = activeAgendaText();
-    const draft = agendaDraft.trim();
-    const txt = draft ? mergeAgendaDays(stored, draft) : stored;
-    return txt.trim() ? parseAgenda(txt) : null;
+    return stored.trim() ? parseAgenda(stored) : null;
   });
 
   const selectedDay = $derived.by<AgendaDay | null>(() => {
@@ -137,7 +147,7 @@
       const hit = agendaDays.find(d => d.date === date);
       if (hit) return hit;
     }
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateISO();
     return agendaDays.find(d => d.date === today)
       ?? agendaDays.find(d => d.date === null)
       ?? agendaDays[0];
@@ -152,6 +162,17 @@
   const selectedDayIdx = $derived.by(() =>
     agendaDays && selectedDay ? agendaDays.indexOf(selectedDay) : -1
   );
+
+  const selectedAgendaDetails = $derived.by(() => {
+    if (!activeAgendaFlow || !agendaDays) return null;
+    const day = agendaDays[activeAgendaFlow.dayIdx];
+    const flow = day?.flows[activeAgendaFlow.flowIdx];
+    if (!day || !flow) return null;
+    const computed = agendaItems.find(item => item.flow === flow);
+    const startMin = flow.startMin ?? computed?.startMin ?? s.startMin;
+    const totalMin = flow.minutes.reduce((sum, minutes) => sum + minutes, 0);
+    return { day, flow, startMin, totalMin };
+  });
 
   const agendaItems = $derived.by(() => {
     const flows = selectedDay?.flows ?? (agendaDays ? [] : s.flows);
@@ -169,7 +190,7 @@
   const overlayItems = $derived.by(() => {
     if (!overlayDays) return [];
     const activeDate = activeAgendaDate();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateISO();
     const target = activeDate || today;
     const day = overlayDays.find(d => d.date === target)
       ?? overlayDays.find(d => d.date === today)
@@ -207,6 +228,12 @@
     appState.persist();
   }
 
+  function setActiveSection(section: AppSection) {
+    s.activeSection = section;
+    if (section === 'plan') s.agendaOpen = true;
+    appState.persist();
+  }
+
   function fmtLeft(left: number): string {
     if (left <= 0) return 'klart';
     const h = Math.floor(left / 60);
@@ -222,6 +249,15 @@
     if (h === 0) return `${m} min till start`;
     if (m === 0) return `${h}h till start`;
     return `${h}h ${m}m till start`;
+  }
+  function sessionSourceText(): string {
+    if (sessionSource.kind === 'agenda') {
+      return `Från dagplan: ${sessionSource.title || 'Session'} ${fmtHM(sessionSource.startMin)}`;
+    }
+    if (sessionSource.kind === 'template') {
+      return `Från mall: ${sessionSource.title || 'Utan rubrik'}`;
+    }
+    return 'Fristående session';
   }
   const elapsedMin = () => nowMinutes() - s.startMin;
   const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
@@ -603,6 +639,7 @@
         parts: s.blocks.map(b => b.title),
         notes: s.blocks.map(b => b.note),
         warnings: s.blocks.map(b => b.warning),
+        extraInfo: s.extraInfo,
       }),
     });
     setActiveAgendaText(serializeAgenda(newDays));
@@ -633,6 +670,7 @@
         if (diff < s.blocks.length * 2) return;
         scaleMinutesTo(diff);
         renderClock(); updateTimeFeedback();
+        syncTimerToAgenda(); appState.persist();
       });
       endControlEl.appendChild(inp);
     } else {
@@ -643,6 +681,7 @@
         if (!v || v < s.blocks.length * 2) return;
         scaleMinutesTo(v);
         renderClock(); updateTimeFeedback();
+        syncTimerToAgenda(); appState.persist();
       });
       endControlEl.appendChild(inp);
     }
@@ -725,9 +764,10 @@
     const result = parseParts(partsArea.value, s.blocks);
     s.blocks = result.blocks;
     if (result.dayTitle) s.dayTitle = result.dayTitle;
-    if (result.extraInfo) s.extraInfo = result.extraInfo;
+    s.extraInfo = result.extraInfo;
     updateTimeFeedback();
     renderEndControl();
+    syncTimerToAgenda();
     appState.persist();
   }
 
@@ -753,10 +793,8 @@
     if (loggedInUser) syncSave();
   }
 
-  function addFlowToAgendaToday(f: Flow) {
-    // Always add flows to school calendar
-    if (!schoolPrimary()) s.agendaView = 'school';
-    const today = new Date().toISOString().slice(0, 10);
+  function addFlowToAgendaToday(f: Flow, activate = false) {
+    const today = localDateISO();
     const flowToAdd: Flow = { ...f, id: uid(), startMin: s.startMin };
     let days: AgendaDay[] = agendaDays
       ? agendaDays.map(d => ({ ...d, flows: [...d.flows] }))
@@ -788,7 +826,10 @@
     days[dayIdx] = { ...days[dayIdx], flows: dayFlows };
     setActiveAgendaText(serializeAgenda(days));
     setActiveAgendaDate(today);
-    activeAgendaFlow = { dayIdx, flowIdx };
+    if (activate) {
+      activeAgendaFlow = { dayIdx, flowIdx };
+      sessionSource = { kind: 'agenda', date: today, title: flowToAdd.title, startMin: flowToAdd.startMin ?? s.startMin };
+    }
     appState.persist();
   }
 
@@ -807,8 +848,19 @@
     if (titleInput) titleInput.value = s.dayTitle;
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback(); renderEndControl();
-    addFlowToAgendaToday(f);
+    activeAgendaFlow = null;
+    sessionSource = { kind: 'template', templateId: f.id, title: f.title };
+    s.activeSection = 'now';
     appState.persist();
+  }
+
+  function addTemplateToAgendaToday(id: string) {
+    const f = s.flows.find(x => x.id === id);
+    if (!f) return;
+    addFlowToAgendaToday(f, false);
+    savedFlowMsg = 'Tillagd i dagplan ✓';
+    setTimeout(() => { savedFlowMsg = ''; }, 2000);
+    if (loggedInUser) syncSave();
   }
 
   function deleteFlow(id: string) {
@@ -849,6 +901,8 @@
         s.agendaText2 = data.agendaText2;
         s.agendaDate2 = data.agendaDate2 || '';
       }
+      activeAgendaFlow = null;
+      sessionSource = { kind: 'unscheduled' };
       appState.persist();
       showSyncStatus('Laddat från moln ✓');
     } catch { showSyncStatus('Kunde inte ladda', true); }
@@ -993,19 +1047,45 @@
   }
 
   function saveAgenda() {
+    const savedText = agendaDraft.trim()
+      ? mergeAgendaDays(activeAgendaText(), agendaDraft)
+      : activeAgendaText();
     if (agendaDraft.trim()) {
-      setActiveAgendaText(mergeAgendaDays(activeAgendaText(), agendaDraft));
+      setActiveAgendaText(savedText);
       agendaDraft = '';
     }
     appState.persist();
 
-    if (agendaDays && agendaItems.length > 0) {
+    const daysAfterSave = savedText.trim() ? parseAgenda(savedText) : null;
+    const dayAfterSave = daysAfterSave
+      ? (() => {
+          const date = activeAgendaDate();
+          if (date) {
+            const hit = daysAfterSave.find(d => d.date === date);
+            if (hit) return hit;
+          }
+          const today = localDateISO();
+          return daysAfterSave.find(d => d.date === today)
+            ?? daysAfterSave.find(d => d.date === null)
+            ?? daysAfterSave[0];
+        })()
+      : null;
+    if (daysAfterSave && dayAfterSave) {
+      let t = s.startMin;
+      const itemsAfterSave = dayAfterSave.flows.map(flow => {
+        if (flow.startMin !== undefined) t = flow.startMin;
+        const startMin = t;
+        const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
+        t += totalMin;
+        return { flow, startMin, totalMin };
+      });
       const now = nowMinutes();
-      const active = agendaItems.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
+      const active = itemsAfterSave.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
       if (active) {
         loadAgendaFlow(active.flow, active.startMin);
       } else {
         activeAgendaFlow = null;
+        sessionSource = { kind: 'unscheduled' };
       }
     }
 
@@ -1023,7 +1103,7 @@
     if (!existing.trim()) return incoming;
     // If pasted text has no dates, tag it with today so it doesn't wipe existing dated entries
     if (!hasDates) {
-      const t = new Date().toISOString().slice(0, 10);
+      const t = localDateISO();
       const [y, m, d] = t.split('-');
       return mergeAgendaDays(existing, `@${y.slice(2)}${m}${d}\n${incoming}`);
     }
@@ -1050,6 +1130,10 @@
         : d
     );
     setActiveAgendaText(serializeAgenda(days));
+    if (activeAgendaFlow?.dayIdx === selectedDayIdx && activeAgendaFlow.flowIdx === flowIdx) {
+      activeAgendaFlow = null;
+      sessionSource = { kind: 'unscheduled' };
+    }
     appState.persist();
   }
 
@@ -1065,6 +1149,7 @@
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback();
     renderEndControl();
+    syncTimerToAgenda();
     appState.persist();
   }
 
@@ -1075,6 +1160,7 @@
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     updateTimeFeedback();
     renderEndControl();
+    syncTimerToAgenda();
     appState.persist();
     editingBlockId = newId;
     editingBlockField = 'name';
@@ -1115,7 +1201,7 @@
     if (!agendaAiInput.trim()) return;
     agendaAiLoading = true; agendaAiError = '';
     try {
-      const todayISO = new Date().toISOString().slice(0, 10);
+      const todayISO = localDateISO();
       const res = await fetch('/api/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1124,6 +1210,8 @@
       const data = await res.json();
       if (data.error) { agendaAiError = data.error; return; }
       setActiveAgendaText(data.text);
+      activeAgendaFlow = null;
+      sessionSource = { kind: 'unscheduled' };
       appState.persist();
       agendaAiOpen = false;
       agendaAiInput = '';
@@ -1535,6 +1623,9 @@ Format:
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     const fi = selectedDay?.flows.indexOf(active.flow) ?? -1;
     activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
+    sessionSource = activeAgendaFlow
+      ? { kind: 'agenda', date: selectedDay?.date ?? null, title: active.flow.title, startMin: s.startMin }
+      : { kind: 'unscheduled' };
     updateTimeFeedback();
     renderEndControl();
     appState.persist();
@@ -1559,6 +1650,10 @@ Format:
     if (partsArea) partsArea.value = serializeBlocks(s.blocks);
     const fi = selectedDay?.flows.indexOf(flow) ?? -1;
     activeAgendaFlow = (agendaDays && fi >= 0) ? { dayIdx: selectedDayIdx, flowIdx: fi } : null;
+    sessionSource = activeAgendaFlow
+      ? { kind: 'agenda', date: selectedDay?.date ?? null, title: flow.title, startMin: s.startMin }
+      : { kind: 'unscheduled' };
+    s.activeSection = 'plan';
     updateTimeFeedback(); renderEndControl(); appState.persist();
     mobileTab = 'timer'; syncBodyClasses();
   }
@@ -1603,25 +1698,29 @@ Format:
       extraInfo: s.extraInfo,
       lastUsed: Date.now(),
     };
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateISO();
     const existingText = activeAgendaText();
     const days = existingText.trim() ? parseAgenda(existingText) : [];
     let todayEntry = days.find(d => d.date === today);
+    let dayIdx = days.indexOf(todayEntry as AgendaDay);
     if (!todayEntry) {
       todayEntry = { date: today, flows: [] };
       const insertAt = days.findIndex(d => d.date !== null && d.date > today);
-      if (insertAt < 0) days.push(todayEntry);
-      else days.splice(insertAt, 0, todayEntry);
+      if (insertAt < 0) { days.push(todayEntry); dayIdx = days.length - 1; }
+      else { days.splice(insertAt, 0, todayEntry); dayIdx = insertAt; }
     }
     const insertFlowAt = todayEntry.flows.findIndex(
       f => f.startMin !== undefined && f.startMin > roundedNow
     );
-    if (insertFlowAt < 0) todayEntry.flows.push(newFlow);
-    else todayEntry.flows.splice(insertFlowAt, 0, newFlow);
+    let flowIdx: number;
+    if (insertFlowAt < 0) { todayEntry.flows.push(newFlow); flowIdx = todayEntry.flows.length - 1; }
+    else { todayEntry.flows.splice(insertFlowAt, 0, newFlow); flowIdx = insertFlowAt; }
     setActiveAgendaText(serializeAgenda(days));
     setActiveAgendaDate(today);
     lastAutoLoadKey = '';
     loadAgendaFlow(newFlow, roundedNow);
+    activeAgendaFlow = { dayIdx, flowIdx };
+    sessionSource = { kind: 'agenda', date: today, title: newFlow.title, startMin: roundedNow };
     appState.persist();
     mobileTab = 'timer'; syncBodyClasses();
   }
@@ -1723,7 +1822,7 @@ Format:
           {@const ct = clockTheme(s.palette, s.dark)}
           <button class="wd" class:on={b.warning} style="color:{ct.colors[i % 8]}"
             title={`2-min varning för "${b.title}"`}
-            onclick={() => { b.warning = !b.warning; appState.persist(); }}
+            onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
           ></button>
         {/each}
       </div>
@@ -1761,198 +1860,256 @@ Format:
 
     {#if s.showControls}
       <div class="controls">
-        <div class="step-section">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <label>Rubrik</label>
-            <input type="text" bind:this={titleInput} placeholder="Matematik"
-              oninput={(e) => { s.dayTitle = (e.target as HTMLInputElement).value; appState.persist(); }} />
-          </div>
-        </div>
-
-        <div class="step-section">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <label style="display:flex;align-items:center;gap:8px;">
-              Lektionsdelar (en per rad)
-              <button onclick={() => {
-                navigator.clipboard.writeText(currentAiPrompt).then(() => {
-                  copyBtnText = '✓ Kopierad';
-                  setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
-                });
-              }} style="font-size:11px;padding:1px 7px;border-radius:5px;border:1px solid var(--border);background:var(--pill);color:var(--menu-muted);cursor:pointer;line-height:1.6;">{copyBtnText}</button>
-            </label>
-            <textarea bind:this={partsArea} placeholder="Genomgång&#10;Eget arbete&#10;Avslut" oninput={handlePartsInput}></textarea>
-            <div class="feedback" bind:this={partsFeedback}>1 del</div>
-            <div class="feedback" style="opacity:.65;margin-top:4px;">#Rubrik &nbsp;·&nbsp; Aktivitet 10m &nbsp;·&nbsp; - notering &nbsp;·&nbsp; &amp;kommentar</div>
-            {#if aiApiKey}
-              <div class="ai-panel">
-                <button class="ai-panel-toggle" onclick={() => aiPanelOpen = !aiPanelOpen}>
-                  {aiPanelOpen ? '▲' : '▼'} Planera med AI
-                </button>
-                {#if aiPanelOpen}
-                  <textarea class="ai-input" placeholder="Beskriv vad du vill planera... t.ex. &quot;45-minuterslektion om bråk för åk 5&quot;" bind:value={aiInput}></textarea>
-                  <div class="ai-mode-row">
-                    <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
-                      onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
-                    <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
-                      onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
-                    <span class="ai-mode-hint">
-                      {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
-                    </span>
-                  </div>
-                  {#if aiError}<div class="ai-error">{aiError}</div>{/if}
-                  <button class="quickstart ai-generate-btn" onclick={runAiParts} disabled={aiLoading || !aiInput.trim()}>
-                    {aiLoading ? 'Tänker...' : 'Generera ▶'}
-                  </button>
-                {/if}
-              </div>
-            {/if}
-          </div>
-        </div>
-
-        <div class="step-section step-section--action">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={() => {
-              const d = new Date();
-              s.startMin = d.getHours() * 60 + d.getMinutes();
-              if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
-              warnedSet.clear(); renderEndControl(); updateTimeFeedback();
-              const f: Flow = {
-                id: uid(), title: s.dayTitle || 'Session',
-                startMin: s.startMin,
-                parts: s.blocks.map(b => b.title),
-                minutes: s.blocks.map(b => b.minutes),
-                warnings: s.blocks.map(b => b.warning),
-                notes: s.blocks.map(b => b.note),
-                extraInfo: s.extraInfo,
-              };
-              addFlowToAgendaToday(f);
-            }}><span class="ico">⚡︎</span> Snabbstart nu</button>
-          </div>
-        </div>
-        <div>
-          <label>Info-ruta (fri text, visas som egen ruta i sidopanelen)</label>
-          <textarea placeholder="T.ex. Att ta med: bok, penna&#10;Läxa: sida 42"
-            oninput={(e) => { s.extraInfo = (e.target as HTMLTextAreaElement).value; appState.persist(); }}>{s.extraInfo}</textarea>
-        </div>
-        <div class="row2">
-          <div>
-            <label>Starttid</label>
-            <input type="time" bind:this={startTimeInput} oninput={(e) => {
-              const [h, m] = (e.target as HTMLInputElement).value.split(':').map(Number);
-              if (isNaN(h) || isNaN(m)) return;
-              s.startMin = h * 60 + m; warnedSet.clear();
-              renderEndControl(); updateTimeFeedback();
-              syncTimerToAgenda(); appState.persist();
-            }} />
-          </div>
-          <div>
-            <label>{endMode === 'end' ? 'Sluttid' : 'Längd (min)'}</label>
-            <div bind:this={endControlEl}></div>
-          </div>
-        </div>
-        <div class="mode-toggle">
-          <button class:on={endMode === 'end'} onclick={() => { endMode = 'end'; s.endMode = 'end'; renderEndControl(); appState.persist(); }}>Sluttid</button>
-          <button class:on={endMode === 'len'} onclick={() => { endMode = 'len'; s.endMode = 'len'; renderEndControl(); appState.persist(); }}>Längd</button>
-        </div>
-        <div class="feedback" bind:this={timeFeedback}></div>
-
-        <div class="flows">
-          <label>Mallar</label>
-          <button class="quickstart" onclick={saveFlow}
-            title="Sparar nuvarande schema som en återanvändbar mall">
-            <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
-          </button>
-          {#if s.flows.length === 0}
-            <p class="flows-hint">Inga mallar sparade. Klicka ovan för att spara det aktiva schemat.</p>
-          {:else}
-            <button class="flows-toggle" onclick={() => flowsOpen = !flowsOpen}>
-              Sparade mallar {flowsOpen ? '▾' : '▸'}
+        <nav class="section-nav" aria-label="Appsektioner">
+          {#each (Object.keys(SECTION_LABELS) as AppSection[]) as section}
+            <button class="section-tab" class:active={s.activeSection === section} onclick={() => setActiveSection(section)}>
+              {SECTION_LABELS[section]}
             </button>
-            {#if flowsOpen}
-              <div class="flow-list">
-                {#each [...s.flows].sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0)) as f (f.id)}
-                  <div class="flow-item">
-                    <button class="flow-name" onclick={() => loadFlow(f.id)}>{f.title || '(utan rubrik)'}</button>
-                    <button class="flow-del" onclick={() => deleteFlow(f.id)}><span class="ico">🗑︎</span></button>
-                  </div>
-                {/each}
+          {/each}
+        </nav>
+
+        <div class="section-hero">
+          <div class="section-title">{SECTION_LABELS[s.activeSection]}</div>
+          <div class="section-copy">
+            {#if s.activeSection === 'now'}
+              Redigera det som körs just nu i timern.
+            {:else if s.activeSection === 'plan'}
+              Välj ett block i dagplanen och redigera det här.
+            {:else if s.activeSection === 'library'}
+              Spara och återanvänd mallar utan att blanda ihop dem med dagens plan.
+            {:else}
+              Hantera synk, delning, AI och framtida importkällor.
+            {/if}
+          </div>
+        </div>
+
+        {#if s.activeSection === 'now' || s.activeSection === 'plan'}
+          <div class="session-source" class:from-template={sessionSource.kind === 'template'} class:from-agenda={sessionSource.kind === 'agenda'}>
+            {sessionSourceText()}
+          </div>
+
+          {#if s.activeSection === 'plan'}
+            <div class="section-card">
+              <div class="section-card-head">
+                <strong>Valt dagplansblock</strong>
+                <button class="ai-key-btn" onclick={() => { s.agendaOpen = !s.agendaOpen; appState.persist(); }}>
+                  {s.agendaOpen ? 'Dölj tidslinje' : 'Visa tidslinje'}
+                </button>
               </div>
+              {#if selectedAgendaDetails}
+                <div class="section-copy">
+                  {selectedAgendaDetails.flow.title || '(utan rubrik)'} • {fmtAgendaDate(selectedAgendaDetails.day.date)} • {fmtHM(selectedAgendaDetails.startMin)}–{fmtHM(selectedAgendaDetails.startMin + selectedAgendaDetails.totalMin)}
+                </div>
+                <div class="section-copy muted">Ändringar i fälten nedan sparas tillbaka till det markerade blocket.</div>
+              {:else}
+                <div class="section-copy">Klicka på ett block i dagplanen till höger för att börja redigera ett specifikt pass.</div>
+              {/if}
+            </div>
+          {/if}
+
+          <div class="step-section">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <label>{s.activeSection === 'plan' ? 'Blockrubrik' : 'Rubrik'}</label>
+              <input type="text" bind:this={titleInput} placeholder="Matematik"
+                oninput={(e) => { s.dayTitle = (e.target as HTMLInputElement).value; syncTimerToAgenda(); appState.persist(); }} />
+            </div>
+          </div>
+
+          <div class="step-section">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <label style="display:flex;align-items:center;gap:8px;">
+                {s.activeSection === 'plan' ? 'Blockinnehåll (en rad per del)' : 'Lektionsdelar (en per rad)'}
+                <button onclick={() => {
+                  navigator.clipboard.writeText(currentAiPrompt).then(() => {
+                    copyBtnText = '✓ Kopierad';
+                    setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
+                  });
+                }} style="font-size:11px;padding:1px 7px;border-radius:5px;border:1px solid var(--border);background:var(--pill);color:var(--menu-muted);cursor:pointer;line-height:1.6;">{copyBtnText}</button>
+              </label>
+              <textarea bind:this={partsArea} placeholder="Genomgång&#10;Eget arbete&#10;Avslut" oninput={handlePartsInput}></textarea>
+              <div class="feedback" bind:this={partsFeedback}>1 del</div>
+              <div class="feedback" style="opacity:.65;margin-top:4px;">#Rubrik &nbsp;·&nbsp; Aktivitet 10m &nbsp;·&nbsp; - notering &nbsp;·&nbsp; &amp;kommentar</div>
+              {#if aiApiKey}
+                <div class="ai-panel">
+                  <button class="ai-panel-toggle" onclick={() => aiPanelOpen = !aiPanelOpen}>
+                    {aiPanelOpen ? '▲' : '▼'} Planera med AI
+                  </button>
+                  {#if aiPanelOpen}
+                    <textarea class="ai-input" placeholder="Beskriv vad du vill planera... t.ex. &quot;45-minuterslektion om bråk för åk 5&quot;" bind:value={aiInput}></textarea>
+                    <div class="ai-mode-row">
+                      <button class="ai-mode-btn" class:on={aiConfig.planMode === 'strict'}
+                        onclick={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}>Strikt</button>
+                      <button class="ai-mode-btn" class:on={aiConfig.planMode === 'helpful'}
+                        onclick={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}>Hjälpsam</button>
+                      <span class="ai-mode-hint">
+                        {aiConfig.planMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
+                      </span>
+                    </div>
+                    {#if aiError}<div class="ai-error">{aiError}</div>{/if}
+                    <button class="quickstart ai-generate-btn" onclick={runAiParts} disabled={aiLoading || !aiInput.trim()}>
+                      {aiLoading ? 'Tänker...' : 'Generera ▶'}
+                    </button>
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          </div>
+
+          <div class="step-section step-section--action">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={() => {
+                const d = new Date();
+                s.startMin = d.getHours() * 60 + d.getMinutes();
+                if (startTimeInput) startTimeInput.value = fmtHM(s.startMin);
+                warnedSet.clear(); renderEndControl(); updateTimeFeedback();
+                const f: Flow = {
+                  id: uid(), title: s.dayTitle || 'Session',
+                  startMin: s.startMin,
+                  parts: s.blocks.map(b => b.title),
+                  minutes: s.blocks.map(b => b.minutes),
+                  warnings: s.blocks.map(b => b.warning),
+                  notes: s.blocks.map(b => b.note),
+                  extraInfo: s.extraInfo,
+                };
+                addFlowToAgendaToday(f, true);
+              }}><span class="ico">⚡︎</span> Snabbstart nu</button>
+            </div>
+          </div>
+
+          <div>
+            <label>{s.activeSection === 'plan' ? 'Kommentar för valt block' : 'Info-ruta (fri text, visas som egen ruta i sidopanelen)'}</label>
+            <textarea placeholder="T.ex. Att ta med: bok, penna&#10;Läxa: sida 42"
+              oninput={(e) => { s.extraInfo = (e.target as HTMLTextAreaElement).value; syncTimerToAgenda(); appState.persist(); }}>{s.extraInfo}</textarea>
+          </div>
+          <div class="row2">
+            <div>
+              <label>Starttid</label>
+              <input type="time" bind:this={startTimeInput} oninput={(e) => {
+                const [h, m] = (e.target as HTMLInputElement).value.split(':').map(Number);
+                if (isNaN(h) || isNaN(m)) return;
+                s.startMin = h * 60 + m; warnedSet.clear();
+                renderEndControl(); updateTimeFeedback();
+                syncTimerToAgenda(); appState.persist();
+              }} />
+            </div>
+            <div>
+              <label>{endMode === 'end' ? 'Sluttid' : 'Längd (min)'}</label>
+              <div bind:this={endControlEl}></div>
+            </div>
+          </div>
+          <div class="mode-toggle">
+            <button class:on={endMode === 'end'} onclick={() => { endMode = 'end'; s.endMode = 'end'; renderEndControl(); appState.persist(); }}>Sluttid</button>
+            <button class:on={endMode === 'len'} onclick={() => { endMode = 'len'; s.endMode = 'len'; renderEndControl(); appState.persist(); }}>Längd</button>
+          </div>
+          <div class="feedback" bind:this={timeFeedback}></div>
+        {:else if s.activeSection === 'library'}
+          <div class="flows">
+            <label>Mallar</label>
+            <button class="quickstart" onclick={saveFlow}
+              title="Sparar nuvarande schema som en återanvändbar mall">
+              <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
+            </button>
+            <p class="flows-hint">Här sparar du återanvändbara upplägg. Ladda i timern eller lägg till direkt i dagens plan.</p>
+            {#if s.flows.length === 0}
+              <p class="flows-hint">Inga mallar sparade ännu.</p>
+            {:else}
+              <button class="flows-toggle" onclick={() => flowsOpen = !flowsOpen}>
+                Sparade mallar {flowsOpen ? '▾' : '▸'}
+              </button>
+              {#if flowsOpen}
+                <div class="flow-list">
+                  {#each [...s.flows].sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0)) as f (f.id)}
+                    <div class="flow-item">
+                      <button class="flow-name" onclick={() => loadFlow(f.id)} title="Ladda mallen i timern utan att ändra dagplanen">{f.title || '(utan rubrik)'}</button>
+                      <button class="flow-add" onclick={() => addTemplateToAgendaToday(f.id)} title="Lägg till mallen i dagens dagplan">＋</button>
+                      <button class="flow-del" onclick={() => deleteFlow(f.id)}><span class="ico">🗑︎</span></button>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
             {/if}
-          {/if}
-        </div>
+          </div>
+        {:else}
+          <div class="section-card">
+            <div class="section-card-head">
+              <strong>Synk och arbetsyta</strong>
+            </div>
+            <div class="section-copy">Här ligger sådant som hör till kontot och appens infrastruktur, inte till ett enskilt block.</div>
+          </div>
 
-        <div class="login-form">
-          {#if loggedInUser}
-            <label>Synkronisering</label>
-            <div class="logged-in-row">
-              <span class="username">👤 {loggedInUser}</span>
-              <button class="logout-btn" onclick={logout}>Logga ut</button>
-            </div>
-            <div class="sync-row">
-              <button class="quickstart sync-btn" onclick={syncLoad}>☁ Ladda</button>
-              <button class="quickstart sync-btn" onclick={syncSave}>☁ Spara</button>
-            </div>
-          {:else}
-            <label>Synkronisering</label>
-            <input type="text" class="sync-input" bind:this={loginNameInput}
-              placeholder="Namn" autocomplete="username" spellcheck="false" />
-            <input type="password" class="sync-input" bind:this={loginPassInput}
-              placeholder="Lösenord" autocomplete="current-password" />
-            <button class="quickstart" onclick={login}>Logga in & synka</button>
-          {/if}
-          <div class="sync-status" style="color:{syncStatusError ? '#c0392b' : 'var(--muted)'}">{syncStatusText}</div>
-        </div>
+          <div class="login-form">
+            {#if loggedInUser}
+              <label>Synkronisering</label>
+              <div class="logged-in-row">
+                <span class="username">👤 {loggedInUser}</span>
+                <button class="logout-btn" onclick={logout}>Logga ut</button>
+              </div>
+              <div class="sync-row">
+                <button class="quickstart sync-btn" onclick={syncLoad}>☁ Ladda</button>
+                <button class="quickstart sync-btn" onclick={syncSave}>☁ Spara</button>
+              </div>
+            {:else}
+              <label>Synkronisering</label>
+              <input type="text" class="sync-input" bind:this={loginNameInput}
+                placeholder="Namn" autocomplete="username" spellcheck="false" />
+              <input type="password" class="sync-input" bind:this={loginPassInput}
+                placeholder="Lösenord" autocomplete="current-password" />
+              <button class="quickstart" onclick={login}>Logga in & synka</button>
+            {/if}
+            <div class="sync-status" style="color:{syncStatusError ? '#c0392b' : 'var(--muted)'}">{syncStatusText}</div>
+          </div>
 
-        <div class="share-section">
-          <label>Dela session</label>
-          {#if shareToken}
-            <div class="share-link-row">
-              <span class="share-link-text">{location.origin}/?view={shareToken}</span>
-              <button class="ai-key-btn" onclick={copyShareLink}>{shareCopyText}</button>
-            </div>
-            <button class="quickstart" onclick={stopSharing}>Sluta dela</button>
-          {:else}
-            <button class="quickstart" onclick={startSharing}>Starta delning</button>
-          {/if}
-        </div>
+          <div class="share-section">
+            <label>Dela session</label>
+            {#if shareToken}
+              <div class="share-link-row">
+                <span class="share-link-text">{location.origin}/?view={shareToken}</span>
+                <button class="ai-key-btn" onclick={copyShareLink}>{shareCopyText}</button>
+              </div>
+              <button class="quickstart" onclick={stopSharing}>Sluta dela</button>
+            {:else}
+              <button class="quickstart" onclick={startSharing}>Starta delning</button>
+            {/if}
+          </div>
 
-        <div class="ai-key-section">
-          <label>AI-planering</label>
-          <select class="sync-input ai-provider-select"
-            value={aiConfig.provider}
-            onchange={(e) => { aiConfig.provider = (e.target as HTMLSelectElement).value as AiProvider; aiKeyVisible = false; saveAiConfig(); }}>
-            {#each Object.entries(AI_PROVIDER_LABELS) as [val, label]}
-              <option value={val}>{label}</option>
-            {/each}
-          </select>
-          {#if aiApiKey}
-            <div class="ai-key-row">
-              <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
-              <button class="ai-key-btn" onclick={() => aiKeyVisible = !aiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
-              <button class="ai-key-btn" onclick={clearAiConfig}>✕</button>
-            </div>
-            {#if aiKeyVisible}
+          <div class="ai-key-section">
+            <label>AI-planering</label>
+            <select class="sync-input ai-provider-select"
+              value={aiConfig.provider}
+              onchange={(e) => { aiConfig.provider = (e.target as HTMLSelectElement).value as AiProvider; aiKeyVisible = false; saveAiConfig(); }}>
+              {#each Object.entries(AI_PROVIDER_LABELS) as [val, label]}
+                <option value={val}>{label}</option>
+              {/each}
+            </select>
+            {#if aiApiKey}
+              <div class="ai-key-row">
+                <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
+                <button class="ai-key-btn" onclick={() => aiKeyVisible = !aiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
+                <button class="ai-key-btn" onclick={clearAiConfig}>✕</button>
+              </div>
+              {#if aiKeyVisible}
+                <input type="password" class="sync-input" placeholder={AI_KEY_PLACEHOLDERS[aiConfig.provider]}
+                  value={aiConfig.apiKey}
+                  onchange={(e) => { aiConfig.apiKey = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+              {/if}
+            {:else}
               <input type="password" class="sync-input" placeholder={AI_KEY_PLACEHOLDERS[aiConfig.provider]}
-                value={aiConfig.apiKey}
                 onchange={(e) => { aiConfig.apiKey = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+              <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel för att aktivera AI-planering</div>
             {/if}
-          {:else}
-            <input type="password" class="sync-input" placeholder={AI_KEY_PLACEHOLDERS[aiConfig.provider]}
-              onchange={(e) => { aiConfig.apiKey = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
-            <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel för att aktivera AI-planering</div>
-          {/if}
-          {#if aiConfig.provider === 'custom'}
-            <input type="text" class="sync-input" placeholder="Bas-URL, t.ex. https://api.mistral.ai/v1"
-              value={aiConfig.baseUrl}
-              onchange={(e) => { aiConfig.baseUrl = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
-            <input type="text" class="sync-input" placeholder="Modell, t.ex. mistral-small-latest"
-              value={aiConfig.customModel}
-              onchange={(e) => { aiConfig.customModel = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
-          {/if}
-        </div>
+            {#if aiConfig.provider === 'custom'}
+              <input type="text" class="sync-input" placeholder="Bas-URL, t.ex. https://api.mistral.ai/v1"
+                value={aiConfig.baseUrl}
+                onchange={(e) => { aiConfig.baseUrl = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+              <input type="text" class="sync-input" placeholder="Modell, t.ex. mistral-small-latest"
+                value={aiConfig.customModel}
+                onchange={(e) => { aiConfig.customModel = (e.target as HTMLInputElement).value.trim(); saveAiConfig(); }} />
+            {/if}
+          </div>
+        {/if}
       </div>
     {/if}
   </main>
@@ -1961,7 +2118,7 @@ Format:
   <aside class="agenda" bind:this={agendaEl}>
     {#if !isViewMode}
       <div class="agenda-input-header">
-        <span class="agenda-input-label">Dagplan</span>
+        <span class="agenda-input-label">Importera ny dagplan</span>
         <button class="agenda-input-toggle" onclick={() => agendaInputOpen = !agendaInputOpen}>
           {agendaInputOpen ? '△ Dölj' : '▽ Redigera'}
         </button>
@@ -1969,7 +2126,7 @@ Format:
       {#if agendaInputOpen}
         <textarea
           class="agenda-input"
-          placeholder="@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9&#10;&#10;@260509&#10;#Arbete 09:00&#10;..."
+          placeholder="Klistra in ny dagplan här. Texten slås ihop med sparad dagplan när du klickar Spara.&#10;&#10;@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
           value={agendaDraft}
           oninput={(e) => { agendaDraft = (e.target as HTMLTextAreaElement).value; }}
           onpaste={(e) => {
@@ -1984,7 +2141,7 @@ Format:
         ></textarea>
         <div class="agenda-save-row">
           <button class="agenda-save-btn" onclick={saveAgenda}
-            title="Sparar dagplanen och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
+            title="Importerar texten till sparad dagplan och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
             {savedAgendaMsg || '📅 Spara dagplan'}
           </button>
           <button class="agenda-save-btn" onclick={() => {
@@ -2140,7 +2297,7 @@ Format:
     <h3>Dagplan (agenda)</h3>
     <ul>
       <li>Öppna agendapanelen med <b>▷</b>-knappen till höger om klockan.</li>
-      <li>Skriv in planen med <code>@YYMMDD</code> för datum, <code>#Rubrik HH:MM</code> för session.</li>
+      <li>Importfältet används för att klistra in ny plantext med <code>@YYMMDD</code> och <code>#Rubrik HH:MM</code>.</li>
       <li>Klicka på ett block i tidslinjen för att ladda den sessionen i klockan.</li>
       <li>Bläddra mellan dagar med <b>‹ ›</b>-pilarna.</li>
     </ul>
@@ -2157,9 +2314,9 @@ Format:
 
     <h3>Flöden &amp; synkronisering</h3>
     <ul>
-      <li><b>Spara flöde</b> 💾 sparar det aktuella schemat lokalt som ett återanvändbart flöde.</li>
-      <li><b>Logga in</b> med namn + lösenord för att synka flöden mellan enheter.</li>
-      <li><b>☁ Ladda / ☁ Spara</b> hämtar resp. skickar upp dina flöden till molnet.</li>
+      <li><b>Spara som mall</b> 💾 sparar det aktuella schemat som en återanvändbar mall.</li>
+      <li>Mallnamnet laddar mallen i timern. <b>＋</b> lägger till mallen i dagens dagplan.</li>
+      <li><b>☁ Ladda / ☁ Spara</b> hämtar eller skickar mallar och dagplaner till molnet.</li>
     </ul>
 
     <h3>Utseende</h3>
