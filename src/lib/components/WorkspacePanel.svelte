@@ -5,9 +5,6 @@
     syncStatusError,
     loginName,
     loginPass,
-    shareToken,
-    shareCopyText,
-    shareUrl,
     aiProvider,
     aiProviderLabels,
     aiKeyPlaceholders,
@@ -15,15 +12,14 @@
     aiKeyVisible,
     aiBaseUrl,
     aiCustomModel,
+    showHelpHints,
     onLogout,
     onSyncLoad,
     onSyncSave,
     onLogin,
     onLoginNameChange,
     onLoginPassChange,
-    onCopyShareLink,
-    onStopSharing,
-    onStartSharing,
+    onToggleHelpHints,
     onProviderChange,
     onToggleAiKeyVisible,
     onClearAiConfig,
@@ -36,9 +32,6 @@
     syncStatusError: boolean;
     loginName: string;
     loginPass: string;
-    shareToken: string;
-    shareCopyText: string;
-    shareUrl: string;
     aiProvider: string;
     aiProviderLabels: Record<string, string>;
     aiKeyPlaceholders: Record<string, string>;
@@ -46,15 +39,14 @@
     aiKeyVisible: boolean;
     aiBaseUrl: string;
     aiCustomModel: string;
+    showHelpHints: boolean;
     onLogout: () => void;
     onSyncLoad: () => void;
     onSyncSave: () => void;
     onLogin: () => void;
     onLoginNameChange: (value: string) => void;
     onLoginPassChange: (value: string) => void;
-    onCopyShareLink: () => void;
-    onStopSharing: () => void;
-    onStartSharing: () => void;
+    onToggleHelpHints: () => void;
     onProviderChange: (value: string) => void;
     onToggleAiKeyVisible: () => void;
     onClearAiConfig: () => void;
@@ -66,14 +58,22 @@
 
 <div class="section-card">
   <div class="section-card-head">
-    <strong>Synk och arbetsyta</strong>
+    <strong>Konto & AI</strong>
   </div>
-  <div class="section-copy">Har ligger sant som hor till kontot och appens infrastruktur, inte till ett enskilt block.</div>
+  <div class="section-copy">Här ligger sådant som hör till konto, delad drift och AI-stöd snarare än till ett enskilt block.</div>
+</div>
+
+<div class="section-card">
+  <div class="section-card-head">
+    <strong>Hjälpläge</strong>
+    <button class="quickstart" onclick={onToggleHelpHints}>{showHelpHints ? 'Dölj hjälp' : 'Visa hjälp'} · Alt+i</button>
+  </div>
+  <div class="section-copy">Global hjälp visar förklarande texter där de finns. Lokala <code>i</code>-knappar fungerar alltid även när hjälpläget är av.</div>
 </div>
 
 <div class="login-form">
   {#if loggedInUser}
-    <label>Synkronisering</label>
+    <div class="field-label">Synkronisering</div>
     <div class="logged-in-row">
       <span class="username">👤 {loggedInUser}</span>
       <button class="logout-btn" onclick={onLogout}>Logga ut</button>
@@ -83,7 +83,7 @@
       <button class="quickstart sync-btn" onclick={onSyncSave}>☁ Spara</button>
     </div>
   {:else}
-    <label>Synkronisering</label>
+    <div class="field-label">Synkronisering</div>
     <input type="text" class="sync-input"
       value={loginName}
       oninput={(e) => onLoginNameChange((e.target as HTMLInputElement).value)}
@@ -97,21 +97,8 @@
   <div class="sync-status" style="color:{syncStatusError ? '#c0392b' : 'var(--muted)'}">{syncStatusText}</div>
 </div>
 
-<div class="share-section">
-  <label>Dela session</label>
-  {#if shareToken}
-    <div class="share-link-row">
-      <span class="share-link-text">{shareUrl}</span>
-      <button class="ai-key-btn" onclick={onCopyShareLink}>{shareCopyText}</button>
-    </div>
-    <button class="quickstart" onclick={onStopSharing}>Sluta dela</button>
-  {:else}
-    <button class="quickstart" onclick={onStartSharing}>Starta delning</button>
-  {/if}
-</div>
-
 <div class="ai-key-section">
-  <label>AI-planering</label>
+  <div class="field-label">AI-planering</div>
   <select class="sync-input ai-provider-select"
     value={aiProvider}
     onchange={(e) => onProviderChange((e.target as HTMLSelectElement).value)}>

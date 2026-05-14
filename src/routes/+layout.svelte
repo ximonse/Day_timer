@@ -94,6 +94,7 @@
   :global(.seglist .dot) { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
   :global(.seglist .name) { flex: 1; overflow: hidden; overflow-wrap: break-word; white-space: normal; cursor: text; }
   :global(.seglist .min) { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; cursor: text; }
+  :global(.seg-inline-btn) { background: transparent; border: 0; padding: 0; font: inherit; text-align: left; }
   :global(.seglist .inline-edit) {
     background: transparent; border: none; border-bottom: 1px solid var(--muted);
     color: var(--fg); font: inherit; padding: 0; outline: none; min-width: 0;
@@ -124,7 +125,8 @@
   :global(.lesson-title-editable:focus) { border-bottom: 2px solid var(--accent); }
   :global(.lesson-title-editable::placeholder) { color: var(--muted); opacity: .35; }
   :global(.top-time) { text-align: center; }
-  :global(.top-time .now) { font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; letter-spacing: -0.025em; line-height: 1; font-variant-numeric: tabular-nums; }
+  :global(.top-time .now) { font-size: clamp(30px, 8.5cqi, 96px); font-weight: 700; letter-spacing: -0.04em; line-height: .95; font-variant-numeric: tabular-nums; display: inline-block; }
+  :global(.top-time .now-btn) { background: transparent; border: 0; color: inherit; font: inherit; padding: 0; cursor: pointer; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
   :global(.clock-wrap) { position: relative; }
   :global(svg.clock) { display: block; user-select: none; touch-action: none; overflow: visible; width: min(85vh, 50vw); height: min(85vh, 50vw); }
@@ -145,6 +147,10 @@
   :global(.pill.on) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); }
   :global(.controls) { background: var(--menu-panel); border: 1px solid var(--menu-border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; width: min(360px, 100%); color: var(--menu-fg); }
   :global(.controls label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  :global(.field-label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  :global(.field-head) { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+  :global(.field-head--wrap) { align-items: flex-start; flex-wrap: wrap; }
+  :global(.field-head-actions) { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
   :global(.section-nav) { display: flex; gap: 6px; flex-wrap: wrap; }
   :global(.section-tab) { border: 1px solid var(--menu-border); background: var(--menu-surface); color: var(--menu-muted); border-radius: 999px; padding: 7px 11px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
   :global(.section-tab.active) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); border-color: var(--menu-pill-on); }
@@ -171,6 +177,7 @@
   :global(.feedback) { font-size: 12px; color: var(--menu-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
   :global(.quickstart) { background: var(--menu-pill); color: var(--menu-fg); border: 1px solid var(--menu-border); border-radius: 999px; padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background .15s; }
   :global(.quickstart:hover) { background: #e2d8c8; }
+  :global(.quickstart:disabled), :global(.ai-key-btn:disabled) { opacity: .45; cursor: default; }
   :global(#quickStartBtn) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); border-color: var(--menu-pill-on); font-weight: 600; padding: 12px 16px; font-size: 15px; }
   :global(#quickStartBtn:hover) { background: #26221d; border-color: #26221d; }
   :global(.flows) { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
@@ -221,6 +228,23 @@
   :global(.agenda-block:hover) { background: var(--pill); }
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
+  :global(.agenda-block.dragging) {
+    opacity: .38;
+    background: color-mix(in srgb, var(--accent) 10%, var(--pill));
+    border-left-style: dashed;
+    transform: translateX(4px) scale(.99);
+  }
+  :global(.agenda-drop-indicator) {
+    position: absolute;
+    left: 0;
+    right: 37%;
+    height: 0;
+    border-top: 2px solid var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+    pointer-events: none;
+    z-index: 6;
+  }
+  :global(.agenda-timeline:not(.has-overlay) .agenda-drop-indicator) { right: 0; }
   :global(.agenda-timeline.has-overlay .agenda-block:not(.ghost)) { right: 37%; }
   :global(.agenda-block.ghost) { left: 65%; right: 0; border-left-width: 8px; opacity: .55; pointer-events: none; }
   :global(.agenda-block.ghost .agenda-name) { font-size: 14px; font-weight: 500; }
@@ -236,7 +260,20 @@
     font-size: 13px; line-height: 1; color: var(--fg);
     opacity: 0; transition: opacity .15s;
   }
+  :global(.agenda-move-btn) {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    z-index: 3; width: 20px; min-height: 38px; border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+    background: color-mix(in srgb, var(--panel) 72%, transparent);
+    color: var(--muted); cursor: grab; padding: 0; opacity: 0;
+    transition: opacity .15s, background .12s, color .12s;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; line-height: .8;
+  }
+  :global(.agenda-move-btn:hover) { background: var(--pill); color: var(--fg); }
+  :global(.agenda-move-btn:active) { cursor: grabbing; }
   :global(.agenda-block:hover .agenda-del-btn) { opacity: .55; }
+  :global(.agenda-block:hover .agenda-move-btn) { opacity: .72; }
   :global(.agenda-del-btn:hover) { opacity: 1 !important; }
   :global(.agenda-drag-top) {
     position: absolute; top: 0; left: 0; width: 50%; height: 50%;
@@ -253,12 +290,19 @@
     padding: 1px 6px; border-radius: 999px;
     background: color-mix(in srgb, var(--menu-pill-on) 84%, white 16%);
     color: var(--menu-pill-on-fg); pointer-events: none;
+    opacity: 0; transform: translateY(2px); transition: opacity .14s, transform .14s;
   }
   :global(.agenda-source-badge.template) { background: color-mix(in srgb, var(--muted) 78%, white 22%); color: #102216; }
   :global(.agenda-source-badge.ai) { background: color-mix(in srgb, var(--accent) 82%, white 18%); color: #2b1208; }
   :global(.agenda-source-badge.imported) { background: color-mix(in srgb, var(--pill-on) 70%, white 30%); color: var(--pill-on-fg); }
   :global(.agenda-name) { flex: 1; width: 100%; font-size: 30px; font-weight: 500; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; }
   :global(.agenda-block.ghost .agenda-source-badge) { display: none; }
+  @media (hover: hover) and (pointer: fine) {
+    :global(.agenda-block:hover .agenda-source-badge) { opacity: .95; transform: translateY(0); }
+  }
+  @media (hover: none) {
+    :global(.agenda-source-badge) { display: none; }
+  }
   :global(.agenda-dur) { font-size: 12px; color: var(--muted); flex-shrink: 0; }
   :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
   :global(.agenda-input) {
@@ -273,16 +317,36 @@
   :global(.agenda-nav-btn) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 18px; padding: 2px 8px; border-radius: 6px; line-height: 1; }
   :global(.agenda-nav-btn:hover:not(:disabled)) { background: var(--pill); color: var(--fg); }
   :global(.agenda-nav-btn:disabled) { opacity: .25; cursor: default; }
-  :global(.agenda-date-label) { flex: 1; text-align: center; font-size: 13px; font-weight: 600; color: var(--fg); }
+  :global(.agenda-date-label) { flex: 1; text-align: center; font-size: 30px; font-weight: 600; color: var(--fg); line-height: 1.05; }
+  :global(.agenda-calendar) { margin-bottom: 12px; padding: 8px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--panel) 72%, white 28%); }
+  :global(.agenda-calendar-head) { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+  :global(.agenda-calendar-weekdays),
+  :global(.agenda-calendar-grid) { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  :global(.agenda-calendar-weekdays) { margin-bottom: 4px; }
+  :global(.agenda-calendar-weekdays span) { text-align: center; font-size: 10px; color: var(--muted); font-weight: 700; }
+  :global(.agenda-calendar-day) {
+    min-height: 28px; border: 1px solid transparent; border-radius: 7px; background: transparent;
+    color: var(--fg); cursor: pointer; font: inherit; position: relative; padding: 4px 2px 8px;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  :global(.agenda-calendar-day:hover) { background: var(--pill); }
+  :global(.agenda-calendar-day.muted) { opacity: .45; }
+  :global(.agenda-calendar-day.selected) { border-color: var(--accent); background: var(--pill); }
+  :global(.agenda-calendar-day.has-content) { font-weight: 700; }
+  :global(.agenda-calendar-density) {
+    position: absolute; left: 8px; right: 8px; bottom: 5px; height: 4px; border-radius: 999px;
+    background: var(--accent); opacity: 0;
+  }
   :global(.agenda-input-header) { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   :global(.agenda-input-label) { flex: 1; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
   :global(.agenda-input-toggle) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 7px; border-radius: 5px; font-family: inherit; }
   :global(.agenda-input-toggle:hover) { background: var(--pill); color: var(--fg); }
   :global(.agenda-section-note) { margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--pill); color: var(--fg); font-size: 12px; line-height: 1.45; }
-  :global(.agenda-save-btn) { flex: 1; padding: 7px; background: var(--pill); border: 1px solid var(--border); border-radius: 8px; color: var(--fg); font-size: 13px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; font-family: inherit; transition: background .12s; }
-  :global(.agenda-save-btn:hover) { background: var(--pill-on); color: var(--pill-on-fg); }
+  :global(.agenda-save-btn) { flex: 1; padding: 7px; background: color-mix(in srgb, var(--pill) 55%, transparent); border: 1px solid color-mix(in srgb, var(--border) 72%, transparent); border-radius: 8px; color: var(--fg); font-size: 13px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; font-family: inherit; transition: background .12s, border-color .12s, color .12s; }
+  :global(.agenda-save-btn:hover) { background: color-mix(in srgb, var(--pill-on) 16%, transparent); color: var(--fg); border-color: var(--border); }
   :global(.agenda-save-row) { display: flex; gap: 6px; }
-  :global(.agenda-ai-btn) { background: var(--pill-on); color: var(--pill-on-fg); }
+  :global(.agenda-ai-btn) { background: color-mix(in srgb, var(--pill-on) 20%, transparent); color: var(--fg); }
+  :global(.agenda-plan-link) { width: 100%; margin-top: 4px; }
   :global(.agenda-ai-panel) { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
   :global(.login-form) { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
   :global(.ai-key-section) { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
@@ -292,6 +356,22 @@
   :global(.ai-key-masked) { flex: 1; font-size: 12px; font-family: monospace; color: var(--menu-fg); opacity: .8; }
   :global(.ai-key-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 5px; padding: 2px 8px; font-size: 11px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }
   :global(.ai-key-btn:hover) { background: var(--menu-surface); color: var(--menu-fg); }
+  :global(.info-btn) {
+    width: 18px; height: 18px; border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--menu-border) 68%, transparent);
+    background: color-mix(in srgb, var(--menu-surface) 36%, transparent);
+    color: color-mix(in srgb, var(--menu-muted) 78%, transparent);
+    cursor: pointer; font: inherit; font-size: 10px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0; flex-shrink: 0; line-height: 1; align-self: center;
+  }
+  :global(.info-btn:hover) {
+    background: color-mix(in srgb, var(--menu-surface) 68%, transparent);
+    color: var(--menu-fg);
+    border-color: color-mix(in srgb, var(--menu-border) 88%, transparent);
+  }
+  :global(.plan-editor) { display: flex; flex-direction: column; gap: 12px; }
+  :global(.plan-editor-bottom) { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; border-top: 1px solid var(--menu-border); }
   :global(.ai-panel) { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
   :global(.ai-panel-toggle) { background: transparent; border: 0; padding: 2px 0; font-size: 12px; color: var(--menu-muted); cursor: pointer; text-align: left; font-family: inherit; font-weight: 500; }
   :global(.ai-panel-toggle:hover) { color: var(--menu-fg); }
@@ -389,6 +469,7 @@
   :global(body.view-mode .resize-handle-ag) { pointer-events: none; }
   :global(body.view-mode .agenda-drag-top) { display: none; }
   :global(body.view-mode .agenda-drag-bottom) { display: none; }
+  :global(body.view-mode .agenda-move-btn) { display: none; }
 
   /* ── Lås-läge ── */
   :global(.lock-btn) { opacity: .18; font-size: 14px !important; }
@@ -401,6 +482,7 @@
   :global(body.page-locked .resize-handle-ag) { pointer-events: none !important; }
   :global(body.page-locked .agenda-drag-top) { pointer-events: none !important; }
   :global(body.page-locked .agenda-drag-bottom) { pointer-events: none !important; }
+  :global(body.page-locked .agenda-move-btn) { pointer-events: none !important; }
   :global(body.page-locked .lesson-title) { pointer-events: none !important; cursor: default; }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }

@@ -23,12 +23,12 @@
 </script>
 
 <div class="flows">
-  <label>Mallar</label>
+  <div class="field-label">Mallar</div>
   <button class="quickstart" onclick={onSaveFlow}
     title="Sparar nuvarande schema som en ateranvandbar mall">
     <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
   </button>
-  <p class="flows-hint">Har sparar du ateranvandbara upplagg. Ladda i timern eller lagg till direkt i dagens plan.</p>
+  <p class="flows-hint">Här sparar du återanvändbara upplägg. Ladda dem i planeringen eller lägg in dem direkt på vald dag.</p>
   {#if flows.length === 0}
     <p class="flows-hint">Inga mallar sparade annu.</p>
   {:else}
@@ -39,8 +39,8 @@
       <div class="flow-list">
         {#each [...flows].sort((a, b) => (b.lastUsed ?? 0) - (a.lastUsed ?? 0)) as f (f.id)}
           <div class="flow-item">
-            <button class="flow-name" onclick={() => onLoadFlow(f.id)} title="Ladda mallen i timern utan att andra dagplanen">{f.title || '(utan rubrik)'}</button>
-            <button class="flow-add" onclick={() => onAddToAgenda(f.id)} title="Lagg till mallen i dagens dagplan">＋</button>
+            <button class="flow-name" onclick={() => onLoadFlow(f.id)} title="Ladda mallen i den valda planeringsytan">{f.title || '(utan rubrik)'}</button>
+            <button class="flow-add" onclick={() => onAddToAgenda(f.id)} title="Lägg till mallen på vald dag">＋</button>
             <button class="flow-del" onclick={() => onDeleteFlow(f.id)}><span class="ico">🗑︎</span></button>
           </div>
         {/each}

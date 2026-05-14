@@ -60,6 +60,7 @@ export interface AppState {
   agendaView: 'school' | 'school+private' | 'private' | 'private+school';
   agendaMeta: Record<string, AgendaFlowMeta>;
   showControls: boolean;
+  showHelpHints: boolean;
   flows: Flow[];
   activeSection: AppSection;
 }
@@ -72,7 +73,7 @@ function defaultState(): AppState {
   return {
     palette: 'sansad',
     dark: false,
-    blocks: [{ id: uid(), title: 'Lektion', minutes: 45, note: '', warning: false, pinned: false }],
+    blocks: [{ id: uid(), title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }],
     dayTitle: '',
     extraInfo: '',
     startMin: 8 * 60,
@@ -99,6 +100,7 @@ function defaultState(): AppState {
     agendaView: 'school',
     agendaMeta: {},
     showControls: true,
+    showHelpHints: false,
     flows: [],
     activeSection: 'now',
   };
