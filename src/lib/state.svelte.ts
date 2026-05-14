@@ -6,6 +6,7 @@ export type AgendaFlowSourceKind = 'manual' | 'template' | 'ai' | 'import';
 export interface AgendaFlowMeta {
   source: AgendaFlowSourceKind;
   label?: string;
+  detail?: string;
 }
 
 export interface Block {

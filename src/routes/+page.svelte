@@ -217,7 +217,7 @@
     if (!meta) return '';
     if (meta.source === 'template') return 'Mall';
     if (meta.source === 'ai') return 'AI';
-    if (meta.source === 'import') return 'Import';
+    if (meta.source === 'import') return meta.label === 'ICS-kalender' ? 'ICS' : 'Import';
     return 'Manuell';
   }
 
@@ -231,7 +231,8 @@
     if (meta.source === 'ai') {
       return 'Blocket skapades av AI och går nu att finjustera som ett vanligt dagplansblock.';
     }
-    return 'Blocket kom in via import. Om du vill behandla det som helt eget kan du göra det manuellt.';
+    const detail = meta.detail ? ` ${meta.detail}` : '';
+    return `Blocket kom in via import.${detail} Om du vill behandla det som helt eget kan du göra det manuellt.`;
   }
 
   function sessionAgendaMeta(): AgendaFlowMeta {
@@ -304,7 +305,8 @@
   const icsPreviewLines = $derived.by(() =>
     icsPreviewEvents.slice(0, 6).map(event => {
       const timeLabel = event.allDay ? 'Heldag' : `${fmtHM(event.startMin)}–${fmtHM(event.endMin)}`;
-      return `${event.date} • ${timeLabel} • ${event.title}`;
+      const locationLabel = event.location ? ` • ${event.location}` : '';
+      return `${event.date} • ${timeLabel} • ${event.title}${locationLabel}`;
     })
   );
 
@@ -1336,7 +1338,11 @@
       for (const flow of day.flows) {
         setAgendaMeta(
           makeAgendaMetaKeyForFlow(day.date ?? null, flow, flow.startMin ?? s.startMin),
-          { source: 'import', label: 'ICS-import' }
+          {
+            source: 'import',
+            label: 'ICS-kalender',
+            detail: flow.extraInfo ? `Plats: ${flow.extraInfo}.` : undefined
+          }
         );
       }
     }
