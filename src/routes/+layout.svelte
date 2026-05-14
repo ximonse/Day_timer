@@ -95,7 +95,11 @@
   :global(.seglist .row.active) { background: var(--pill); font-weight: 500; }
   :global(.seglist .row.past) { opacity: .45; }
   :global(.seglist .dot) { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
-  :global(.seglist .name) { flex: 1; overflow: hidden; overflow-wrap: break-word; white-space: normal; cursor: text; }
+  :global(.seglist .name) {
+    flex: 1; overflow: hidden; overflow-wrap: break-word; white-space: normal; cursor: text;
+    color: color-mix(in srgb, var(--accent) 72%, white 28%);
+  }
+  :global(body.dark .seglist .name) { color: color-mix(in srgb, var(--accent) 62%, white 38%); }
   :global(.seglist .min) { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; cursor: text; }
   :global(.seg-inline-btn) { background: transparent; border: 0; padding: 0; font: inherit; text-align: left; }
   :global(.seglist .inline-edit) {

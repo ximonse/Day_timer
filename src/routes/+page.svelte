@@ -786,6 +786,9 @@
   }
   const elapsedMin = () => nowMinutes() - s.startMin;
   const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
+  function agendaAutoLoadKey(item: { startMin: number; totalMin: number; flow: Flow }) {
+    return `${item.startMin}-${item.totalMin}-${item.flow.title}-${item.flow.parts.length}`;
+  }
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
@@ -2448,7 +2451,7 @@ Regler:
       nowMin >= item.startMin && nowMin < item.startMin + item.totalMin
     );
     if (!active) return;
-    const key = `${active.startMin}-${active.flow.title}`;
+    const key = agendaAutoLoadKey(active);
     if (key === lastAutoLoadKey) return;
     lastAutoLoadKey = key;
     s.dayTitle = active.flow.title;
@@ -2868,6 +2871,7 @@ Regler:
                 extraInfo: s.extraInfo,
               };
               addFlowToAgendaToday(f, true, sessionAgendaMeta());
+              lastAutoLoadKey = `${f.startMin}-${totalFlowMinutes(f)}-${f.title}-${f.parts.length}`;
               capturePanelBaseline('now');
               notifyPanelMutation('now');
             }}
