@@ -2548,7 +2548,7 @@ Regler:
     setTimeout(() => { agendaDragMoved = false; }, 0);
   }
 
-  function loadAgendaFlow(flow: Flow, computedStart: number) {
+  function loadAgendaFlow(flow: Flow, computedStart: number, targetSection: AppSection = 'plan') {
     s.dayTitle = flow.title;
     s.blocks = flow.parts.map((title, i) => ({
       id: uid(),
@@ -2569,7 +2569,7 @@ Regler:
       ? { kind: 'agenda', date: selectedDay?.date ?? null, title: flow.title, startMin: s.startMin }
       : { kind: 'unscheduled' };
     planLastSavedAt = Date.now();
-    setActiveSection('plan');
+    setActiveSection(targetSection);
     capturePanelBaseline('plan');
     capturePanelBaseline('now');
     updateTimeFeedback(); renderEndControl(); appState.persist();
@@ -2595,7 +2595,7 @@ Regler:
         if (flow.startMin !== undefined) t = flow.startMin;
         const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
         if (now >= t && now < t + totalMin) {
-          loadAgendaFlow(flow, t);
+          loadAgendaFlow(flow, t, 'now');
           return;
         }
         t += totalMin;

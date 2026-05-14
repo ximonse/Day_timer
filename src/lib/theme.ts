@@ -133,5 +133,7 @@ export function labelColorFor(baseColor: string, i: number, isPast: boolean, pal
       label = LABELS_CLEAR_DAY[i % LABELS_CLEAR_DAY.length];
     }
   }
-  return isPast ? label + clockTheme(p, d).dimSuffix : label;
+  if (!isPast) return label;
+  // Keep past labels visually toned down, but not so faint they become unreadable.
+  return d ? mixHex(label, '#b8b3aa', 0.35) : mixHex(label, '#8c867a', 0.28);
 }
