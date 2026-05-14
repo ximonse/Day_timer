@@ -13,6 +13,11 @@
     aiBaseUrl,
     aiCustomModel,
     showHelpHints,
+    confirmedActualCount,
+    pendingActualCount,
+    reliabilityPercent,
+    reliabilityLevel,
+    reliabilityHint,
     onLogout,
     onSyncLoad,
     onSyncSave,
@@ -40,6 +45,11 @@
     aiBaseUrl: string;
     aiCustomModel: string;
     showHelpHints: boolean;
+    confirmedActualCount: number;
+    pendingActualCount: number;
+    reliabilityPercent: number;
+    reliabilityLevel: string;
+    reliabilityHint: string;
     onLogout: () => void;
     onSyncLoad: () => void;
     onSyncSave: () => void;
@@ -69,6 +79,23 @@
     <button class="quickstart" onclick={onToggleHelpHints}>{showHelpHints ? 'Dölj hjälp' : 'Visa hjälp'} · Alt+i</button>
   </div>
   <div class="section-copy">Global hjälp visar förklarande texter där de finns. Lokala <code>i</code>-knappar fungerar alltid även när hjälpläget är av.</div>
+</div>
+
+<div class="section-card">
+  <div class="section-card-head">
+    <strong>Tidsdata & tillförlitlighet</strong>
+  </div>
+  <div class="section-copy">Bekräftade pass: <strong>{confirmedActualCount}</strong> · Obekräftade idag: <strong>{pendingActualCount}</strong></div>
+  <div style="margin-top:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px;">
+      <span>Tillförlitlighet</span>
+      <span><strong>{reliabilityLevel}</strong> ({reliabilityPercent}%)</span>
+    </div>
+    <div style="height:10px;border-radius:999px;border:1px solid var(--border);background:var(--pill);overflow:hidden;">
+      <div style="height:100%;width:{reliabilityPercent}%;background:color-mix(in srgb, var(--pill-on) 75%, var(--accent) 25%);"></div>
+    </div>
+    <div class="section-copy" style="margin-top:6px;">{reliabilityHint}</div>
+  </div>
 </div>
 
 <div class="login-form">
