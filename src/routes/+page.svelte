@@ -2641,7 +2641,7 @@ Regler:
     setActiveAgendaText(serializeAgenda(days));
     setActiveAgendaDate(today);
     lastAutoLoadKey = '';
-    loadAgendaFlow(newFlow, roundedNow);
+    loadAgendaFlow(newFlow, roundedNow, 'now', false);
     activeAgendaFlowRef = makeAgendaFlowRef(today, newFlow, roundedNow);
     sessionSource = { kind: 'agenda', date: today, title: newFlow.title, startMin: roundedNow };
     capturePanelBaseline('now');
