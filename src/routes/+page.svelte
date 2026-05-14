@@ -764,6 +764,11 @@
     });
     appState.persist();
   }
+  function deleteActualEntry(id: string) {
+    const before = s.actualTimeLog.length;
+    s.actualTimeLog = s.actualTimeLog.filter((entry) => entry.id !== id);
+    if (s.actualTimeLog.length !== before) appState.persist();
+  }
   async function exportActualHistory() {
     const confirmed = s.actualTimeLog.filter((entry) => entry.confirmed || entry.autoFinalized);
     const jsonl = toJsonl(confirmed);
@@ -2927,7 +2932,10 @@ Regler:
                 {#each pendingActualEntries as entry, pi (`${entry.id}-${pi}`)}
                   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;">
                     <span>{fmtHM(entry.startMin)} {entry.title} · {entry.durationActualMin} min</span>
-                    <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={() => confirmActualEntry(entry.id)}>Bekräfta</button>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                      <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={() => confirmActualEntry(entry.id)}>Bekräfta</button>
+                      <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={() => deleteActualEntry(entry.id)}>Ta bort</button>
+                    </div>
                   </div>
                 {/each}
               {/if}
