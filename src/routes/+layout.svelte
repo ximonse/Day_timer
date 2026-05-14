@@ -27,6 +27,8 @@
     --menu-panel: #fcfaf5; --menu-surface: #f1ebdf; --menu-border: #d0c6b5;
     --menu-fg: #3a352e; --menu-muted: #6e665b; --menu-pill: #ece4d6;
     --menu-pill-on: #3a352e; --menu-pill-on-fg: #fbf7ef;
+    --sidebar-heading: #5f6f8f;
+    --sidebar-subheading: #5f8f7a;
   }
   :global(body.dark:not(.psychedelic)) {
     --bg: #1c1a16; --fg: #ede8dc; --panel: #26231e; --border: #3c3830;
@@ -35,31 +37,43 @@
     --menu-panel: #211f1a; --menu-surface: #2a2722; --menu-border: #464138;
     --menu-fg: #f2ede2; --menu-muted: #c2bbad; --menu-pill: #343029;
     --menu-pill-on: #ede8dc; --menu-pill-on-fg: #1c1a16;
+    --sidebar-heading: #d8d4ca;
+    --sidebar-subheading: #bdb7ab;
   }
   :global(.meadow) {
     --bg: #f4f1de; --fg: #2a3a10; --panel: #e5e8d0; --border: #a8c080;
     --muted: #5c8001; --accent: #fb6107; --pill: #e5e8d8;
     --pill-on: #5c8001; --pill-on-fg: #f4f1de; --void: #2a3a10;
+    --sidebar-heading: #3f5f0f;
+    --sidebar-subheading: #54761a;
   }
   :global(.mlp) {
     --bg: #fff5fb; --fg: #5a3070; --panel: #f8eaf8; --border: #d4a0e8;
     --muted: #8080b0; --accent: #ffafcc; --pill: #f0e0f8;
     --pill-on: #cdb4db; --pill-on-fg: #5a3070; --void: #5a3070;
+    --sidebar-heading: #6b3a84;
+    --sidebar-subheading: #6f6fa2;
   }
   :global(.bright) {
     --bg: #f4f1de; --fg: #1a0820; --panel: #e8e5d8; --border: #c0a0b8;
     --muted: #662e9b; --accent: #f86624; --pill: #e8e5d8;
     --pill-on: #662e9b; --pill-on-fg: #f4f1de; --void: #1a0820;
+    --sidebar-heading: #5f2f9c;
+    --sidebar-subheading: #7a49b2;
   }
   :global(.clear) {
     --bg: #f9f2ee; --fg: #5f0f40; --panel: #ede5e0; --border: #c09888;
     --muted: #0f4c5c; --accent: #fb8b24; --pill: #ede5e0;
     --pill-on: #5f0f40; --pill-on-fg: #f9f2ee; --void: #5f0f40;
+    --sidebar-heading: #6f1e4f;
+    --sidebar-subheading: #2e5e6a;
   }
   :global(.psychedelic) {
     --bg: #ff00ff; --fg: #ffffff; --panel: rgba(255,255,0,0.12); --border: #ff00ff;
     --muted: #ffff00; --accent: #ff00ff; --pill: rgba(0,255,255,0.15);
     --pill-on: #ffff00; --pill-on-fg: #000000; --void: #050010;
+    --sidebar-heading: #ffffff;
+    --sidebar-subheading: #ffff66;
   }
   :global(body.psychedelic) {
     background: linear-gradient(135deg,#ff00cc 0%,#00e5ff 28%,#fff35c 62%,#6a00ff 100%);
@@ -97,10 +111,9 @@
   :global(.seglist .dot) { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
   :global(.seglist .name) {
     flex: 1; overflow: hidden; overflow-wrap: break-word; white-space: normal; cursor: text;
-    color: color-mix(in srgb, var(--accent) 72%, white 28%);
+    color: var(--sidebar-heading);
   }
-  :global(body.dark .seglist .name) { color: color-mix(in srgb, var(--accent) 62%, white 38%); }
-  :global(.seglist .min) { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; cursor: text; }
+  :global(.seglist .min) { color: var(--sidebar-subheading); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; cursor: text; }
   :global(.seg-inline-btn) { background: transparent; border: 0; padding: 0; font: inherit; text-align: left; }
   :global(.seglist .inline-edit) {
     background: transparent; border: none; border-bottom: 1px solid var(--muted);
@@ -115,7 +128,7 @@
     transition: opacity .12s; opacity: .38;
   }
   :global(.seg-add-btn:hover) { opacity: .8; }
-  :global(.seglist .note) { color: var(--muted); font-size: 33px; line-height: 1.2; padding: 0 12px 8px 50px; white-space: pre-wrap; }
+  :global(.seglist .note) { color: var(--sidebar-subheading); font-size: 33px; line-height: 1.2; padding: 0 12px 8px 50px; white-space: pre-wrap; }
   :global(.seglist .infobox) { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: #ffffff; color: #1a1410; border: 1px solid #b8b0a4; font-size: 26px; line-height: 1.35; white-space: pre-wrap; font-style: italic; }
   :global(.dark .seglist .infobox) { background: #ececec; color: #000000; border: none; }
   :global(.collapse-btn) { position: fixed; top: 50%; left: calc(var(--sb-w, 260px) - 14px); transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--panel); color: var(--fg); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; z-index: 50; transition: left .25s ease; }
@@ -154,7 +167,7 @@
   :global(.pill.on) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); }
   :global(.controls) { background: var(--menu-panel); border: 1px solid var(--menu-border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; width: min(360px, 100%); color: var(--menu-fg); }
   :global(.controls label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
-  :global(.field-label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  :global(.field-label) { font-size: 12px; color: color-mix(in srgb, var(--menu-fg) 75%, var(--menu-muted) 25%); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
   :global(.field-head) { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
   :global(.field-head--wrap) { align-items: flex-start; flex-wrap: wrap; }
   :global(.field-head-actions) { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -163,7 +176,7 @@
   :global(.section-tab.active) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); border-color: var(--menu-pill-on); }
   :global(.section-hero) { display: flex; flex-direction: column; gap: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--menu-border); }
   :global(.section-title) { font-size: 18px; font-weight: 700; color: var(--menu-fg); }
-  :global(.section-copy) { font-size: 13px; line-height: 1.45; color: var(--menu-muted); }
+  :global(.section-copy) { font-size: 13px; line-height: 1.45; color: color-mix(in srgb, var(--menu-fg) 68%, var(--menu-muted) 32%); }
   :global(.section-copy.muted) { opacity: .8; }
   :global(.section-card) { display: flex; flex-direction: column; gap: 8px; background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 10px; padding: 12px; }
   :global(.section-card-head) { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -290,7 +303,7 @@
     position: absolute; bottom: 0; left: 0; width: 50%; height: 50%;
     cursor: ns-resize; touch-action: none; z-index: 2;
   }
-  :global(.agenda-time) { position: absolute; top: 3px; left: 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 500; pointer-events: none; }
+  :global(.agenda-time) { position: absolute; top: 3px; left: 8px; font-size: 12px; color: var(--sidebar-subheading); font-variant-numeric: tabular-nums; font-weight: 600; pointer-events: none; }
   :global(.agenda-source-badge) {
     position: absolute; top: 22px; left: 8px;
     font-size: 10px; font-weight: 700; letter-spacing: .03em;
@@ -347,7 +360,7 @@
     background: var(--accent); opacity: 0;
   }
   :global(.agenda-input-header) { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  :global(.agenda-input-label) { flex: 1; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+  :global(.agenda-input-label) { flex: 1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--sidebar-subheading); }
   :global(.agenda-input-toggle) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 7px; border-radius: 5px; font-family: inherit; }
   :global(.agenda-input-toggle:hover) { background: var(--pill); color: var(--fg); }
   :global(.agenda-section-note) { margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--pill); color: var(--fg); font-size: 12px; line-height: 1.45; }
