@@ -82,7 +82,7 @@
   <span class="agenda-input-label">Redigera dagtext</span>
   <button class="info-btn" onclick={onToggleImportHelp}>i</button>
   <button class="agenda-input-toggle" onclick={onToggleOpen}>
-    {agendaInputOpen ? '△ Dölj' : '▽ Redigera'}
+    {agendaInputOpen ? '△' : '▽'}
   </button>
 </div>
 {#if showImportHelp}
@@ -142,7 +142,7 @@
   <span class="agenda-input-label">Importera ICS-kalender</span>
   <button class="info-btn" onclick={onToggleIcsHelp}>i</button>
   <button class="agenda-input-toggle" onclick={onToggleIcsOpen}>
-    {icsImportOpen ? '△ Dölj' : '▽ Visa'}
+    {icsImportOpen ? '△' : '▽'}
   </button>
 </div>
 {#if showIcsHelp}

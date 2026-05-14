@@ -319,6 +319,8 @@
   :global(.agenda-nav-btn:disabled) { opacity: .25; cursor: default; }
   :global(.agenda-date-label) { flex: 1; text-align: center; font-size: 30px; font-weight: 600; color: var(--fg); line-height: 1.05; }
   :global(.agenda-calendar) { margin-bottom: 12px; padding: 8px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--panel) 72%, white 28%); }
+  :global(.agenda-calendar.collapsed) { margin-bottom: 6px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+  :global(.agenda-calendar.collapsed .agenda-input-header) { margin-bottom: 0 !important; }
   :global(.agenda-calendar-head) { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
   :global(.agenda-calendar-weekdays),
   :global(.agenda-calendar-grid) { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
