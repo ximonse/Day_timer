@@ -30,6 +30,22 @@ export interface Flow {
   lastUsed?: number;
 }
 
+export interface ActualTimeEntry {
+  id: string;
+  date: string;
+  agendaDate: string | null;
+  title: string;
+  subjectCategory: string;
+  weekday: number;
+  startMin: number;
+  endMinActual: number;
+  durationActualMin: number;
+  dayTextSnapshot: string;
+  confirmed: boolean;
+  confirmedAt: number | null;
+  autoFinalized: boolean;
+}
+
 export interface AppState {
   palette: Palette;
   dark: boolean;
@@ -59,6 +75,7 @@ export interface AppState {
   agendaDate2: string;
   agendaView: 'school' | 'school+private' | 'private' | 'private+school';
   agendaMeta: Record<string, AgendaFlowMeta>;
+  actualTimeLog: ActualTimeEntry[];
   showControls: boolean;
   showHelpHints: boolean;
   flows: Flow[];
@@ -99,6 +116,7 @@ function defaultState(): AppState {
     agendaDate2: '',
     agendaView: 'school',
     agendaMeta: {},
+    actualTimeLog: [],
     showControls: true,
     showHelpHints: false,
     flows: [],

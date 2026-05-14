@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { appState, uid, type AgendaFlowMeta, type AppSection, type Flow } from '$lib/state.svelte.js';
+  import { appState, uid, type ActualTimeEntry, type AgendaFlowMeta, type AppSection, type Flow } from '$lib/state.svelte.js';
   import { PALETTES, PALETTE_COLORS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO } from '$lib/date.js';
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
+  import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory, toJsonl } from '$lib/learning.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -83,6 +84,8 @@
   let titleDraftValue = $state('');
   let agendaDayStart = $state(s.startMin);
   let planLastSavedAt = $state<number | null>(null);
+  let lastSeenDate = $state(localDateISO());
+  let activeRuntimeEntryId = $state<string | null>(null);
   let calendarMonthCursor = $state('');
   type PanelSaveStatus = 'idle' | 'saving' | 'saved';
   let nowPanelStatus = $state<PanelSaveStatus>('idle');
@@ -400,6 +403,37 @@
     });
     return `Sparat i dagplanen ${savedAt}`;
   });
+  const pendingActualEntries = $derived.by(() => {
+    const today = localDateISO();
+    return s.actualTimeLog
+      .filter((entry) => entry.date === today && !entry.confirmed)
+      .sort((a, b) => a.startMin - b.startMin);
+  });
+  const currentSubjectCategory = $derived.by(() => inferSubjectCategory(s.dayTitle || ''));
+  const suggestedDuration = $derived.by(() => {
+    const weekday = new Date().getDay();
+    const rec = computeRecommendation(s.actualTimeLog, s.dayTitle || '', currentSubjectCategory, weekday);
+    if (!rec) return null;
+    const dayText = serializeSelectedAgendaDay(selectedDay?.date ?? null, agendaDays ?? null);
+    return {
+      ...rec,
+      minutes: applyDayTextHeuristic(rec.minutes, dayText),
+    };
+  });
+  const confirmedActualCount = $derived.by(() =>
+    s.actualTimeLog.filter((entry) => entry.confirmed || entry.autoFinalized).length
+  );
+  const reliabilityPercent = $derived.by(() => Math.min(100, Math.round((confirmedActualCount / 40) * 100)));
+  const reliabilityLevel = $derived.by(() => {
+    if (confirmedActualCount >= 40) return 'Hög';
+    if (confirmedActualCount >= 15) return 'Medel';
+    return 'Låg';
+  });
+  const reliabilityHint = $derived.by(() => {
+    if (confirmedActualCount >= 40) return 'Bra underlag för stabila rekommendationer.';
+    if (confirmedActualCount >= 15) return 'Helt okej underlag, men fler bekräftade pass förbättrar träffsäkerheten.';
+    return 'Få datapunkter än så länge. Bekräfta fler pass för bättre förslag.';
+  });
 
   const sectionCopy = $derived.by(() => {
     if (s.activeSection === 'now') return 'Redigera det som körs just nu i timern.';
@@ -649,6 +683,94 @@
     if (h === 0) return `${m} min till start`;
     if (m === 0) return `${h}h till start`;
     return `${h}h ${m}m till start`;
+  }
+  function makeActualEntryId(date: string, startMin: number, title: string) {
+    return `${date}|${startMin}|${title.trim().toLowerCase()}`;
+  }
+  function upsertActualEntry(entry: ActualTimeEntry) {
+    const idx = s.actualTimeLog.findIndex((item) => item.id === entry.id);
+    if (idx < 0) s.actualTimeLog = [...s.actualTimeLog, entry];
+    else {
+      const next = [...s.actualTimeLog];
+      next[idx] = entry;
+      s.actualTimeLog = next;
+    }
+  }
+  function trackActualForActiveAgendaItem() {
+    const date = localDateISO();
+    const nowMin = nowMinutes();
+    const active = agendaItems.find((item) => nowMin >= item.startMin && nowMin < item.startMin + item.totalMin);
+    if (!active) {
+      activeRuntimeEntryId = null;
+      return;
+    }
+    const id = makeActualEntryId(date, active.startMin, active.flow.title || 'Session');
+    activeRuntimeEntryId = id;
+    const existing = s.actualTimeLog.find((entry) => entry.id === id);
+    const duration = Math.max(1, nowMin - active.startMin);
+    const base: ActualTimeEntry = existing ?? {
+      id,
+      date,
+      agendaDate: selectedDay?.date ?? null,
+      title: active.flow.title || 'Session',
+      subjectCategory: inferSubjectCategory(active.flow.title || ''),
+      weekday: new Date().getDay(),
+      startMin: active.startMin,
+      endMinActual: nowMin,
+      durationActualMin: duration,
+      dayTextSnapshot: serializeSelectedAgendaDay(selectedDay?.date ?? null, agendaDays ?? null),
+      confirmed: false,
+      confirmedAt: null,
+      autoFinalized: false
+    };
+    const updated = {
+      ...base,
+      endMinActual: Math.max(base.endMinActual, nowMin),
+      durationActualMin: Math.max(base.durationActualMin, duration),
+      dayTextSnapshot: base.dayTextSnapshot || serializeSelectedAgendaDay(selectedDay?.date ?? null, agendaDays ?? null),
+    };
+    const wasNew = !existing;
+    const wasChanged = updated.endMinActual !== base.endMinActual || updated.durationActualMin !== base.durationActualMin;
+    upsertActualEntry(updated);
+    if (wasNew || (wasChanged && nowMin % 5 === 0)) appState.persist();
+  }
+  function finalizeUnconfirmedForDate(date: string) {
+    let changed = false;
+    s.actualTimeLog = s.actualTimeLog.map((entry) => {
+      if (entry.date !== date || entry.confirmed) return entry;
+      changed = true;
+      return {
+        ...entry,
+        confirmed: true,
+        confirmedAt: Date.now(),
+        autoFinalized: true
+      };
+    });
+    if (changed) appState.persist();
+  }
+  function confirmActualEntry(id: string) {
+    const hit = s.actualTimeLog.find((entry) => entry.id === id);
+    if (!hit || hit.confirmed) return;
+    upsertActualEntry({
+      ...hit,
+      confirmed: true,
+      confirmedAt: Date.now(),
+      autoFinalized: false
+    });
+    appState.persist();
+  }
+  async function exportActualHistory() {
+    const confirmed = s.actualTimeLog.filter((entry) => entry.confirmed || entry.autoFinalized);
+    const jsonl = toJsonl(confirmed);
+    const blob = new Blob([jsonl], { type: 'application/x-ndjson;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `day-timer-history-${localDateISO()}.jsonl`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
   function sessionSourceText(): string {
     if (sessionSource.kind === 'agenda') {
@@ -1180,6 +1302,11 @@
 
   function tick() {
     const now = new Date();
+    const todayIso = localDateISO(now);
+    if (todayIso !== lastSeenDate) {
+      finalizeUnconfirmedForDate(lastSeenDate);
+      lastSeenDate = todayIso;
+    }
     nowMinLive = nowMinutes();
     nowText = pad(now.getHours()) + ':' + pad(now.getMinutes());
     const tot = totalMin();
@@ -1190,6 +1317,7 @@
       leftText = fmtLeft((s.startMin + tot) - nowMin);
     }
     checkAutoLoad();
+    trackActualForActiveAgendaItem();
     renderClock();
     checkWarnings();
   }
@@ -1370,6 +1498,9 @@
       if (data.agendaMeta && typeof data.agendaMeta === 'object') {
         s.agendaMeta = data.agendaMeta;
       }
+      if (Array.isArray(data.actualTimeLog)) {
+        s.actualTimeLog = data.actualTimeLog;
+      }
       activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
       capturePanelBaseline('now');
@@ -1396,6 +1527,7 @@
           agendaText2: s.agendaText2 || '',
           agendaDate2: s.agendaDate2 || '',
           agendaMeta: s.agendaMeta || {},
+          actualTimeLog: s.actualTimeLog || [],
         }),
       });
       if (!res.ok) throw new Error();
@@ -2384,12 +2516,13 @@ Regler:
       setTimeout(() => { agendaDragMoved = false; }, 0);
       return;
     }
+    const previewStart = preview.previewStart;
 
     const newDays = agendaDays.map((day, di) => {
       if (di !== move.dayIdx) return day;
       const flows = [...day.flows];
       const [movedFlow] = flows.splice(move.flowIdx, 1);
-      const updated = { ...movedFlow, startMin: preview.previewStart };
+      const updated = { ...movedFlow, startMin: previewStart };
       flows.splice(Math.min(preview.targetIdx, flows.length), 0, updated);
       return { ...day, flows };
     });
@@ -2750,6 +2883,31 @@ Regler:
             onStartSessionShare={() => startSharing('selected-session-snapshot')}
             onStartDayShare={() => startSharing('selected-day-snapshot')}
           />
+          {#if s.activeSection === 'plan' && !isViewMode}
+            <div class="agenda-section-note" style="margin-top:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                <strong>Faktisk tid & lärande</strong>
+                <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={exportActualHistory}>Exportera historik (JSONL)</button>
+              </div>
+              <div class="feedback" style="margin-top:8px;">
+                Kategori: <strong>{currentSubjectCategory}</strong>
+                {#if suggestedDuration}
+                  · Föreslagen tid: <strong>{suggestedDuration.minutes} min</strong> ({suggestedDuration.sampleSize} träffar)
+                {:else}
+                  · Ingen historik ännu för rekommendation
+                {/if}
+              </div>
+              {#if pendingActualEntries.length > 0}
+                <div class="feedback" style="margin-top:8px;">Obekräftade pass idag (autosparas vid nytt dygn):</div>
+                {#each pendingActualEntries as entry, pi (`${entry.id}-${pi}`)}
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;">
+                    <span>{fmtHM(entry.startMin)} {entry.title} · {entry.durationActualMin} min</span>
+                    <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={() => confirmActualEntry(entry.id)}>Bekräfta</button>
+                  </div>
+                {/each}
+              {/if}
+            </div>
+          {/if}
         {:else if s.activeSection === 'library'}
           <LibraryPanel
             savedFlowMsg={savedFlowMsg}
@@ -2776,6 +2934,11 @@ Regler:
             aiBaseUrl={aiConfig.baseUrl}
             aiCustomModel={aiConfig.customModel}
             showHelpHints={s.showHelpHints}
+            confirmedActualCount={confirmedActualCount}
+            pendingActualCount={pendingActualEntries.length}
+            reliabilityPercent={reliabilityPercent}
+            reliabilityLevel={reliabilityLevel}
+            reliabilityHint={reliabilityHint}
             onLogout={logout}
             onSyncLoad={syncLoad}
             onSyncSave={syncSave}
@@ -2910,7 +3073,7 @@ Regler:
           {@const previewTop = ((agendaMoveState.previewStart - windowStart) / 720 * 100).toFixed(3)}
           <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>
         {/if}
-        {#each agendaItems as item, ai (item.startMin + item.flow.title)}
+        {#each agendaItems as item, ai (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-${ai}`)}
           {@const itemColor = sectorColors[ai % sectorColors.length]}
           {@const isPast = nowMinLive >= item.startMin + item.totalMin}
           {@const isActive = nowMinLive >= item.startMin && nowMinLive < item.startMin + item.totalMin}
@@ -2953,7 +3116,7 @@ Regler:
             {/if}
           </div>
         {/each}
-        {#each overlayItems as item (item.startMin + item.flow.title + '-overlay')}
+        {#each overlayItems as item, oi (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-overlay-${oi}`)}
           {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
           {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
           <div class="agenda-block ghost"

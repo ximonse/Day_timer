@@ -20,7 +20,7 @@ function redisKey(token: string): string {
 export async function GET({ request }: { request: Request }) {
   const token = readSyncToken(request);
   const data = await redis.get(redisKey(token));
-  return json(data ?? { flows: [] });
+  return json(data ?? { flows: [], actualTimeLog: [] });
 }
 
 export async function POST({ request }: { request: Request }) {
