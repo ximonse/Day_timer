@@ -10,6 +10,7 @@ describe('parseIcsEvents', () => {
       'SUMMARY:Math',
       'DTSTART:20260514T083000',
       'DTEND:20260514T091500',
+      'LOCATION:Room 2',
       'DESCRIPTION:Bring book\\nRoom 2',
       'END:VEVENT',
       'END:VCALENDAR'
@@ -24,7 +25,8 @@ describe('parseIcsEvents', () => {
       startMin: 8 * 60 + 30,
       endMin: 9 * 60 + 15,
       allDay: false,
-      description: 'Bring book\nRoom 2'
+      description: 'Bring book\nRoom 2',
+      location: 'Room 2'
     });
   });
 
@@ -45,7 +47,8 @@ describe('parseIcsEvents', () => {
     expect(events[0]).toMatchObject({
       date: '2026-05-06',
       allDay: true,
-      startMin: 0
+      startMin: 0,
+      location: ''
     });
   });
 
@@ -70,15 +73,16 @@ describe('parseIcsEvents', () => {
 describe('icsEventsToAgendaDays', () => {
   it('groups timed events by date and skips all-day events', () => {
     const days = icsEventsToAgendaDays([
-      { uid: 'a', title: 'Math', date: '2026-05-14', startMin: 480, endMin: 525, allDay: false, description: '' },
-      { uid: 'b', title: 'Holiday', date: '2026-05-14', startMin: 0, endMin: 0, allDay: true, description: '' },
-      { uid: 'c', title: 'Lunch', date: '2026-05-15', startMin: 720, endMin: 780, allDay: false, description: 'Cafe' }
+      { uid: 'a', title: 'Math', date: '2026-05-14', startMin: 480, endMin: 525, allDay: false, description: '', location: 'Room 2' },
+      { uid: 'b', title: 'Holiday', date: '2026-05-14', startMin: 0, endMin: 0, allDay: true, description: '', location: '' },
+      { uid: 'c', title: 'Lunch', date: '2026-05-15', startMin: 720, endMin: 780, allDay: false, description: 'Cafe', location: '' }
     ]);
 
     expect(days).toHaveLength(2);
     expect(days[0].date).toBe('2026-05-14');
     expect(days[0].flows[0].title).toBe('Math');
     expect(days[0].flows[0].minutes).toEqual([45]);
+    expect(days[0].flows[0].extraInfo).toBe('Room 2');
     expect(days[1].flows[0].notes).toEqual(['Cafe']);
   });
 });

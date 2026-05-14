@@ -9,6 +9,7 @@ export interface IcsEvent {
   endMin: number;
   allDay: boolean;
   description: string;
+  location: string;
 }
 
 function unfoldIcs(text: string): string[] {
@@ -117,7 +118,8 @@ export function parseIcsEvents(text: string): IcsEvent[] {
             startMin: start.minutes,
             endMin,
             allDay: start.allDay,
-            description: current.description || ''
+            description: current.description || '',
+            location: current.location || ''
           });
         }
       }
@@ -132,6 +134,7 @@ export function parseIcsEvents(text: string): IcsEvent[] {
     if (key === 'UID') current.uid = value.trim();
     if (key === 'SUMMARY') current.title = decodeText(value);
     if (key === 'DESCRIPTION') current.description = decodeText(value);
+    if (key === 'LOCATION') current.location = decodeText(value);
     if (key === 'DTSTART') rawStart = value.trim();
     if (key === 'DTEND') rawEnd = value.trim();
   }
@@ -156,7 +159,7 @@ export function icsEventsToAgendaDays(events: IcsEvent[]): AgendaDay[] {
       minutes: [duration],
       warnings: [false],
       notes: [event.description || ''],
-      extraInfo: ''
+      extraInfo: event.location || ''
     };
     const flows = byDate.get(event.date) ?? [];
     flows.push(flow);
