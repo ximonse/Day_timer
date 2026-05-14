@@ -2451,6 +2451,11 @@ Regler:
   function checkAutoLoad() {
     if (!agendaItems.length) return;
     const nowMin = nowMinutes();
+    const current = resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef);
+    if (current && nowMin >= current.startMin && nowMin < current.startMin + current.totalMin) {
+      lastAutoLoadKey = `${current.startMin}-${current.totalMin}-${current.flow.title}-${current.flow.parts.length}`;
+      return;
+    }
     const active = agendaItems.find(item =>
       nowMin >= item.startMin && nowMin < item.startMin + item.totalMin
     );
