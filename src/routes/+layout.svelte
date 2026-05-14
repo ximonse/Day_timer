@@ -126,7 +126,7 @@
   :global(.lesson-title-editable::placeholder) { color: var(--muted); opacity: .35; }
   :global(.top-time) { text-align: center; }
   :global(.top-time .now) { font-size: clamp(30px, 8.5cqi, 96px); font-weight: 700; letter-spacing: -0.04em; line-height: .95; font-variant-numeric: tabular-nums; display: inline-block; }
-  :global(.top-time .now-btn) { background: transparent; border: 0; color: inherit; font-family: inherit; font-size: inherit; font-weight: inherit; line-height: inherit; letter-spacing: inherit; font-variant-numeric: inherit; padding: 0; cursor: pointer; }
+  :global(.top-time .now-btn) { background: transparent; border: 0; color: inherit; padding: 0; cursor: pointer; appearance: none; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
   :global(.clock-wrap) { position: relative; }
   :global(svg.clock) { display: block; user-select: none; touch-action: none; overflow: visible; width: min(85vh, 50vw); height: min(85vh, 50vw); }
