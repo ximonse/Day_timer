@@ -120,12 +120,12 @@
   }
   :global(.resize-handle-sb:hover), :global(.resize-handle-ag:hover) { background: var(--border); }
   :global(.main-header) { position: relative; width: 100%; }
-  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: clamp(20px, 7.5cqi, 87px); font-weight: 500; line-height: 1; letter-spacing: -0.025em; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.lesson-title) { position: absolute; left: 16px; top: 0; font-size: clamp(30px, 7cqi, 70px); font-weight: 500; line-height: 1; letter-spacing: -0.03em; color: var(--fg); max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.lesson-title-editable) { background: transparent; border: none; outline: none; font-family: inherit; padding: 0; cursor: text; width: 38%; }
   :global(.lesson-title-editable:focus) { border-bottom: 2px solid var(--accent); }
   :global(.lesson-title-editable::placeholder) { color: var(--muted); opacity: .35; }
   :global(.top-time) { text-align: center; }
-  :global(.top-time .now) { font-size: clamp(30px, 8.5cqi, 96px); font-weight: 700; letter-spacing: -0.04em; line-height: .95; font-variant-numeric: tabular-nums; display: inline-block; }
+  :global(.top-time .now) { font-size: clamp(30px, 7cqi, 70px); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; display: inline-block; }
   :global(.top-time .now-btn) { background: transparent; border: 0; color: inherit; padding: 0; cursor: pointer; appearance: none; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
   :global(.clock-wrap) { position: relative; }
@@ -512,8 +512,8 @@
     :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
     :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
     :global(.main) { order: 1; padding: 8px 8px 64px; gap: 6px; }
-    :global(.lesson-title) { position: static; font-size: 28px; letter-spacing: -1px; max-width: 100%; text-align: center; }
-    :global(.top-time .now) { font-size: 40px; letter-spacing: -1px; }
+    :global(.lesson-title) { position: static; font-size: clamp(30px, 7cqi, 70px); letter-spacing: -0.03em; max-width: 100%; text-align: center; }
+    :global(.top-time .now) { font-size: clamp(30px, 7cqi, 70px); letter-spacing: -0.03em; }
     :global(.top-time .left) { font-size: 14px; }
     :global(svg.clock) { width: min(95vw, 70vh); height: min(95vw, 70vh); }
     :global(.controls) { width: 100%; max-width: 100%; }
@@ -531,9 +531,9 @@
     :global(.app) { flex-direction: row; height: 100vh; height: 100dvh; overflow: hidden; }
     :global(.main) { padding: 6px; gap: 4px; }
     :global(svg.clock) { width: 48vh; height: 48vh; }
-    :global(.top-time .now) { font-size: 28px; }
+    :global(.top-time .now) { font-size: clamp(30px, 7cqi, 70px); }
     :global(.top-time .left) { font-size: 12px; margin-top: 2px; }
-    :global(.lesson-title) { font-size: 20px; }
+    :global(.lesson-title) { font-size: clamp(30px, 7cqi, 70px); }
     :global(.sidebar) { display: flex; width: 240px; min-width: 0; height: 100%; border-right: 1px solid var(--border); border-bottom: none; order: 0; padding: 8px 10px 60px; overflow-y: auto; }
     :global(.seglist .row) { font-size: 16px; padding: 4px 6px; }
     :global(.mobile-tabs) { flex-direction: column; width: 52px; height: 100%; border-top: none; border-right: 1px solid var(--border); bottom: 0; left: auto; right: 0; }
