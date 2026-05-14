@@ -216,7 +216,7 @@
   }
   :global(body:not(.ag-open) .agenda-toggle-btn) { right: 8px; }
   :global(.agenda-timeline) {
-    height: 1200px; position: relative; flex-shrink: 0;
+    height: 1200px; position: relative; flex-shrink: 0; overflow: hidden;
   }
   :global(.agenda-block) {
     position: absolute; left: 0; right: 0;

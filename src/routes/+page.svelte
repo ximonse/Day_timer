@@ -3126,13 +3126,18 @@ Regler:
           </div>
         {/each}
         {#each overlayItems as item, oi (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-overlay-${oi}`)}
-          {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
-          {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
-          <div class="agenda-block ghost"
-               style="top: {topPct}%; height: {heightPct}%; border-left-color: var(--muted)">
-            <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
-            <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
-          </div>
+          {@const itemEnd = item.startMin + item.totalMin}
+          {@const visStart = Math.max(item.startMin, windowStart)}
+          {@const visEnd = Math.min(itemEnd, windowStart + 720)}
+          {#if visEnd > visStart}
+            {@const topPct = ((visStart - windowStart) / 720 * 100).toFixed(3)}
+            {@const heightPct = ((visEnd - visStart) / 720 * 100).toFixed(3)}
+            <div class="agenda-block ghost"
+                 style="top: {topPct}%; height: {heightPct}%; border-left-color: var(--muted)">
+              <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
+              <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
+            </div>
+          {/if}
         {/each}
       </div>
     {/if}
