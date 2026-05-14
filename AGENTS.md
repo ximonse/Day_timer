@@ -1,4 +1,4 @@
-# Day_timer — Claude Context
+# Day_timer — Codex Context
 
 ## Vad är det här?
 
@@ -10,7 +10,7 @@
 
 ## Varför gjordes detta så här?
 
-En tidigare Claude-session försökte bygga det direkt från en vag beskrivning och misslyckades totalt: fel färger, fel layout, trasig drag-funktion, fel typsnitt. Lösningen: specificera varje värde exakt. En ny session ska kopiera värden från detta dokument — aldrig gissa eller anpassa.
+En tidigare Codex-session försökte bygga det direkt från en vag beskrivning och misslyckades totalt: fel färger, fel layout, trasig drag-funktion, fel typsnitt. Lösningen: specificera varje värde exakt. En ny session ska kopiera värden från detta dokument — aldrig gissa eller anpassa.
 
 ---
 

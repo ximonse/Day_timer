@@ -1,6 +1,6 @@
 # Day_timer
 
-Visuell lektions- och dagstimer för lärare. SvelteKit-port av [the_timer](https://github.com/ximonse/the_timer), utbyggd med agenda, flöden och live-delning.
+Visuell lektions- och dagstimer för lärare. SvelteKit-port av [the_timer](https://github.com/ximonse/the_timer), utbyggd med `Nu`, `Planera`, agenda, kalender och live-delning.
 
 **Deploy:** [Vercel](https://vercel.com) · **Repo:** `ximonse/Day_timer`
 
@@ -14,18 +14,21 @@ Visuell lektions- och dagstimer för lärare. SvelteKit-port av [the_timer](http
 - 6 färgpaletter + mörkt läge
 - Audio-varning 2 min före + vid segmentslut, flash-overlay
 - 11 toggle-alternativ (minuter, labels, hollow, textOutside m.m.)
+- Hjälp kan slås av och på globalt med `Alt+i`, och lokala `i`-knappar kan ändå öppna egna texter
 
 ### Agenda
 - Heldagsplanering med eget textformat (`@datum`, `#Session 09:00`, `Aktivitet 10m`)
-- Tidslinje-vy med drag för att flytta och ändra längd på block
+- Kompakt kalender med val av dag, även tomma dagar
+- Tidslinje-vy med drag för att flytta block, ändra längd och ändra ordning
 - Tvåvägssynk: dra i timern → agendan uppdateras, ändra starttid i menyn → agendan uppdateras
 - Klicka på ett agendablock → laddar in i timern
-- Klicka på klocktiden → hoppar till aktuellt tidsblock
+- Källstatus som `Mall`, `Import` och `AI` visas diskret och blir tydligare vid hover eller i planeringsläget
 
 ### Flöden
 - Spara namngivna sessioner (t.ex. "Genomgång 60m")
-- Ladda ett flöde → skapar automatiskt ett agendablock för idag
-- Snabbstart: skriv rubrik + delar → klicka "Snabbstart nu" → direkt i agendan
+- Ladda ett flöde → öppnar `Nu` eller `Planera` beroende på sammanhang
+- `＋` i Bibliotek lägger till mallen på vald dag
+- Snabbstart: skriv rubrik + delar → klicka "Snabbstart nu" → direkt i agendan för idag
 
 ### Live-delning (read-only)
 - Ägaren klickar "Starta delning" → länk genereras
@@ -41,7 +44,7 @@ Visuell lektions- och dagstimer för lärare. SvelteKit-port av [the_timer](http
 ### AI-planering
 - Stöd för OpenAI, Anthropic, Google Gemini och egna modeller
 - "Planera med AI" i timerkontrollen (sessionsnivå)
-- "AI-dagplan" i agendapanelen (heldagsnivå)
+- "AI-dagplan" i agendapanelen för vald dag
 - "AI-prompt"-knapp i båda för att kopiera prompten till valfri AI utan API-nyckel
 
 ---
@@ -111,3 +114,10 @@ Avslut 5m
 
 #Rast 08:50
 ```
+
+## Gränssnitt i korthet
+
+- `Nu` är snabbvägen när du vill köra igång ett pass direkt.
+- `Planera` är dagläget med kalender, dagtext och sparknapp längst ner.
+- `Bibliotek` innehåller återanvändbara mallar.
+- `Konto & AI` samlar synk, API-nycklar och hjälp-/AI-inställningar.
