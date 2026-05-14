@@ -147,7 +147,7 @@
 <div class="section-card">
   <div class="section-card-head">
     <strong>Tidsdata & tillförlitlighet</strong>
-    <button class="quickstart" onclick={() => reliabilityOpen = !reliabilityOpen}>{reliabilityOpen ? 'Dölj' : 'Visa'}</button>
+    <button class="quickstart" onclick={() => reliabilityOpen = !reliabilityOpen}>{reliabilityOpen ? '△' : '▽'}</button>
   </div>
   {#if reliabilityOpen}
     <div class="section-copy">Bekräftade pass: <strong>{confirmedActualCount}</strong> · Obekräftade idag: <strong>{pendingActualCount}</strong></div>

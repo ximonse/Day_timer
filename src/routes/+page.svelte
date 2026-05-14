@@ -3014,23 +3014,13 @@ Regler:
         onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
         onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}
       />
-    {:else if !isViewMode && (s.showHelpHints || helpVisible(agendaOverviewHelpOpen))}
-      <div class="agenda-section-note">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <span>Dagplanen visas här som översikt. Byt till sektionen <strong>Planera</strong> för att importera, ändra block och arbeta med kalenderflödet.</span>
-          <button class="info-btn" onclick={() => agendaOverviewHelpOpen = toggleHelpOverride(agendaOverviewHelpOpen)}>i</button>
-        </div>
-        {#if helpVisible(agendaOverviewHelpOpen)}
-          <div class="feedback" style="margin-top:8px;">På desktop visas källstatus vid hover. På mobil syns källan först när du har valt blocket i planeringseditorn.</div>
-        {/if}
-      </div>
     {/if}
 
-    <div class="agenda-calendar">
+    <div class="agenda-calendar" class:collapsed={!agendaCalendarOpen}>
       <div class="agenda-input-header" style="margin-bottom:8px;">
         <span class="agenda-input-label">Kalender</span>
         <button class="agenda-input-toggle" onclick={() => agendaCalendarOpen = !agendaCalendarOpen}>
-          {agendaCalendarOpen ? '△ Dölj' : '▽ Visa'}
+          {agendaCalendarOpen ? '△' : '▽'}
         </button>
       </div>
       {#if agendaCalendarOpen}
