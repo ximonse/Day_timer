@@ -483,6 +483,7 @@
   :global(body.page-locked .agenda-drag-top) { pointer-events: none !important; }
   :global(body.page-locked .agenda-drag-bottom) { pointer-events: none !important; }
   :global(body.page-locked .agenda-move-btn) { pointer-events: none !important; }
+  :global(body.page-locked svg.clock) { pointer-events: none !important; }
   :global(body.page-locked .lesson-title) { pointer-events: none !important; cursor: default; }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }

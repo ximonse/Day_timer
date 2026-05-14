@@ -1097,7 +1097,7 @@
   }
 
   function startBoundaryDrag(e: Event) {
-    if (isViewMode) return;
+    if (isViewMode || locked) return;
     const pe = e as PointerEvent;
     pe.preventDefault();
     const i = (pe.target as any)._boundaryIdx as number;
@@ -1106,14 +1106,14 @@
     window.addEventListener('pointerup', endDrag);
   }
   function startEndDrag(e: Event) {
-    if (isViewMode) return;
+    if (isViewMode || locked) return;
     (e as PointerEvent).preventDefault();
     drag = { type: 'end' };
     window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag);
   }
   function startStartDrag(e: Event) {
-    if (isViewMode) return;
+    if (isViewMode || locked) return;
     const pe = e as PointerEvent;
     pe.preventDefault();
     drag = { type: 'start', startMin0: s.startMin, endMin0: s.startMin + totalMin(), pointerAng0: pointerAngle(pe) };
@@ -1138,7 +1138,7 @@
   }
 
   function onDrag(e: PointerEvent) {
-    if (!drag) return;
+    if (!drag || locked) return;
     const ang = pointerAngle(e);
     const sa = startAngle();
     let rel = ang - sa;
