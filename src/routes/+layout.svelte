@@ -32,6 +32,9 @@
     --bg: #1c1a16; --fg: #ede8dc; --panel: #26231e; --border: #3c3830;
     --muted: #8a8478; --accent: #ede8dc; --pill: #2e2b26;
     --pill-on: #ede8dc; --pill-on-fg: #1c1a16; --void: #0e0d0b;
+    --menu-panel: #211f1a; --menu-surface: #2a2722; --menu-border: #464138;
+    --menu-fg: #f2ede2; --menu-muted: #c2bbad; --menu-pill: #343029;
+    --menu-pill-on: #ede8dc; --menu-pill-on-fg: #1c1a16;
   }
   :global(.meadow) {
     --bg: #f4f1de; --fg: #2a3a10; --panel: #e5e8d0; --border: #a8c080;
