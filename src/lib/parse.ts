@@ -44,7 +44,7 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
 
   if (parts.length === 0) {
     return {
-      blocks: [{ id: uid(), title: 'Lektion', minutes: 45, note: '', warning: false, pinned: false }],
+      blocks: [{ id: uid(), title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }],
       dayTitle,
       extraInfo: infoLines.join('\n'),
     };
@@ -64,7 +64,7 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
       title,
       minutes: parsedMins[i] !== null ? parsedMins[i]! : (existing?.minutes ?? each),
       note: notes[i] ?? '',
-      warning: existing?.warning ?? false,
+      warning: existing?.warning ?? true,
       pinned: parsedMins[i] !== null,
     };
   });
@@ -123,7 +123,7 @@ function sectionsToFlows(sections: RawSection[]): Flow[] {
       startMin: sec.startMin,
       parts: sec.items.map(b => b.title),
       minutes: sec.items.map(b => b.minutes !== null ? b.minutes : perUnpinned),
-      warnings: sec.items.map(() => false),
+      warnings: sec.items.map(() => true),
       notes: sec.items.map(b => b.note),
       extraInfo: sec.extraInfo,
     } satisfies Flow;

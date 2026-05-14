@@ -9,7 +9,6 @@
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
-  import PlanSelectionCard from '$lib/components/PlanSelectionCard.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
   import LibraryPanel from '$lib/components/LibraryPanel.svelte';
   import WorkspacePanel from '$lib/components/WorkspacePanel.svelte';
@@ -42,13 +41,18 @@
   let shareToken = $state('');
   let shareOwnerToken = $state('');
   let shareCopyText = $state('Kopiera länk');
+  let pageOrigin = $state('');
+  type ShareMode = 'active-session-live' | 'selected-session-snapshot' | 'selected-day-snapshot';
+  let shareMode = $state<ShareMode | null>(null);
   let isViewMode = $state(false);
   let viewToken = $state('');
   let agendaInputOpen = $state(true);
+  let agendaCalendarOpen = $state(true);
   let savedAgendaMsg = $state('');
   let savedFlowMsg = $state('');
   let copyAgendaPromptText = $state('AI-prompt');
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
+  let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean } | null>(null);
   type AgendaFlowRef = {
     date: string | null;
     title: string;
@@ -68,6 +72,8 @@
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
   let agendaDraft = $state('');
+  let agendaDraftDate = $state<string | null>(null);
+  let agendaDraftDirty = $state(false);
   let icsDraft = $state('');
   let icsImportOpen = $state(false);
   let icsPreviewEvents = $state<IcsEvent[]>([]);
@@ -77,6 +83,19 @@
   let titleDraftValue = $state('');
   let agendaDayStart = $state(s.startMin);
   let planLastSavedAt = $state<number | null>(null);
+  let calendarMonthCursor = $state('');
+  type PanelSaveStatus = 'idle' | 'saving' | 'saved';
+  let nowPanelStatus = $state<PanelSaveStatus>('idle');
+  let planPanelStatus = $state<PanelSaveStatus>('idle');
+  type SessionSnapshot = {
+    dayTitle: string;
+    extraInfo: string;
+    startMin: number;
+    endMode: 'end' | 'len';
+    blocks: typeof s.blocks;
+  };
+  let nowPanelBaseline = $state<SessionSnapshot | null>(null);
+  let planPanelBaseline = $state<SessionSnapshot | null>(null);
 
 
   let nowMinLive = $state(nowMinutes());
@@ -88,6 +107,14 @@
   let themePickerOpen = $state(false);
   let popoverOpen = $state(false);
   let helpOpen = $state(false);
+  type HelpOverride = 'inherit' | 'show' | 'hide';
+  let sessionTitleHelpOpen = $state<HelpOverride>('inherit');
+  let sessionPartsHelpOpen = $state<HelpOverride>('inherit');
+  let sessionTimeHelpOpen = $state<HelpOverride>('inherit');
+  let planSourceHelpOpen = $state<HelpOverride>('inherit');
+  let agendaImportHelpOpen = $state<HelpOverride>('inherit');
+  let agendaIcsHelpOpen = $state<HelpOverride>('inherit');
+  let agendaOverviewHelpOpen = $state<HelpOverride>('inherit');
   let copyBtnText = $state('AI-prompt');
   let syncStatusText = $state('');
   let syncStatusError = $state(false);
@@ -121,10 +148,21 @@
   };
   const SECTION_LABELS: Record<AppSection, string> = {
     now: 'Nu',
-    plan: 'Plan',
+    plan: 'Planera',
     library: 'Bibliotek',
-    workspace: 'Arbetsyta'
+    workspace: 'Konto & AI'
   };
+
+  function helpVisible(override: HelpOverride) {
+    if (override === 'show') return true;
+    if (override === 'hide') return false;
+    return s.showHelpHints;
+  }
+
+  function toggleHelpOverride(current: HelpOverride): HelpOverride {
+    if (current === 'inherit') return s.showHelpHints ? 'hide' : 'show';
+    return 'inherit';
+  }
 
   function saveAiConfig() {
     localStorage.setItem('daytimer_ai_config', JSON.stringify(aiConfig));
@@ -169,6 +207,34 @@
     });
   }
 
+  function cloneAgendaDay(day: AgendaDay): AgendaDay {
+    return {
+      date: day.date,
+      flows: day.flows.map(flow => ({
+        ...flow,
+        parts: [...flow.parts],
+        minutes: [...flow.minutes],
+        warnings: [...flow.warnings],
+        notes: [...flow.notes]
+      }))
+    };
+  }
+
+  function serializeSelectedAgendaDay(date: string | null, days: AgendaDay[] | null) {
+    if (!date) return '';
+    const day = days?.find(entry => entry.date === date);
+    return day ? serializeAgenda([cloneAgendaDay(day)]) : `@${date.slice(2, 4)}${date.slice(5, 7)}${date.slice(8, 10)}\n`;
+  }
+
+  function suggestedStartMinForDate(date: string, durationMin = totalMin()) {
+    const day = agendaDays?.find(entry => entry.date === date) ?? null;
+    if (!day || day.flows.length === 0) return 8 * 60;
+    const items = buildAgendaItemsForDay(day, 8 * 60);
+    const last = items[items.length - 1];
+    const roundedEnd = Math.ceil((last.startMin + last.totalMin) / 5) * 5;
+    return Math.min(roundedEnd, Math.max(8 * 60, 24 * 60 - durationMin));
+  }
+
   function makeAgendaFlowRef(date: string | null, flow: Flow, startMin: number): AgendaFlowRef {
     return {
       date,
@@ -193,6 +259,19 @@
 
   function setAgendaMeta(key: string, meta: AgendaFlowMeta) {
     s.agendaMeta = { ...s.agendaMeta, [key]: meta };
+  }
+
+  function removeAgendaMetaForDate(date: string | null) {
+    const next: typeof s.agendaMeta = {};
+    for (const [key, meta] of Object.entries(s.agendaMeta)) {
+      try {
+        const [storedDate] = JSON.parse(key);
+        if ((storedDate || '') !== (date ?? '')) next[key] = meta;
+      } catch {
+        next[key] = meta;
+      }
+    }
+    s.agendaMeta = next;
   }
 
   function moveAgendaMeta(oldKey: string, newKey: string) {
@@ -271,11 +350,14 @@
   });
 
   const selectedDay = $derived.by<AgendaDay | null>(() => {
-    if (!agendaDays?.length) return null;
     const date = activeAgendaDate();
+    if (!agendaDays?.length) {
+      return date ? { date, flows: [] } : null;
+    }
     if (date) {
       const hit = agendaDays.find(d => d.date === date);
       if (hit) return hit;
+      return { date, flows: [] };
     }
     const today = localDateISO();
     return agendaDays.find(d => d.date === today)
@@ -290,7 +372,7 @@
   });
 
   const selectedDayIdx = $derived.by(() =>
-    agendaDays && selectedDay ? agendaDays.indexOf(selectedDay) : -1
+    agendaDays && selectedDay ? agendaDays.findIndex(day => day.date === selectedDay.date) : -1
   );
 
   const selectedAgendaDetails = $derived.by(() => resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef));
@@ -300,7 +382,6 @@
   });
   const selectedAgendaSourceLabel = $derived.by(() => agendaMetaLabel(selectedAgendaMeta));
   const selectedAgendaSourceHelp = $derived.by(() => agendaMetaHelp(selectedAgendaMeta));
-  const selectedAgendaCanDetach = $derived.by(() => !!selectedAgendaMeta && selectedAgendaMeta.source !== 'manual');
   const icsCanImport = $derived.by(() => icsPreviewEvents.some(event => !event.allDay));
   const icsPreviewLines = $derived.by(() =>
     icsPreviewEvents.slice(0, 6).map(event => {
@@ -311,7 +392,7 @@
   );
 
   const planSaveLabel = $derived.by(() => {
-    if (!selectedAgendaDetails) return 'Valj ett block for att borja redigera.';
+    if (!selectedAgendaDetails) return 'Inget block valt. Spara skapar ett nytt block på vald dag.';
     if (planLastSavedAt === null) return 'Inte sparat an i dagplanen.';
     const savedAt = new Date(planLastSavedAt).toLocaleTimeString('sv-SE', {
       hour: '2-digit',
@@ -322,14 +403,92 @@
 
   const sectionCopy = $derived.by(() => {
     if (s.activeSection === 'now') return 'Redigera det som körs just nu i timern.';
-    if (s.activeSection === 'plan') return 'Välj ett block i dagplanen och redigera det här.';
+    if (s.activeSection === 'plan') return 'Planera på vald dag och håll själva visningsläget lugnt.';
     if (s.activeSection === 'library') return 'Spara och återanvänd mallar utan att blanda ihop dem med dagens plan.';
-    return 'Hantera synk, delning, AI och framtida importkällor.';
+    return 'Hantera konto, synk, hjälpläge och AI-stöd.';
   });
 
   const partsFieldValue = $derived(serializeBlocks(s.blocks));
   const partsFeedbackText = $derived(`${s.blocks.length}${s.blocks.length === 1 ? ' del' : ' delar'}`);
   const timeFeedbackText = $derived(`${totalMin()} min → slutar ${fmtHM(s.startMin + totalMin())}`);
+  const activePanelStatus = $derived(s.activeSection === 'plan' ? planPanelStatus : nowPanelStatus);
+  const activePanelStatusLabel = $derived.by(() => {
+    if (activePanelStatus === 'saving') return 'Sparar...';
+    if (activePanelStatus === 'saved') return 'Sparat';
+    return s.activeSection === 'plan' ? 'Autospar på. Klicka Spara när blocket känns klart.' : 'Autospar på i den här sessionen.';
+  });
+  const canRevertPanel = $derived(
+    (s.activeSection === 'plan' ? planPanelBaseline : nowPanelBaseline) !== null
+  );
+  const planActionHint = $derived.by(() =>
+    s.activeSection === 'plan'
+      ? 'Sparar till den dag som är vald i kalendern utan att snabbstarta timern.'
+      : 'Sätter starttiden till nu och lägger in sessionen i dagplanen.'
+  );
+  const targetDateLabel = $derived.by(() => {
+    const explicit = selectedDay?.date ?? activeAgendaDate() ?? '';
+    return explicit ? fmtAgendaDate(explicit) : 'Ingen dag vald';
+  });
+  type CalendarCell = {
+    iso: string;
+    label: number;
+    inMonth: boolean;
+    isSelected: boolean;
+    density: number;
+    hasContent: boolean;
+  };
+
+  function parseIsoDate(iso: string) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function monthKey(date: Date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function shiftMonth(monthIso: string, delta: number) {
+    const [year, month] = monthIso.split('-').map(Number);
+    const date = new Date(year, month - 1 + delta, 1);
+    return monthKey(date);
+  }
+
+  const agendaDensityByDay = $derived.by(() => {
+    const map = new Map<string, { count: number; minutes: number }>();
+    for (const day of agendaDays ?? []) {
+      if (!day.date) continue;
+      const minutes = day.flows.reduce((sum, flow) => sum + totalFlowMinutes(flow), 0);
+      map.set(day.date, { count: day.flows.length, minutes });
+    }
+    return map;
+  });
+
+  const calendarCells = $derived.by<CalendarCell[]>(() => {
+    const baseIso = selectedDay?.date ?? localDateISO();
+    const monthIso = calendarMonthCursor || monthKey(parseIsoDate(baseIso));
+    const [year, month] = monthIso.split('-').map(Number);
+    const first = new Date(year, month - 1, 1);
+    const startOffset = first.getDay();
+    const gridStart = new Date(year, month - 1, 1 - startOffset);
+    const cells: CalendarCell[] = [];
+    const selectedIso = selectedDay?.date ?? '';
+    const monthDensities = [...agendaDensityByDay.values()].map(entry => entry.count);
+    const maxCount = monthDensities.length ? Math.max(...monthDensities) : 1;
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+      const iso = localDateISO(date);
+      const densityEntry = agendaDensityByDay.get(iso);
+      cells.push({
+        iso,
+        label: date.getDate(),
+        inMonth: date.getMonth() === first.getMonth(),
+        isSelected: iso === selectedIso,
+        density: densityEntry ? Math.max(0.2, densityEntry.count / maxCount) : 0,
+        hasContent: Boolean(densityEntry)
+      });
+    }
+    return cells;
+  });
 
   const agendaItems = $derived.by(() => {
     const flows = selectedDay?.flows ?? (agendaDays ? [] : s.flows);
@@ -381,13 +540,11 @@
 
   function prevDay() {
     if (!agendaDays || selectedDayIdx <= 0) return;
-    setActiveAgendaDate(agendaDays[selectedDayIdx - 1].date ?? '');
-    appState.persist();
+    selectAgendaDate(agendaDays[selectedDayIdx - 1].date ?? '');
   }
   function nextDay() {
     if (!agendaDays || selectedDayIdx >= agendaDays.length - 1) return;
-    setActiveAgendaDate(agendaDays[selectedDayIdx + 1].date ?? '');
-    appState.persist();
+    selectAgendaDate(agendaDays[selectedDayIdx + 1].date ?? '');
   }
 
   function setActiveSection(section: AppSection) {
@@ -400,9 +557,81 @@
     appState.persist();
   }
 
+  function cloneBlocks(blocks: typeof s.blocks) {
+    return blocks.map(block => ({ ...block }));
+  }
+
+  function currentSnapshot(): SessionSnapshot {
+    return {
+      dayTitle: s.dayTitle,
+      extraInfo: s.extraInfo,
+      startMin: s.startMin,
+      endMode,
+      blocks: cloneBlocks(s.blocks)
+    };
+  }
+
+  function capturePanelBaseline(target: 'now' | 'plan') {
+    const snapshot = currentSnapshot();
+    if (target === 'now') nowPanelBaseline = snapshot;
+    else planPanelBaseline = snapshot;
+  }
+
+  function restoreSnapshot(snapshot: SessionSnapshot) {
+    s.dayTitle = snapshot.dayTitle;
+    s.extraInfo = snapshot.extraInfo;
+    s.startMin = snapshot.startMin;
+    s.blocks = cloneBlocks(snapshot.blocks);
+    endMode = snapshot.endMode;
+    s.endMode = snapshot.endMode;
+    warnedSet.clear();
+    renderEndControl();
+    updateTimeFeedback();
+    syncTimerToAgenda();
+    appState.persist();
+  }
+
+  function pulsePanelStatus(target: 'now' | 'plan') {
+    if (target === 'now') nowPanelStatus = 'saving';
+    else planPanelStatus = 'saving';
+    queueMicrotask(() => {
+      if (target === 'now') nowPanelStatus = 'saved';
+      else planPanelStatus = 'saved';
+    });
+  }
+
+  function notifyPanelMutation(target: 'now' | 'plan') {
+    pulsePanelStatus(target);
+    if (target === 'plan') markPlanSaved();
+  }
+
+  function revertActivePanel() {
+    const baseline = s.activeSection === 'plan' ? planPanelBaseline : nowPanelBaseline;
+    if (!baseline) return;
+    restoreSnapshot(baseline);
+    notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+  }
+
   function markPlanSaved() {
     if (!activeAgendaFlowRef) return;
     planLastSavedAt = Date.now();
+  }
+
+  function monthLabel(monthIso: string): string {
+    const [year, month] = monthIso.split('-').map(Number);
+    return new Date(year, month - 1, 1).toLocaleDateString('sv-SE', {
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
+  function selectAgendaDate(date: string) {
+    setActiveAgendaDate(date);
+    calendarMonthCursor = monthKey(parseIsoDate(date));
+    activeAgendaFlowRef = null;
+    sessionSource = { kind: 'unscheduled' };
+    agendaDraftDirty = false;
+    appState.persist();
   }
 
   function fmtLeft(left: number): string {
@@ -651,6 +880,34 @@
       }
     }
 
+    if (!use12hAgenda && s.clockSpan === 60) {
+      const drawSessionMarker = (ang: number) => {
+        const [hx0, hy0] = polar(ang, R + 6);
+        const [hx1, hy1] = polar(ang, R - 6);
+        const halo = document.createElementNS(NS, 'line');
+        halo.setAttribute('x1', String(hx0)); halo.setAttribute('y1', String(hy0));
+        halo.setAttribute('x2', String(hx1)); halo.setAttribute('y2', String(hy1));
+        halo.setAttribute('stroke', '#fff');
+        halo.setAttribute('stroke-width', '3.2');
+        halo.setAttribute('stroke-linecap', 'round');
+        halo.setAttribute('opacity', '0.38');
+        halo.setAttribute('pointer-events', 'none');
+        svgEl.appendChild(halo);
+
+        const mark = document.createElementNS(NS, 'line');
+        mark.setAttribute('x1', String(hx0)); mark.setAttribute('y1', String(hy0));
+        mark.setAttribute('x2', String(hx1)); mark.setAttribute('y2', String(hy1));
+        mark.setAttribute('stroke', markColor);
+        mark.setAttribute('stroke-width', '1.4');
+        mark.setAttribute('stroke-linecap', 'round');
+        mark.setAttribute('opacity', '0.95');
+        mark.setAttribute('pointer-events', 'none');
+        svgEl.appendChild(mark);
+      };
+      drawSessionMarker(sa);
+      drawSessionMarker(sa + (tot / 60) * 360);
+    }
+
     {
       const ang = (nowMin % s.clockSpan / s.clockSpan) * 360;
       const innerR = 30, tipR = R + 2, baseWidth = 22;
@@ -851,6 +1108,7 @@
         scaleMinutesTo(diff);
         renderClock(); updateTimeFeedback();
         syncTimerToAgenda(); appState.persist();
+        notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
       });
       endControlEl.appendChild(inp);
     } else {
@@ -862,6 +1120,7 @@
         scaleMinutesTo(v);
         renderClock(); updateTimeFeedback();
         syncTimerToAgenda(); appState.persist();
+        notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
       });
       endControlEl.appendChild(inp);
     }
@@ -905,7 +1164,7 @@
     s.blocks.forEach((b, i) => {
       const segEnd = cum + b.minutes;
       if (b.warning) {
-        const warnAt = segEnd - 2;
+        const warnAt = segEnd - 3;
         const keyWarn = `w-${i}-${s.startMin}-${segEnd}`;
         const keyEnd = `e-${i}-${s.startMin}-${segEnd}`;
         if (elapsed >= warnAt && elapsed < warnAt + 1/60 && !warnedSet.has(keyWarn)) {
@@ -944,6 +1203,7 @@
     renderEndControl();
     syncTimerToAgenda();
     appState.persist();
+    notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
   }
 
   function saveFlow() {
@@ -968,46 +1228,42 @@
     if (loggedInUser) syncSave();
   }
 
-  function addFlowToAgendaToday(f: Flow, activate = false, meta: AgendaFlowMeta | null = null) {
-    const today = localDateISO();
-    const flowToAdd: Flow = { ...f, id: uid(), startMin: s.startMin };
+  function addFlowToAgendaDate(date: string, f: Flow, activate = false, meta: AgendaFlowMeta | null = null, startMinOverride?: number) {
+    const startMin = startMinOverride ?? s.startMin;
+    const flowToAdd: Flow = { ...f, id: uid(), startMin };
     let days: AgendaDay[] = agendaDays
       ? agendaDays.map(d => ({ ...d, flows: [...d.flows] }))
       : [];
 
-    let dayIdx = days.findIndex(d => d.date === today);
+    let dayIdx = days.findIndex(d => d.date === date);
     if (dayIdx < 0) {
-      const insertAt = days.findIndex(d => d.date !== null && d.date > today);
-      const newDay: AgendaDay = { date: today, flows: [] };
+      const insertAt = days.findIndex(d => d.date !== null && d.date > date);
+      const newDay: AgendaDay = { date, flows: [] };
       if (insertAt < 0) { days.push(newDay); dayIdx = days.length - 1; }
       else { days.splice(insertAt, 0, newDay); dayIdx = insertAt; }
     }
 
     const dayFlows = [...days[dayIdx].flows];
-    // Replace flow with same startMin or same title, otherwise insert sorted by time
-    const replaceIdx = dayFlows.findIndex(
-      fl => fl.startMin === s.startMin || fl.title === f.title
-    );
-    if (replaceIdx >= 0) {
-      dayFlows[replaceIdx] = flowToAdd;
-    } else {
-      const insertAt = dayFlows.findIndex(fl => (fl.startMin ?? 0) > s.startMin);
-      if (insertAt < 0) { dayFlows.push(flowToAdd); }
-      else { dayFlows.splice(insertAt, 0, flowToAdd); }
-    }
+    const insertAt = dayFlows.findIndex(fl => (fl.startMin ?? 0) > startMin);
+    if (insertAt < 0) { dayFlows.push(flowToAdd); }
+    else { dayFlows.splice(insertAt, 0, flowToAdd); }
 
     days[dayIdx] = { ...days[dayIdx], flows: dayFlows };
     setActiveAgendaText(serializeAgenda(days));
-    setActiveAgendaDate(today);
-    if (meta) setAgendaMeta(makeAgendaMetaKeyForFlow(today, flowToAdd, flowToAdd.startMin ?? s.startMin), meta);
+    setActiveAgendaDate(date);
+    if (meta) setAgendaMeta(makeAgendaMetaKeyForFlow(date, flowToAdd, flowToAdd.startMin ?? startMin), meta);
     if (activate) {
-      activeAgendaFlowRef = makeAgendaFlowRef(today, flowToAdd, flowToAdd.startMin ?? s.startMin);
-      sessionSource = { kind: 'agenda', date: today, title: flowToAdd.title, startMin: flowToAdd.startMin ?? s.startMin };
+      activeAgendaFlowRef = makeAgendaFlowRef(date, flowToAdd, flowToAdd.startMin ?? startMin);
+      sessionSource = { kind: 'agenda', date, title: flowToAdd.title, startMin: flowToAdd.startMin ?? startMin };
     }
     appState.persist();
   }
 
-  function loadFlow(id: string) {
+  function addFlowToAgendaToday(f: Flow, activate = false, meta: AgendaFlowMeta | null = null) {
+    addFlowToAgendaDate(localDateISO(), f, activate, meta);
+  }
+
+  function loadFlow(id: string, targetSection: AppSection = 'now') {
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
     f.lastUsed = Date.now();
@@ -1018,18 +1274,25 @@
       note: f.notes?.[i] ?? '', warning: f.warnings?.[i] ?? false, pinned: true,
     }));
     s.extraInfo = f.extraInfo || '';
+    if (targetSection === 'plan') {
+      const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+      s.startMin = suggestedStartMinForDate(targetDate, totalFlowMinutes(f));
+    }
     warnedSet.clear();
     updateTimeFeedback(); renderEndControl();
     activeAgendaFlowRef = null;
     sessionSource = { kind: 'template', templateId: f.id, title: f.title };
-    s.activeSection = 'now';
+    setActiveSection(targetSection);
+    capturePanelBaseline('now');
+    capturePanelBaseline('plan');
     appState.persist();
   }
 
-  function addTemplateToAgendaToday(id: string) {
+  function addTemplateToSelectedAgendaDate(id: string) {
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
-    addFlowToAgendaToday(f, false, { source: 'template', label: f.title });
+    const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+    addFlowToAgendaDate(targetDate, f, false, { source: 'template', label: f.title }, suggestedStartMinForDate(targetDate, totalFlowMinutes(f)));
     savedFlowMsg = 'Tillagd i dagplan ✓';
     setTimeout(() => { savedFlowMsg = ''; }, 2000);
     if (loggedInUser) syncSave();
@@ -1109,6 +1372,8 @@
       }
       activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
+      capturePanelBaseline('now');
+      capturePanelBaseline('plan');
       appState.persist();
       showSyncStatus('Laddat från moln ✓');
     } catch { showSyncStatus('Kunde inte ladda', true); }
@@ -1158,24 +1423,96 @@
     appState.persist();
   }
 
-  function buildShareState() {
+  function sharedUiState() {
     return {
-      blocks: s.blocks, dayTitle: s.dayTitle, extraInfo: s.extraInfo,
-      startMin: s.startMin, endMode: s.endMode, clockSpan: s.clockSpan,
-      palette: s.palette, dark: s.dark, showLeft: s.showLeft,
-      showCenterEnd: s.showCenterEnd, hollow: s.hollow, textOutside: s.textOutside,
-      showMin: s.showMin, showFive: s.showFive, showQuarter: s.showQuarter,
-      segMinutesMode: s.segMinutesMode, showSegNotes: s.showSegNotes,
-      showExtraInfo: s.showExtraInfo, showSegLabels: s.showSegLabels,
-      agendaText: s.agendaText, agendaDate: s.agendaDate,
+      palette: s.palette,
+      dark: s.dark,
+      showLeft: s.showLeft,
+      showCenterEnd: s.showCenterEnd,
+      hollow: s.hollow,
+      textOutside: s.textOutside,
+      showMin: s.showMin,
+      showFive: s.showFive,
+      showQuarter: s.showQuarter,
+      segMinutesMode: s.segMinutesMode,
+      showSegNotes: s.showSegNotes,
+      showExtraInfo: s.showExtraInfo,
+      showSegLabels: s.showSegLabels,
+    };
+  }
+
+  function buildLiveShareState() {
+    return {
+      shareType: 'active-session-live' as const,
+      ...sharedUiState(),
+      blocks: cloneBlocks(s.blocks),
+      dayTitle: s.dayTitle,
+      extraInfo: s.extraInfo,
+      startMin: s.startMin,
+      endMode: s.endMode,
+      clockSpan: s.clockSpan,
+      agendaText: s.agendaText,
+      agendaDate: s.agendaDate,
+    };
+  }
+
+  function buildSelectedSessionSnapshot() {
+    if (!selectedAgendaDetails) return null;
+    const { day, flow, startMin } = selectedAgendaDetails;
+    return {
+      shareType: 'selected-session-snapshot' as const,
+      ...sharedUiState(),
+      blocks: flow.parts.map((title, i) => ({
+        id: uid(),
+        title,
+        minutes: flow.minutes[i] ?? 45,
+        note: flow.notes?.[i] ?? '',
+        warning: flow.warnings?.[i] ?? true,
+        pinned: true
+      })),
+      dayTitle: flow.title,
+      extraInfo: flow.extraInfo || '',
+      startMin,
+      endMode: 'end' as const,
+      clockSpan: 60 as const,
+      agendaText: serializeAgenda([{ date: day.date ?? null, flows: [{ ...flow }] }]),
+      agendaDate: day.date ?? '',
+    };
+  }
+
+  function buildSelectedDaySnapshot() {
+    if (!selectedDay?.date) return null;
+    const flows = selectedDay.flows.map(flow => ({ ...flow }));
+    const first = selectedAgendaDetails?.flow ?? selectedDay.flows[0] ?? null;
+    const firstStart = selectedAgendaDetails?.startMin ?? selectedDay.flows[0]?.startMin ?? agendaDayStart;
+    return {
+      shareType: 'selected-day-snapshot' as const,
+      ...sharedUiState(),
+      blocks: first
+        ? first.parts.map((title, i) => ({
+            id: uid(),
+            title,
+            minutes: first.minutes[i] ?? 45,
+            note: first.notes?.[i] ?? '',
+            warning: first.warnings?.[i] ?? true,
+            pinned: true
+          }))
+        : cloneBlocks(s.blocks),
+      dayTitle: first?.title ?? fmtAgendaDate(selectedDay.date),
+      extraInfo: first?.extraInfo ?? '',
+      startMin: firstStart,
+      endMode: 'end' as const,
+      clockSpan: 720 as const,
+      agendaText: serializeAgenda([{ date: selectedDay.date, flows }]),
+      agendaDate: selectedDay.date,
     };
   }
 
   let lastPushedHash = '';
 
   async function pushShareState() {
-    if (!shareToken || !shareOwnerToken) return;
-    const state = buildShareState();
+    if (!shareToken || !shareOwnerToken || shareMode !== 'active-session-live') return;
+    const state = buildLiveShareState();
     const hash = JSON.stringify(state);
     if (hash === lastPushedHash) return;
     try {
@@ -1196,6 +1533,7 @@
       const res = await fetch(`/api/share?token=${encodeURIComponent(token)}`);
       if (!res.ok) return;
       const d = await res.json();
+      shareMode = d.shareType ?? 'active-session-live';
       if (d.blocks) s.blocks = d.blocks;
       if (d.dayTitle !== undefined) s.dayTitle = d.dayTitle;
       if (d.extraInfo !== undefined) s.extraInfo = d.extraInfo;
@@ -1217,18 +1555,40 @@
       if (d.showSegLabels !== undefined) s.showSegLabels = d.showSegLabels;
       if (d.agendaText !== undefined) s.agendaText = d.agendaText;
       if (d.agendaDate !== undefined) s.agendaDate = d.agendaDate;
+      if (d.shareType === 'selected-day-snapshot') {
+        s.clockSpan = 720;
+      }
       syncBodyClasses();
     } catch { /* silent */ }
   }
 
-  function startSharing() {
+  async function startSharing(mode: ShareMode) {
+    const payload = mode === 'active-session-live'
+      ? buildLiveShareState()
+      : mode === 'selected-session-snapshot'
+        ? buildSelectedSessionSnapshot()
+        : buildSelectedDaySnapshot();
+    if (!payload) return;
     const tokens = createShareTokens();
     shareToken = tokens.viewToken;
     shareOwnerToken = tokens.ownerToken;
+    shareMode = mode;
     localStorage.setItem('daytimer_share_token', tokens.viewToken);
     localStorage.setItem('daytimer_share_owner_token', tokens.ownerToken);
+    localStorage.setItem('daytimer_share_mode', mode);
     lastPushedHash = '';
-    pushShareState();
+    try {
+      const hash = JSON.stringify(payload);
+      await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-share-owner': shareOwnerToken
+        },
+        body: hash,
+      });
+      lastPushedHash = mode === 'active-session-live' ? hash : '';
+    } catch { /* silent */ }
   }
 
   async function stopSharing() {
@@ -1241,62 +1601,47 @@
     } catch { /* silent */ }
     shareToken = '';
     shareOwnerToken = '';
+    shareMode = null;
     lastPushedHash = '';
     localStorage.removeItem('daytimer_share_token');
     localStorage.removeItem('daytimer_share_owner_token');
+    localStorage.removeItem('daytimer_share_mode');
   }
 
   async function copyShareLink() {
-    const link = `${location.origin}/?view=${shareToken}`;
+    const link = `${pageOrigin}/?view=${shareToken}`;
     await navigator.clipboard.writeText(link);
     shareCopyText = '✓ Kopierad!';
     setTimeout(() => { shareCopyText = 'Kopiera länk'; }, 2000);
   }
 
   function saveAgenda() {
-    const importedDays = agendaDraft.trim() ? parseAgenda(agendaDraft) : [];
-    const savedText = agendaDraft.trim()
-      ? mergeAgendaDays(activeAgendaText(), agendaDraft)
-      : activeAgendaText();
-    if (agendaDraft.trim()) {
-      setActiveAgendaText(savedText);
-      agendaDraft = '';
+    const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+    const parsedDraft = agendaDraft.trim() ? parseAgenda(agendaDraft) : [];
+    const draftDay = parsedDraft.find(day => day.date === targetDate)
+      ?? (parsedDraft[0] ? { ...parsedDraft[0], date: targetDate } : { date: targetDate, flows: [] });
+    const baseDays = activeAgendaText().trim() ? parseAgenda(activeAgendaText()) : [];
+    const preservedDays = baseDays
+      .filter(day => day.date !== targetDate)
+      .map(day => cloneAgendaDay(day));
+    const nextDays = draftDay.flows.length > 0
+      ? [...preservedDays, cloneAgendaDay(draftDay)].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+      : preservedDays.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    const savedText = serializeAgenda(nextDays);
+    setActiveAgendaText(savedText);
+    agendaDraft = serializeSelectedAgendaDay(targetDate, nextDays);
+    agendaDraftDate = targetDate;
+    agendaDraftDirty = false;
+    removeAgendaMetaForDate(targetDate);
+    if (draftDay.flows.length > 0) {
+      const items = buildAgendaItemsForDay(draftDay, draftDay.flows[0]?.startMin ?? 8 * 60);
+      for (const item of items) {
+        setAgendaMeta(makeAgendaMetaKeyForFlow(targetDate, item.flow, item.startMin), { source: 'import', label: 'Textimport' });
+      }
     }
+    activeAgendaFlowRef = null;
+    sessionSource = { kind: 'unscheduled' };
     appState.persist();
-    if (importedDays.length > 0) {
-      for (const day of importedDays) {
-        const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
-        for (const item of items) {
-          setAgendaMeta(makeAgendaMetaKeyForFlow(day.date ?? null, item.flow, item.startMin), { source: 'import', label: 'Textimport' });
-        }
-      }
-    }
-
-    const daysAfterSave = savedText.trim() ? parseAgenda(savedText) : null;
-    const dayAfterSave = daysAfterSave
-      ? (() => {
-          const date = activeAgendaDate();
-          if (date) {
-            const hit = daysAfterSave.find(d => d.date === date);
-            if (hit) return hit;
-          }
-          const today = localDateISO();
-          return daysAfterSave.find(d => d.date === today)
-            ?? daysAfterSave.find(d => d.date === null)
-            ?? daysAfterSave[0];
-        })()
-      : null;
-    if (daysAfterSave && dayAfterSave) {
-      const itemsAfterSave = buildAgendaItemsForDay(dayAfterSave, agendaDayStart);
-      const now = nowMinutes();
-      const active = itemsAfterSave.find(item => now >= item.startMin && now < item.startMin + item.totalMin);
-      if (active) {
-        loadAgendaFlow(active.flow, active.startMin);
-      } else {
-        activeAgendaFlowRef = null;
-        sessionSource = { kind: 'unscheduled' };
-      }
-    }
 
     if (loggedInUser) syncSave();
 
@@ -1418,16 +1763,18 @@
     renderEndControl();
     syncTimerToAgenda();
     appState.persist();
+    notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
   }
 
   function addBlock() {
     if (isViewMode) return;
     const newId = uid();
-    s.blocks = [...s.blocks, { id: newId, title: 'Ny aktivitet', minutes: 10, note: '', warning: false, pinned: false }];
+    s.blocks = [...s.blocks, { id: newId, title: 'Ny aktivitet', minutes: 10, note: '', warning: true, pinned: false }];
     updateTimeFeedback();
     renderEndControl();
     syncTimerToAgenda();
     appState.persist();
+    notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
     editingBlockId = newId;
     editingBlockField = 'name';
   }
@@ -1496,6 +1843,33 @@
     const drift = newTotal - scaled.reduce((a, b) => a + b, 0);
     scaled[scaled.length - 1] = Math.max(1, scaled[scaled.length - 1] + drift);
     return { ...flow, minutes: scaled };
+  }
+
+  function computeMovePreview(day: AgendaDay, flowIdx: number, dropY: number) {
+    const items = buildAgendaItemsForDay(day, agendaDayStart);
+    const source = items[flowIdx];
+    if (!source) return null;
+    const remaining = items.filter((_, idx) => idx !== flowIdx);
+    const windowStart = Math.floor(items[0].startMin / 60) * 60;
+    const targetPx = dropY;
+    let targetIdx = remaining.findIndex(item => {
+      const topPx = ((item.startMin - windowStart) / 720) * timelineEl.clientHeight;
+      const midPx = topPx + (item.totalMin / 720) * timelineEl.clientHeight / 2;
+      return targetPx < midPx;
+    });
+    if (targetIdx < 0) targetIdx = remaining.length;
+    const prev = targetIdx > 0 ? remaining[targetIdx - 1] : null;
+    const next = targetIdx < remaining.length ? remaining[targetIdx] : null;
+    const duration = source.totalMin;
+    const minStart = prev ? prev.startMin + prev.totalMin + 5 : windowStart;
+    const maxStart = next ? next.startMin - duration - 5 : windowStart + 720 - duration;
+    const room = maxStart - minStart;
+    if (room < 0) {
+      return { items, source, remaining, targetIdx, previewStart: null, previewValid: false };
+    }
+    const desired = windowStart + Math.round((dropY / timelineEl.clientHeight) * 720);
+    const previewStart = Math.max(minStart, Math.min(maxStart, Math.round(desired / 5) * 5));
+    return { items, source, remaining, targetIdx, previewStart, previewValid: true };
   }
 
   function startAgendaDrag(e: PointerEvent, i: number, edge: 'top' | 'bottom') {
@@ -1636,6 +2010,16 @@ Format:
     s.agendaOpen && s.clockSpan === 720 ? AI_PROMPT_AGENDA : AI_PROMPT_PARTS
   );
 
+  function syncAgendaDraftFromState(force = false) {
+    const currentDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+    const source = serializeSelectedAgendaDay(currentDate, agendaDays);
+    if (force || agendaDraftDate !== currentDate || !agendaDraftDirty) {
+      agendaDraft = source;
+      agendaDraftDate = currentDate;
+      agendaDraftDirty = false;
+    }
+  }
+
   function startSidebarResize(e: PointerEvent) {
     e.preventDefault();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -1671,6 +2055,17 @@ Format:
   }
 
   onMount(() => {
+    pageOrigin = window.location.origin;
+    const helpShortcut = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (e.altKey && !e.ctrlKey && (e.code === 'KeyI' || e.key === 'i' || e.key === 'I')) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        s.showHelpHints = !s.showHelpHints;
+        appState.persist();
+      }
+    };
     // View mode: load shared state and start polling
     const vt = new URLSearchParams(location.search).get('view');
     let viewPollId: ReturnType<typeof setInterval> | null = null;
@@ -1694,12 +2089,15 @@ Format:
 
     const savedShare = localStorage.getItem('daytimer_share_token');
     const savedShareOwner = localStorage.getItem('daytimer_share_owner_token');
+    const savedShareMode = localStorage.getItem('daytimer_share_mode');
     if (savedShare && savedShareOwner) {
       shareToken = savedShare;
       shareOwnerToken = savedShareOwner;
+      shareMode = (savedShareMode as ShareMode | null) ?? 'active-session-live';
     } else {
       localStorage.removeItem('daytimer_share_token');
       localStorage.removeItem('daytimer_share_owner_token');
+      localStorage.removeItem('daytimer_share_mode');
     }
 
     if (!localStorage.getItem('day_timer_v1')) {
@@ -1764,8 +2162,13 @@ Format:
     }
     renderEndControl();
     updateTimeFeedback();
+    capturePanelBaseline('now');
+    capturePanelBaseline('plan');
+    calendarMonthCursor = monthKey(parseIsoDate(selectedDay?.date ?? localDateISO()));
     tick();
     const id = setInterval(tick, 1000);
+    document.addEventListener('keydown', helpShortcut, true);
+    document.addEventListener('keyup', helpShortcut, true);
 
     function handleOutsideClick(e: MouseEvent) {
       if (!(e.target as Element).closest('.toolbar')) popoverOpen = false;
@@ -1795,6 +2198,8 @@ Format:
       if (viewVisibilityHandler) document.removeEventListener('visibilitychange', viewVisibilityHandler);
       resizeObservers.forEach(ro => ro.disconnect());
       document.removeEventListener('click', handleOutsideClick);
+      document.removeEventListener('keydown', helpShortcut, true);
+      document.removeEventListener('keyup', helpShortcut, true);
       window.removeEventListener('keydown', handleKeydown);
     };
   });
@@ -1820,7 +2225,22 @@ Format:
   });
 
   $effect(() => {
-    if (!shareToken) return;
+    const activeDate = selectedDay?.date ?? localDateISO();
+    if (!calendarMonthCursor) {
+      calendarMonthCursor = monthKey(parseIsoDate(activeDate));
+    }
+  });
+
+  $effect(() => {
+    const _selectedDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+    const _agendaText = activeAgendaText();
+    if (s.activeSection === 'plan') {
+      syncAgendaDraftFromState();
+    }
+  });
+
+  $effect(() => {
+    if (!shareToken || shareMode !== 'active-session-live') return;
     let id: ReturnType<typeof setInterval> | null = null;
 
     function startPush() {
@@ -1896,7 +2316,80 @@ Format:
       : { kind: 'unscheduled' };
     updateTimeFeedback();
     renderEndControl();
+    capturePanelBaseline('now');
+    capturePanelBaseline('plan');
     appState.persist();
+  }
+
+  function startAgendaMove(e: PointerEvent, i: number) {
+    if (isViewMode || !agendaDays || !selectedDay || !timelineEl || s.activeSection === 'now') return;
+    e.preventDefault();
+    e.stopPropagation();
+    agendaDragMoved = false;
+    const dayIdx = selectedDayIdx;
+    if (dayIdx < 0) return;
+    const preview = computeMovePreview(selectedDay, i, e.clientY - timelineEl.getBoundingClientRect().top);
+    agendaMoveState = {
+      dayIdx,
+      flowIdx: i,
+      startY: e.clientY,
+      currentY: e.clientY,
+      targetIdx: preview?.targetIdx ?? i,
+      previewStart: preview?.previewStart ?? null,
+      previewValid: preview?.previewValid ?? false
+    };
+    window.addEventListener('pointermove', onAgendaMove);
+    window.addEventListener('pointerup', endAgendaMove);
+  }
+
+  function onAgendaMove(e: PointerEvent) {
+    const move = agendaMoveState;
+    if (!move || !agendaDays || !selectedDay) return;
+    move.currentY = e.clientY;
+    if (Math.abs(move.currentY - move.startY) < 6) return;
+    agendaDragMoved = true;
+    const preview = computeMovePreview(selectedDay, move.flowIdx, move.currentY - timelineEl.getBoundingClientRect().top);
+    if (preview) {
+      move.targetIdx = preview.targetIdx;
+      move.previewStart = preview.previewStart;
+      move.previewValid = preview.previewValid;
+    }
+  }
+
+  function endAgendaMove() {
+    const move = agendaMoveState;
+    agendaMoveState = null;
+    window.removeEventListener('pointermove', onAgendaMove);
+    window.removeEventListener('pointerup', endAgendaMove);
+    if (!move || !agendaDays || !selectedDay || !timelineEl || !agendaDragMoved) {
+      setTimeout(() => { agendaDragMoved = false; }, 0);
+      return;
+    }
+    const preview = move.previewValid && move.previewStart !== null ? move : computeMovePreview(selectedDay, move.flowIdx, move.currentY - timelineEl.getBoundingClientRect().top);
+    if (!preview || !preview.previewValid || preview.previewStart === null) {
+      setTimeout(() => { agendaDragMoved = false; }, 0);
+      return;
+    }
+
+    const newDays = agendaDays.map((day, di) => {
+      if (di !== move.dayIdx) return day;
+      const flows = [...day.flows];
+      const [movedFlow] = flows.splice(move.flowIdx, 1);
+      const updated = { ...movedFlow, startMin: preview.previewStart };
+      flows.splice(Math.min(preview.targetIdx, flows.length), 0, updated);
+      return { ...day, flows };
+    });
+    setActiveAgendaText(serializeAgenda(newDays));
+    if (selectedAgendaDetails?.dayIdx === move.dayIdx) {
+      const updatedDay = newDays[move.dayIdx];
+      const updatedItems = buildAgendaItemsForDay(updatedDay, agendaDayStart);
+      const updatedItem = updatedItems.find(item => item.flow.id === selectedAgendaDetails.flow.id) ?? updatedItems.find(item => item.flow.title === selectedAgendaDetails.flow.title);
+      if (updatedItem) {
+        activeAgendaFlowRef = makeAgendaFlowRef(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin);
+      }
+    }
+    appState.persist();
+    setTimeout(() => { agendaDragMoved = false; }, 0);
   }
 
   function loadAgendaFlow(flow: Flow, computedStart: number) {
@@ -1921,22 +2414,9 @@ Format:
       : { kind: 'unscheduled' };
     planLastSavedAt = Date.now();
     setActiveSection('plan');
+    capturePanelBaseline('plan');
+    capturePanelBaseline('now');
     updateTimeFeedback(); renderEndControl(); appState.persist();
-  }
-
-  function detachSelectedAgendaBlock() {
-    if (!selectedAgendaDetails) return;
-    setAgendaMeta(
-      makeAgendaMetaKeyForFlow(
-        selectedAgendaDetails.day.date ?? null,
-        selectedAgendaDetails.flow,
-        selectedAgendaDetails.startMin
-      ),
-      { source: 'manual' }
-    );
-    planLastSavedAt = Date.now();
-    appState.persist();
-    if (loggedInUser) void syncSave();
   }
 
   function goToTimerNow() {
@@ -1999,6 +2479,8 @@ Format:
     loadAgendaFlow(newFlow, roundedNow);
     activeAgendaFlowRef = makeAgendaFlowRef(today, newFlow, roundedNow);
     sessionSource = { kind: 'agenda', date: today, title: newFlow.title, startMin: roundedNow };
+    capturePanelBaseline('now');
+    capturePanelBaseline('plan');
     appState.persist();
   }
 </script>
@@ -2022,7 +2504,7 @@ Format:
               onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
               onclick={(e) => e.stopPropagation()} />
           {:else}
-            <span class="name" onclick={() => startBlockEdit(b.id, 'name')}>{b.title}</span>
+            <button class="name seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'name')}>{b.title}</button>
           {/if}
           {#if editingBlockId === b.id && editingBlockField === 'min'}
             <input class="inline-edit min-inp" type="number" min="1" use:focusOnMount
@@ -2031,9 +2513,9 @@ Format:
               onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
               onclick={(e) => e.stopPropagation()} />
           {:else if s.segMinutesMode === 'planned'}
-            <span class="min" onclick={() => startBlockEdit(b.id, 'min')}>{b.minutes}m</span>
+            <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{b.minutes}m</button>
           {:else if s.segMinutesMode === 'remaining'}
-            <span class="min" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsed)) : b.minutes}m kvar</span>
+            <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsed)) : b.minutes}m kvar</button>
           {/if}
         </div>
         {#if b.note && s.showSegNotes}
@@ -2049,13 +2531,13 @@ Format:
     </div>
   </aside>
 
-  <div class="resize-handle-sb" onpointerdown={startSidebarResize}></div>
+  <div class="resize-handle-sb" role="separator" aria-orientation="vertical" onpointerdown={startSidebarResize}></div>
   <button class="collapse-btn" onclick={toggleCollapse} title="Dölj panel">
     {s.sbCollapsed ? '›' : '‹'}
   </button>
 
   {#if isViewMode}
-    <div class="live-badge">● Live</div>
+    <div class="live-badge">{shareMode === 'active-session-live' ? '● Live' : '◌ Snapshot'}</div>
   {/if}
 
   <main class="main">
@@ -2077,7 +2559,7 @@ Format:
         <div class="lesson-title">{s.dayTitle}</div>
       {/if}
       <div class="top-time">
-        <div class="now" onclick={goToTimerNow} style="cursor:pointer" title="Visa nuvarande tid">{nowText}</div>
+        <button class="now now-btn" type="button" onclick={goToTimerNow} title="Visa nuvarande tid">{nowText}</button>
         {#if s.showLeft}<div class="left">{leftText}</div>{/if}
       </div>
     </div>
@@ -2098,7 +2580,7 @@ Format:
         {#each s.blocks as b, i (b.id)}
           {@const ct = clockTheme(s.palette, s.dark)}
           <button class="wd" class:on={b.warning} style="color:{ct.colors[i % 8]}"
-            title={`2-min varning för "${b.title}"`}
+            title={`3-min varning för "${b.title}"`}
             onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
           ></button>
         {/each}
@@ -2148,22 +2630,6 @@ Format:
         {/if}
 
         {#if s.activeSection === 'now' || s.activeSection === 'plan'}
-          {#if s.activeSection === 'plan'}
-            <PlanSelectionCard
-              hasSelection={!!selectedAgendaDetails}
-              title={selectedAgendaDetails?.flow.title || '(utan rubrik)'}
-              dateLabel={fmtAgendaDate(selectedAgendaDetails?.day.date ?? null)}
-              timeRange={`${fmtHM(selectedAgendaDetails?.startMin ?? s.startMin)}–${fmtHM((selectedAgendaDetails?.startMin ?? s.startMin) + (selectedAgendaDetails?.totalMin ?? 0))}`}
-              saveLabel={planSaveLabel}
-              sourceLabel={selectedAgendaSourceLabel}
-              sourceHelp={selectedAgendaSourceHelp}
-              agendaOpen={s.agendaOpen}
-              canDetach={selectedAgendaCanDetach}
-              onToggleAgenda={() => { s.agendaOpen = !s.agendaOpen; appState.persist(); }}
-              onDetach={detachSelectedAgendaBlock}
-            />
-          {/if}
-
           <SessionEditorPanel
             mode={s.activeSection}
             hasSelection={!!selectedAgendaDetails}
@@ -2181,7 +2647,23 @@ Format:
             aiPlanMode={aiConfig.planMode}
             startTimeValue={fmtHM(s.startMin)}
             {endMode}
-            onTitleInput={(value) => { s.dayTitle = value; syncTimerToAgenda(); appState.persist(); }}
+            actionLabel={s.activeSection === 'plan' ? 'Spara' : 'Snabbstart nu'}
+            actionHint={planActionHint}
+            saveStatusLabel={activePanelStatusLabel}
+            canRevert={canRevertPanel}
+            showHelpHints={s.showHelpHints}
+            showTitleHelp={helpVisible(sessionTitleHelpOpen)}
+            showPartsHelp={helpVisible(sessionPartsHelpOpen)}
+            showTimeHelp={helpVisible(sessionTimeHelpOpen)}
+            targetDateLabel={targetDateLabel}
+            sourceLabel={selectedAgendaSourceLabel}
+            sourceHelp={selectedAgendaSourceHelp}
+            showSourceHelp={helpVisible(planSourceHelpOpen)}
+            {shareToken}
+            {shareMode}
+            {shareCopyText}
+            shareUrl={shareToken && pageOrigin ? `${pageOrigin}/?view=${shareToken}` : ''}
+            onTitleInput={(value) => { s.dayTitle = value; syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}
             onPartsInput={handlePartsInput}
             onCopyPrompt={() => {
               navigator.clipboard.writeText(currentAiPrompt).then(() => {
@@ -2194,7 +2676,29 @@ Format:
             onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
             onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
             onRunAi={runAiParts}
-            onQuickStart={() => {
+            onAction={() => {
+              if (s.activeSection === 'plan') {
+                if (selectedAgendaDetails) {
+                  syncTimerToAgenda();
+                } else {
+                  const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+                  const flow: Flow = {
+                    id: uid(),
+                    title: s.dayTitle || 'Session',
+                    startMin: s.startMin,
+                    parts: s.blocks.map(b => b.title),
+                    minutes: s.blocks.map(b => b.minutes),
+                    warnings: s.blocks.map(b => b.warning),
+                    notes: s.blocks.map(b => b.note),
+                    extraInfo: s.extraInfo,
+                  };
+                  addFlowToAgendaDate(targetDate, flow, true, sessionAgendaMeta());
+                }
+                capturePanelBaseline('plan');
+                notifyPanelMutation('plan');
+                appState.persist();
+                return;
+              }
               const d = new Date();
               s.startMin = d.getHours() * 60 + d.getMinutes();
               warnedSet.clear(); renderEndControl(); updateTimeFeedback();
@@ -2208,17 +2712,29 @@ Format:
                 extraInfo: s.extraInfo,
               };
               addFlowToAgendaToday(f, true, sessionAgendaMeta());
+              capturePanelBaseline('now');
+              notifyPanelMutation('now');
             }}
-            onExtraInfoInput={(value) => { s.extraInfo = value; syncTimerToAgenda(); appState.persist(); }}
+            onExtraInfoInput={(value) => { s.extraInfo = value; syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}
             onStartTimeInput={(value) => {
               const [h, m] = value.split(':').map(Number);
               if (isNaN(h) || isNaN(m)) return;
               s.startMin = h * 60 + m; warnedSet.clear();
               renderEndControl(); updateTimeFeedback();
-              syncTimerToAgenda(); appState.persist();
+              syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
             }}
-            onEndModeChange={(mode) => { endMode = mode; s.endMode = mode; renderEndControl(); appState.persist(); }}
+            onEndModeChange={(mode) => { endMode = mode; s.endMode = mode; renderEndControl(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}
             onEndControlMount={(node) => { endControlEl = node ?? null!; renderEndControl(); }}
+            onRevert={revertActivePanel}
+            onToggleTitleHelp={() => sessionTitleHelpOpen = toggleHelpOverride(sessionTitleHelpOpen)}
+            onTogglePartsHelp={() => sessionPartsHelpOpen = toggleHelpOverride(sessionPartsHelpOpen)}
+            onToggleTimeHelp={() => sessionTimeHelpOpen = toggleHelpOverride(sessionTimeHelpOpen)}
+            onToggleSourceHelp={() => planSourceHelpOpen = toggleHelpOverride(planSourceHelpOpen)}
+            onCopyShareLink={copyShareLink}
+            onStopSharing={stopSharing}
+            onStartLiveShare={() => startSharing('active-session-live')}
+            onStartSessionShare={() => startSharing('selected-session-snapshot')}
+            onStartDayShare={() => startSharing('selected-day-snapshot')}
           />
         {:else if s.activeSection === 'library'}
           <LibraryPanel
@@ -2227,8 +2743,8 @@ Format:
             flowsOpen={flowsOpen}
             onSaveFlow={saveFlow}
             onToggleFlows={() => flowsOpen = !flowsOpen}
-            onLoadFlow={loadFlow}
-            onAddToAgenda={addTemplateToAgendaToday}
+            onLoadFlow={(id) => loadFlow(id, selectedDay?.date ? 'plan' : 'now')}
+            onAddToAgenda={addTemplateToSelectedAgendaDate}
             onDeleteFlow={deleteFlow}
           />
         {:else}
@@ -2238,9 +2754,6 @@ Format:
             {syncStatusError}
             {loginName}
             {loginPass}
-            {shareToken}
-            {shareCopyText}
-            shareUrl={`${location.origin}/?view=${shareToken}`}
             aiProvider={aiConfig.provider}
             aiProviderLabels={AI_PROVIDER_LABELS}
             aiKeyPlaceholders={AI_KEY_PLACEHOLDERS}
@@ -2248,15 +2761,14 @@ Format:
             aiKeyVisible={aiKeyVisible}
             aiBaseUrl={aiConfig.baseUrl}
             aiCustomModel={aiConfig.customModel}
+            showHelpHints={s.showHelpHints}
             onLogout={logout}
             onSyncLoad={syncLoad}
             onSyncSave={syncSave}
             onLogin={login}
             onLoginNameChange={(value) => loginName = value}
             onLoginPassChange={(value) => loginPass = value}
-            onCopyShareLink={copyShareLink}
-            onStopSharing={stopSharing}
-            onStartSharing={startSharing}
+            onToggleHelpHints={() => { s.showHelpHints = !s.showHelpHints; appState.persist(); }}
             onProviderChange={(value) => { aiConfig.provider = value as AiProvider; aiKeyVisible = false; saveAiConfig(); }}
             onToggleAiKeyVisible={() => aiKeyVisible = !aiKeyVisible}
             onClearAiConfig={clearAiConfig}
@@ -2269,7 +2781,7 @@ Format:
     {/if}
   </main>
 
-  <div class="resize-handle-ag" onpointerdown={startAgendaResize}></div>
+  <div class="resize-handle-ag" role="separator" aria-orientation="vertical" onpointerdown={startAgendaResize}></div>
   <aside class="agenda" bind:this={agendaEl}>
     {#if !isViewMode && s.activeSection === 'plan'}
       <AgendaImportPanel
@@ -2290,17 +2802,12 @@ Format:
         aiPlanMode={aiConfig.planMode}
         {agendaAiError}
         {agendaAiLoading}
+        showHelpHints={s.showHelpHints}
+        showImportHelp={helpVisible(agendaImportHelpOpen)}
+        showIcsHelp={helpVisible(agendaIcsHelpOpen)}
         onToggleOpen={() => agendaInputOpen = !agendaInputOpen}
-        onDraftChange={(value) => agendaDraft = value}
-        onDraftPaste={(e) => {
-          const pasted = e.clipboardData?.getData('text') ?? '';
-          const merged = mergeAgendaDays(agendaDraft, pasted);
-          if (merged !== pasted) {
-            e.preventDefault();
-            agendaDraft = merged;
-            (e.target as HTMLTextAreaElement).value = merged;
-          }
-        }}
+        onDraftChange={(value) => { agendaDraft = value; agendaDraftDirty = true; agendaDraftDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO(); }}
+        onDraftPaste={() => {}}
         onSave={saveAgenda}
         onToggleIcsOpen={() => icsImportOpen = !icsImportOpen}
         onIcsDraftChange={(value) => { icsDraft = value; resetIcsPreview(); }}
@@ -2318,29 +2825,77 @@ Format:
         onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
         onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
         onRunAi={runAiAgenda}
+        onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
+        onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}
       />
-    {:else if !isViewMode}
+    {:else if !isViewMode && (s.showHelpHints || helpVisible(agendaOverviewHelpOpen))}
       <div class="agenda-section-note">
-        Dagplanen visas här som översikt. Byt till sektionen <strong>Plan</strong> för att importera, ändra block och arbeta med kalenderflödet.
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span>Dagplanen visas här som översikt. Byt till sektionen <strong>Planera</strong> för att importera, ändra block och arbeta med kalenderflödet.</span>
+          <button class="info-btn" onclick={() => agendaOverviewHelpOpen = toggleHelpOverride(agendaOverviewHelpOpen)}>i</button>
+        </div>
+        {#if helpVisible(agendaOverviewHelpOpen)}
+          <div class="feedback" style="margin-top:8px;">På desktop visas källstatus vid hover. På mobil syns källan först när du har valt blocket i planeringseditorn.</div>
+        {/if}
       </div>
     {/if}
 
-    {#if agendaDays && agendaDays.length > 0}
+    <div class="agenda-calendar">
+      <div class="agenda-input-header" style="margin-bottom:8px;">
+        <span class="agenda-input-label">Kalender</span>
+        <button class="agenda-input-toggle" onclick={() => agendaCalendarOpen = !agendaCalendarOpen}>
+          {agendaCalendarOpen ? '△ Dölj' : '▽ Visa'}
+        </button>
+      </div>
+      {#if agendaCalendarOpen}
+        <div class="agenda-calendar-head">
+          <button class="agenda-nav-btn" onclick={() => calendarMonthCursor = shiftMonth(calendarMonthCursor || monthKey(parseIsoDate(selectedDay?.date ?? localDateISO())), -1)}>‹</button>
+          <span class="agenda-date-label">{monthLabel(calendarMonthCursor || monthKey(parseIsoDate(selectedDay?.date ?? localDateISO())))}</span>
+          <button class="agenda-nav-btn" onclick={() => calendarMonthCursor = shiftMonth(calendarMonthCursor || monthKey(parseIsoDate(selectedDay?.date ?? localDateISO())), 1)}>›</button>
+        </div>
+        <div class="agenda-calendar-weekdays">
+          {#each ['S','M','T','O','T','F','L'] as weekday}
+            <span>{weekday}</span>
+          {/each}
+        </div>
+        <div class="agenda-calendar-grid">
+          {#each calendarCells as cell (cell.iso)}
+            <button
+              class="agenda-calendar-day"
+              class:muted={!cell.inMonth}
+              class:selected={cell.isSelected}
+              class:has-content={cell.hasContent}
+              onclick={() => selectAgendaDate(cell.iso)}
+            >
+              <span>{cell.label}</span>
+              <span class="agenda-calendar-density" style={`opacity:${cell.density}`}></span>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+
+    {#if selectedDay}
       <div class="agenda-nav">
-        <button class="agenda-nav-btn" onclick={prevDay} disabled={selectedDayIdx <= 0}>‹</button>
+        <button class="agenda-nav-btn" onclick={prevDay} disabled={!agendaDays || selectedDayIdx <= 0}>‹</button>
         <span class="agenda-date-label">{fmtAgendaDate(selectedDay?.date ?? null)}</span>
         {#if !schoolPrimary() && !isViewMode}
           <span class="agenda-mode-badge">Fritid</span>
         {/if}
-        <button class="agenda-nav-btn" onclick={nextDay} disabled={selectedDayIdx >= (agendaDays.length - 1)}>›</button>
+        <button class="agenda-nav-btn" onclick={nextDay} disabled={!agendaDays || selectedDayIdx >= (agendaDays.length - 1)}>›</button>
       </div>
     {/if}
 
     {#if agendaItems.length === 0}
-      <p class="agenda-empty">Skriv in dagplanen ovan, eller spara flöden via ✎-panelen.</p>
+      <p class="agenda-empty">{selectedDay?.date ? `Ingen plan sparad för ${fmtAgendaDate(selectedDay.date)} än.` : 'Skriv in dagplanen ovan, eller spara flöden via ✎-panelen.'}</p>
+      <button class="quickstart agenda-plan-link" onclick={() => setActiveSection('plan')}>Gå till Planera</button>
     {:else}
       {@const windowStart = Math.floor(agendaItems[0].startMin / 60) * 60}
       <div class="agenda-timeline" class:has-overlay={overlayItems.length > 0} bind:this={timelineEl}>
+        {#if agendaMoveState && agendaMoveState.previewValid && agendaMoveState.previewStart !== null}
+          {@const previewTop = ((agendaMoveState.previewStart - windowStart) / 720 * 100).toFixed(3)}
+          <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>
+        {/if}
         {#each agendaItems as item, ai (item.startMin + item.flow.title)}
           {@const itemColor = sectorColors[ai % sectorColors.length]}
           {@const isPast = nowMinLive >= item.startMin + item.totalMin}
@@ -2349,21 +2904,38 @@ Format:
           {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
           {@const itemMeta = item.fromText && selectedDay ? s.agendaMeta[makeAgendaMetaKeyForFlow(selectedDay.date ?? null, item.flow, item.startMin)] ?? null : null}
           <div class="agenda-block"
+               role="button"
+               tabindex="0"
                class:past={isPast}
                class:active={isActive}
+               class:dragging={agendaMoveState?.dayIdx === selectedDayIdx && agendaMoveState?.flowIdx === ai}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
-               onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}>
+               onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}
+               onkeydown={(e) => {
+                 if (e.key === 'Enter' || e.key === ' ') {
+                   e.preventDefault();
+                   if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id);
+                 }
+               }}>
             <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
             {#if itemMeta}
-              <span class="agenda-source-badge" class:template={itemMeta.source === 'template'} class:ai={itemMeta.source === 'ai'} class:imported={itemMeta.source === 'import'}>
+              <span class="agenda-source-badge" class:template={itemMeta.source === 'template'} class:ai={itemMeta.source === 'ai'} class:imported={itemMeta.source === 'import'} title={agendaMetaLabel(itemMeta)}>
                 {agendaMetaBadge(itemMeta)}
               </span>
             {/if}
             <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
             {#if item.fromText && !isViewMode}
+              {#if s.activeSection !== 'now'}
+                <button
+                  class="agenda-move-btn"
+                  onclick={(e) => e.stopPropagation()}
+                  onpointerdown={(e) => startAgendaMove(e, ai)}
+                  title="Flytta block i ordningen"
+                >⋮⋮</button>
+              {/if}
               <button class="agenda-del-btn" onclick={(e) => { e.stopPropagation(); deleteAgendaItem(ai); }} title="Ta bort block">🗑</button>
-              <div class="agenda-drag-top" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
-              <div class="agenda-drag-bottom" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
+              <div class="agenda-drag-top" role="separator" aria-orientation="horizontal" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
+              <div class="agenda-drag-bottom" role="separator" aria-orientation="horizontal" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
             {/if}
           </div>
         {/each}
@@ -2389,13 +2961,13 @@ Format:
       <span>◷</span> Nu
     </button>
     <button class:active={s.activeSection === 'plan' && mobileTab === 'plan'} onclick={() => setActiveSection('plan')}>
-      <span>▦</span> Plan
+      <span>▦</span> Planera
     </button>
     <button class:active={s.activeSection === 'library'} onclick={() => setActiveSection('library')}>
       <span>⌘</span> Bibliotek
     </button>
     <button class:active={s.activeSection === 'workspace'} onclick={() => setActiveSection('workspace')}>
-      <span>⋯</span> Mer
+      <span>⋯</span> Konto
     </button>
   </nav>
 </div>
@@ -2422,7 +2994,15 @@ Format:
 <div class="flash" bind:this={flashEl}></div>
 
 <div class="help-modal" class:open={helpOpen}
-  onclick={(e) => { if ((e.target as Element).classList.contains('help-modal')) helpOpen = false; }}>
+  role="button"
+  tabindex="0"
+  onclick={(e) => { if ((e.target as Element).classList.contains('help-modal')) helpOpen = false; }}
+  onkeydown={(e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && (e.target as Element).classList.contains('help-modal')) {
+      e.preventDefault();
+      helpOpen = false;
+    }
+  }}>
   <div class="help-card">
     <button class="help-close" onclick={() => helpOpen = false} title="Stäng">×</button>
     <h2>Så här använder du Day Timer</h2>
@@ -2431,7 +3011,7 @@ Format:
     <ul>
       <li><b>Skapa ett schema</b> via <span class="ico">✎</span> — skriv aktiviteter i textfältet, en per rad.</li>
       <li><b>Dra för att ändra tid</b> — håll på gränsen mellan två sektorer och dra.</li>
-      <li><b>Snabbstart</b> ⚡︎ ställer in starttid till just nu.</li>
+      <li><b>Snabbstart</b> ⚡︎ ställer in starttid till just nu. I <b>Planera</b> används steg 3 i stället som tydlig spara-knapp.</li>
       <li><b>Allt sparas automatiskt</b> i webbläsaren (ingen inloggning krävs).</li>
     </ul>
 
@@ -2481,7 +3061,7 @@ Format:
       <li><b>Paletter</b> — färgpunkterna längst ner till höger byter tema.</li>
       <li><b>Mörkt läge</b> — ☽/☀-knappen bredvid paletterna.</li>
       <li><b>Toggle-pills</b> (<span class="ico">⚙︎</span>) styr vad som visas: tid kvar, etiketter, markeringar m.m.</li>
-      <li><b>Mobilvy</b> — flikarna Nu / Plan / Bibliotek / Mer längst ner på skärmen.</li>
+      <li><b>Mobilvy</b> — flikarna Nu / Planera / Bibliotek / Konto längst ner på skärmen.</li>
     </ul>
 
     <p class="help-foot" style="margin-top:12px">Genväg: <code>Alt+Shift+R</code> återställer timern (all data raderas).</p>

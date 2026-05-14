@@ -50,6 +50,11 @@ describe('parseParts — grundformat', () => {
     const { blocks } = parseParts('Frukost 20m\n- kaffe\n- juice', []);
     expect(blocks[0].note).toBe('kaffe\njuice');
   });
+
+  it('nya block får varningar påslagna som standard', () => {
+    const { blocks } = parseParts('Lektion 45m', []);
+    expect(blocks[0].warning).toBe(true);
+  });
 });
 
 describe('parseParts — opinnade block', () => {
@@ -183,6 +188,11 @@ describe('parseAgenda — sessioner', () => {
     const days = parseAgenda('#Session\nLektion 45m\n& Kom ihåg läxor');
     const flow = days[0].flows[0];
     expect(flow.extraInfo).toBe('Kom ihåg läxor');
+  });
+
+  it('agendaimport sätter varningar på som standard', () => {
+    const days = parseAgenda('#Session\nLektion 45m\nRast 10m');
+    expect(days[0].flows[0].warnings).toEqual([true, true]);
   });
 
   it('tom text ger inga dagar', () => {
