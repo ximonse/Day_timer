@@ -54,6 +54,7 @@
   let copyAgendaPromptText = $state('AI-prompt');
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean } | null>(null);
+  let planSelectionExplicit = $state(false);
   type AgendaFlowRef = {
     date: string | null;
     title: string;
@@ -666,6 +667,7 @@
     setActiveAgendaDate(date);
     calendarMonthCursor = monthKey(parseIsoDate(date));
     activeAgendaFlowRef = null;
+    planSelectionExplicit = false;
     sessionSource = { kind: 'unscheduled' };
     agendaDraftDirty = false;
     appState.persist();
@@ -1415,6 +1417,7 @@
     warnedSet.clear();
     updateTimeFeedback(); renderEndControl();
     activeAgendaFlowRef = null;
+    planSelectionExplicit = false;
     sessionSource = { kind: 'template', templateId: f.id, title: f.title };
     setActiveSection(targetSection);
     capturePanelBaseline('now');
@@ -1883,6 +1886,7 @@
     setActiveAgendaText(serializeAgenda(days));
     if (selectedAgendaDetails?.dayIdx === selectedDayIdx && selectedAgendaDetails.flowIdx === flowIdx) {
       activeAgendaFlowRef = null;
+      planSelectionExplicit = false;
       sessionSource = { kind: 'unscheduled' };
     }
     appState.persist();
@@ -2469,6 +2473,7 @@ Regler:
     activeAgendaFlowRef = selectedDay
       ? makeAgendaFlowRef(selectedDay.date ?? null, active.flow, s.startMin)
       : null;
+    planSelectionExplicit = false;
     sessionSource = activeAgendaFlowRef
       ? { kind: 'agenda', date: selectedDay?.date ?? null, title: active.flow.title, startMin: s.startMin }
       : { kind: 'unscheduled' };
@@ -2551,7 +2556,7 @@ Regler:
     setTimeout(() => { agendaDragMoved = false; }, 0);
   }
 
-  function loadAgendaFlow(flow: Flow, computedStart: number, targetSection: AppSection = 'plan') {
+  function loadAgendaFlow(flow: Flow, computedStart: number, targetSection: AppSection = 'plan', markExplicitSelection = true) {
     s.dayTitle = flow.title;
     s.blocks = flow.parts.map((title, i) => ({
       id: uid(),
@@ -2568,6 +2573,7 @@ Regler:
     activeAgendaFlowRef = selectedDay
       ? makeAgendaFlowRef(selectedDay.date ?? null, flow, s.startMin)
       : null;
+    planSelectionExplicit = markExplicitSelection && targetSection === 'plan';
     sessionSource = activeAgendaFlowRef
       ? { kind: 'agenda', date: selectedDay?.date ?? null, title: flow.title, startMin: s.startMin }
       : { kind: 'unscheduled' };
@@ -2598,7 +2604,7 @@ Regler:
         if (flow.startMin !== undefined) t = flow.startMin;
         const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
         if (now >= t && now < t + totalMin) {
-          loadAgendaFlow(flow, t, 'now');
+          loadAgendaFlow(flow, t, 'now', false);
           return;
         }
         t += totalMin;
@@ -2837,7 +2843,7 @@ Regler:
             onRunAi={runAiParts}
             onAction={() => {
               if (s.activeSection === 'plan') {
-                if (selectedAgendaDetails) {
+                if (selectedAgendaDetails && planSelectionExplicit) {
                   syncTimerToAgenda();
                 } else {
                   const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
@@ -2852,6 +2858,7 @@ Regler:
                     extraInfo: s.extraInfo,
                   };
                   addFlowToAgendaDate(targetDate, flow, true, sessionAgendaMeta());
+                  planSelectionExplicit = true;
                 }
                 capturePanelBaseline('plan');
                 notifyPanelMutation('plan');
@@ -3090,11 +3097,11 @@ Regler:
                class:active={isActive}
                class:dragging={agendaMoveState?.dayIdx === selectedDayIdx && agendaMoveState?.flowIdx === ai}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
-               onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}
+              onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}
                onkeydown={(e) => {
                  if (e.key === 'Enter' || e.key === ' ') {
                    e.preventDefault();
-                   if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id);
+                   if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin, 'plan', true) : loadFlow(item.flow.id);
                  }
                }}>
             <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
