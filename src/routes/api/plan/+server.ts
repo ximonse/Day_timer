@@ -7,7 +7,10 @@ import { GoogleGenAI } from '@google/genai';
 type Provider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 type PlanMode = 'strict' | 'helpful';
 
-const PARTS_STRICT = `Du är en assistent som formaterar aktivitetslistor för en visuell timer.
+const PARTS_STRICT = `Du är en strikt formateringsassistent för en visuell timer.
+
+Uppgiften är att återge användarens aktiviteter så nära som möjligt utan att lägga till egna idéer.
+Fokusera på korrekt format, inte på förbättringar, råd eller extra struktur.
 
 Returnera BARA en färdig lista i det här formatet — inget annat, inga förklaringar:
 
@@ -20,7 +23,9 @@ Promenad 30m
 
 Regler:
 - Inkludera EXAKT de aktiviteter användaren nämner — lägg inte till, ta inte bort något
-- Om användaren anger en tid, använd den. Om inte, uppskatta realistiskt
+- Om användaren anger en tid, använd den. Om inte, uppskatta så försiktigt som möjligt
+- Lägg inte till extra aktiviteter, pauser eller ställtid
+- Lägg inte till egna råd eller kommentarer om de inte redan finns i användarens text
 - Namn på svenska, korta (max 3 ord)
 - Underpunkter börjar med - och har ingen tid
 - Ny rad mellan varje aktivitet
@@ -60,8 +65,11 @@ Regler:
 - Var hjälpsam och tydlig, men håll formatet enkelt nog att kunna läsas i timern`;
 
 function agendaStrictPrompt(todayISO: string): string {
-  return `Du är en assistent som formaterar dagplaner för en visuell timer.
+  return `Du är en strikt formateringsassistent för dagplaner i en visuell timer.
 Dagens datum är ${todayISO}.
+
+Uppgiften är att återge användarens dag så nära som möjligt utan att lägga till egna förslag.
+Fokusera på korrekt struktur, inte på råd, förbättringar eller extra planering.
 
 Returnera BARA en dagplan i exakt det här formatet — inget annat, inga förklaringar:
 
@@ -77,8 +85,10 @@ Djuparbete 90m
 
 Regler:
 - Inkludera EXAKT de sessioner och aktiviteter användaren nämner — lägg inte till, ta inte bort
-- Om starttid anges, använd den. Om inte, uppskatta rimligt
-- Om tider saknas, uppskatta realistiskt per aktivitet
+- Om starttid anges, använd den. Om inte, uppskatta så försiktigt som möjligt
+- Om tider saknas, uppskatta bara det nödvändigaste för att få formatet att fungera
+- Lägg inte till extra pauser, övergångar eller ställtid
+- Lägg inte till egna råd eller kommentarer om de inte redan finns i användarens text
 - @YYMMDD för datum, #Rubrik HH:MM för session (rubrik max 3 ord)
 - Aktiviteter med tid: Aktivitet Nm. Underpunkter: - notering
 - Kommentarer för hela dagen börjar med &
