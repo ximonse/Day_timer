@@ -188,6 +188,18 @@
     </div>
   </div>
 
+  <div class="step-section step-section--action">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={onAction}><span class="ico">⚡︎</span> {actionLabel}</button>
+      <div class="feedback">{actionHint}</div>
+      <div class="feedback" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span>{saveStatusLabel}</span>
+        <button class="ai-key-btn" type="button" onclick={onRevert} disabled={!canRevert}>Återställ</button>
+      </div>
+    </div>
+  </div>
+
   <div>
     <div class="field-label">Info-ruta (fri text, visas som egen ruta i sidopanelen)</div>
     <textarea placeholder="T.ex. Att ta med: bok, penna&#10;Läxa: sida 42"
@@ -217,18 +229,6 @@
     <div class="feedback">Start och slut sparas direkt. Återställ hoppar tillbaka till senaste baslinjen för den här panelen.</div>
   {/if}
   <div class="feedback">{timeFeedbackText}</div>
-
-  <div class="step-section step-section--action">
-    <div class="step-num">3</div>
-    <div class="step-body">
-      <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={onAction}><span class="ico">⚡︎</span> {actionLabel}</button>
-      <div class="feedback">{actionHint}</div>
-      <div class="feedback" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <span>{saveStatusLabel}</span>
-        <button class="ai-key-btn" type="button" onclick={onRevert} disabled={!canRevert}>Återställ</button>
-      </div>
-    </div>
-  </div>
 
   <div class="share-section">
     <div class="field-label">Dela</div>

@@ -64,13 +64,15 @@
     onAiBaseUrlChange: (value: string) => void;
     onAiCustomModelChange: (value: string) => void;
   } = $props();
+
+  let reliabilityOpen = $state(false);
 </script>
 
 <div class="section-card">
   <div class="section-card-head">
-    <strong>Konto & AI</strong>
+    <strong>Översikt</strong>
   </div>
-  <div class="section-copy">Här ligger sådant som hör till konto, delad drift och AI-stöd snarare än till ett enskilt block.</div>
+  <div class="section-copy"><strong>Konto & AI</strong> samlar sådant som hör till konto, delad drift och AI-stöd snarare än till ett enskilt block.</div>
 </div>
 
 <div class="section-card">
@@ -79,23 +81,6 @@
     <button class="quickstart" onclick={onToggleHelpHints}>{showHelpHints ? 'Dölj hjälp' : 'Visa hjälp'} · Alt+i</button>
   </div>
   <div class="section-copy">Global hjälp visar förklarande texter där de finns. Lokala <code>i</code>-knappar fungerar alltid även när hjälpläget är av.</div>
-</div>
-
-<div class="section-card">
-  <div class="section-card-head">
-    <strong>Tidsdata & tillförlitlighet</strong>
-  </div>
-  <div class="section-copy">Bekräftade pass: <strong>{confirmedActualCount}</strong> · Obekräftade idag: <strong>{pendingActualCount}</strong></div>
-  <div style="margin-top:8px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px;">
-      <span>Tillförlitlighet</span>
-      <span><strong>{reliabilityLevel}</strong> ({reliabilityPercent}%)</span>
-    </div>
-    <div style="height:10px;border-radius:999px;border:1px solid var(--border);background:var(--pill);overflow:hidden;">
-      <div style="height:100%;width:{reliabilityPercent}%;background:color-mix(in srgb, var(--pill-on) 75%, var(--accent) 25%);"></div>
-    </div>
-    <div class="section-copy" style="margin-top:6px;">{reliabilityHint}</div>
-  </div>
 </div>
 
 <div class="login-form">
@@ -156,5 +141,25 @@
     <input type="text" class="sync-input" placeholder="Modell, t.ex. mistral-small-latest"
       value={aiCustomModel}
       onchange={(e) => onAiCustomModelChange((e.target as HTMLInputElement).value.trim())} />
+  {/if}
+</div>
+
+<div class="section-card">
+  <div class="section-card-head">
+    <strong>Tidsdata & tillförlitlighet</strong>
+    <button class="quickstart" onclick={() => reliabilityOpen = !reliabilityOpen}>{reliabilityOpen ? 'Dölj' : 'Visa'}</button>
+  </div>
+  {#if reliabilityOpen}
+    <div class="section-copy">Bekräftade pass: <strong>{confirmedActualCount}</strong> · Obekräftade idag: <strong>{pendingActualCount}</strong></div>
+    <div style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px;">
+        <span>Tillförlitlighet</span>
+        <span><strong>{reliabilityLevel}</strong> ({reliabilityPercent}%)</span>
+      </div>
+      <div style="height:10px;border-radius:999px;border:1px solid var(--border);background:var(--pill);overflow:hidden;">
+        <div style="height:100%;width:{reliabilityPercent}%;background:color-mix(in srgb, var(--pill-on) 75%, var(--accent) 25%);"></div>
+      </div>
+      <div class="section-copy" style="margin-top:6px;">{reliabilityHint}</div>
+    </div>
   {/if}
 </div>
