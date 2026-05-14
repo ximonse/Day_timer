@@ -125,7 +125,7 @@
   :global(.lesson-title-editable:focus) { border-bottom: 2px solid var(--accent); }
   :global(.lesson-title-editable::placeholder) { color: var(--muted); opacity: .35; }
   :global(.top-time) { text-align: center; }
-  :global(.top-time .now) { font-size: clamp(30px, 7cqi, 70px); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; display: inline-block; }
+  :global(.top-time .now) { font-size: clamp(30px, 7cqi, 70px); font-weight: 400; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; display: inline-block; }
   :global(.top-time .now-btn) { background: transparent; border: 0; color: inherit; padding: 0; cursor: pointer; appearance: none; }
   :global(.top-time .left) { font-size: 20px; color: var(--muted); margin-top: 6px; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; }
   :global(.clock-wrap) { position: relative; }
