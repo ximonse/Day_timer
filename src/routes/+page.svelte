@@ -3009,10 +3009,10 @@ Format:
 
     <h3>Grunderna</h3>
     <ul>
-      <li><b>Skapa ett schema</b> via <span class="ico">✎</span> — skriv aktiviteter i textfältet, en per rad.</li>
-      <li><b>Dra för att ändra tid</b> — håll på gränsen mellan två sektorer och dra.</li>
-      <li><b>Snabbstart</b> ⚡︎ ställer in starttid till just nu. I <b>Planera</b> används steg 3 i stället som tydlig spara-knapp.</li>
-      <li><b>Allt sparas automatiskt</b> i webbläsaren (ingen inloggning krävs).</li>
+      <li><b>Nu</b> är snabbvägen: skriv rubrik och delar, använd <b>Snabbstart nu</b> för att komma igång direkt.</li>
+      <li><b>Planera</b> är dagläget: välj datum i kalendern, skriv eller klistra in dagtext och spara längst ner.</li>
+      <li><b>Alt+i</b> visar eller gömmer hjälp globalt. Lokala <span class="ico">i</span>-knappar kan ändå öppna eller stänga just sin ruta.</li>
+      <li><b>Allt sparas automatiskt</b> i webbläsaren tills du klickar <b>Spara</b> i dagplanen eller ändrar något i timern.</li>
     </ul>
 
     <h3>Inmatningsformat</h3>
@@ -3033,10 +3033,10 @@ Format:
 
     <h3>Dagplan (agenda)</h3>
     <ul>
-      <li>Öppna agendapanelen med <b>▷</b>-knappen till höger om klockan.</li>
-      <li>Importfältet används för att klistra in ny plantext med <code>@YYMMDD</code> och <code>#Rubrik HH:MM</code>.</li>
-      <li>Klicka på ett block i tidslinjen för att ladda den sessionen i klockan.</li>
-      <li>Bläddra mellan dagar med <b>‹ ›</b>-pilarna.</li>
+      <li>Öppna agendan med <b>▷</b>-knappen till höger om klockan. Kalendern kan fällas ihop och visar en kompakt översikt.</li>
+      <li>Klicka en dag i kalendern för att visa just den dagtexten. Tom dag går också att välja och skriva på.</li>
+      <li>I tidslinjen kan du klicka ett block för att ladda det i timern, dra i över- och underkant för tid och dra i flytthandtaget för ordningen.</li>
+      <li>Status som <b>Mall</b>, <b>Import</b> och <b>AI</b> visas diskret och blir tydligare vid hover eller i planeringsläget.</li>
     </ul>
 
     <h3>AI-planering</h3>
@@ -3044,15 +3044,15 @@ Format:
       <li>Öppna <span class="ico">✎</span> och scrolla ner till <b>AI-planering</b>.</li>
       <li>Välj provider: <b>Claude</b>, <b>GPT</b>, <b>Gemini</b> eller <b>Anpassad</b> (valfri OpenAI-kompatibel, t.ex. Mistral, Groq).</li>
       <li>Klistra in din API-nyckel — sparas lokalt, skickas till vår server enbart för att nå vald AI-leverantör.</li>
-      <li>Klicka <b>▽ Planera med AI</b> under aktivitets­fältet → beskriv på fritt språk → schemat fylls i automatiskt.</li>
-      <li>I agendapanelen: klicka <b>✨ AI-dagplan</b> för att generera ett fler­dagars schema.</li>
+      <li>Klicka <b>▽ Planera med AI</b> under aktivitetsfältet → beskriv på fritt språk → schemat fylls i automatiskt.</li>
+      <li>I agendapanelen: klicka <b>✨ AI-dagplan</b> för att generera dagtext för vald dag.</li>
       <li><b>AI-prompt</b>-knappen bredvid aktivitetsfältet kopierar en prompt du kan klistra in i valfritt AI-verktyg manuellt.</li>
     </ul>
 
     <h3>Flöden &amp; synkronisering</h3>
     <ul>
-      <li><b>Spara som mall</b> 💾 sparar det aktuella schemat som en återanvändbar mall.</li>
-      <li>Mallnamnet laddar mallen i timern. <b>＋</b> lägger till mallen i dagens dagplan.</li>
+      <li><b>Spara som mall</b> 💾 sparar det aktuella schemat som en återanvändbar mall i Bibliotek.</li>
+      <li>Mallnamnet laddar mallen i <b>Planera</b> eller <b>Nu</b> beroende på var du är. <b>＋</b> lägger till mallen på vald dag.</li>
       <li><b>☁ Ladda / ☁ Spara</b> hämtar eller skickar mallar och dagplaner till molnet.</li>
     </ul>
 
@@ -3064,7 +3064,7 @@ Format:
       <li><b>Mobilvy</b> — flikarna Nu / Planera / Bibliotek / Konto längst ner på skärmen.</li>
     </ul>
 
-    <p class="help-foot" style="margin-top:12px">Genväg: <code>Alt+Shift+R</code> återställer timern (all data raderas).</p>
+    <p class="help-foot" style="margin-top:12px">Genväg: <code>Alt+i</code> visar eller gömmer hjälp. <code>Alt+Shift+R</code> återställer timern (all data raderas).</p>
     <p class="help-foot">Klockan följer faktisk klocktid — visaren är alltid rätt.</p>
     <p class="help-foot">Frågor? Mejla <a href="mailto:timer@ximon.se">timer@ximon.se</a></p>
   </div>
