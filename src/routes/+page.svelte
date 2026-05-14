@@ -104,6 +104,7 @@
   let nowMinLive = $state(nowMinutes());
   let lastAutoLoadKey = $state('');
   let mobileTab = $state<'timer'|'plan'>('timer');
+  let showAgendaOverlay = $state(typeof window !== 'undefined' ? window.innerWidth > 980 : true);
   let nowText = $state('--:--');
   let leftText = $state('');
   let flowsOpen = $state(false);
@@ -543,6 +544,8 @@
   });
 
   const overlayItems = $derived.by(() => {
+    if (s.activeSection !== 'plan') return [];
+    if (!showAgendaOverlay) return [];
     if (!overlayDays) return [];
     const activeDate = activeAgendaDate();
     const today = localDateISO();
@@ -2202,6 +2205,10 @@ Regler:
 
   onMount(() => {
     pageOrigin = window.location.origin;
+    const handleViewport = () => {
+      showAgendaOverlay = window.innerWidth > 980;
+    };
+    handleViewport();
     const helpShortcut = (e: KeyboardEvent) => {
       if (e.repeat) return;
       if (e.altKey && !e.ctrlKey && (e.code === 'KeyI' || e.key === 'i' || e.key === 'I')) {
@@ -2337,6 +2344,7 @@ Regler:
       }
     }
     window.addEventListener('keydown', handleKeydown);
+    window.addEventListener('resize', handleViewport);
 
     return () => {
       clearInterval(id);
@@ -2347,6 +2355,7 @@ Regler:
       document.removeEventListener('keydown', helpShortcut, true);
       document.removeEventListener('keyup', helpShortcut, true);
       window.removeEventListener('keydown', handleKeydown);
+      window.removeEventListener('resize', handleViewport);
     };
   });
 
@@ -3246,4 +3255,3 @@ Regler:
     <p class="help-foot">Frågor? Mejla <a href="mailto:timer@ximon.se">timer@ximon.se</a></p>
   </div>
 </div>
-
