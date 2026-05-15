@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { appState, uid, type ActualTimeEntry, type AgendaFlowMeta, type AppSection, type Flow } from '$lib/state.svelte.js';
-  import { PALETTES, PALETTE_COLORS, clockTheme, labelColorFor } from '$lib/theme.js';
+  import { PALETTES, PALETTE_COLORS, PALETTE_LABELS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO } from '$lib/date.js';
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
@@ -109,8 +109,10 @@
   let nowText = $state('--:--');
   let leftText = $state('');
   let flowsOpen = $state(false);
+  let miniMenuOpen = $state(true);
   let themePickerOpen = $state(false);
-  let popoverOpen = $state(false);
+  let optionsMenuOpen = $state(false);
+  let menuHelpOpen = $state<'tid' | 'visning' | 'sidopanel' | 'agenda' | 'ovrigt' | null>(null);
   let helpOpen = $state(false);
   type HelpOverride = 'inherit' | 'show' | 'hide';
   let sessionTitleHelpOpen = $state<HelpOverride>('inherit');
@@ -121,6 +123,7 @@
   let agendaIcsHelpOpen = $state<HelpOverride>('inherit');
   let agendaOverviewHelpOpen = $state<HelpOverride>('inherit');
   let copyBtnText = $state('AI-prompt');
+  let nowTemplateSelection = $state('');
   let syncStatusText = $state('');
   let syncStatusError = $state(false);
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
@@ -152,6 +155,7 @@
     gemini: 'AIza...',
     custom: 'API-nyckel'
   };
+
   const SECTION_LABELS: Record<AppSection, string> = {
     now: 'Nu',
     plan: 'Planera',
@@ -538,11 +542,17 @@
   });
 
   const sectionCopy = $derived.by(() => {
-    if (s.activeSection === 'now') return 'Redigera det som körs just nu i timern.';
+    if (s.activeSection === 'now') return 'Kör det som händer nu utan planeringsbrus.';
     if (s.activeSection === 'plan') return 'Planera på vald dag och håll själva visningsläget lugnt.';
     if (s.activeSection === 'library') return 'Spara och återanvänd mallar utan att blanda ihop dem med dagens plan.';
     return 'Hantera konto, synk, hjälpläge och AI-stöd.';
   });
+  const sortedFlowOptions = $derived.by(() =>
+    [...s.flows].sort((a, b) => {
+      const lastUsedDiff = (b.lastUsed ?? 0) - (a.lastUsed ?? 0);
+      return lastUsedDiff !== 0 ? lastUsedDiff : a.title.localeCompare(b.title, 'sv');
+    })
+  );
 
   const partsFieldValue = $derived(serializeBlocks(s.blocks));
   const partsFeedbackText = $derived(`${s.blocks.length}${s.blocks.length === 1 ? ' del' : ' delar'}`);
@@ -703,12 +713,42 @@
 
   function setActiveSection(section: AppSection) {
     s.activeSection = section;
+    s.showControls = true;
+    miniMenuOpen = true;
     if (section === 'plan') s.agendaOpen = true;
     if (typeof window !== 'undefined' && window.innerWidth <= 800) {
       mobileTab = section === 'plan' ? 'plan' : 'timer';
       syncBodyClasses();
     }
     appState.persist();
+  }
+
+  function closeTransientMenus() {
+    optionsMenuOpen = false;
+    menuHelpOpen = null;
+    themePickerOpen = false;
+    aiPanelOpen = false;
+    agendaAiOpen = false;
+    icsImportOpen = false;
+    flowsOpen = false;
+  }
+
+  function toggleMiniMenu() {
+    if (miniMenuOpen) {
+      closeTransientMenus();
+      miniMenuOpen = false;
+      return;
+    }
+    closeTransientMenus();
+    miniMenuOpen = true;
+    s.showControls = true;
+    setActiveSection('now');
+  }
+
+  function loadNowTemplate(id: string) {
+    if (!id) return;
+    loadFlow(id, 'now');
+    nowTemplateSelection = '';
   }
 
   function cloneBlocks(blocks: typeof s.blocks) {
@@ -2475,7 +2515,7 @@ Regler:
     document.addEventListener('keyup', helpShortcut, true);
 
     function handleOutsideClick(e: MouseEvent) {
-      if (!(e.target as Element).closest('.toolbar')) popoverOpen = false;
+      if (!(e.target as Element).closest('.mini-menu-shell')) optionsMenuOpen = false;
     }
     document.addEventListener('click', handleOutsideClick);
 
@@ -2857,7 +2897,7 @@ Regler:
   <main class="main">
     <div class="main-header">
       {#if !isViewMode && !locked}
-        <input class="lesson-title lesson-title-editable"
+        <input class="lesson-title lesson-title-editable hero-text"
           placeholder="Rubrik…"
           value={titleDraftValue || s.dayTitle}
           onfocus={() => { titleDraftValue = s.dayTitle; }}
@@ -2870,10 +2910,10 @@ Regler:
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
         />
       {:else if s.dayTitle}
-        <div class="lesson-title">{s.dayTitle}</div>
+        <div class="lesson-title hero-text">{s.dayTitle}</div>
       {/if}
       <div class="top-time">
-        <button class="now now-btn" type="button" onclick={goToTimerNow} title="Visa nuvarande tid">{nowText}</button>
+        <button class="now now-btn hero-text" type="button" onclick={goToTimerNow} title="Visa nuvarande tid">{nowText}</button>
         {#if s.showLeft}<div class="left">{leftText}</div>{/if}
       </div>
     </div>
@@ -2882,71 +2922,218 @@ Regler:
       <svg class="clock" viewBox="0 0 360 360" style="overflow:visible" bind:this={svgEl}></svg>
     </div>
 
-    <div class="toolbar">
-      <button class="icon" onclick={(e) => { e.stopPropagation(); popoverOpen = !popoverOpen; }} title="Visningsalternativ">⚙︎</button>
-      <button class="icon" onclick={() => { s.showControls = !s.showControls; appState.persist(); }} title="Inställningar">✎</button>
-      <div class="toolbar-spacer"></div>
-      <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : '1h'}</button>
-      <div class="toolbar-spacer"></div>
-      <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
-      <button class="icon lock-btn" class:locked onclick={() => locked = !locked} title={locked ? 'Lås upp' : 'Lås sidan'}>{locked ? '○' : '⊠'}</button>
-      <div class="warn-dots">
-        {#each s.blocks as b, i (b.id)}
-          {@const ct = clockTheme(s.palette, s.dark)}
-          <button class="wd" class:on={b.warning} style="color:{ct.colors[i % 8]}"
-            title={`3-min varning för "${b.title}"`}
-            onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
-          ></button>
-        {/each}
-      </div>
-      {#if loggedInUser}
-        <span style="font-size:11px;opacity:.55;padding:0 4px;font-weight:500;border-left:1px solid var(--border);">👤 {loggedInUser}</span>
-      {/if}
-      <div class="popover" class:open={popoverOpen}>
-        <button class="pill" class:on={s.clockSpan === 120} onclick={() => { s.clockSpan = s.clockSpan === 120 ? 60 : 120; appState.persist(); }}>2h-vy <span>•</span></button>
-        <button class="pill" class:on={s.clockSpan === 720} onclick={() => { s.clockSpan = s.clockSpan === 720 ? 60 : 720; appState.persist(); }}>12h-vy <span>•</span></button>
-        <button class="pill" class:on={s.showLeft} onclick={() => { s.showLeft = !s.showLeft; appState.persist(); }}>Tid kvar <span>•</span></button>
-        <button class="pill" class:on={s.showCenterEnd} onclick={() => { s.showCenterEnd = !s.showCenterEnd; appState.persist(); }}>Sluttid i mitten <span>•</span></button>
-        <button class="pill" class:on={s.hollow} onclick={() => { s.hollow = !s.hollow; appState.persist(); }}>Ihålig mitt <span>•</span></button>
-        <button class="pill" class:on={s.textOutside} onclick={() => { s.textOutside = !s.textOutside; appState.persist(); }}>Text utanför <span>•</span></button>
-        <button class="pill" class:on={s.showQuarter} onclick={() => { s.showQuarter = !s.showQuarter; appState.persist(); }}>Kvartmarkeringar <span>•</span></button>
-        <button class="pill" class:on={s.showFive} onclick={() => { s.showFive = !s.showFive; appState.persist(); }}>5-minutersmarkeringar <span>•</span></button>
-        <button class="pill" class:on={s.showMin} onclick={() => { s.showMin = !s.showMin; appState.persist(); }}>Minutmarkeringar <span>•</span></button>
-        <button class="pill" class:on={s.segMinutesMode !== 'off'} onclick={() => {
-          const order: ('off'|'planned'|'remaining')[] = ['off','planned','remaining'];
-          s.segMinutesMode = order[(order.indexOf(s.segMinutesMode) + 1) % order.length];
-          appState.persist();
-        }}>{{ off:'Minuter: av', planned:'Minuter: planerade', remaining:'Minuter: kvar' }[s.segMinutesMode]}</button>
-        <button class="pill" class:on={s.showSegNotes} onclick={() => { s.showSegNotes = !s.showSegNotes; appState.persist(); }}>Underrubriker i sidopanel <span>•</span></button>
-        <button class="pill" class:on={s.showExtraInfo} onclick={() => { s.showExtraInfo = !s.showExtraInfo; appState.persist(); }}>Info-ruta i sidopanel <span>•</span></button>
-        <button class="pill" class:on={s.showSegLabels} onclick={() => { s.showSegLabels = !s.showSegLabels; appState.persist(); }}>Visa rubriker <span>•</span></button>
-        {#if !isViewMode}
-          <button class="pill" class:on={s.agendaView !== 'school'} onclick={() => {
-            const order = ['school', 'school+private', 'private', 'private+school'] as const;
-            agendaDraft = '';
-            s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
-            appState.persist();
-          }}>{{ school: 'Jobb', 'school+private': 'Jobb + fritid', private: 'Fritid', 'private+school': 'Fritid + jobb' }[s.agendaView]} <span>•</span></button>
-        {/if}
-      </div>
-    </div>
+    <div class="mini-menu-shell">
+      <div
+        class="toolbar"
+        role="button"
+        tabindex="0"
+        aria-label={miniMenuOpen ? 'Dölj meny' : 'Visa meny'}
+        onclick={() => { if (!miniMenuOpen) toggleMiniMenu(); }}
+        onkeydown={(e) => {
+          if (!miniMenuOpen && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            toggleMiniMenu();
+          }
+        }}
+      >
+        <div class="toolbar-side toolbar-side-left" class:collapsed={!miniMenuOpen}>
+          <button class="icon" onclick={() => { s.showControls = !s.showControls; appState.persist(); }} title="Inställningar">✎</button>
+          <button class="icon" onclick={(e) => { e.stopPropagation(); optionsMenuOpen = !optionsMenuOpen; }} title="Visningsalternativ">⚙︎</button>
+          <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : '1h'}</button>
+        </div>
 
-    {#if s.showControls}
-      <div class="controls">
+        {#if !isViewMode}
+          <button
+            class="mini-menu-toggle toolbar-center"
+            class:open={miniMenuOpen}
+            type="button"
+            onclick={(e) => { e.stopPropagation(); toggleMiniMenu(); }}
+            title={miniMenuOpen ? 'Dölj meny' : 'Visa meny'}
+          >
+            <span>▾</span>
+          </button>
+        {/if}
+
+        <div class="toolbar-side toolbar-side-right" class:collapsed={!miniMenuOpen}>
+          <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
+          <button class="icon lock-btn" class:locked onclick={() => locked = !locked} title={locked ? 'Lås upp' : 'Lås sidan'}>{locked ? '○' : '⊠'}</button>
+          <div class="warn-dots">
+            {#each s.blocks as b, i (b.id)}
+              {@const ct = clockTheme(s.palette, s.dark)}
+              <button class="wd" class:on={b.warning} style={`--warn-color:${ct.colors[i % 8]}`}
+                title="Plingar 3 minuter innan och vid aktivitetsbyte"
+                onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
+              >♪</button>
+            {/each}
+          </div>
+          {#if loggedInUser}
+            <span style="font-size:11px;opacity:.55;padding:0 4px;font-weight:500;border-left:1px solid var(--border);">👤 {loggedInUser}</span>
+          {/if}
+        </div>
+      </div>
+
+      {#if optionsMenuOpen}
+        <div class="options-menu" class:open={optionsMenuOpen}>
+          <div class="menu-section">
+            <div class="menu-section-head">
+              <div>
+                <div class="menu-section-title">Tid</div>
+                <div class="menu-section-copy">Klockans läge och tidsvisningen i toppen.</div>
+              </div>
+              <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'tid' ? null : 'tid'} title="Mer om tid">i</button>
+            </div>
+            {#if menuHelpOpen === 'tid'}
+              <div class="menu-help">Klockvyn kan cykla 1h, 2h och 12h. Resten styr bara hur tydligt tid visas.</div>
+            {/if}
+            <div class="menu-list">
+              <button class="menu-row" type="button" class:on={s.clockSpan !== 60} onclick={cycleClockSpan}>
+                <span>Klockvy</span>
+                <span class="menu-row-state">{s.clockSpan === 60 ? '1h' : s.clockSpan === 120 ? '2h' : '12h'}</span>
+              </button>
+              <button class="menu-row" type="button" class:on={s.showLeft} onclick={() => { s.showLeft = !s.showLeft; appState.persist(); }}>
+                <span>Tid kvar</span><span class="menu-row-state">{s.showLeft ? 'På' : 'Av'}</span>
+              </button>
+              <button class="menu-row" type="button" class:on={s.showCenterEnd} onclick={() => { s.showCenterEnd = !s.showCenterEnd; appState.persist(); }}>
+                <span>Sluttid i mitten</span><span class="menu-row-state">{s.showCenterEnd ? 'På' : 'Av'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="menu-section">
+            <div class="menu-section-head">
+              <div>
+                <div class="menu-section-title">Visning</div>
+                <div class="menu-section-copy">Små markeringar och läsbarhet i klockan.</div>
+              </div>
+              <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'visning' ? null : 'visning'} title="Mer om visning">i</button>
+            </div>
+            {#if menuHelpOpen === 'visning'}
+              <div class="menu-help">Här stänger du av och på detaljnivån i visningen utan att ändra själva tiden.</div>
+            {/if}
+            <div class="menu-list">
+              <button class="menu-row" type="button" class:on={s.hollow} onclick={() => { s.hollow = !s.hollow; appState.persist(); }}>
+                <span>Ihålig mitt</span><span class="menu-row-state">{s.hollow ? 'På' : 'Av'}</span>
+              </button>
+              <button class="menu-row" type="button" class:on={s.textOutside} onclick={() => { s.textOutside = !s.textOutside; appState.persist(); }}>
+                <span>Text utanför</span><span class="menu-row-state">{s.textOutside ? 'På' : 'Av'}</span>
+              </button>
+              <button class="menu-row" type="button" class:on={s.showQuarter} onclick={() => { s.showQuarter = !s.showQuarter; appState.persist(); }}>
+                <span>Kvartmarkeringar</span><span class="menu-row-state">{s.showQuarter ? 'På' : 'Av'}</span>
+              </button>
+              <button class="menu-row" type="button" class:on={s.showFive} onclick={() => { s.showFive = !s.showFive; appState.persist(); }}>
+                <span>5-minutersmarkeringar</span><span class="menu-row-state">{s.showFive ? 'På' : 'Av'}</span>
+              </button>
+              <button class="menu-row" type="button" class:on={s.showMin} onclick={() => { s.showMin = !s.showMin; appState.persist(); }}>
+                <span>Minutmarkeringar</span><span class="menu-row-state">{s.showMin ? 'På' : 'Av'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="menu-section">
+            <div class="menu-section-head">
+              <div>
+                <div class="menu-section-title">Sidopanel</div>
+                <div class="menu-section-copy">Vad som syns i vänsterpanelen under timern.</div>
+              </div>
+              <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'sidopanel' ? null : 'sidopanel'} title="Mer om sidopanel">i</button>
+            </div>
+            {#if menuHelpOpen === 'sidopanel'}
+              <div class="menu-help">De här reglagen styr om noteringar och extra info visas i panelen bredvid timern.</div>
+            {/if}
+            <div class="menu-list">
+              <button class="menu-row" type="button" class:on={s.segMinutesMode !== 'off'} onclick={() => {
+                const order: ('off'|'planned'|'remaining')[] = ['off','planned','remaining'];
+                s.segMinutesMode = order[(order.indexOf(s.segMinutesMode) + 1) % order.length];
+                appState.persist();
+              }}>
+                <span>Minuter</span><span class="menu-row-state">{{ off:'Av', planned:'Planerade', remaining:'Kvar' }[s.segMinutesMode]}</span>
+              </button>
+              <button class="menu-row" type="button" class:on={s.showSegNotes} onclick={() => { s.showSegNotes = !s.showSegNotes; appState.persist(); }}>
+                <span>Underrubriker</span><span class="menu-row-state">{s.showSegNotes ? 'På' : 'Av'}</span>
+              </button>
+              <button class="menu-row" type="button" class:on={s.showExtraInfo} onclick={() => { s.showExtraInfo = !s.showExtraInfo; appState.persist(); }}>
+                <span>Info-ruta</span><span class="menu-row-state">{s.showExtraInfo ? 'På' : 'Av'}</span>
+              </button>
+              <button class="menu-row" type="button" class:on={s.showSegLabels} onclick={() => { s.showSegLabels = !s.showSegLabels; appState.persist(); }}>
+                <span>Visa rubriker</span><span class="menu-row-state">{s.showSegLabels ? 'På' : 'Av'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="menu-section">
+            <div class="menu-section-head">
+              <div>
+                <div class="menu-section-title">Agenda</div>
+                <div class="menu-section-copy">Dagplansläget och hur dagen delas upp.</div>
+              </div>
+              <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'agenda' ? null : 'agenda'} title="Mer om agenda">i</button>
+            </div>
+            {#if menuHelpOpen === 'agenda'}
+              <div class="menu-help">Här finns det som påverkar själva dagplanen. I mobilvyn väljer du också direkt vilken flik som ska öppnas.</div>
+            {/if}
+            <div class="menu-list">
+              {#if !isViewMode}
+                <button class="menu-row" type="button" class:on={s.agendaView !== 'school'} onclick={() => {
+                  const order = ['school', 'school+private', 'private', 'private+school'] as const;
+                  agendaDraft = '';
+                  s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
+                  appState.persist();
+                }}>
+                  <span>Jobb / fritid</span><span class="menu-row-state">{{ school: 'Jobb', 'school+private': 'Båda', private: 'Fritid', 'private+school': 'Fritid + jobb' }[s.agendaView]}</span>
+                </button>
+              {:else}
+                <div class="menu-help" style="margin-top:0;">Visas som snapshot i delningsläge.</div>
+              {/if}
+            </div>
+          </div>
+
+          <div class="menu-section">
+            <div class="menu-section-head">
+              <div>
+                <div class="menu-section-title">Övrigt</div>
+                <div class="menu-section-copy">Snabbval som inte riktigt hör till en specifik vy.</div>
+              </div>
+              <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'ovrigt' ? null : 'ovrigt'} title="Mer om övrigt">i</button>
+            </div>
+            {#if menuHelpOpen === 'ovrigt'}
+              <div class="menu-help">Lås, hjälp och andra snabbval ligger kvar i toppraden. Den här menyn samlar bara visningslägena.</div>
+            {/if}
+          </div>
+        </div>
+      {/if}
+
+      <div class="mini-menu-details" class:open={miniMenuOpen}>
+      {#if s.showControls}
+        <div class="controls">
         <SectionNav activeSection={s.activeSection} labels={SECTION_LABELS} onSelect={setActiveSection} />
 
-        <SectionHero title={SECTION_LABELS[s.activeSection]} copy={sectionCopy} />
-
-        {#if s.activeSection === 'now' || (s.activeSection === 'plan' && selectedAgendaDetails)}
-          <div class="session-source" class:from-template={sessionSource.kind === 'template'} class:from-agenda={sessionSource.kind === 'agenda'}>
-            {sessionSourceText()}
+        {#if s.activeSection === 'now'}
+          <div class="section-hero section-hero--split section-hero--compact">
+            <div class="hero-select-wrap">
+              <label class="field-label" for="now-template-select">Mall</label>
+              <select
+                id="now-template-select"
+                class="hero-select"
+                disabled={sortedFlowOptions.length === 0}
+                bind:value={nowTemplateSelection}
+                onchange={(e) => loadNowTemplate((e.target as HTMLSelectElement).value)}
+              >
+                <option value="">{sortedFlowOptions.length > 0 ? 'Ladda mall...' : 'Inga mallar ännu'}</option>
+                {#each sortedFlowOptions as flow (flow.id)}
+                  <option value={flow.id}>{flow.title || '(utan rubrik)'}</option>
+                {/each}
+              </select>
+            </div>
           </div>
+        {:else}
+          <SectionHero title={SECTION_LABELS[s.activeSection]} copy={sectionCopy} />
         {/if}
 
         {#if s.activeSection === 'now' || s.activeSection === 'plan'}
           <SessionEditorPanel
             mode={s.activeSection}
             hasSelection={!!selectedAgendaDetails}
+            savedFlowMsg={savedFlowMsg}
             titleValue={s.dayTitle}
             partsValue={partsFieldValue}
             extraInfoValue={s.extraInfo}
@@ -2961,7 +3148,7 @@ Regler:
             aiPlanMode={aiConfig.planMode}
             startTimeValue={fmtHM(s.startMin)}
             {endMode}
-            actionLabel={s.activeSection === 'plan' ? 'Spara' : 'Snabbstart nu'}
+            actionLabel={s.activeSection === 'plan' ? 'Spara' : 'Kör!'}
             actionHint={planActionHint}
             saveStatusLabel={activePanelStatusLabel}
             canRevert={canRevertPanel}
@@ -3049,6 +3236,7 @@ Regler:
             onCopyShareLink={copyShareLink}
             onStopSharing={stopSharing}
             onStartLiveShare={() => startSharing('active-session-live')}
+            onSaveFlow={saveFlow}
             onStartSessionShare={() => startSharing('selected-session-snapshot')}
             onStartDayShare={() => startSharing('selected-day-snapshot')}
           />
@@ -3130,8 +3318,10 @@ Regler:
             onAiCustomModelChange={(value) => { aiConfig.customModel = value; saveAiConfig(); }}
           />
         {/if}
+        </div>
+      {/if}
       </div>
-    {/if}
+    </div>
   </main>
 
   <div class="resize-handle-ag" role="separator" aria-orientation="vertical" onpointerdown={startAgendaResize}></div>
@@ -3325,13 +3515,16 @@ Regler:
 <div class="theme-dots" class:open={themePickerOpen}
   use:clickOutside={() => { themePickerOpen = false; }}>
   <button class="theme-trigger"
-    style="background:{PALETTE_COLORS[s.palette]}"
+    aria-label={`Tema: ${PALETTE_LABELS[s.palette]}`}
     onclick={() => themePickerOpen = !themePickerOpen}
-    title="Välj tema"></button>
+    title={`Tema: ${PALETTE_LABELS[s.palette]}`}>
+    <span class="theme-trigger-swatch" style="background:{PALETTE_COLORS[s.palette]}"></span>
+    <span class="theme-trigger-caret">▾</span>
+  </button>
   <div class="theme-panel">
     {#each PALETTES as p}
       <button class="theme-dot" class:active={s.palette === p}
-        style="background:{PALETTE_COLORS[p]}" title={p}
+        style="background:{PALETTE_COLORS[p]}" title={PALETTE_LABELS[p]}
         onclick={() => { s.palette = p; syncBodyClasses(); appState.persist(); themePickerOpen = false; }}
       ></button>
     {/each}
@@ -3359,7 +3552,7 @@ Regler:
 
     <h3>Grunderna</h3>
     <ul>
-      <li><b>Nu</b> är snabbvägen: skriv rubrik och delar, använd <b>Snabbstart nu</b> för att komma igång direkt.</li>
+      <li><b>Nu</b> är snabbvägen: skriv rubrik och delar, eller ladda en mall, och tryck sedan <b>Kör!</b>.</li>
       <li><b>Planera</b> är dagläget: välj datum i kalendern, skriv eller klistra in dagtext och spara längst ner.</li>
       <li><b>Alt+i</b> visar eller gömmer hjälp globalt. Lokala <span class="ico">i</span>-knappar kan ändå öppna eller stänga just sin ruta.</li>
       <li><b>Allt sparas automatiskt</b> i webbläsaren tills du klickar <b>Spara</b> i dagplanen eller ändrar något i timern.</li>
@@ -3371,7 +3564,7 @@ Regler:
       <li><code>Frukost 20m</code> — aktivitet med fast tid (pinnad)</li>
       <li><code>Promenad</code> — aktivitet utan tid (fördelas automatiskt)</li>
       <li><code>- ta med vatten</code> — undernotering på föregående aktivitet</li>
-      <li><code>&amp;Kom ihåg möte kl 9</code> — kommentar som visas som egen ruta</li>
+      <li><code>&amp; Kom ihåg möte kl 9</code> — kommentar som visas som egen ruta</li>
     </ul>
 
     <h3>Klockvyer</h3>
