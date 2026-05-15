@@ -204,12 +204,24 @@ describe('parseAgenda — sessioner', () => {
 // ── serializeAgenda ───────────────────────────────────────────────────────────
 
 describe('serializeAgenda — roundtrip', () => {
-  it('datum bevaras via roundtrip', () => {
+  it('datum bevaras via roundtrip (fyrsiffrigt år)', () => {
     const days: AgendaDay[] = parseAgenda('@20260509\n#Morgon 08:00\nLektion 45m');
     const text = serializeAgenda(days);
-    expect(text).toContain('@260509');
+    expect(text).toContain('@20260509');
     const days2 = parseAgenda(text);
     expect(days2[0].date).toBe('2026-05-09');
+  });
+
+  it('tvåsiffrigt år i gammal data parsas korrekt (bakåtkompabilitet)', () => {
+    const days = parseAgenda('@260509\n#Morgon\nLektion 45m');
+    expect(days[0].date).toBe('2026-05-09');
+  });
+
+  it('blocktitel med radbrytning saniteras i serializeBlocks', () => {
+    const blocks = [{ id: '1', title: 'Matematik\nExtra', minutes: 45, note: '', warning: true, pinned: true }];
+    const text = serializeBlocks(blocks);
+    expect(text).not.toContain('\n');
+    expect(text).toBe('Matematik Extra 45m');
   });
 
   it('starttid bevaras via roundtrip', () => {
