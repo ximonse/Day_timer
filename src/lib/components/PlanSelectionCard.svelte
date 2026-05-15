@@ -57,9 +57,9 @@
   </div>
   {#if hasSelection}
     <div class="section-copy">{title} • {dateLabel} • {timeRange}</div>
-    <div class="section-copy muted">Andringar i falten nedan sparas tillbaka till det markerade blocket.</div>
+    <div class="section-copy muted">Ändringar i fälten nedan sparas tillbaka till det markerade blocket.</div>
     <div class="section-copy" style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
-      <span><strong>Källa:</strong> {sourceLabel}</span>
+      <span><strong>Källa:</strong> <span class="section-chip on">{sourceLabel}</span></span>
       <button class="ai-key-btn" onclick={onToggleSourceHelp}>{showSourceHelp ? 'Dölj info' : 'i'}</button>
     </div>
     {#if showHelpHints || showSourceHelp}
@@ -74,9 +74,12 @@
     <div class="share-section" style="padding-top:8px;">
       <label>Dela från planering</label>
       {#if shareToken}
-        <div class="share-link-row">
+        <div class="share-link-box">
           <span class="share-link-text">{shareUrl}</span>
-          <button class="ai-key-btn" onclick={onCopyShareLink}>{shareCopyText}</button>
+          <div class="share-link-actions">
+            <span class="section-chip">{shareMode === 'selected-day-snapshot' ? 'Dag' : 'Pass'}</span>
+            <button class="ai-key-btn" onclick={onCopyShareLink}>{shareCopyText}</button>
+          </div>
         </div>
         <div class="section-copy muted">
           {shareMode === 'selected-day-snapshot'
@@ -94,6 +97,7 @@
       {/if}
     </div>
   {:else}
-    <div class="section-copy">Klicka pa ett block i dagplanen till hoger for att borja redigera ett specifikt pass.</div>
+    <div class="section-copy">Klicka på ett block i dagplanen till höger för att börja redigera ett specifikt pass.</div>
+    <div class="section-copy muted">När inget block är valt används fälten nedan för att skapa ett nytt block på vald dag.</div>
   {/if}
 </div>

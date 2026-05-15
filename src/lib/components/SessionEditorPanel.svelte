@@ -125,6 +125,13 @@
     if (shareMode === 'selected-session-snapshot') return 'Vald session delas som snapshot.';
     return '';
   });
+
+  const shareModeLabel = $derived.by(() => {
+    if (shareMode === 'active-session-live') return 'Live';
+    if (shareMode === 'selected-day-snapshot') return 'Dag';
+    if (shareMode === 'selected-session-snapshot') return 'Pass';
+    return '';
+  });
 </script>
 
 {#if mode === 'now'}
@@ -150,7 +157,7 @@
       <div class="field-head field-head--wrap">
         <div class="field-label">Lektionsdelar (en per rad)</div>
         <div class="field-head-actions">
-          <button onclick={onCopyPrompt} style="font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--menu-border);background:transparent;color:var(--menu-muted);cursor:pointer;line-height:1.6;">{copyBtnText}</button>
+          <button class="micro-btn" onclick={onCopyPrompt}>{copyBtnText}</button>
           <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
         </div>
       </div>
@@ -233,9 +240,12 @@
   <div class="share-section">
     <div class="field-label">Dela</div>
     {#if shareToken}
-      <div class="share-link-row">
+      <div class="share-link-box">
         <span class="share-link-text">{shareUrl}</span>
-        <button class="ai-key-btn" onclick={onCopyShareLink}>{shareCopyText}</button>
+        <div class="share-link-actions">
+          {#if shareModeLabel}<span class="section-chip">{shareModeLabel}</span>{/if}
+          <button class="ai-key-btn" onclick={onCopyShareLink}>{shareCopyText}</button>
+        </div>
       </div>
       <div class="section-copy muted">{shareSummary}</div>
       <button class="quickstart" onclick={onStopSharing}>Sluta dela</button>
@@ -274,7 +284,7 @@
       <div class="field-head field-head--wrap">
         <div class="field-label">Blockinnehåll</div>
         <div class="field-head-actions">
-          <button onclick={onCopyPrompt} style="font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--menu-border);background:transparent;color:var(--menu-muted);cursor:pointer;line-height:1.6;">{copyBtnText}</button>
+          <button class="micro-btn" onclick={onCopyPrompt}>{copyBtnText}</button>
           <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
         </div>
       </div>
@@ -351,9 +361,12 @@
       <div class="share-section">
         <div class="field-label">Dela</div>
         {#if shareToken}
-          <div class="share-link-row">
+          <div class="share-link-box">
             <span class="share-link-text">{shareUrl}</span>
-            <button class="ai-key-btn" onclick={onCopyShareLink}>{shareCopyText}</button>
+            <div class="share-link-actions">
+              {#if shareModeLabel}<span class="section-chip">{shareModeLabel}</span>{/if}
+              <button class="ai-key-btn" onclick={onCopyShareLink}>{shareCopyText}</button>
+            </div>
           </div>
           <div class="section-copy muted">{shareSummary}</div>
           <button class="quickstart" onclick={onStopSharing}>Sluta dela</button>

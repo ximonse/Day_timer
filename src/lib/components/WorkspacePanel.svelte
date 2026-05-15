@@ -12,6 +12,8 @@
     aiKeyVisible,
     aiBaseUrl,
     aiCustomModel,
+    syncReady,
+    aiReady,
     showHelpHints,
     confirmedActualCount,
     pendingActualCount,
@@ -44,6 +46,8 @@
     aiKeyVisible: boolean;
     aiBaseUrl: string;
     aiCustomModel: string;
+    syncReady: boolean;
+    aiReady: boolean;
     showHelpHints: boolean;
     confirmedActualCount: number;
     pendingActualCount: number;
@@ -73,6 +77,11 @@
     <strong>Översikt</strong>
   </div>
   <div class="section-copy"><strong>Konto & AI</strong> samlar sådant som hör till konto, delad drift och AI-stöd snarare än till ett enskilt block.</div>
+  <div class="section-chip-row">
+    <span class="section-chip" class:on={syncReady}>{syncReady ? 'Synk aktiv' : 'Bara lokalt'}</span>
+    <span class="section-chip" class:on={aiReady}>{aiReady ? 'AI redo' : 'AI av'}</span>
+    <span class="section-chip">{reliabilityLevel} tillförlitlighet</span>
+  </div>
 </div>
 
 <div class="section-card">
@@ -84,6 +93,7 @@
 </div>
 
 <div class="login-form">
+  <div class="section-copy muted">Synk gäller mallar, dagplaner och faktisk tid. Inloggningen sparas bara för den här webbläsarsessionen.</div>
   {#if loggedInUser}
     <div class="field-label">Synkronisering</div>
     <div class="logged-in-row">
@@ -103,14 +113,17 @@
     <input type="password" class="sync-input"
       value={loginPass}
       oninput={(e) => onLoginPassChange((e.target as HTMLInputElement).value)}
-      placeholder="Losenord" autocomplete="current-password" />
+      placeholder="Lösenord" autocomplete="current-password" />
     <button class="quickstart" onclick={onLogin}>Logga in & synka</button>
   {/if}
-  <div class="sync-status" style="color:{syncStatusError ? '#c0392b' : 'var(--muted)'}">{syncStatusText}</div>
+  {#if syncStatusText}
+    <div class="sync-status" class:error={syncStatusError}>{syncStatusText}</div>
+  {/if}
 </div>
 
 <div class="ai-key-section">
   <div class="field-label">AI-planering</div>
+  <div class="section-copy muted">Välj leverantör här. API-nyckeln ligger bara kvar i den här sessionen och sparas inte permanent i webbläsaren.</div>
   <select class="sync-input ai-provider-select"
     value={aiProvider}
     onchange={(e) => onProviderChange((e.target as HTMLSelectElement).value)}>
@@ -121,9 +134,10 @@
   {#if aiApiKey}
     <div class="ai-key-row">
       <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
-      <button class="ai-key-btn" onclick={onToggleAiKeyVisible}>{aiKeyVisible ? 'Dolj' : 'Andra'}</button>
+      <button class="ai-key-btn" onclick={onToggleAiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
       <button class="ai-key-btn" onclick={onClearAiConfig}>✕</button>
     </div>
+    <div class="section-copy muted">Nyckeln används bara i den här sessionen.</div>
     {#if aiKeyVisible}
       <input type="password" class="sync-input" placeholder={aiKeyPlaceholders[aiProvider]}
         value={aiApiKey}
@@ -132,7 +146,7 @@
   {:else}
     <input type="password" class="sync-input" placeholder={aiKeyPlaceholders[aiProvider]}
       onchange={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value.trim())} />
-    <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel for att aktivera AI-planering</div>
+    <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel för att aktivera AI-planering</div>
   {/if}
   {#if aiProvider === 'custom'}
     <input type="text" class="sync-input" placeholder="Bas-URL, t.ex. https://api.mistral.ai/v1"
@@ -149,6 +163,7 @@
     <strong>Tidsdata & tillförlitlighet</strong>
     <button class="quickstart" onclick={() => reliabilityOpen = !reliabilityOpen}>{reliabilityOpen ? '△' : '▽'}</button>
   </div>
+  <div class="section-copy muted">Bekräftade pass förbättrar rekommendationerna för hur långa framtida block brukar bli.</div>
   {#if reliabilityOpen}
     <div class="section-copy">Bekräftade pass: <strong>{confirmedActualCount}</strong> · Obekräftade idag: <strong>{pendingActualCount}</strong></div>
     <div style="margin-top:8px;">
