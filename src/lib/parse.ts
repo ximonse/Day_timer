@@ -34,10 +34,10 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
     }
     const m = t.match(/\s+(\d+)m$/i);
     if (m) {
-      parts.push(t.slice(0, t.length - m[0].length));
+      parts.push(t.slice(0, t.length - m[0].length).replace(/[\r\n]+/g, ' ').trim());
       parsedMins.push(Math.max(1, parseInt(m[1], 10)));
     } else {
-      parts.push(t);
+      parts.push(t.replace(/[\r\n]+/g, ' ').trim());
       parsedMins.push(null);
     }
   }
@@ -210,7 +210,8 @@ export function parseAgenda(text: string): AgendaDay[] {
 export function serializeBlocks(blocks: Block[]): string {
   const out: string[] = [];
   for (const b of blocks) {
-    out.push(b.pinned ? `${b.title} ${b.minutes}m` : b.title);
+    const title = b.title.replace(/[\r\n]+/g, ' ').trim();
+    out.push(b.pinned ? `${title} ${b.minutes}m` : title);
     if (b.note) {
       for (const line of b.note.split('\n')) {
         if (line.trim()) out.push('-' + line);
@@ -228,7 +229,7 @@ export function serializeAgenda(days: AgendaDay[]): string {
     firstDay = false;
     if (day.date !== null) {
       const [y, m, d] = day.date.split('-');
-      lines.push(`@${y.slice(2)}${m}${d}`);
+      lines.push(`@${y}${m}${d}`);
     }
     for (const flow of day.flows) {
       if (flow.startMin !== undefined) {
