@@ -1503,6 +1503,40 @@
     notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
   }
 
+  function replaceTextareaSelection(node: HTMLTextAreaElement, value: string, caret: number) {
+    onPartsInput(value);
+    requestAnimationFrame(() => {
+      node.focus();
+      node.setSelectionRange(caret, caret);
+    });
+  }
+
+  function handlePartsKeyDown(e: KeyboardEvent) {
+    const node = e.currentTarget as HTMLTextAreaElement | null;
+    if (!node) return;
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = node.selectionStart ?? 0;
+      const end = node.selectionEnd ?? start;
+      const value = node.value;
+      const insert = '\n- ';
+      const next = value.slice(0, start) + insert + value.slice(end);
+      replaceTextareaSelection(node, next, start + insert.length);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const start = node.selectionStart ?? 0;
+      const end = node.selectionEnd ?? start;
+      const value = node.value;
+      const insert = '\n';
+      const next = value.slice(0, start) + insert + value.slice(end);
+      replaceTextareaSelection(node, next, start + insert.length);
+    }
+  }
+
   function saveFlow() {
     const title = s.dayTitle.trim() || 'Utan rubrik';
     if (!s.flows) s.flows = [];
@@ -2100,6 +2134,24 @@
     notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
     editingBlockId = newId;
     editingBlockField = 'name';
+  }
+
+  let sidebarExtraInfoOpen = false;
+  let sidebarExtraInfoEl: HTMLTextAreaElement | null = null;
+
+  function openSidebarComment() {
+    if (isViewMode) return;
+    sidebarExtraInfoOpen = true;
+    s.showExtraInfo = true;
+    appState.persist();
+    requestAnimationFrame(() => sidebarExtraInfoEl?.focus());
+  }
+
+  function updateSidebarExtraInfo(text: string) {
+    s.extraInfo = text;
+    syncTimerToAgenda();
+    appState.persist();
+    notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
   }
 
   function aiPayload(extra: Record<string, unknown>) {
@@ -2876,11 +2928,23 @@ Regler:
           <div class="note">{b.note}</div>
         {/if}
       {/each}
-      {#if !isViewMode}
-        <button class="seg-add-btn" onclick={addBlock}>+</button>
+      {#if s.showExtraInfo || sidebarExtraInfoOpen}
+        <div class="sidebar-comment-head">
+          <span class="field-label">Kommentar</span>
+        </div>
+        <textarea
+          bind:this={sidebarExtraInfoEl}
+          class="comment-box sidebar-extra-info-box"
+          placeholder="Skriv en kommentar…"
+          value={s.extraInfo}
+          oninput={(e) => updateSidebarExtraInfo((e.target as HTMLTextAreaElement).value)}
+        ></textarea>
       {/if}
-      {#if s.extraInfo && s.showExtraInfo}
-        <div class="infobox">{s.extraInfo}</div>
+      {#if !isViewMode}
+        <div class="sidebar-add-row">
+          <button class="seg-add-btn" onclick={addBlock}>+</button>
+          <button class="seg-add-btn comment-add-btn" onclick={openSidebarComment}>✎</button>
+        </div>
       {/if}
     </div>
   </aside>
@@ -2977,13 +3041,13 @@ Regler:
           <div class="menu-section">
             <div class="menu-section-head">
               <div>
-                <div class="menu-section-title">Tid</div>
-                <div class="menu-section-copy">Klockans läge och tidsvisningen i toppen.</div>
+                <div class="section-title">Tid</div>
+                <div class="section-copy">Klockans läge och tidsvisningen i toppen.</div>
               </div>
               <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'tid' ? null : 'tid'} title="Mer om tid">i</button>
             </div>
             {#if menuHelpOpen === 'tid'}
-              <div class="menu-help">Klockvyn kan cykla 1h, 2h och 12h. Resten styr bara hur tydligt tid visas.</div>
+              <div class="menu-help">Klockvyn kan växla mellan 1h och 12h. Resten styr bara hur tydligt tid visas.</div>
             {/if}
             <div class="menu-list">
               <button class="menu-row" type="button" class:on={s.clockSpan !== 60} onclick={cycleClockSpan}>
@@ -3002,8 +3066,8 @@ Regler:
           <div class="menu-section">
             <div class="menu-section-head">
               <div>
-                <div class="menu-section-title">Visning</div>
-                <div class="menu-section-copy">Små markeringar och läsbarhet i klockan.</div>
+                <div class="section-title">Visning</div>
+                <div class="section-copy">Små markeringar och läsbarhet i klockan.</div>
               </div>
               <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'visning' ? null : 'visning'} title="Mer om visning">i</button>
             </div>
@@ -3032,8 +3096,8 @@ Regler:
           <div class="menu-section">
             <div class="menu-section-head">
               <div>
-                <div class="menu-section-title">Sidopanel</div>
-                <div class="menu-section-copy">Vad som syns i vänsterpanelen under timern.</div>
+                <div class="section-title">Sidopanel</div>
+                <div class="section-copy">Vad som syns i vänsterpanelen under timern.</div>
               </div>
               <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'sidopanel' ? null : 'sidopanel'} title="Mer om sidopanel">i</button>
             </div>
@@ -3063,8 +3127,8 @@ Regler:
           <div class="menu-section">
             <div class="menu-section-head">
               <div>
-                <div class="menu-section-title">Agenda</div>
-                <div class="menu-section-copy">Dagplansläget och hur dagen delas upp.</div>
+                <div class="section-title">Agenda</div>
+                <div class="section-copy">Dagplansläget och hur dagen delas upp.</div>
               </div>
               <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'agenda' ? null : 'agenda'} title="Mer om agenda">i</button>
             </div>
@@ -3090,8 +3154,8 @@ Regler:
           <div class="menu-section">
             <div class="menu-section-head">
               <div>
-                <div class="menu-section-title">Övrigt</div>
-                <div class="menu-section-copy">Snabbval som inte riktigt hör till en specifik vy.</div>
+                <div class="section-title">Övrigt</div>
+                <div class="section-copy">Snabbval som inte riktigt hör till en specifik vy.</div>
               </div>
               <button class="menu-i" type="button" onclick={() => menuHelpOpen = menuHelpOpen === 'ovrigt' ? null : 'ovrigt'} title="Mer om övrigt">i</button>
             </div>
@@ -3166,6 +3230,7 @@ Regler:
             shareUrl={shareToken && pageOrigin ? `${pageOrigin}/?view=${shareToken}` : ''}
             onTitleInput={(value) => { s.dayTitle = value; syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}
             onPartsInput={handlePartsInput}
+            onPartsKeyDown={handlePartsKeyDown}
             onCopyPrompt={() => {
               navigator.clipboard.writeText(currentAiPrompt).then(() => {
                 copyBtnText = '✓ Kopierad';
