@@ -35,6 +35,7 @@
     shareUrl,
     onTitleInput,
     onPartsInput,
+    onPartsKeyDown,
     onCopyPrompt,
     onToggleAiPanel,
     onAiInputChange,
@@ -93,6 +94,7 @@
     shareUrl: string;
     onTitleInput: (value: string) => void;
     onPartsInput: (value: string) => void;
+    onPartsKeyDown: (e: KeyboardEvent) => void;
     onCopyPrompt: () => void;
     onToggleAiPanel: () => void;
     onAiInputChange: (value: string) => void;
@@ -163,11 +165,12 @@
         <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
       </div>
       {#if showPartsHelp}
-        <div class="feedback">En rad per del. Tider som slutar med <code>m</code> låses, övriga delar fördelas automatiskt. Börja en rad med <code>-</code> för underpunkt och <code>&amp;</code> för kommentar.</div>
+        <div class="feedback">En rad per del. Tider som slutar med <code>m</code> låses, övriga delar fördelas automatiskt. Börja en rad med <code>-</code> för underpunkt och <code>&amp;</code> för kommentar. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rubrik.</div>
       {/if}
       <textarea placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
         value={partsValue}
-        oninput={(e) => onPartsInput((e.target as HTMLTextAreaElement).value)}></textarea>
+        oninput={(e) => onPartsInput((e.target as HTMLTextAreaElement).value)}
+        onkeydown={onPartsKeyDown}></textarea>
       <div class="feedback">{partsFeedbackText}</div>
     </div>
   </div>
@@ -234,11 +237,12 @@
         </div>
       </div>
       {#if showPartsHelp}
-        <div class="feedback">Skriv eller klistra in hela blocket här om du vill planera med text i stället för att dra i tidslinjen.</div>
+        <div class="feedback">Skriv eller klistra in hela blocket här om du vill planera med text i stället för att dra i tidslinjen. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rubrik.</div>
       {/if}
       <textarea placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
         value={partsValue}
-        oninput={(e) => onPartsInput((e.target as HTMLTextAreaElement).value)}></textarea>
+        oninput={(e) => onPartsInput((e.target as HTMLTextAreaElement).value)}
+        onkeydown={onPartsKeyDown}></textarea>
       <div class="feedback">{partsFeedbackText}</div>
       {#if hasAiKey}
         <div class="ai-panel">
