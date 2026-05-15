@@ -2,6 +2,8 @@
   let {
     agendaInputOpen,
     agendaDraft,
+    draftStatus,
+    selectedDateLabel,
     savedAgendaMsg,
     icsImportOpen,
     icsDraft,
@@ -40,6 +42,8 @@
   }: {
     agendaInputOpen: boolean;
     agendaDraft: string;
+    draftStatus: string;
+    selectedDateLabel: string;
     savedAgendaMsg: string;
     icsImportOpen: boolean;
     icsDraft: string;
@@ -91,6 +95,10 @@
   </div>
 {/if}
 {#if agendaInputOpen}
+  <div class="section-chip-row" style="margin-bottom:8px;">
+    <span class="section-chip on">{selectedDateLabel}</span>
+    <span class="section-chip">{draftStatus}</span>
+  </div>
   <textarea
     class="agenda-input"
     placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
@@ -101,12 +109,12 @@
   <div class="agenda-save-row">
     <button class="agenda-save-btn" onclick={onSave}
       title="Sparar dagtexten och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
-      {savedAgendaMsg || '📅 Spara dagtext'}
+      {savedAgendaMsg || '📅 Spara i dagplan'}
     </button>
     <button class="agenda-save-btn" onclick={onCopyPrompt}>{copyAgendaPromptText}</button>
     {#if hasAiKey}
       <button class="agenda-save-btn agenda-ai-btn" onclick={onToggleAi}>
-        ✨ AI-dagplan
+        ✨ Skapa med AI
       </button>
     {/if}
   </div>
@@ -167,9 +175,9 @@
     <div class="feedback" style="margin-top:6px;">{icsSummary}</div>
   {/if}
   {#if icsPreviewLines.length > 0}
-    <div class="feedback" style="margin-top:6px;">
+    <div class="preview-list" style="margin-top:6px;">
       {#each icsPreviewLines as line}
-        <div>{line}</div>
+        <div class="preview-item">{line}</div>
       {/each}
     </div>
   {/if}
@@ -178,7 +186,7 @@
   {/if}
   {#if icsHasPreview}
     <div class="feedback" style="opacity:.72;margin-top:4px;">
-      Heldagshandelser visas i previewn men importeras inte an i den har versionen.
+      Heldagshändelser visas i förhandsgranskningen men importeras inte än i den här versionen.
     </div>
   {/if}
 {/if}

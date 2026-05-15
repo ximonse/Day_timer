@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-  <title>Lektionsklocka</title>
+  <title>Timer</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 </svelte:head>
 
@@ -178,8 +178,11 @@
   :global(.section-title) { font-size: 18px; font-weight: 700; color: var(--menu-fg); }
   :global(.section-copy) { font-size: 13px; line-height: 1.45; color: color-mix(in srgb, var(--menu-fg) 68%, var(--menu-muted) 32%); }
   :global(.section-copy.muted) { opacity: .8; }
-  :global(.section-card) { display: flex; flex-direction: column; gap: 8px; background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 10px; padding: 12px; }
+  :global(.section-card) { display: flex; flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--menu-surface) 92%, white 8%); border: 1px solid var(--menu-border); border-radius: 12px; padding: 12px; box-shadow: 0 1px 0 rgba(255,255,255,.35) inset; }
   :global(.section-card-head) { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  :global(.section-chip-row) { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  :global(.section-chip) { display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--menu-border); background: color-mix(in srgb, var(--menu-surface) 84%, white 16%); color: var(--menu-muted); font-size: 11px; font-weight: 700; letter-spacing: .2px; }
+  :global(.section-chip.on) { background: color-mix(in srgb, var(--menu-pill-on) 88%, white 12%); color: var(--menu-pill-on-fg); border-color: color-mix(in srgb, var(--menu-pill-on) 72%, var(--menu-border) 28%); }
   :global(.session-source) { font-size: 12px; font-weight: 600; color: var(--menu-muted); background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 999px; padding: 6px 10px; width: fit-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.session-source.from-template) { color: var(--menu-fg); border-color: var(--muted); }
   :global(.session-source.from-agenda) { color: var(--menu-pill-on-fg); background: var(--menu-pill-on); border-color: var(--menu-pill-on); }
@@ -204,9 +207,12 @@
   :global(.flows-toggle) { background: transparent; border: 0; color: var(--menu-muted); cursor: pointer; font-size: 13px; font-weight: 600; padding: 4px 0; text-align: left; font-family: inherit; }
   :global(.flows-toggle:hover) { color: var(--menu-fg); }
   :global(.flow-list) { display: flex; flex-direction: column; gap: 4px; }
-  :global(.flow-item) { display: flex; align-items: center; gap: 8px; background: var(--menu-pill); border-radius: 8px; padding: 4px 4px 4px 12px; }
-  :global(.flow-item .flow-name) { flex: 1; background: transparent; border: 0; color: var(--menu-fg); cursor: pointer; text-align: left; padding: 8px 0; font-size: 15px; font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.flow-item) { display: flex; align-items: center; gap: 8px; background: var(--menu-pill); border-radius: 10px; padding: 8px 8px 8px 12px; }
+  :global(.flow-main) { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  :global(.flow-item .flow-name) { flex: 1; background: transparent; border: 0; color: var(--menu-fg); cursor: pointer; text-align: left; padding: 0; font-size: 15px; font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :global(.flow-item .flow-name:hover) { text-decoration: underline; }
+  :global(.flow-meta) { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 11px; color: var(--menu-muted); }
+  :global(.flow-actions) { display: flex; align-items: center; gap: 4px; }
   :global(.flow-item .flow-add) { background: transparent; border: 1px solid var(--menu-border); color: var(--menu-muted); cursor: pointer; font-size: 14px; width: 28px; height: 28px; border-radius: 999px; flex-shrink: 0; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
   :global(.flow-item .flow-add:hover) { background: var(--menu-surface); color: var(--menu-fg); }
   :global(.flow-item .flow-del) { background: transparent; border: 0; color: var(--menu-muted); cursor: pointer; font-size: 14px; padding: 6px 10px; border-radius: 6px; flex-shrink: 0; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
@@ -217,7 +223,8 @@
   :global(.sync-input:focus) { outline: 2px solid #4a443c; outline-offset: 1px; }
   :global(.sync-row) { display: flex; gap: 8px; }
   :global(.sync-btn) { flex: 1; font-size: 14px; }
-  :global(.sync-status) { font-size: 13px; color: var(--menu-muted); min-height: 18px; }
+  :global(.sync-status) { font-size: 12px; color: #165a3f; min-height: 18px; padding: 7px 9px; border-radius: 8px; background: rgba(22,90,63,.08); border: 1px solid rgba(22,90,63,.16); }
+  :global(.sync-status.error) { color: #a12d21; background: rgba(161,45,33,.08); border-color: rgba(161,45,33,.16); }
   /* ── Agenda panel ── */
   :global(.agenda) {
     width: 280px; min-width: 160px; max-width: 720px; background: var(--panel);
@@ -370,6 +377,8 @@
   :global(.agenda-ai-btn) { background: color-mix(in srgb, var(--pill-on) 20%, transparent); color: var(--fg); }
   :global(.agenda-plan-link) { width: 100%; margin-top: 4px; }
   :global(.agenda-ai-panel) { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  :global(.preview-list) { display: flex; flex-direction: column; gap: 6px; }
+  :global(.preview-item) { padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--menu-surface) 78%, white 22%); border: 1px solid color-mix(in srgb, var(--menu-border) 72%, transparent); color: var(--menu-fg); }
   :global(.login-form) { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
   :global(.ai-key-section) { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
   :global(.ai-key-section label) { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--menu-muted); }
@@ -378,6 +387,8 @@
   :global(.ai-key-masked) { flex: 1; font-size: 12px; font-family: monospace; color: var(--menu-fg); opacity: .8; }
   :global(.ai-key-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 5px; padding: 2px 8px; font-size: 11px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }
   :global(.ai-key-btn:hover) { background: var(--menu-surface); color: var(--menu-fg); }
+  :global(.micro-btn) { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--menu-border); background: transparent; color: var(--menu-muted); cursor: pointer; line-height: 1.6; font-family: inherit; }
+  :global(.micro-btn:hover) { background: var(--menu-surface); color: var(--menu-fg); }
   :global(.info-btn) {
     width: 18px; height: 18px; border-radius: 999px;
     border: 1px solid color-mix(in srgb, var(--menu-border) 68%, transparent);
@@ -469,6 +480,8 @@
   :global(.share-section) { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
   :global(.share-section label) { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--menu-muted); }
   :global(.share-link-row) { display: flex; align-items: center; gap: 6px; }
+  :global(.share-link-box) { display: flex; flex-direction: column; gap: 8px; padding: 9px 10px; border: 1px solid var(--menu-border); border-radius: 10px; background: color-mix(in srgb, var(--menu-surface) 84%, white 16%); }
+  :global(.share-link-actions) { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   :global(.share-link-text) { flex: 1; font-size: 11px; font-family: monospace; color: var(--menu-fg); opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* ── Live-badge ── */

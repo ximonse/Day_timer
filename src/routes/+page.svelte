@@ -128,6 +128,7 @@
   type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'custom';
   type AiPlanMode = 'strict' | 'helpful';
   interface AiConfig { provider: AiProvider; apiKey: string; baseUrl: string; customModel: string; planMode: AiPlanMode; }
+  type PersistedAiConfig = Omit<AiConfig, 'apiKey'>;
   let aiConfig = $state<AiConfig>({ provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '', planMode: 'helpful' });
   let aiKeyVisible = $state(false);
   let aiPanelOpen = $state(false);
@@ -169,14 +170,53 @@
     return 'inherit';
   }
 
+  const AI_CONFIG_STORAGE = 'daytimer_ai_config';
+  const AI_KEY_SESSION_STORAGE = 'daytimer_ai_api_key';
+  const SHARE_TOKEN_STORAGE = 'daytimer_share_token';
+  const SHARE_OWNER_STORAGE = 'daytimer_share_owner_token';
+  const SHARE_MODE_STORAGE = 'daytimer_share_mode';
+
+  function readSessionValue(key: string) {
+    try {
+      return typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(key) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeSessionValue(key: string, value: string) {
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(key, value);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function removeSessionValue(key: string) {
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key);
+    } catch {
+      /* ignore */
+    }
+  }
+
   function saveAiConfig() {
-    localStorage.setItem('daytimer_ai_config', JSON.stringify(aiConfig));
+    const persistedConfig: PersistedAiConfig = {
+      provider: aiConfig.provider,
+      baseUrl: aiConfig.baseUrl,
+      customModel: aiConfig.customModel,
+      planMode: aiConfig.planMode
+    };
+    localStorage.setItem(AI_CONFIG_STORAGE, JSON.stringify(persistedConfig));
+    if (aiConfig.apiKey.trim()) writeSessionValue(AI_KEY_SESSION_STORAGE, aiConfig.apiKey);
+    else removeSessionValue(AI_KEY_SESSION_STORAGE);
     localStorage.removeItem('daytimer_ai_key'); // migrate away from old key
   }
   function clearAiConfig() {
     aiConfig = { provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '', planMode: 'helpful' };
-    localStorage.removeItem('daytimer_ai_config');
+    localStorage.removeItem(AI_CONFIG_STORAGE);
     localStorage.removeItem('daytimer_ai_key');
+    removeSessionValue(AI_KEY_SESSION_STORAGE);
   }
 
   // derived shorthand used in templates
@@ -258,6 +298,16 @@
     return makeAgendaMetaKey(date, flow.title, startMin, totalFlowMinutes(flow), flow.parts.length);
   }
 
+  function agendaMetaSignature(flow: Flow, startMin: number): string {
+    return JSON.stringify([
+      startMin,
+      flow.title,
+      flow.parts,
+      flow.minutes,
+      flow.extraInfo || ''
+    ]);
+  }
+
   function makeAgendaMetaKeyForRef(ref: AgendaFlowRef): string {
     return makeAgendaMetaKey(ref.date, ref.title, ref.startMin, ref.totalMin, ref.partCount);
   }
@@ -277,6 +327,52 @@
       }
     }
     s.agendaMeta = next;
+  }
+
+  function cloneAgendaMeta(meta: AgendaFlowMeta): AgendaFlowMeta {
+    return { ...meta };
+  }
+
+  function buildAgendaMetaLookup(date: string | null, day: AgendaDay | null) {
+    const exact = new Map<string, AgendaFlowMeta>();
+    const signature = new Map<string, AgendaFlowMeta>();
+    if (!day) return { exact, signature };
+    const fallbackStart = day.flows[0]?.startMin ?? agendaDayStart;
+    for (const item of buildAgendaItemsForDay(day, fallbackStart)) {
+      const key = makeAgendaMetaKeyForFlow(date, item.flow, item.startMin);
+      const meta = s.agendaMeta[key];
+      if (!meta) continue;
+      exact.set(key, cloneAgendaMeta(meta));
+      signature.set(agendaMetaSignature(item.flow, item.startMin), cloneAgendaMeta(meta));
+    }
+    return { exact, signature };
+  }
+
+  function rebuildAgendaMetaForDay(
+    date: string | null,
+    previousDay: AgendaDay | null,
+    nextDay: AgendaDay | null,
+    options?: {
+      overridesByKey?: Map<string, AgendaFlowMeta>;
+      overridesBySignature?: Map<string, AgendaFlowMeta>;
+      defaultMeta?: AgendaFlowMeta;
+    }
+  ) {
+    removeAgendaMetaForDate(date);
+    if (!nextDay) return;
+    const previousLookup = buildAgendaMetaLookup(date, previousDay);
+    const fallbackStart = nextDay.flows[0]?.startMin ?? agendaDayStart;
+    for (const item of buildAgendaItemsForDay(nextDay, fallbackStart)) {
+      const key = makeAgendaMetaKeyForFlow(date, item.flow, item.startMin);
+      const signature = agendaMetaSignature(item.flow, item.startMin);
+      const meta =
+        options?.overridesByKey?.get(key) ??
+        options?.overridesBySignature?.get(signature) ??
+        previousLookup.exact.get(key) ??
+        previousLookup.signature.get(signature) ??
+        options?.defaultMeta;
+      if (meta) setAgendaMeta(key, cloneAgendaMeta(meta));
+    }
   }
 
   function moveAgendaMeta(oldKey: string, newKey: string) {
@@ -436,6 +532,10 @@
     if (confirmedActualCount >= 15) return 'Helt okej underlag, men fler bekräftade pass förbättrar träffsäkerheten.';
     return 'Få datapunkter än så länge. Bekräfta fler pass för bättre förslag.';
   });
+  const agendaDraftStatus = $derived.by(() => {
+    if (savedAgendaMsg) return savedAgendaMsg;
+    return agendaDraftDirty ? 'Ej sparat ännu' : 'Synkat med vald dag';
+  });
 
   const sectionCopy = $derived.by(() => {
     if (s.activeSection === 'now') return 'Redigera det som körs just nu i timern.';
@@ -574,6 +674,22 @@
     const days = ['Sön','Mån','Tis','Ons','Tor','Fre','Lör'];
     const months = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
     return `${days[dt.getDay()]} ${d} ${months[m - 1]}`;
+  }
+
+  function describeFlow(flow: Flow): string {
+    const partCount = flow.parts.length;
+    return `${partCount} ${partCount === 1 ? 'del' : 'delar'} • ${totalFlowMinutes(flow)} min`;
+  }
+
+  function formatLastUsed(timestamp?: number): string {
+    if (!timestamp) return 'Inte använd nyligen';
+    const diffMin = Math.round((Date.now() - timestamp) / 60000);
+    if (diffMin < 1) return 'Nyss använd';
+    if (diffMin < 60) return `Använd för ${diffMin} min sedan`;
+    const diffHours = Math.round(diffMin / 60);
+    if (diffHours < 24) return `Använd för ${diffHours} h sedan`;
+    const diffDays = Math.round(diffHours / 24);
+    return `Använd för ${diffDays} d sedan`;
   }
 
   function prevDay() {
@@ -1480,6 +1596,21 @@
   const SYNC_TOKEN_STORAGE = 'timer-sync-token';
   let syncStatusTimer: ReturnType<typeof setTimeout>;
 
+  function persistShareState(token: string, ownerToken: string, mode: ShareMode) {
+    writeSessionValue(SHARE_TOKEN_STORAGE, token);
+    writeSessionValue(SHARE_OWNER_STORAGE, ownerToken);
+    writeSessionValue(SHARE_MODE_STORAGE, mode);
+  }
+
+  function clearPersistedShareState() {
+    removeSessionValue(SHARE_TOKEN_STORAGE);
+    removeSessionValue(SHARE_OWNER_STORAGE);
+    removeSessionValue(SHARE_MODE_STORAGE);
+    localStorage.removeItem(SHARE_TOKEN_STORAGE);
+    localStorage.removeItem(SHARE_OWNER_STORAGE);
+    localStorage.removeItem(SHARE_MODE_STORAGE);
+  }
+
   function showSyncStatus(msg: string, isError = false) {
     syncStatusText = msg; syncStatusError = isError;
     clearTimeout(syncStatusTimer);
@@ -1501,11 +1632,11 @@
       const localOnly = (s.flows || []).filter(f => !cloudIds.has(f.id));
       s.flows = [...cloudFlows, ...localOnly];
       // Restore agenda from cloud if it has content
-      if (data.agendaText) {
+      if ('agendaText' in data) {
         s.agendaText = data.agendaText;
         s.agendaDate = data.agendaDate || '';
       }
-      if (data.agendaText2) {
+      if ('agendaText2' in data) {
         s.agendaText2 = data.agendaText2;
         s.agendaDate2 = data.agendaDate2 || '';
       }
@@ -1555,7 +1686,7 @@
     if (!name || !pass) { showSyncStatus('Ange namn och lösenord', true); return; }
     s.syncKey = await deriveSyncToken(name, pass);
     loggedInUser = name;
-    localStorage.setItem(SYNC_TOKEN_STORAGE, s.syncKey);
+    writeSessionValue(SYNC_TOKEN_STORAGE, s.syncKey);
     localStorage.setItem('timer-login-user', name);
     appState.persist();
     await syncLoad();
@@ -1564,6 +1695,7 @@
   function logout() {
     loggedInUser = '';
     s.syncKey = '';
+    removeSessionValue(SYNC_TOKEN_STORAGE);
     localStorage.removeItem(SYNC_TOKEN_STORAGE);
     localStorage.removeItem('timer-login-user');
     appState.persist();
@@ -1662,7 +1794,7 @@
     const hash = JSON.stringify(state);
     if (hash === lastPushedHash) return;
     try {
-      await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
+      const res = await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1670,6 +1802,7 @@
         },
         body: hash,
       });
+      if (!res.ok) return;
       lastPushedHash = hash;
     } catch { /* silent */ }
   }
@@ -1716,25 +1849,25 @@
         : buildSelectedDaySnapshot();
     if (!payload) return;
     const tokens = createShareTokens();
-    shareToken = tokens.viewToken;
-    shareOwnerToken = tokens.ownerToken;
-    shareMode = mode;
-    localStorage.setItem('daytimer_share_token', tokens.viewToken);
-    localStorage.setItem('daytimer_share_owner_token', tokens.ownerToken);
-    localStorage.setItem('daytimer_share_mode', mode);
-    lastPushedHash = '';
     try {
       const hash = JSON.stringify(payload);
-      await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
+      const res = await fetch(`/api/share?token=${encodeURIComponent(tokens.viewToken)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-share-owner': shareOwnerToken
+          'x-share-owner': tokens.ownerToken
         },
         body: hash,
       });
+      if (!res.ok) throw new Error();
+      shareToken = tokens.viewToken;
+      shareOwnerToken = tokens.ownerToken;
+      shareMode = mode;
       lastPushedHash = mode === 'active-session-live' ? hash : '';
-    } catch { /* silent */ }
+      persistShareState(tokens.viewToken, tokens.ownerToken, mode);
+    } catch {
+      showSyncStatus('Kunde inte starta delning', true);
+    }
   }
 
   async function stopSharing() {
@@ -1749,9 +1882,7 @@
     shareOwnerToken = '';
     shareMode = null;
     lastPushedHash = '';
-    localStorage.removeItem('daytimer_share_token');
-    localStorage.removeItem('daytimer_share_owner_token');
-    localStorage.removeItem('daytimer_share_mode');
+    clearPersistedShareState();
   }
 
   async function copyShareLink() {
@@ -1767,6 +1898,7 @@
     const draftDay = parsedDraft.find(day => day.date === targetDate)
       ?? (parsedDraft[0] ? { ...parsedDraft[0], date: targetDate } : { date: targetDate, flows: [] });
     const baseDays = activeAgendaText().trim() ? parseAgenda(activeAgendaText()) : [];
+    const previousDay = baseDays.find(day => day.date === targetDate) ?? null;
     const preservedDays = baseDays
       .filter(day => day.date !== targetDate)
       .map(day => cloneAgendaDay(day));
@@ -1778,13 +1910,12 @@
     agendaDraft = serializeSelectedAgendaDay(targetDate, nextDays);
     agendaDraftDate = targetDate;
     agendaDraftDirty = false;
-    removeAgendaMetaForDate(targetDate);
-    if (draftDay.flows.length > 0) {
-      const items = buildAgendaItemsForDay(draftDay, draftDay.flows[0]?.startMin ?? 8 * 60);
-      for (const item of items) {
-        setAgendaMeta(makeAgendaMetaKeyForFlow(targetDate, item.flow, item.startMin), { source: 'import', label: 'Textimport' });
-      }
-    }
+    rebuildAgendaMetaForDay(
+      targetDate,
+      previousDay,
+      nextDays.find(day => day.date === targetDate) ?? null,
+      { defaultMeta: { source: 'manual' } }
+    );
     activeAgendaFlowRef = null;
     sessionSource = { kind: 'unscheduled' };
     appState.persist();
@@ -1803,10 +1934,10 @@
     icsImportError = '';
     if (parsed.length === 0) {
       icsPreviewSummary = '';
-      icsImportError = 'Ingen kalenderhandelse kunde lasas. Kontrollera att du klistrat in en riktig .ics-fil.';
+      icsImportError = 'Ingen kalenderhändelse kunde läsas. Kontrollera att du klistrat in en riktig .ics-fil.';
       return;
     }
-    icsPreviewSummary = `${parsed.length} handelser hittades: ${timed} tidsatta och ${allDay} heldag.`;
+    icsPreviewSummary = `${parsed.length} händelser hittades: ${timed} tidsatta och ${allDay} heldag.`;
   }
 
   function resetIcsPreview() {
@@ -1818,7 +1949,7 @@
   function importPreviewedIcs() {
     const importDays = icsEventsToAgendaDays(icsPreviewEvents);
     if (importDays.length === 0) {
-      icsImportError = 'Det finns inga tidsatta kalenderhandelser att importera an.';
+      icsImportError = 'Det finns inga tidsatta kalenderhändelser att importera än.';
       return;
     }
 
@@ -1826,9 +1957,13 @@
     setActiveAgendaText(serializeAgenda(merged));
 
     for (const day of importDays) {
+      const previousDay = (agendaDays ?? []).find(existingDay => existingDay.date === day.date) ?? null;
+      const mergedDay = merged.find(mergedEntry => mergedEntry.date === day.date) ?? null;
+      const overridesBySignature = new Map<string, AgendaFlowMeta>();
       for (const flow of day.flows) {
-        setAgendaMeta(
-          makeAgendaMetaKeyForFlow(day.date ?? null, flow, flow.startMin ?? s.startMin),
+        const startMin = flow.startMin ?? s.startMin;
+        overridesBySignature.set(
+          agendaMetaSignature(flow, startMin),
           {
             source: 'import',
             label: 'ICS-kalender',
@@ -1836,6 +1971,7 @@
           }
         );
       }
+      rebuildAgendaMetaForDay(day.date ?? null, previousDay, mergedDay, { overridesBySignature });
     }
 
     if (importDays[0]?.date) setActiveAgendaDate(importDays[0].date);
@@ -2252,17 +2388,15 @@ Regler:
       document.addEventListener('visibilitychange', viewVisibilityHandler);
     }
 
-    const savedShare = localStorage.getItem('daytimer_share_token');
-    const savedShareOwner = localStorage.getItem('daytimer_share_owner_token');
-    const savedShareMode = localStorage.getItem('daytimer_share_mode');
+    const savedShare = readSessionValue(SHARE_TOKEN_STORAGE);
+    const savedShareOwner = readSessionValue(SHARE_OWNER_STORAGE);
+    const savedShareMode = readSessionValue(SHARE_MODE_STORAGE);
     if (savedShare && savedShareOwner) {
       shareToken = savedShare;
       shareOwnerToken = savedShareOwner;
       shareMode = (savedShareMode as ShareMode | null) ?? 'active-session-live';
     } else {
-      localStorage.removeItem('daytimer_share_token');
-      localStorage.removeItem('daytimer_share_owner_token');
-      localStorage.removeItem('daytimer_share_mode');
+      clearPersistedShareState();
     }
 
     if (!localStorage.getItem('day_timer_v1')) {
@@ -2293,13 +2427,15 @@ Regler:
       document.documentElement.style.setProperty('--ag-w', agendaEl.offsetWidth + 'px');
       resizeObservers.push(ro);
     }
-    const savedToken = localStorage.getItem(SYNC_TOKEN_STORAGE);
+    const savedToken = readSessionValue(SYNC_TOKEN_STORAGE) ?? localStorage.getItem(SYNC_TOKEN_STORAGE);
     const migrateLegacyToken = async () => {
       const sourceToken: string = savedToken || s.syncKey || '';
       if (!sourceToken) return;
       const existingHashedToken = validateSyncToken(sourceToken) ? sourceToken : null;
       if (existingHashedToken) {
         s.syncKey = existingHashedToken;
+        writeSessionValue(SYNC_TOKEN_STORAGE, existingHashedToken);
+        localStorage.removeItem(SYNC_TOKEN_STORAGE);
         return;
       }
       const legacyToken = sourceToken;
@@ -2309,7 +2445,8 @@ Regler:
         const pass = legacyToken.slice(idx + 1);
         if (name && pass) {
           s.syncKey = await deriveSyncToken(name, pass);
-          localStorage.setItem(SYNC_TOKEN_STORAGE, s.syncKey);
+          writeSessionValue(SYNC_TOKEN_STORAGE, s.syncKey);
+          localStorage.removeItem(SYNC_TOKEN_STORAGE);
           appState.persist();
         }
       }
@@ -2317,13 +2454,15 @@ Regler:
     void migrateLegacyToken();
     const savedUser = localStorage.getItem('timer-login-user');
     if (savedUser) loggedInUser = savedUser;
-    const savedAiConfig = localStorage.getItem('daytimer_ai_config');
+    const savedAiConfig = localStorage.getItem(AI_CONFIG_STORAGE);
     if (savedAiConfig) {
       try { aiConfig = { ...aiConfig, ...JSON.parse(savedAiConfig) }; } catch { /* ignore */ }
-    } else {
-      // migrate from old single-key format
-      const oldKey = localStorage.getItem('daytimer_ai_key');
-      if (oldKey) { aiConfig = { provider: 'anthropic', apiKey: oldKey, baseUrl: '', customModel: '', planMode: 'helpful' }; saveAiConfig(); }
+    }
+    const savedAiKey = readSessionValue(AI_KEY_SESSION_STORAGE) ?? localStorage.getItem('daytimer_ai_key');
+    if (savedAiKey) {
+      aiConfig = { ...aiConfig, apiKey: savedAiKey };
+      writeSessionValue(AI_KEY_SESSION_STORAGE, savedAiKey);
+      localStorage.removeItem('daytimer_ai_key');
     }
     renderEndControl();
     updateTimeFeedback();
@@ -2946,6 +3085,8 @@ Regler:
             savedFlowMsg={savedFlowMsg}
             flows={s.flows}
             flowsOpen={flowsOpen}
+            {describeFlow}
+            {formatLastUsed}
             onSaveFlow={saveFlow}
             onToggleFlows={() => flowsOpen = !flowsOpen}
             onLoadFlow={(id) => loadFlow(id, selectedDay?.date ? 'plan' : 'now')}
@@ -2966,6 +3107,8 @@ Regler:
             aiKeyVisible={aiKeyVisible}
             aiBaseUrl={aiConfig.baseUrl}
             aiCustomModel={aiConfig.customModel}
+            syncReady={!!loggedInUser}
+            aiReady={!!aiApiKey}
             showHelpHints={s.showHelpHints}
             confirmedActualCount={confirmedActualCount}
             pendingActualCount={pendingActualEntries.length}
@@ -2997,6 +3140,8 @@ Regler:
       <AgendaImportPanel
         {agendaInputOpen}
         {agendaDraft}
+        draftStatus={agendaDraftStatus}
+        selectedDateLabel={selectedDay?.date ? fmtAgendaDate(selectedDay.date) : 'Odaterad dag'}
         {savedAgendaMsg}
         {icsImportOpen}
         {icsDraft}
