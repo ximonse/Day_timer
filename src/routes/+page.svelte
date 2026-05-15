@@ -1504,7 +1504,7 @@
   }
 
   function replaceTextareaSelection(node: HTMLTextAreaElement, value: string, caret: number) {
-    onPartsInput(value);
+    handlePartsInput(value);
     requestAnimationFrame(() => {
       node.focus();
       node.setSelectionRange(caret, caret);
@@ -2136,8 +2136,8 @@
     editingBlockField = 'name';
   }
 
-  let sidebarExtraInfoOpen = false;
-  let sidebarExtraInfoEl: HTMLTextAreaElement | null = null;
+  let sidebarExtraInfoOpen = $state(false);
+  let sidebarExtraInfoEl = $state<HTMLTextAreaElement | null>(null);
 
   function openSidebarComment() {
     if (isViewMode) return;
