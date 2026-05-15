@@ -1,6 +1,16 @@
-export type Palette = 'sansad' | 'meadow' | 'mlp' | 'bright' | 'clear' | 'psychedelic';
+export type Palette = 'sansad' | 'meadow' | 'mlp' | 'bright' | 'clear' | 'vitgra' | 'psychedelic';
 
-export const PALETTES: Palette[] = ['sansad', 'meadow', 'mlp', 'bright', 'clear', 'psychedelic'];
+export const PALETTES: Palette[] = ['sansad', 'meadow', 'mlp', 'bright', 'clear', 'vitgra', 'psychedelic'];
+
+export const PALETTE_LABELS: Record<Palette, string> = {
+  sansad: 'Sansad',
+  meadow: 'Meadow',
+  mlp: 'MLP',
+  bright: 'Bright',
+  clear: 'Clear',
+  vitgra: 'Vitgrå',
+  psychedelic: 'Psychedelic',
+};
 
 export const PALETTE_COLORS: Record<Palette, string> = {
   sansad:      '#e07a5f',
@@ -8,6 +18,7 @@ export const PALETTE_COLORS: Record<Palette, string> = {
   mlp:         '#cdb4db',
   bright:      '#f86624',
   clear:       '#9a031e',
+  vitgra:      '#707070',
   psychedelic: '#ff00ff',
 };
 
@@ -17,6 +28,7 @@ export const SECTOR_COLORS: Record<Palette, string[]> = {
   mlp:         ['#cdb4db','#ffc8dd','#ffafcc','#bde0fe','#a2d2ff','#b898d0','#ff90b8','#80c8f8'],
   bright:      ['#f9c80e','#f86624','#ea3546','#662e9b','#43bccd','#d4a808','#c44818','#8840c0'],
   clear:       ['#5f0f40','#9a031e','#fb8b24','#e36414','#0f4c5c','#8a1560','#c20428','#d46010'],
+  vitgra:      ['#111111','#404040','#6c6c6c','#959595','#bcbcbc','#d33b3b','#7a7a7a','#d9d9d9'],
   psychedelic: ['#ff00ff','#ff0000','#ff8800','#ffff00','#00ff44','#00ffff','#4400ff','#ff00aa'],
 };
 
@@ -27,6 +39,8 @@ const LABELS_CLEAR_DAY   = ['#7d2c60','#b43346','#d5771f','#c4621b','#2f6674','#
 const LABELS_SANSAD_DARK = ['#e07a5f','#6970a1','#81b29a','#f2cc8f','#c05840','#8790c4','#5a9278','#d8b870'];
 const LABELS_MEADOW_DARK = ['#fb6107','#f3de2c','#7cb518','#86b72a','#fbb02d','#d94e05','#a0d028','#f09010'];
 const LABELS_CLEAR_DARK  = ['#935477','#c04b5e','#ffab48','#ff8744','#4f7c89','#aa5a8d','#dd5d72','#ee924a'];
+const LABELS_VITGRA_DAY  = ['#111111','#3a3a3a','#5f5f5f','#7d7d7d','#9a9a9a','#c43a3a','#545454','#b2b2b2'];
+const LABELS_VITGRA_DARK = ['#f3f3f3','#d8d8d8','#bfbfbf','#a6a6a6','#8f8f8f','#ff6666','#cacaca','#e4e4e4'];
 
 export interface ClockTheme {
   colors: string[];
@@ -46,10 +60,16 @@ const DARK_CLOCK: Omit<ClockTheme, 'colors'> = {
   mark: '#c8c4bc', centerMain: '#ede8dc', centerMuted: '#8a8478',
   handDark: '#ede8dc', handLight: '#1c1a16', chip: '#1c1a16dd',
 };
+const VITGRA_DARK_CLOCK: Omit<ClockTheme, 'colors'> = {
+  bg: '#111111', dimSuffix: '55', grayPast: '#353535',
+  mark: '#ff6666', centerMain: '#efefef', centerMuted: '#c95a5a',
+  handDark: '#ff6666', handLight: '#111111', chip: '#111111dd',
+};
 
 export function clockTheme(palette: Palette, dark: boolean): ClockTheme {
   const p = palette || 'sansad';
   const d = dark && p !== 'psychedelic';
+  const D = '#ffffffee'; // day chip: white so any colored text is readable
 
   if (p === 'psychedelic') {
     return {
@@ -59,8 +79,11 @@ export function clockTheme(palette: Palette, dark: boolean): ClockTheme {
       handDark: '#ffffff', handLight: '#00001a', chip: '#00000088',
     };
   }
-
-  const D = '#ffffffee'; // day chip: white so any colored text is readable
+  if (p === 'vitgra') return d
+    ? { colors: SECTOR_COLORS.vitgra, ...VITGRA_DARK_CLOCK }
+    : { colors: SECTOR_COLORS.vitgra, bg: '#f7f7f7', dimSuffix: '40', grayPast: '#d0d0d0',
+        mark: '#111111', centerMain: '#111111', centerMuted: '#777777',
+        handDark: '#111111', handLight: '#f7f7f7', chip: D };
 
   if (p === 'meadow') return d
     ? { colors: SECTOR_COLORS.meadow, ...DARK_CLOCK }
@@ -118,6 +141,7 @@ export function labelColorFor(baseColor: string, i: number, isPast: boolean, pal
     if (p === 'sansad') label = LABELS_SANSAD_DARK[i % LABELS_SANSAD_DARK.length];
     else if (p === 'meadow') label = LABELS_MEADOW_DARK[i % LABELS_MEADOW_DARK.length];
     else if (p === 'clear') label = LABELS_CLEAR_DARK[i % LABELS_CLEAR_DARK.length];
+    else if (p === 'vitgra') label = LABELS_VITGRA_DARK[i % LABELS_VITGRA_DARK.length];
   } else {
     if (p === 'meadow') {
       if (baseColor === '#f3de2c') label = '#a28900';
@@ -131,6 +155,8 @@ export function labelColorFor(baseColor: string, i: number, isPast: boolean, pal
       else if (baseColor === '#d4a808') label = '#987600';
     } else if (p === 'clear') {
       label = LABELS_CLEAR_DAY[i % LABELS_CLEAR_DAY.length];
+    } else if (p === 'vitgra') {
+      label = LABELS_VITGRA_DAY[i % LABELS_VITGRA_DAY.length];
     }
   }
   if (!isPast) return label;
