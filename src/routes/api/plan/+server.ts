@@ -175,6 +175,34 @@ async function callGemini(apiKey: string, systemPrompt: string, message: string)
   return res.text ?? '';
 }
 
+const PRIVATE_IP = [
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^::1$/,
+  /^fc/i,
+  /^fe80/i,
+  /^0\./,
+];
+
+function isPrivateHost(hostname: string): boolean {
+  const h = hostname.replace(/^\[|\]$/g, '');
+  return PRIVATE_IP.some(r => r.test(h));
+}
+
+function safeErrorMessage(err: unknown): string {
+  if (!(err instanceof Error)) return 'Okänt fel';
+  const m = err.message.toLowerCase();
+  if (m.includes('401') || m.includes('unauthorized') || m.includes('invalid api key') || m.includes('incorrect api key')) return 'Ogiltig API-nyckel';
+  if (m.includes('429') || m.includes('rate limit') || m.includes('quota')) return 'För många förfrågningar — försök igen om en stund';
+  if (m.includes('403') || m.includes('forbidden')) return 'Åtkomst nekad av AI-tjänsten';
+  if (m.includes('timeout') || m.includes('timed out')) return 'AI-tjänsten svarade inte i tid';
+  if (m.includes('network') || m.includes('fetch') || m.includes('econnrefused')) return 'Kunde inte nå AI-tjänsten';
+  return 'AI-tjänsten svarade med ett fel';
+}
+
 export const POST: RequestHandler = async ({ request }) => {
   const { provider = 'anthropic', apiKey, message, mode, planMode = 'helpful', context, baseUrl, customModel } = await request.json() as {
     provider?: Provider;
@@ -198,7 +226,7 @@ export const POST: RequestHandler = async ({ request }) => {
     systemPrompt = planMode === 'strict' ? PARTS_STRICT : PARTS_HELPFUL;
   }
 
-  const key = apiKey?.trim() ?? '';
+  const key = apiKey.trim();
 
   try {
     let text = '';
@@ -213,11 +241,12 @@ export const POST: RequestHandler = async ({ request }) => {
       let parsedUrl: URL;
       try { parsedUrl = new URL(baseUrl.trim()); } catch { return json({ error: 'Ogiltig bas-URL' }, { status: 400 }); }
       if (parsedUrl.protocol !== 'https:') return json({ error: 'Bas-URL måste använda https://' }, { status: 400 });
+      if (isPrivateHost(parsedUrl.hostname)) return json({ error: 'Bas-URL pekar på ett otillåtet nätverk' }, { status: 400 });
       text = await callOpenAI(key, systemPrompt, message, parsedUrl.toString(), customModel?.trim() || undefined);
     }
     return json({ text });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Okänt fel';
-    return json({ error: msg }, { status: 500 });
+    console.error('[api/plan] AI call failed:', err instanceof Error ? err.message : err);
+    return json({ error: safeErrorMessage(err) }, { status: 500 });
   }
 };
