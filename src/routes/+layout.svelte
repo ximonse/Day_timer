@@ -532,7 +532,7 @@
     :global(.mobile-tabs button.active) { color: var(--fg); }
     :global(.mobile-tabs button.active span) { color: var(--accent); }
     /* Visa rätt sektion beroende på aktiv flik */
-    :global(body.m-timer .sidebar) { display: none; }
+    :global(body.m-timer .sidebar) { display: block; padding-bottom: 60px; }
     :global(body.m-timer .resize-handle-sb) { display: none; }
     :global(body.m-delar .main) { display: none; }
     :global(body.m-delar .resize-handle-sb) { display: none; }

@@ -3187,6 +3187,11 @@ Regler:
             {#if menuHelpOpen === 'ovrigt'}
               <div class="menu-help">Lås, hjälp och andra snabbval ligger kvar i toppraden. Den här menyn samlar bara visningslägena.</div>
             {/if}
+            <div class="menu-list">
+              <button class="menu-row" type="button" class:on={s.sbCollapsed} onclick={toggleCollapse}>
+                <span>Sidopanel i mobil</span><span class="menu-row-state">{s.sbCollapsed ? 'Av' : 'På'}</span>
+              </button>
+            </div>
           </div>
         </div>
       {/if}
