@@ -5,7 +5,6 @@
     savedFlowMsg,
     titleValue,
     partsValue,
-    extraInfoValue,
     copyBtnText,
     partsFeedbackText,
     timeFeedbackText,
@@ -43,7 +42,6 @@
     onSetHelpfulMode,
     onRunAi,
     onAction,
-    onExtraInfoInput,
     onStartTimeInput,
     onEndModeChange,
     onEndControlMount,
@@ -64,7 +62,6 @@
     savedFlowMsg: string;
     titleValue: string;
     partsValue: string;
-    extraInfoValue: string;
     copyBtnText: string;
     partsFeedbackText: string;
     timeFeedbackText: string;
@@ -102,7 +99,6 @@
     onSetHelpfulMode: () => void;
     onRunAi: () => void;
     onAction: () => void;
-    onExtraInfoInput: (value: string) => void;
     onStartTimeInput: (value: string) => void;
     onEndModeChange: (mode: 'end' | 'len') => void;
     onEndControlMount: (node: HTMLElement | null) => void;
@@ -165,7 +161,7 @@
         <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
       </div>
       {#if showPartsHelp}
-        <div class="feedback">En rad per del. Tider som slutar med <code>m</code> låses, övriga delar fördelas automatiskt. Börja en rad med <code>-</code> för underpunkt och <code>&amp;</code> för kommentar. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rubrik.</div>
+        <div class="feedback">En rad per del. Tider som slutar med <code>m</code> låses, övriga delar fördelas automatiskt. Börja en rad med <code>#</code> för rubrik, <code>-</code> för underpunkt och <code>&amp;</code> för kommentar. <code>Tab</code> gör underpunkt och <code>Enter</code> fortsätter samma radtyp på ny rad.</div>
       {/if}
       <textarea placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
         value={partsValue}
@@ -267,13 +263,6 @@
           {/if}
         </div>
       {/if}
-    </div>
-
-    <div>
-      <div class="field-label">Kommentar för blocket</div>
-      <textarea placeholder="T.ex. material, plats eller påminnelse"
-        value={extraInfoValue}
-        oninput={(e) => onExtraInfoInput((e.target as HTMLTextAreaElement).value)}></textarea>
     </div>
 
     <div class="row2">
