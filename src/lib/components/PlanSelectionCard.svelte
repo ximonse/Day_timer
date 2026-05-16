@@ -72,7 +72,7 @@
     {/if}
     <div class="section-copy"><strong>Status:</strong> {saveLabel}</div>
     <div class="share-section" style="padding-top:8px;">
-      <label>Dela från planering</label>
+      <span class="share-label">Dela från planering</span>
       {#if shareToken}
         <div class="share-link-box">
           <span class="share-link-text">{shareUrl}</span>
