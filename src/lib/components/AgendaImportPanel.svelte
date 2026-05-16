@@ -99,13 +99,15 @@
     <span class="section-chip on">{selectedDateLabel}</span>
     <span class="section-chip">{draftStatus}</span>
   </div>
-  <textarea
-    class="agenda-input"
-    placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
-    value={agendaDraft}
-    oninput={(e) => onDraftChange((e.target as HTMLTextAreaElement).value)}
-    onpaste={(e) => onDraftPaste(e)}
-  ></textarea>
+  <div class="agenda-input-wrapper">
+    <textarea
+      class="agenda-input"
+      placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
+      value={agendaDraft}
+      oninput={(e) => onDraftChange((e.target as HTMLTextAreaElement).value)}
+      onpaste={(e) => onDraftPaste(e)}
+    ></textarea>
+  </div>
   <div class="agenda-save-row">
     <button class="agenda-save-btn" onclick={onSave}
       title="Sparar dagtexten och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
@@ -128,9 +130,11 @@
   {/if}
   {#if agendaAiOpen && hasAiKey}
     <div class="agenda-ai-panel">
-      <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;"
-        value={agendaAiInput}
-        oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
+      <div class="agenda-input-wrapper">
+        <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;"
+          value={agendaAiInput}
+          oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
+      </div>
       <div class="ai-mode-row">
         <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
         <button class="ai-mode-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
@@ -160,13 +164,14 @@
 {/if}
 {#if icsImportOpen}
   <input type="file" accept=".ics,text/calendar" class="sync-input" onchange={onIcsFileChange} />
-  <textarea
-    class="agenda-input"
-    placeholder="Klistra in innehållet från en .ics-fil här om du hellre vill importera via text."
-    value={icsDraft}
-    oninput={(e) => onIcsDraftChange((e.target as HTMLTextAreaElement).value)}
-    style="margin-top:8px;"
-  ></textarea>
+  <div class="agenda-input-wrapper" style="margin-top:8px;">
+    <textarea
+      class="agenda-input"
+      placeholder="Klistra in innehållet från en .ics-fil här om du hellre vill importera via text."
+      value={icsDraft}
+      oninput={(e) => onIcsDraftChange((e.target as HTMLTextAreaElement).value)}
+    ></textarea>
+  </div>
   <div class="agenda-save-row">
     <button class="agenda-save-btn" onclick={onPreviewIcs}>Förhandsgranska ICS</button>
     <button class="agenda-save-btn" onclick={onImportIcs} disabled={!icsCanImport}>Lägg i dagplan</button>

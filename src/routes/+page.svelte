@@ -72,7 +72,7 @@
   let sessionSource = $state<SessionSource>({ kind: 'unscheduled' });
   let agendaDragMoved = false;
   let editingBlockId = $state<string | null>(null);
-  let editingBlockField = $state<'name' | 'min' | null>(null);
+  let editingBlockField = $state<'name' | 'min' | 'note' | 'extra' | null>(null);
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
   let agendaDraft = $state('');
@@ -1158,7 +1158,7 @@
     }
 
     const drawMark = (ang: number, len: number, w: number, op: number) => {
-      const [mx0, my0] = polar(ang, R);
+      const [mx0, my0] = polar(ang, R + 1);
       const [mx1, my1] = polar(ang, R - len);
       const l = document.createElementNS(NS, 'line');
       l.setAttribute('x1', String(mx0)); l.setAttribute('y1', String(my0));
@@ -2123,16 +2123,46 @@
     appState.persist();
   }
 
-  function startBlockEdit(id: string, field: 'name' | 'min') {
+  function startBlockEdit(id: string, field: 'name' | 'min' | 'note') {
     if (isViewMode) return;
     editingBlockId = id;
     editingBlockField = field;
   }
 
+  function startExtraEdit() {
+    if (isViewMode) return;
+    editingBlockId = null;
+    editingBlockField = 'extra';
+  }
+
   function handleSidebarNameKeydown(e: KeyboardEvent, b: Block) {
     if (e.key === 'Escape') {
-      editingBlockId = null;
-      editingBlockField = null;
+      e.preventDefault();
+      const input = e.target as HTMLInputElement;
+      parseAndCommitSidebarName(b, input.value, false);
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const input = e.target as HTMLInputElement;
+      const val = input.value.trim();
+      if (val) {
+        b.title = val;
+        editingBlockField = 'note';
+      } else {
+        // Delete block if empty title on Tab
+        s.blocks = s.blocks.filter(x => x.id !== b.id);
+        if (s.blocks.length === 0) {
+          s.blocks = [{ id: uid(), title: '', minutes: 10, note: '', warning: true, pinned: false }];
+          editingBlockId = s.blocks[0].id;
+          editingBlockField = 'name';
+        } else {
+          editingBlockId = null;
+          editingBlockField = null;
+        }
+        commitBlockEdit();
+      }
       return;
     }
 
@@ -2140,12 +2170,87 @@
       e.preventDefault();
       const input = e.target as HTMLInputElement;
       parseAndCommitSidebarName(b, input.value, true);
+      return;
+    }
+
+    if (e.key === '&') {
+      e.preventDefault();
+      const input = e.target as HTMLInputElement;
+      b.title = input.value.trim();
+      commitBlockEdit();
+      startExtraEdit();
+      return;
     }
   }
 
   function handleSidebarNameBlur(b: Block, value: string) {
     if (editingBlockId === b.id && editingBlockField === 'name') {
       parseAndCommitSidebarName(b, value, false);
+    }
+  }
+
+  function handleSidebarNoteKeydown(e: KeyboardEvent, b: Block) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      const input = e.target as HTMLTextAreaElement;
+      b.note = input.value.trim();
+      commitBlockEdit();
+      return;
+    }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const input = e.target as HTMLTextAreaElement;
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      input.value = input.value.substring(0, start) + "\n" + input.value.substring(end);
+      input.selectionStart = input.selectionEnd = start + 1;
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const input = e.target as HTMLTextAreaElement;
+      b.note = input.value.trim();
+      commitBlockEdit();
+      addBlockAfter(b.id);
+      return;
+    }
+    if (e.key === '&') {
+      e.preventDefault();
+      const input = e.target as HTMLTextAreaElement;
+      b.note = input.value.trim();
+      commitBlockEdit();
+      startExtraEdit();
+      return;
+    }
+  }
+
+  function handleSidebarNoteBlur(b: Block, value: string) {
+    if (editingBlockId === b.id && editingBlockField === 'note') {
+      b.note = value.trim();
+      commitBlockEdit();
+    }
+  }
+
+  function handleSidebarExtraKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      const input = e.target as HTMLTextAreaElement;
+      s.extraInfo = input.value.trim();
+      commitBlockEdit();
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const input = e.target as HTMLTextAreaElement;
+      s.extraInfo = input.value.trim();
+      commitBlockEdit();
+    }
+  }
+
+  function handleSidebarExtraBlur(value: string) {
+    if (editingBlockField === 'extra') {
+      s.extraInfo = value.trim();
+      commitBlockEdit();
     }
   }
 
@@ -2180,7 +2285,14 @@
       val = val.slice(0, val.length - mMatch[0].length).trim();
     }
 
-    if (val) b.title = val;
+    if (val) {
+      b.title = val;
+    } else {
+      s.blocks = s.blocks.filter(x => x.id !== b.id);
+      if (s.blocks.length === 0) {
+        s.blocks = [{ id: uid(), title: '', minutes: 10, note: '', warning: true, pinned: false }];
+      }
+    }
     
     const currentId = b.id;
     commitBlockEdit();
@@ -2485,7 +2597,7 @@ Regler:
   );
 
   function syncPartsDraftFromState(force = false) {
-    const source = serializeBlocks(s.blocks, s.dayTitle, s.extraInfo);
+    const source = serializeBlocks(s.blocks, undefined, s.extraInfo);
     if (force || !partsDraftDirty) {
       partsDraft = source;
       partsDraftDirty = false;
@@ -2667,15 +2779,33 @@ Regler:
     function handleKeydown(e: KeyboardEvent) {
       if (e.altKey && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
         e.preventDefault();
-        if (confirm('Återställ timern? All sparad data raderas.')) appState.reset();
+        if (confirm('Återställ timern? All sparad data raderas.')) {
+          appState.reset();
+          window.location.reload();
+        }
       }
-      if (e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'S' || e.key === 's')) {
-        e.preventDefault();
-        if (!isViewMode) {
-          const order = ['school', 'school+private', 'private', 'private+school'] as const;
-          agendaDraft = '';
-          s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
-          appState.persist();
+      if (e.altKey && !e.ctrlKey && !e.shiftKey) {
+        const key = e.key.toLowerCase();
+        if (key === 'n') {
+          e.preventDefault();
+          setActiveSection('now');
+        } else if (key === 'p') {
+          e.preventDefault();
+          setActiveSection('plan');
+        } else if (key === 'b') {
+          e.preventDefault();
+          setActiveSection('library');
+        } else if (key === 'k') {
+          e.preventDefault();
+          setActiveSection('workspace');
+        } else if (key === 's') {
+          e.preventDefault();
+          if (!isViewMode) {
+            const order = ['school', 'school+private', 'private', 'private+school'] as const;
+            agendaDraft = '';
+            s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
+            appState.persist();
+          }
         }
       }
     }
@@ -3026,12 +3156,26 @@ Regler:
             <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsed)) : b.minutes}m kvar</button>
           {/if}
         </div>
-        {#if b.note && s.showSegNotes}
-          <div class="note">{b.note}</div>
+        {#if s.showSegNotes}
+          {#if editingBlockId === b.id && editingBlockField === 'note'}
+            <textarea class="inline-edit note note-inp" use:focusOnMount
+              onblur={(e) => handleSidebarNoteBlur(b, (e.target as HTMLTextAreaElement).value)}
+              onkeydown={(e) => handleSidebarNoteKeydown(e, b)}
+              onclick={(e) => e.stopPropagation()}>{b.note}</textarea>
+          {:else if b.note}
+            <button class="note seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'note')}>{b.note}</button>
+          {/if}
         {/if}
       {/each}
-      {#if s.extraInfo && s.showExtraInfo}
-        <div class="infobox">{s.extraInfo}</div>
+      {#if s.showExtraInfo}
+        {#if editingBlockField === 'extra'}
+          <textarea class="inline-edit infobox extra-inp" use:focusOnMount
+            onblur={(e) => handleSidebarExtraBlur((e.target as HTMLTextAreaElement).value)}
+            onkeydown={(e) => handleSidebarExtraKeydown(e)}
+            onclick={(e) => e.stopPropagation()}>{s.extraInfo}</textarea>
+        {:else if s.extraInfo}
+          <button class="infobox seg-inline-btn" type="button" onclick={startExtraEdit}>{s.extraInfo}</button>
+        {/if}
       {/if}
       {#if !isViewMode}
         <div class="sidebar-add-row">
@@ -3099,22 +3243,72 @@ Regler:
         </div>
 
         {#if !isViewMode}
-          <button
-            class="mini-menu-toggle toolbar-center"
-            class:open={miniMenuOpen}
-            type="button"
-            onclick={(e) => { e.stopPropagation(); toggleMiniMenu(); }}
-            title={miniMenuOpen ? 'Dölj meny' : 'Visa meny'}
-          >
-            <span>▾</span>
-          </button>
+          <div class="toolbar-center" style="display:flex; align-items:center; gap:0;">
+            <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
+            <button
+              class="mini-menu-toggle"
+              class:open={miniMenuOpen}
+              type="button"
+              onclick={(e) => { e.stopPropagation(); toggleMiniMenu(); }}
+              title={miniMenuOpen ? 'Dölj meny' : 'Visa meny'}
+            >
+              <span>▾</span>
+            </button>
+          </div>
         {/if}
 
         <div class="toolbar-side toolbar-side-right" class:collapsed={!miniMenuOpen}>
-          <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
           <button class="icon lock-btn" class:locked onclick={() => locked = !locked} title={locked ? 'Lås upp' : 'Lås sidan'}>{locked ? '○' : '⊠'}</button>
           
-          <div style="position:relative; display:flex; align-items:center;">
+          <div style="position:relative; display:flex; align-items:center;"
+            use:clickOutside={() => { themePickerOpen = false; }}>
+            <button class="icon" 
+              aria-label={`Tema: ${PALETTE_LABELS[s.palette]}`}
+              onclick={(e) => { e.stopPropagation(); themePickerOpen = !themePickerOpen; }}
+              title={`Tema: ${PALETTE_LABELS[s.palette]}`}>
+              <span class="theme-trigger-swatch" style="background:{PALETTE_COLORS[s.palette]}; width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,0,0,0.1); display:inline-block;"></span>
+            </button>
+            {#if themePickerOpen}
+              <div class="warnings-popup theme-popup-new" onclick={(e) => e.stopPropagation()}>
+                <div class="field-label" style="font-size:10px;margin-bottom:8px;opacity:.7;">Teman</div>
+                <div class="warn-dots-grid" style="gap:8px;">
+                  {#each PALETTES as p}
+                    <button class="wd on"
+                      style={`--warn-color:${PALETTE_COLORS[p]}; width:24px; height:24px;`}
+                      title={PALETTE_LABELS[p]}
+                      onclick={() => { s.palette = p; syncBodyClasses(); appState.persist(); themePickerOpen = false; }}
+                    >●</button>
+                  {/each}
+                </div>
+                <div style="margin-top:12px; padding-top:8px; border-top:1px solid var(--menu-border); display:flex; justify-content:center;">
+                  <button id="darkToggle" class:active={s.dark} title="Dag/Natt"
+                    style="width:40px; height:22px; border-radius:11px; font-size:12px; display:flex; align-items:center; justify-content:center; padding:0; border: 1px solid color-mix(in srgb, var(--menu-border) 40%, transparent);"
+                    onclick={() => { if (s.palette !== 'psychedelic') { s.dark = !s.dark; syncBodyClasses(); appState.persist(); } }}>
+                    {#if s.dark}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                      </svg>
+                    {:else}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="4"></line>
+                        <line x1="12" y1="20" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"></line>
+                        <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="4" y2="12"></line>
+                        <line x1="20" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"></line>
+                        <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"></line>
+                      </svg>
+                    {/if}
+                  </button>
+                </div>
+              </div>
+            {/if}
+          </div>
+
+          <div style="position:relative; display:flex; align-items:center;"
+            use:clickOutside={() => { warningsOpen = false; }}>
             <button class="icon" 
               onclick={(e) => { e.stopPropagation(); warningsOpen = !warningsOpen; }} 
               title="Hantera ljudaviseringar">
@@ -3668,28 +3862,6 @@ Regler:
       <span>⋯</span> Konto
     </button>
   </nav>
-</div>
-
-<div class="theme-dots" class:open={themePickerOpen}
-  use:clickOutside={() => { themePickerOpen = false; }}>
-  <button class="theme-trigger"
-    aria-label={`Tema: ${PALETTE_LABELS[s.palette]}`}
-    onclick={() => themePickerOpen = !themePickerOpen}
-    title={`Tema: ${PALETTE_LABELS[s.palette]}`}>
-    <span class="theme-trigger-swatch" style="background:{PALETTE_COLORS[s.palette]}"></span>
-    <span class="theme-trigger-caret">▾</span>
-  </button>
-  <div class="theme-panel">
-    {#each PALETTES as p}
-      <button class="theme-dot" class:active={s.palette === p}
-        style="background:{PALETTE_COLORS[p]}" title={PALETTE_LABELS[p]}
-        onclick={() => { s.palette = p; syncBodyClasses(); appState.persist(); themePickerOpen = false; }}
-      ></button>
-    {/each}
-    <button id="darkToggle" class:active={s.dark} title="Dag/Natt"
-      onclick={() => { if (s.palette !== 'psychedelic') { s.dark = !s.dark; syncBodyClasses(); appState.persist(); } }}
-    >{s.dark ? '☾' : '☀'}</button>
-  </div>
 </div>
 
 <div class="flash" bind:this={flashEl}></div>
