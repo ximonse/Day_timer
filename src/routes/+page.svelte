@@ -715,7 +715,10 @@
     s.activeSection = section;
     s.showControls = true;
     miniMenuOpen = true;
-    if (section === 'plan') s.agendaOpen = true;
+    if (section === 'plan') {
+      s.agendaOpen = true;
+      agendaInputOpen = true;
+    }
     if (typeof window !== 'undefined' && window.innerWidth <= 800) {
       mobileTab = section === 'plan' ? 'plan' : 'timer';
       syncBodyClasses();
@@ -1511,15 +1514,6 @@
     });
   }
 
-  function currentLinePrefix(value: string, caret: number) {
-    const lineStart = value.lastIndexOf('\n', Math.max(0, caret - 1)) + 1;
-    const prefix = value.slice(lineStart, caret).trimStart();
-    if (prefix.startsWith('#')) return '# ';
-    if (prefix.startsWith('&')) return '& ';
-    if (prefix.startsWith('-')) return '- ';
-    return '';
-  }
-
   function handlePartsKeyDown(e: KeyboardEvent) {
     const node = e.currentTarget as HTMLTextAreaElement | null;
     if (!node) return;
@@ -1529,7 +1523,7 @@
       const start = node.selectionStart ?? 0;
       const end = node.selectionEnd ?? start;
       const value = node.value;
-      const insert = `\n${currentLinePrefix(value, start) || '- '}`;
+      const insert = '\n- ';
       const next = value.slice(0, start) + insert + value.slice(end);
       replaceTextareaSelection(node, next, start + insert.length);
       return;
@@ -1540,7 +1534,7 @@
       const start = node.selectionStart ?? 0;
       const end = node.selectionEnd ?? start;
       const value = node.value;
-      const insert = `\n${currentLinePrefix(value, start)}`;
+      const insert = '\n';
       const next = value.slice(0, start) + insert + value.slice(end);
       replaceTextareaSelection(node, next, start + insert.length);
     }

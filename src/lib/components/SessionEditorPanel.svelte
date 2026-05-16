@@ -161,7 +161,7 @@
         <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
       </div>
       {#if showPartsHelp}
-        <div class="feedback">En rad per del. Tider som slutar med <code>m</code> låses, övriga delar fördelas automatiskt. Börja en rad med <code>#</code> för rubrik, <code>-</code> för underpunkt och <code>&amp;</code> för kommentar. <code>Tab</code> gör underpunkt och <code>Enter</code> fortsätter samma radtyp på ny rad.</div>
+        <div class="feedback">En rad per del. Tider som slutar med <code>m</code> låses, övriga delar fördelas automatiskt. Börja en rad med <code>#</code> för rubrik, <code>-</code> för underpunkt och <code>&amp;</code> för kommentar. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rad.</div>
       {/if}
       <textarea placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
         value={partsValue}
@@ -233,7 +233,7 @@
         </div>
       </div>
       {#if showPartsHelp}
-        <div class="feedback">Skriv eller klistra in hela blocket här om du vill planera med text i stället för att dra i tidslinjen. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rubrik.</div>
+        <div class="feedback">Skriv eller klistra in hela blocket här om du vill planera med text i stället för att dra i tidslinjen. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rad.</div>
       {/if}
       <textarea placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
         value={partsValue}
