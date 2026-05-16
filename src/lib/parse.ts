@@ -207,15 +207,21 @@ export function parseAgenda(text: string): AgendaDay[] {
   return days;
 }
 
-export function serializeBlocks(blocks: Block[]): string {
+export function serializeBlocks(blocks: Block[], dayTitle?: string, extraInfo?: string): string {
   const out: string[] = [];
+  if (dayTitle) out.push(`# ${dayTitle}`);
   for (const b of blocks) {
     const title = b.title.replace(/[\r\n]+/g, ' ').trim();
     out.push(b.pinned ? `${title} ${b.minutes}m` : title);
     if (b.note) {
       for (const line of b.note.split('\n')) {
-        if (line.trim()) out.push('-' + line);
+        if (line.trim()) out.push('- ' + line);
       }
+    }
+  }
+  if (extraInfo) {
+    for (const line of extraInfo.split('\n')) {
+      if (line.trim()) out.push('& ' + line);
     }
   }
   return out.join('\n');
