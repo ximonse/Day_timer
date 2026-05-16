@@ -653,4 +653,15 @@
     :global(.mobile-tabs) { flex-direction: column; width: 52px; height: 100%; border-top: none; border-right: 1px solid var(--border); bottom: 0; left: auto; right: 0; }
     :global(body.m-now .sidebar) { display: flex; }
   }
+  :global(.beta-tag) {
+    font-size: 9px;
+    background: var(--accent);
+    color: var(--bg);
+    padding: 1px 4px;
+    border-radius: 4px;
+    vertical-align: middle;
+    font-weight: 800;
+    margin-left: 4px;
+    opacity: 0.8;
+  }
 </style>

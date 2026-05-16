@@ -70,6 +70,7 @@
   } = $props();
 
   let reliabilityOpen = $state(false);
+  let aiConfigOpen = $state(false);
 </script>
 
 <div class="section-card">
@@ -122,49 +123,80 @@
 </div>
 
 <div class="ai-key-section">
-  <div class="field-label">AI-planering</div>
-  <div class="section-copy muted">Välj leverantör här. API-nyckeln ligger bara kvar i den här sessionen och sparas inte permanent i webbläsaren.</div>
-  <select class="sync-input ai-provider-select"
-    value={aiProvider}
-    onchange={(e) => onProviderChange((e.target as HTMLSelectElement).value)}>
-    {#each Object.entries(aiProviderLabels) as [val, label]}
-      <option value={val}>{label}</option>
-    {/each}
-  </select>
-  {#if aiApiKey}
-    <div class="ai-key-row">
-      <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
-      <button class="ai-key-btn" onclick={onToggleAiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
-      <button class="ai-key-btn" onclick={onClearAiConfig}>✕</button>
+  <div class="field-label">
+    AI-planering <span class="beta-tag">BETA</span>
+    <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen} style="margin-left:4px;">
+      {aiConfigOpen ? '▲' : '▼'}
+    </button>
+  </div>
+  
+  {#if aiConfigOpen}
+    <div class="section-copy muted" style="margin-bottom:8px;">
+      Används på egen risk. Var väldigt försiktig med att skriva in din API-nyckel på nätet. 
+      Här används nyckeln enbart för att skicka förfrågningar direkt till vald AI-leverantör från din webbläsare, 
+      och den sparas enbart lokalt i den här sessionen.
     </div>
-    <div class="section-copy muted">Nyckeln används bara i den här sessionen.</div>
-    {#if aiKeyVisible}
+
+    <select class="sync-input ai-provider-select"
+      value={aiProvider}
+      onchange={(e) => onProviderChange((e.target as HTMLSelectElement).value)}>
+      {#each Object.entries(aiProviderLabels) as [val, label]}
+        <option value={val}>{label}</option>
+      {/each}
+    </select>
+    {#if aiApiKey}
+      <div class="ai-key-row">
+        <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
+        <button class="ai-key-btn" onclick={onToggleAiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
+        <button class="ai-key-btn" onclick={onClearAiConfig}>✕</button>
+      </div>
+      <div class="section-copy muted">Nyckeln används bara i den här sessionen.</div>
+      {#if aiKeyVisible}
+        <input type="password" class="sync-input" placeholder={aiKeyPlaceholders[aiProvider]}
+          value={aiApiKey}
+          onchange={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value.trim())} />
+      {/if}
+    {:else}
       <input type="password" class="sync-input" placeholder={aiKeyPlaceholders[aiProvider]}
-        value={aiApiKey}
         onchange={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value.trim())} />
+      <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel för att aktivera AI-planering</div>
     {/if}
-  {:else}
-    <input type="password" class="sync-input" placeholder={aiKeyPlaceholders[aiProvider]}
-      onchange={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value.trim())} />
-    <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel för att aktivera AI-planering</div>
-  {/if}
-  {#if aiProvider === 'custom'}
-    <input type="text" class="sync-input" placeholder="Bas-URL, t.ex. https://api.mistral.ai/v1"
-      value={aiBaseUrl}
-      onchange={(e) => onAiBaseUrlChange((e.target as HTMLInputElement).value.trim())} />
-    <input type="text" class="sync-input" placeholder="Modell, t.ex. mistral-small-latest"
-      value={aiCustomModel}
-      onchange={(e) => onAiCustomModelChange((e.target as HTMLInputElement).value.trim())} />
+    {#if aiProvider === 'custom'}
+      <input type="text" class="sync-input" placeholder="Bas-URL, t.ex. https://api.mistral.ai/v1"
+        value={aiBaseUrl}
+        onchange={(e) => onAiBaseUrlChange((e.target as HTMLInputElement).value.trim())} />
+      <input type="text" class="sync-input" placeholder="Modell, t.ex. mistral-small-latest"
+        value={aiCustomModel}
+        onchange={(e) => onAiCustomModelChange((e.target as HTMLInputElement).value.trim())} />
+    {/if}
   {/if}
 </div>
 
+<style>
+  .beta-tag {
+    font-size: 9px;
+    background: var(--accent);
+    color: var(--bg);
+    padding: 1px 4px;
+    border-radius: 4px;
+    vertical-align: middle;
+    font-weight: 800;
+    margin-left: 4px;
+    opacity: 0.8;
+  }
+</style>
+
 <div class="section-card">
   <div class="section-card-head">
-    <strong>Tidsdata & tillförlitlighet</strong>
-    <button class="quickstart" onclick={() => reliabilityOpen = !reliabilityOpen}>{reliabilityOpen ? '△' : '▽'}</button>
+    <strong>Tidsdata & tillförlitlighet <span class="beta-tag">BETA</span></strong>
+    <button class="quickstart" onclick={() => reliabilityOpen = !reliabilityOpen}>{reliabilityOpen ? '▲' : '▼'}</button>
   </div>
-  <div class="section-copy muted">Bekräftade pass förbättrar rekommendationerna för hur långa framtida block brukar bli.</div>
+  
   {#if reliabilityOpen}
+    <div class="section-copy muted" style="margin-bottom:8px;">
+      Används på egen risk. Den här funktionen räknar ut hur mycket tid dina sessioner brukar ta baserat på historik. 
+      Bekräftade pass förbättrar rekommendationerna för hur långa framtida block brukar bli.
+    </div>
     <div class="section-copy">Bekräftade pass: <strong>{confirmedActualCount}</strong> · Obekräftade idag: <strong>{pendingActualCount}</strong></div>
     <div style="margin-top:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px;">

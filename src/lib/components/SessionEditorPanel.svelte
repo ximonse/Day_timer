@@ -243,13 +243,15 @@
       {#if hasAiKey}
         <div class="ai-panel">
           <button class="ai-panel-toggle" onclick={onToggleAiPanel}>
-            {aiPanelOpen ? '▲' : '▼'} Planera med AI
+            {aiPanelOpen ? '▲' : '▼'} Planera med AI <span class="beta-tag">BETA</span>
           </button>
           {#if aiPanelOpen}
+            <div class="feedback" style="margin-bottom:8px; opacity:0.8;">
+              Används på egen risk. Din API-nyckel används enbart för att skicka instruktioner direkt till AI-leverantören.
+            </div>
             <textarea class="ai-input" placeholder="Beskriv vad du vill planera..."
               value={aiInput}
-              oninput={(e) => onAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
-            <div class="ai-mode-row">
+              oninput={(e) => onAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>            <div class="ai-mode-row">
               <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
               <button class="ai-mode-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
               <span class="ai-mode-hint">
