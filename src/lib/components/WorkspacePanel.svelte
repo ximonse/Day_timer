@@ -20,6 +20,8 @@
     reliabilityPercent,
     reliabilityLevel,
     reliabilityHint,
+    timeDataOpen,
+    onToggleTimeData,
     onLogout,
     onSyncLoad,
     onSyncSave,
@@ -54,6 +56,8 @@
     reliabilityPercent: number;
     reliabilityLevel: string;
     reliabilityHint: string;
+    timeDataOpen: boolean;
+    onToggleTimeData: () => void;
     onLogout: () => void;
     onSyncLoad: () => void;
     onSyncSave: () => void;
@@ -69,28 +73,17 @@
     onAiCustomModelChange: (value: string) => void;
   } = $props();
 
-  let reliabilityOpen = $state(false);
   let aiConfigOpen = $state(false);
 </script>
 
-<div class="section-card">
-  <div class="section-card-head">
-    <strong>Översikt</strong>
+<div class="ai-key-section" style="margin-bottom:20px;">
+  <div class="field-label">
+    Hjälpläge
+    <button class="quickstart" onclick={onToggleHelpHints} style="margin-left:auto; width:auto; padding: 2px 8px; font-size:11px;">
+      {showHelpHints ? 'Dölj hjälp' : 'Visa hjälp'} · Alt+i
+    </button>
   </div>
-  <div class="section-copy"><strong>Konto & AI</strong> samlar sådant som hör till konto, delad drift och AI-stöd snarare än till ett enskilt block.</div>
-  <div class="section-chip-row">
-    <span class="section-chip" class:on={syncReady}>{syncReady ? 'Synk aktiv' : 'Bara lokalt'}</span>
-    <span class="section-chip" class:on={aiReady}>{aiReady ? 'AI redo' : 'AI av'}</span>
-    <span class="section-chip">{reliabilityLevel} tillförlitlighet</span>
-  </div>
-</div>
-
-<div class="section-card">
-  <div class="section-card-head">
-    <strong>Hjälpläge</strong>
-    <button class="quickstart" onclick={onToggleHelpHints}>{showHelpHints ? 'Dölj hjälp' : 'Visa hjälp'} · Alt+i</button>
-  </div>
-  <div class="section-copy">Global hjälp visar förklarande texter där de finns. Lokala <code>i</code>-knappar fungerar alltid även när hjälpläget är av.</div>
+  <div class="section-copy muted" style="margin-top:4px;">Global hjälp visar förklarande texter. Lokala <code>i</code>-knappar fungerar alltid.</div>
 </div>
 
 <div class="login-form">
@@ -148,66 +141,60 @@
       <div class="ai-key-row">
         <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
         <button class="ai-key-btn" onclick={onToggleAiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
-        <button class="ai-key-btn" onclick={onClearAiConfig}>✕</button>
+        <button class="ai-key-btn" onclick={onClearAiConfig}>Rensa</button>
       </div>
-      <div class="section-copy muted">Nyckeln används bara i den här sessionen.</div>
       {#if aiKeyVisible}
-        <input type="password" class="sync-input" placeholder={aiKeyPlaceholders[aiProvider]}
+        <input type="password" class="sync-input" 
           value={aiApiKey}
-          onchange={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value.trim())} />
+          oninput={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value)}
+          placeholder={aiKeyPlaceholders[aiProvider]} />
       {/if}
     {:else}
-      <input type="password" class="sync-input" placeholder={aiKeyPlaceholders[aiProvider]}
-        onchange={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value.trim())} />
-      <div class="sync-status" style="color:var(--muted)">Klistra in din API-nyckel för att aktivera AI-planering</div>
+      <input type="password" class="sync-input" 
+        value={aiApiKey}
+        oninput={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value)}
+        placeholder={aiKeyPlaceholders[aiProvider]} />
     {/if}
+
     {#if aiProvider === 'custom'}
-      <input type="text" class="sync-input" placeholder="Bas-URL, t.ex. https://api.mistral.ai/v1"
+      <div class="field-label" style="margin-top:12px;">Base URL</div>
+      <input type="text" class="sync-input" 
         value={aiBaseUrl}
-        onchange={(e) => onAiBaseUrlChange((e.target as HTMLInputElement).value.trim())} />
-      <input type="text" class="sync-input" placeholder="Modell, t.ex. mistral-small-latest"
+        oninput={(e) => onAiBaseUrlChange((e.target as HTMLInputElement).value)}
+        placeholder="https://api.openai.com/v1" />
+      <div class="field-label" style="margin-top:8px;">Model name</div>
+      <input type="text" class="sync-input" 
         value={aiCustomModel}
-        onchange={(e) => onAiCustomModelChange((e.target as HTMLInputElement).value.trim())} />
+        oninput={(e) => onAiCustomModelChange((e.target as HTMLInputElement).value)}
+        placeholder="gpt-4o" />
     {/if}
   {/if}
 </div>
 
-<style>
-  .beta-tag {
-    font-size: 9px;
-    background: var(--accent);
-    color: var(--bg);
-    padding: 1px 4px;
-    border-radius: 4px;
-    vertical-align: middle;
-    font-weight: 800;
-    margin-left: 4px;
-    opacity: 0.8;
-  }
-</style>
-
-<div class="section-card">
-  <div class="section-card-head">
-    <strong>Tidsdata & tillförlitlighet <span class="beta-tag">BETA</span></strong>
-    <button class="quickstart" onclick={() => reliabilityOpen = !reliabilityOpen}>{reliabilityOpen ? '▲' : '▼'}</button>
+<div class="ai-key-section" style="margin-top:16px;">
+  <div class="field-label">
+    Tidsdata & Lärande <span class="beta-tag">BETA</span>
+    <button class="ai-panel-toggle" onclick={onToggleTimeData} style="margin-left:4px;">
+      {timeDataOpen ? '▲' : '▼'}
+    </button>
   </div>
   
-  {#if reliabilityOpen}
+  {#if timeDataOpen}
     <div class="section-copy muted" style="margin-bottom:8px;">
-      Den här funktionen är under utveckling och tanken är att den ska hjälpa med tidsuppskattningen av framtida pass. 
-      Om man ändrar och bekräftar sina pass tidsåtgång så kommer den över tid ge tidsförslag när du skriver samma pass eller aktivitet i planeringen. 
-      Observera att funktionen fortfarande slipas på.
+      Baserat på {confirmedActualCount} bekräftade pass.
     </div>
-    <div class="section-copy">Bekräftade pass: <strong>{confirmedActualCount}</strong> · Obekräftade idag: <strong>{pendingActualCount}</strong></div>
-    <div style="margin-top:8px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px;">
-        <span>Tillförlitlighet</span>
-        <span><strong>{reliabilityLevel}</strong> ({reliabilityPercent}%)</span>
+    <div class="reliability-box">
+      <div class="rel-head">
+        <span>Tillförlitlighet: <strong>{reliabilityLevel}</strong></span>
+        <span class="rel-percent">{reliabilityPercent}%</span>
       </div>
-      <div style="height:10px;border-radius:999px;border:1px solid var(--border);background:var(--pill);overflow:hidden;">
-        <div style="height:100%;width:{reliabilityPercent}%;background:color-mix(in srgb, var(--pill-on) 75%, var(--accent) 25%);"></div>
-      </div>
-      <div class="section-copy" style="margin-top:6px;">{reliabilityHint}</div>
+      <div class="rel-bar"><div class="rel-progress" style="width: {reliabilityPercent}%"></div></div>
+      <div class="rel-hint">{reliabilityHint}</div>
     </div>
+    {#if pendingActualCount > 0}
+      <div class="section-copy muted" style="margin-top:8px;">
+        Du har <strong>{pendingActualCount}</strong> obekräftade pass. Gå till Planera för att granska dem.
+      </div>
+    {/if}
   {/if}
 </div>

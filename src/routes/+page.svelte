@@ -545,9 +545,9 @@
 
   const sectionCopy = $derived.by(() => {
     if (s.activeSection === 'now') return 'Kör det som händer nu utan planeringsbrus.';
-    if (s.activeSection === 'plan') return 'Planera på vald dag och håll själva visningsläget lugnt.';
+    if (s.activeSection === 'plan') return '';
     if (s.activeSection === 'library') return 'Spara och återanvänd mallar utan att blanda ihop dem med dagens plan.';
-    return 'Hantera konto, synk, hjälpläge och AI-stöd.';
+    return 'Hantera konto, synk och AI-stöd.';
   });
   const sortedFlowOptions = $derived.by(() =>
     [...s.flows].sort((a, b) => {
@@ -961,6 +961,8 @@
   }
 
   let warningsOpen = $state(false);
+  let workspaceTimeDataOpen = $state(false);
+  let actualHistoryOpen = $state(false);
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
@@ -3328,35 +3330,15 @@ Regler:
             onSaveFlow={saveFlow}
             onStartSessionShare={() => startSharing('selected-session-snapshot')}
             onStartDayShare={() => startSharing('selected-day-snapshot')}
+            actualHistoryOpen={actualHistoryOpen}
+            onToggleActualHistory={() => actualHistoryOpen = !actualHistoryOpen}
+            currentSubjectCategory={currentSubjectCategory}
+            suggestedDuration={suggestedDuration}
+            pendingActualEntries={pendingActualEntries}
+            onConfirmActualEntry={confirmActualEntry}
+            onDeleteActualEntry={deleteActualEntry}
+            onExportActualHistory={exportActualHistory}
           />
-          {#if s.activeSection === 'plan' && !isViewMode}
-            <div class="agenda-section-note" style="margin-top:8px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-                <strong>Faktisk tid & lärande</strong>
-                <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={exportActualHistory}>Exportera historik (JSONL)</button>
-              </div>
-              <div class="feedback" style="margin-top:8px;">
-                Kategori: <strong>{currentSubjectCategory}</strong>
-                {#if suggestedDuration}
-                  · Föreslagen tid: <strong>{suggestedDuration.minutes} min</strong> ({suggestedDuration.sampleSize} träffar)
-                {:else}
-                  · Ingen historik ännu för rekommendation
-                {/if}
-              </div>
-              {#if pendingActualEntries.length > 0}
-                <div class="feedback" style="margin-top:8px;">Obekräftade pass idag (autosparas vid nytt dygn):</div>
-                {#each pendingActualEntries as entry, pi (`${entry.id}-${pi}`)}
-                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;">
-                    <span>{fmtHM(entry.startMin)} {entry.title} · {entry.durationActualMin} min</span>
-                    <div style="display:flex;gap:6px;align-items:center;">
-                      <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={() => confirmActualEntry(entry.id)}>Bekräfta</button>
-                      <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={() => deleteActualEntry(entry.id)}>Ta bort</button>
-                    </div>
-                  </div>
-                {/each}
-              {/if}
-            </div>
-          {/if}
         {:else if s.activeSection === 'library'}
           <LibraryPanel
             savedFlowMsg={savedFlowMsg}
@@ -3392,6 +3374,8 @@ Regler:
             reliabilityPercent={reliabilityPercent}
             reliabilityLevel={reliabilityLevel}
             reliabilityHint={reliabilityHint}
+            timeDataOpen={workspaceTimeDataOpen}
+            onToggleTimeData={() => workspaceTimeDataOpen = !workspaceTimeDataOpen}
             onLogout={logout}
             onSyncLoad={syncLoad}
             onSyncSave={syncSave}
