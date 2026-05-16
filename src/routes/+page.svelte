@@ -2154,6 +2154,21 @@
     notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
   }
 
+  function handleCommentKeyDown(e: KeyboardEvent) {
+    const node = e.currentTarget as HTMLTextAreaElement | null;
+    if (!node || e.key !== 'Tab') return;
+    e.preventDefault();
+    const start = node.selectionStart ?? 0;
+    const end = node.selectionEnd ?? start;
+    const insert = '\n- ';
+    const next = node.value.slice(0, start) + insert + node.value.slice(end);
+    updateSidebarExtraInfo(next);
+    requestAnimationFrame(() => {
+      node.focus();
+      node.setSelectionRange(start + insert.length, start + insert.length);
+    });
+  }
+
   function aiPayload(extra: Record<string, unknown>) {
     return {
       provider: aiConfig.provider,
@@ -2938,6 +2953,7 @@ Regler:
           placeholder="Skriv en kommentar…"
           value={s.extraInfo}
           oninput={(e) => updateSidebarExtraInfo((e.target as HTMLTextAreaElement).value)}
+          onkeydown={handleCommentKeyDown}
         ></textarea>
       {/if}
       {#if !isViewMode}
