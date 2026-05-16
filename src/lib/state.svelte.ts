@@ -46,6 +46,13 @@ export interface ActualTimeEntry {
   autoFinalized: boolean;
 }
 
+export interface EditorDraft {
+  dayTitle: string;
+  blocks: Block[];
+  extraInfo: string;
+  startMin: number;
+}
+
 export interface AppState {
   palette: Palette;
   dark: boolean;
@@ -73,20 +80,35 @@ export interface AppState {
   agendaDate: string;
   agendaText2: string;
   agendaDate2: string;
-  agendaView: 'school' | 'school+private' | 'private' | 'private+school';
+  agendaView: 'school' | 'private';
   agendaMeta: Record<string, AgendaFlowMeta>;
+  isLocked: boolean;
   actualTimeLog: ActualTimeEntry[];
   showControls: boolean;
   showHelpHints: boolean;
   flows: Flow[];
   activeSection: AppSection;
+  nowDraft: EditorDraft;
+  planDraft: EditorDraft;
 }
 
 export function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+function defaultDraft(startHour = 8): EditorDraft {
+  return {
+    dayTitle: '',
+    blocks: [{ id: uid(), title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }],
+    extraInfo: '',
+    startMin: startHour * 60,
+  };
+}
+
 function defaultState(): AppState {
+  const now = new Date();
+  const currentMin = now.getHours() * 60 + Math.floor(now.getMinutes() / 5) * 5;
+  
   return {
     palette: 'sansad',
     dark: false,
@@ -116,11 +138,14 @@ function defaultState(): AppState {
     agendaDate2: '',
     agendaView: 'school',
     agendaMeta: {},
+    isLocked: false,
     actualTimeLog: [],
     showControls: true,
     showHelpHints: false,
     flows: [],
     activeSection: 'now',
+    nowDraft: defaultDraft(now.getHours()),
+    planDraft: defaultDraft(8),
   };
 }
 

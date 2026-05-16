@@ -1,9 +1,11 @@
 <script lang="ts">
+  import AgendaPanel from '$lib/components/AgendaPanel.svelte';
+  
   import { onMount, untrack } from 'svelte';
-  import { appState, uid, type ActualTimeEntry, type AgendaFlowMeta, type AppSection, type Flow } from '$lib/state.svelte.js';
+  import { appState, uid, type ActualTimeEntry, type AgendaFlowMeta, type AppSection, type Block, type Flow } from '$lib/state.svelte.js';
   import { PALETTES, PALETTE_COLORS, PALETTE_LABELS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
-  import { localDateISO } from '$lib/date.js';
+  import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
@@ -14,6 +16,8 @@
   import LibraryPanel from '$lib/components/LibraryPanel.svelte';
   import WorkspacePanel from '$lib/components/WorkspacePanel.svelte';
   import AgendaImportPanel from '$lib/components/AgendaImportPanel.svelte';
+  import Clock from '$lib/components/Clock.svelte';
+  import Sidebar from '$lib/components/Sidebar.svelte';
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
@@ -24,12 +28,6 @@
     }
     document.addEventListener('click', handle, true);
     return { destroy() { document.removeEventListener('click', handle, true); } };
-  }
-
-  function focusOnMount(node: HTMLInputElement) {
-    node.focus();
-    node.select();
-    return {};
   }
 
   let svgEl = $state<SVGSVGElement>(null!);
@@ -70,9 +68,7 @@
     | { kind: 'template'; templateId: string; title: string }
     | { kind: 'agenda'; date: string | null; title: string; startMin: number };
   let sessionSource = $state<SessionSource>({ kind: 'unscheduled' });
-  let agendaDragMoved = false;
-  let editingBlockId = $state<string | null>(null);
-  let editingBlockField = $state<'name' | 'min' | 'note' | 'extra' | null>(null);
+  let agendaDragMoved = $state(false);
   let agendaEl = $state<HTMLElement>(null!);
   let timelineEl = $state<HTMLElement>(null!);
   let agendaDraft = $state('');
@@ -444,12 +440,12 @@
     return fallback ? { ...fallback, dayIdx } : null;
   }
 
-  function schoolPrimary() { return s.agendaView === 'school' || s.agendaView === 'school+private'; }
+  function schoolPrimary() { return s.agendaView === 'school'; }
   function activeAgendaText(): string { return schoolPrimary() ? s.agendaText : s.agendaText2; }
   function activeAgendaDate(): string { return schoolPrimary() ? s.agendaDate : s.agendaDate2; }
   function setActiveAgendaText(v: string) { if (schoolPrimary()) s.agendaText = v; else s.agendaText2 = v; }
   function setActiveAgendaDate(v: string) { if (schoolPrimary()) s.agendaDate = v; else s.agendaDate2 = v; }
-  function hasOverlay() { return s.agendaView === 'school+private' || s.agendaView === 'private+school'; }
+  function hasOverlay() { return false; }
 
   const agendaDays = $derived.by<AgendaDay[] | null>(() => {
     const stored = activeAgendaText();
@@ -586,21 +582,6 @@
     hasContent: boolean;
   };
 
-  function parseIsoDate(iso: string) {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  }
-
-  function monthKey(date: Date) {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-  }
-
-  function shiftMonth(monthIso: string, delta: number) {
-    const [year, month] = monthIso.split('-').map(Number);
-    const date = new Date(year, month - 1 + delta, 1);
-    return monthKey(date);
-  }
-
   const agendaDensityByDay = $derived.by(() => {
     const map = new Map<string, { count: number; minutes: number }>();
     for (const day of agendaDays ?? []) {
@@ -657,9 +638,9 @@
   });
 
   const overlayItems = $derived.by(() => {
-    if (s.activeSection !== 'plan') return [];
-    if (!showAgendaOverlay) return [];
-    if (!overlayDays) return [];
+   if (!showAgendaOverlay) return [];
+   if (!overlayDays) return [];
+
     const activeDate = activeAgendaDate();
     const today = localDateISO();
     const target = activeDate || today;
@@ -678,15 +659,6 @@
       return { flow, startMin, totalMin };
     });
   });
-
-  function fmtAgendaDate(iso: string | null): string {
-    if (!iso) return 'Odaterat';
-    const [y, m, d] = iso.split('-').map(Number);
-    const dt = new Date(y, m - 1, d);
-    const days = ['Sön','Mån','Tis','Ons','Tor','Fre','Lör'];
-    const months = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
-    return `${days[dt.getDay()]} ${d} ${months[m - 1]}`;
-  }
 
   function describeFlow(flow: Flow): string {
     const partCount = flow.parts.length;
@@ -714,17 +686,51 @@
   }
 
   function setActiveSection(section: AppSection) {
+    const oldSection = s.activeSection;
+    if (oldSection === section) return;
+
+    // Save current state to the appropriate draft
+    if (oldSection === 'now') {
+      s.nowDraft = {
+        dayTitle: s.dayTitle,
+        blocks: cloneBlocks(s.blocks),
+        extraInfo: s.extraInfo,
+        startMin: s.startMin
+      };
+    } else if (oldSection === 'plan') {
+      s.planDraft = {
+        dayTitle: s.dayTitle,
+        blocks: cloneBlocks(s.blocks),
+        extraInfo: s.extraInfo,
+        startMin: s.startMin
+      };
+    }
+
     s.activeSection = section;
-    s.showControls = true;
-    miniMenuOpen = true;
-    if (section === 'plan') {
+
+    // Load state from the new section's draft
+    if (section === 'now') {
+      s.dayTitle = s.nowDraft.dayTitle;
+      s.blocks = cloneBlocks(s.nowDraft.blocks);
+      s.extraInfo = s.nowDraft.extraInfo;
+      s.startMin = s.nowDraft.startMin;
+    } else if (section === 'plan') {
+      s.dayTitle = s.planDraft.dayTitle;
+      s.blocks = cloneBlocks(s.planDraft.blocks);
+      s.extraInfo = s.planDraft.extraInfo;
+      s.startMin = s.planDraft.startMin;
       s.agendaOpen = true;
       agendaInputOpen = true;
     }
+
+    s.showControls = true;
+    miniMenuOpen = true;
     if (typeof window !== 'undefined' && window.innerWidth <= 800) {
       mobileTab = section;
       syncBodyClasses();
     }
+    updateTimeFeedback();
+    renderEndControl();
     appState.persist();
   }
 
@@ -815,14 +821,6 @@
   function markPlanSaved() {
     if (!activeAgendaFlowRef) return;
     planLastSavedAt = Date.now();
-  }
-
-  function monthLabel(monthIso: string): string {
-    const [year, month] = monthIso.split('-').map(Number);
-    return new Date(year, month - 1, 1).toLocaleDateString('sv-SE', {
-      month: 'long',
-      year: 'numeric'
-    });
   }
 
   function selectAgendaDate(date: string) {
@@ -975,287 +973,6 @@
     if (locked) document.body.classList.add('page-locked');
   }
 
-  function renderClock() {
-    if (!svgEl) return;
-    while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
-
-    const ct = clockTheme(s.palette, s.dark);
-    const { bg, dimSuffix, mark: markColor, centerMain, centerMuted, handDark, handLight, chip: chipFill } = ct;
-    const cs = ct.colors;
-    const tot = totalMin();
-    const sa = startAngle();
-    const elapsed = elapsedMin();
-    const nowMin = nowMinutes();
-    const ri = s.hollow ? Ri : 0;
-    const labelDefer: { lx: number; ly: number; fillText: string; text: string }[] = [];
-
-    const use12hAgenda = s.clockSpan === 720 && agendaItems.length > 0;
-
-    if (use12hAgenda) {
-      // 12h mode: render agenda sessions at absolute clock positions
-      const periodStart = Math.floor(nowMin / 720) * 720;
-      agendaItems.forEach((item, i) => {
-        const itemEnd = item.startMin + item.totalMin;
-        if (itemEnd <= periodStart || item.startMin >= periodStart + 720) return;
-        const clampStart = Math.max(item.startMin, periodStart);
-        const clampEnd = Math.min(itemEnd, periodStart + 720);
-        const a0 = ((clampStart - periodStart) / 720) * 360;
-        const a1 = ((clampEnd - periodStart) / 720) * 360;
-        if (a1 - a0 < 0.1) return;
-        const baseColor = cs[i % cs.length];
-        const isPast = nowMin >= itemEnd;
-        const isActive = nowMin >= item.startMin && nowMin < itemEnd;
-        if (isActive) {
-          const splitAngle = ((nowMin - periodStart) / 720) * 360;
-          if (splitAngle > a0) {
-            const pastP = document.createElementNS(NS, 'path');
-            pastP.setAttribute('d', arcPath(a0, Math.min(splitAngle, a1), R, ri));
-            pastP.setAttribute('fill', baseColor + dimSuffix);
-            svgEl.appendChild(pastP);
-          }
-          if (splitAngle < a1) {
-            const liveP = document.createElementNS(NS, 'path');
-            liveP.setAttribute('d', arcPath(Math.max(splitAngle, a0), a1, R, ri));
-            liveP.setAttribute('fill', baseColor);
-            svgEl.appendChild(liveP);
-          }
-        } else {
-          const path = document.createElementNS(NS, 'path');
-          path.setAttribute('d', arcPath(a0, a1, R, ri));
-          path.setAttribute('fill', isPast ? baseColor + dimSuffix : baseColor);
-          svgEl.appendChild(path);
-        }
-        // transparent hit-area for click-to-load
-        const hit = document.createElementNS(NS, 'path');
-        hit.setAttribute('d', arcPath(a0, a1, R, ri));
-        hit.setAttribute('fill', 'transparent');
-        hit.style.cursor = 'pointer';
-        hit.addEventListener('click', () => loadAgendaFlow(item.flow, item.startMin));
-        svgEl.appendChild(hit);
-
-        const midAngle = (a0 + a1) / 2;
-        const [lx, ly] = s.textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R * 0.65);
-        const fillText = labelColorFor(baseColor, i, isPast, s.palette, s.dark);
-        const timeLabel = fmtHM(item.startMin);
-        const nameLabel = truncate(item.flow.title, 10);
-        labelDefer.push({ lx, ly, fillText, text: `${nameLabel} ${timeLabel}` });
-      });
-    } else {
-      // 1h/2h mode: render s.blocks as relative sectors
-      let cumMin = 0;
-      s.blocks.forEach((b, i) => {
-        const segStartMin = cumMin;
-        const segEndMin = cumMin + b.minutes;
-        const a0 = sa + (segStartMin / s.clockSpan) * 360;
-        const a1 = sa + (segEndMin / s.clockSpan) * 360;
-        const baseColor = cs[i % cs.length];
-        const isPast = elapsed >= segEndMin;
-        const isActive = elapsed >= segStartMin && elapsed < segEndMin;
-        if (isActive) {
-          const splitAngle = sa + (elapsed / s.clockSpan) * 360;
-          const pastP = document.createElementNS(NS, 'path');
-          pastP.setAttribute('d', arcPath(a0, splitAngle, R, ri));
-          pastP.setAttribute('fill', baseColor + dimSuffix);
-          svgEl.appendChild(pastP);
-          const liveP = document.createElementNS(NS, 'path');
-          liveP.setAttribute('d', arcPath(splitAngle, a1, R, ri));
-          liveP.setAttribute('fill', baseColor);
-          svgEl.appendChild(liveP);
-        } else {
-          const path = document.createElementNS(NS, 'path');
-          path.setAttribute('d', arcPath(a0, a1, R, ri));
-          path.setAttribute('fill', isPast ? baseColor + dimSuffix : baseColor);
-          svgEl.appendChild(path);
-        }
-        if (i > 0) {
-          const [x0, y0] = polar(a0, ri || 0);
-          const [x1, y1] = polar(a0, R);
-          const hit = document.createElementNS(NS, 'line');
-          hit.setAttribute('x1', String(x0)); hit.setAttribute('y1', String(y0));
-          hit.setAttribute('x2', String(x1)); hit.setAttribute('y2', String(y1));
-          hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', '32');
-          hit.setAttribute('pointer-events', 'stroke'); hit.style.cursor = 'grab';
-          (hit as any)._boundaryIdx = i - 1;
-          hit.addEventListener('pointerdown', startBoundaryDrag);
-          svgEl.appendChild(hit);
-        }
-        const midAngle = (a0 + a1) / 2;
-        const [lx, ly] = s.textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R / 2);
-        const fillText = labelColorFor(baseColor, i, isPast, s.palette, s.dark);
-        let labelText = truncate(b.title, 14);
-        if (s.segMinutesMode === 'planned') { labelText += ` ${b.minutes}m`; }
-        else if (s.segMinutesMode === 'remaining') {
-          const mins = isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEndMin - elapsed)) : b.minutes;
-          labelText += ` ${mins}m kvar`;
-        }
-        labelDefer.push({ lx, ly, fillText, text: labelText });
-        cumMin = segEndMin;
-      });
-    }
-
-    if (s.hollow) {
-      const c = document.createElementNS(NS, 'circle');
-      c.setAttribute('cx', String(CX)); c.setAttribute('cy', String(CY));
-      c.setAttribute('r', String(Ri - 3)); c.setAttribute('fill', bg);
-      svgEl.appendChild(c);
-      if (s.showCenterEnd) {
-        if (s.clockSpan === 720) {
-          const now = new Date();
-          const dayNames = ['Söndag','Måndag','Tisdag','Onsdag','Torsdag','Fredag','Lördag'];
-          const monthNames = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
-          const t1 = document.createElementNS(NS, 'text');
-          t1.setAttribute('x', String(CX)); t1.setAttribute('y', String(CY - 8));
-          t1.setAttribute('text-anchor', 'middle'); t1.setAttribute('font-size', '9');
-          t1.setAttribute('fill', centerMuted);
-          t1.textContent = dayNames[now.getDay()];
-          svgEl.appendChild(t1);
-          const t2 = document.createElementNS(NS, 'text');
-          t2.setAttribute('x', String(CX)); t2.setAttribute('y', String(CY + 11));
-          t2.setAttribute('text-anchor', 'middle'); t2.setAttribute('font-size', '17');
-          t2.setAttribute('font-weight', '200'); t2.setAttribute('fill', centerMain);
-          t2.textContent = `${now.getDate()} ${monthNames[now.getMonth()]}`;
-          svgEl.appendChild(t2);
-        } else {
-          const t1 = document.createElementNS(NS, 'text');
-          t1.setAttribute('x', String(CX)); t1.setAttribute('y', String(CY - 8));
-          t1.setAttribute('text-anchor', 'middle'); t1.setAttribute('font-size', '11');
-          t1.setAttribute('fill', centerMuted); t1.textContent = 'slutar';
-          svgEl.appendChild(t1);
-          const t2 = document.createElementNS(NS, 'text');
-          t2.setAttribute('x', String(CX)); t2.setAttribute('y', String(CY + 12));
-          t2.setAttribute('text-anchor', 'middle'); t2.setAttribute('font-size', '20');
-          t2.setAttribute('font-weight', '200'); t2.setAttribute('letter-spacing', '-0.5');
-          t2.setAttribute('font-variant-numeric', 'tabular-nums'); t2.setAttribute('fill', centerMain);
-          t2.textContent = fmtHM(s.startMin + tot);
-          svgEl.appendChild(t2);
-        }
-      }
-    }
-
-    if (!use12hAgenda) {
-      const [sx0, sy0] = polar(sa, ri || 0);
-      const [sx1, sy1] = polar(sa, R);
-      const startHit = document.createElementNS(NS, 'line');
-      startHit.setAttribute('x1', String(sx0)); startHit.setAttribute('y1', String(sy0));
-      startHit.setAttribute('x2', String(sx1)); startHit.setAttribute('y2', String(sy1));
-      startHit.setAttribute('stroke', 'transparent'); startHit.setAttribute('stroke-width', '36');
-      startHit.setAttribute('pointer-events', 'stroke'); startHit.style.cursor = 'grab';
-      startHit.addEventListener('pointerdown', startStartDrag);
-      svgEl.appendChild(startHit);
-      const lessonSpan = (tot / s.clockSpan) * 360;
-      if (lessonSpan < 360 - 2) {
-        const aEnd = sa + lessonSpan;
-        const [ex0, ey0] = polar(aEnd, ri || 0);
-        const [ex1, ey1] = polar(aEnd, R);
-        const ehit = document.createElementNS(NS, 'line');
-        ehit.setAttribute('x1', String(ex0)); ehit.setAttribute('y1', String(ey0));
-        ehit.setAttribute('x2', String(ex1)); ehit.setAttribute('y2', String(ey1));
-        ehit.setAttribute('stroke', 'transparent'); ehit.setAttribute('stroke-width', '36');
-        ehit.setAttribute('pointer-events', 'stroke'); ehit.style.cursor = 'grab';
-        ehit.addEventListener('pointerdown', startEndDrag);
-        svgEl.appendChild(ehit);
-      }
-    }
-
-    const drawMark = (ang: number, len: number, w: number, op: number) => {
-      const [mx0, my0] = polar(ang, R + 1);
-      const [mx1, my1] = polar(ang, R - len);
-      const l = document.createElementNS(NS, 'line');
-      l.setAttribute('x1', String(mx0)); l.setAttribute('y1', String(my0));
-      l.setAttribute('x2', String(mx1)); l.setAttribute('y2', String(my1));
-      l.setAttribute('stroke', markColor); l.setAttribute('stroke-width', String(w));
-      l.setAttribute('stroke-linecap', 'round'); l.setAttribute('opacity', String(op));
-      l.setAttribute('pointer-events', 'none');
-      svgEl.appendChild(l);
-    };
-    {
-      const cs = s.clockSpan;
-      if (cs === 720) {
-        if (s.showMin)     { for (let m = 0; m < 720; m += 15)  drawMark((m/720)*360, 5,  1,   0.45); }
-        if (s.showFive)    { for (let m = 0; m < 720; m += 60)  drawMark((m/720)*360, 11, 1.8, 0.7);  }
-        if (s.showQuarter) { for (let m = 0; m < 720; m += 180) drawMark((m/720)*360, 18, 3,   0.95); }
-      } else {
-        const f = cs / 60;
-        if (s.showMin)     { for (let m = 0; m < cs; m += f)    drawMark((m/cs)*360, 5,  1,   0.45); }
-        if (s.showFive)    { for (let m = 0; m < cs; m += 5*f)  drawMark((m/cs)*360, 11, 1.8, 0.7);  }
-        if (s.showQuarter) { for (let m = 0; m < cs; m += 15*f) drawMark((m/cs)*360, 18, 3,   0.95); }
-      }
-    }
-
-    if (!use12hAgenda && s.clockSpan === 60) {
-      const drawSessionMarker = (ang: number) => {
-        const [hx0, hy0] = polar(ang, R + 6);
-        const [hx1, hy1] = polar(ang, R - 6);
-        const halo = document.createElementNS(NS, 'line');
-        halo.setAttribute('x1', String(hx0)); halo.setAttribute('y1', String(hy0));
-        halo.setAttribute('x2', String(hx1)); halo.setAttribute('y2', String(hy1));
-        halo.setAttribute('stroke', '#fff');
-        halo.setAttribute('stroke-width', '3.2');
-        halo.setAttribute('stroke-linecap', 'round');
-        halo.setAttribute('opacity', '0.38');
-        halo.setAttribute('pointer-events', 'none');
-        svgEl.appendChild(halo);
-
-        const mark = document.createElementNS(NS, 'line');
-        mark.setAttribute('x1', String(hx0)); mark.setAttribute('y1', String(hy0));
-        mark.setAttribute('x2', String(hx1)); mark.setAttribute('y2', String(hy1));
-        mark.setAttribute('stroke', markColor);
-        mark.setAttribute('stroke-width', '1.4');
-        mark.setAttribute('stroke-linecap', 'round');
-        mark.setAttribute('opacity', '0.95');
-        mark.setAttribute('pointer-events', 'none');
-        svgEl.appendChild(mark);
-      };
-      drawSessionMarker(sa);
-      drawSessionMarker(sa + (tot / 60) * 360);
-    }
-
-    {
-      const ang = (nowMin % s.clockSpan / s.clockSpan) * 360;
-      const innerR = 30, tipR = R + 2, baseWidth = 22;
-      const [tx, ty] = polar(ang, tipR);
-      const aRad = (ang - 90) * Math.PI / 180;
-      const dx = Math.cos(aRad), dy = Math.sin(aRad);
-      const px = -dy, py = dx;
-      const cxB = CX + dx * innerR, cyB = CY + dy * innerR;
-      const halfW = baseWidth / 2;
-      const bx1 = cxB + px * halfW, by1 = cyB + py * halfW;
-      const bx2 = cxB - px * halfW, by2 = cyB - py * halfW;
-      const nowInView = nowMin >= s.startMin && nowMin < s.startMin + s.clockSpan;
-      const spike = document.createElementNS(NS, 'polygon');
-      spike.setAttribute('points', `${tx},${ty} ${bx1},${by1} ${bx2},${by2}`);
-      spike.setAttribute('fill', handDark); spike.setAttribute('stroke', handLight);
-      spike.setAttribute('stroke-width', '1.5'); spike.setAttribute('stroke-linejoin', 'round');
-      spike.setAttribute('opacity', nowInView ? '1' : '0.1');
-      svgEl.appendChild(spike);
-    }
-
-    if (s.showSegLabels) {
-      labelDefer.forEach(({ lx, ly, fillText, text }) => {
-        const t = document.createElementNS(NS, 'text');
-        t.setAttribute('x', String(lx)); t.setAttribute('y', String(ly));
-        t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'middle');
-        t.setAttribute('font-size', s.textOutside ? '14' : '13');
-        t.setAttribute('font-weight', '600'); t.setAttribute('fill', fillText);
-        t.setAttribute('pointer-events', 'none');
-        t.textContent = text;
-        svgEl.appendChild(t);
-        try {
-          const bb = t.getBBox();
-          const padX = 6, padY = 1.5;
-          const chip = document.createElementNS(NS, 'rect');
-          chip.setAttribute('x', String(bb.x - padX)); chip.setAttribute('y', String(bb.y - padY));
-          chip.setAttribute('width', String(bb.width + padX * 2));
-          chip.setAttribute('height', String(bb.height + padY * 2));
-          chip.setAttribute('rx', '3'); chip.setAttribute('fill', chipFill);
-          chip.setAttribute('stroke', fillText); chip.setAttribute('stroke-width', '1');
-          chip.setAttribute('opacity', '0.95'); chip.setAttribute('pointer-events', 'none');
-          svgEl.insertBefore(chip, t);
-        } catch { /* getBBox may fail */ }
-      });
-    }
-  }
-
   // ── Drag ──
   type DragState =
     | { type: 'between'; i: number; leftMin: number; rightMin: number }
@@ -1264,6 +981,7 @@
   let drag: DragState | null = null;
 
   function pointerAngle(e: PointerEvent): number {
+    if (!svgEl) return 0;
     const rect = svgEl.getBoundingClientRect();
     const scale = rect.width / 360;
     const x = e.clientX - rect.left - CX * scale;
@@ -1273,25 +991,22 @@
     return ang;
   }
 
-  function startBoundaryDrag(e: Event) {
+  function startBoundaryDrag(pe: PointerEvent, i: number) {
     if (isViewMode || locked) return;
-    const pe = e as PointerEvent;
     pe.preventDefault();
-    const i = (pe.target as any)._boundaryIdx as number;
     drag = { type: 'between', i, leftMin: s.blocks[i].minutes, rightMin: s.blocks[i+1].minutes };
     window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag);
   }
-  function startEndDrag(e: Event) {
+  function startEndDrag(pe: PointerEvent) {
     if (isViewMode || locked) return;
-    (e as PointerEvent).preventDefault();
+    pe.preventDefault();
     drag = { type: 'end' };
     window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag);
   }
-  function startStartDrag(e: Event) {
+  function startStartDrag(pe: PointerEvent) {
     if (isViewMode || locked) return;
-    const pe = e as PointerEvent;
     pe.preventDefault();
     drag = { type: 'start', startMin0: s.startMin, endMin0: s.startMin + totalMin(), pointerAng0: pointerAngle(pe) };
     window.addEventListener('pointermove', onDrag);
@@ -1327,7 +1042,7 @@
       if (newTotal < minTotal) newTotal = minTotal;
       if (newTotal > s.clockSpan) newTotal = s.clockSpan;
       scaleMinutesTo(Math.round(newTotal));
-      renderEndControl(); renderClock(); return;
+      renderEndControl(); return;
     }
     if (drag.type === 'start') {
       let delta = ang - drag.pointerAng0;
@@ -1341,8 +1056,9 @@
       if (newTotal > s.clockSpan) { newTotal = s.clockSpan; newStart = drag.endMin0 - newTotal; }
       s.startMin = newStart;
       scaleMinutesTo(newTotal);
-    renderEndControl(); renderClock(); return;
-    }
+      renderEndControl(); return;
+      }
+
     const targetCumMin = (rel / 360) * s.clockSpan;
     let cumBefore = 0;
     for (let k = 0; k < drag.i; k++) cumBefore += s.blocks[k].minutes;
@@ -1351,10 +1067,11 @@
     newLeft = Math.max(2, Math.min(pair - 2, newLeft));
     s.blocks[drag.i].minutes = Math.round(newLeft);
     s.blocks[drag.i + 1].minutes = pair - Math.round(newLeft);
-    renderEndControl(); renderClock();
+    renderEndControl();
   }
 
-  function syncTimerToAgenda() {
+  function syncTimerToAgenda(forceUpdate = false) {
+    if (s.activeSection === 'plan' && !forceUpdate) return;
     const active = resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef);
     if (!active || !agendaDays) return;
     const { dayIdx, flowIdx } = active;
@@ -1410,7 +1127,7 @@
         const diff = end - s.startMin;
         if (diff < s.blocks.length * 2) return;
         scaleMinutesTo(diff);
-        renderClock(); updateTimeFeedback();
+        renderEndControl(); updateTimeFeedback();
         syncTimerToAgenda(); appState.persist();
         notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
       });
@@ -1422,7 +1139,7 @@
         const v = Number(inp.value);
         if (!v || v < s.blocks.length * 2) return;
         scaleMinutesTo(v);
-        renderClock(); updateTimeFeedback();
+        renderEndControl(); updateTimeFeedback();
         syncTimerToAgenda(); appState.persist();
         notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
       });
@@ -1500,7 +1217,6 @@
     }
     checkAutoLoad();
     trackActualForActiveAgendaItem();
-    renderClock();
     checkWarnings();
   }
 
@@ -1513,7 +1229,9 @@
     s.extraInfo = result.extraInfo;
     updateTimeFeedback();
     renderEndControl();
-    syncTimerToAgenda();
+    if (s.activeSection !== 'plan') {
+      syncTimerToAgenda();
+    }
     appState.persist();
     notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
   }
@@ -2123,188 +1841,7 @@
     appState.persist();
   }
 
-  function startBlockEdit(id: string, field: 'name' | 'min' | 'note') {
-    if (isViewMode) return;
-    editingBlockId = id;
-    editingBlockField = field;
-  }
-
-  function startExtraEdit() {
-    if (isViewMode) return;
-    editingBlockId = null;
-    editingBlockField = 'extra';
-  }
-
-  function handleSidebarNameKeydown(e: KeyboardEvent, b: Block) {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      const input = e.target as HTMLInputElement;
-      parseAndCommitSidebarName(b, input.value, false);
-      return;
-    }
-
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const input = e.target as HTMLInputElement;
-      const val = input.value.trim();
-      if (val) {
-        b.title = val;
-        editingBlockField = 'note';
-      } else {
-        // Delete block if empty title on Tab
-        s.blocks = s.blocks.filter(x => x.id !== b.id);
-        if (s.blocks.length === 0) {
-          s.blocks = [{ id: uid(), title: '', minutes: 10, note: '', warning: true, pinned: false }];
-          editingBlockId = s.blocks[0].id;
-          editingBlockField = 'name';
-        } else {
-          editingBlockId = null;
-          editingBlockField = null;
-        }
-        commitBlockEdit();
-      }
-      return;
-    }
-
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const input = e.target as HTMLInputElement;
-      parseAndCommitSidebarName(b, input.value, true);
-      return;
-    }
-
-    if (e.key === '&') {
-      e.preventDefault();
-      const input = e.target as HTMLInputElement;
-      b.title = input.value.trim();
-      commitBlockEdit();
-      startExtraEdit();
-      return;
-    }
-  }
-
-  function handleSidebarNameBlur(b: Block, value: string) {
-    if (editingBlockId === b.id && editingBlockField === 'name') {
-      parseAndCommitSidebarName(b, value, false);
-    }
-  }
-
-  function handleSidebarNoteKeydown(e: KeyboardEvent, b: Block) {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      const input = e.target as HTMLTextAreaElement;
-      b.note = input.value.trim();
-      commitBlockEdit();
-      return;
-    }
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const input = e.target as HTMLTextAreaElement;
-      const start = input.selectionStart;
-      const end = input.selectionEnd;
-      input.value = input.value.substring(0, start) + "\n" + input.value.substring(end);
-      input.selectionStart = input.selectionEnd = start + 1;
-      return;
-    }
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const input = e.target as HTMLTextAreaElement;
-      b.note = input.value.trim();
-      commitBlockEdit();
-      addBlockAfter(b.id);
-      return;
-    }
-    if (e.key === '&') {
-      e.preventDefault();
-      const input = e.target as HTMLTextAreaElement;
-      b.note = input.value.trim();
-      commitBlockEdit();
-      startExtraEdit();
-      return;
-    }
-  }
-
-  function handleSidebarNoteBlur(b: Block, value: string) {
-    if (editingBlockId === b.id && editingBlockField === 'note') {
-      b.note = value.trim();
-      commitBlockEdit();
-    }
-  }
-
-  function handleSidebarExtraKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      const input = e.target as HTMLTextAreaElement;
-      s.extraInfo = input.value.trim();
-      commitBlockEdit();
-      return;
-    }
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const input = e.target as HTMLTextAreaElement;
-      s.extraInfo = input.value.trim();
-      commitBlockEdit();
-    }
-  }
-
-  function handleSidebarExtraBlur(value: string) {
-    if (editingBlockField === 'extra') {
-      s.extraInfo = value.trim();
-      commitBlockEdit();
-    }
-  }
-
-  function parseAndCommitSidebarName(b: Block, rawValue: string, addNew: boolean) {
-    let val = rawValue;
-    
-    // Handle & (Extra Info)
-    if (val.includes('&')) {
-      const parts = val.split('&');
-      val = parts[0].trim();
-      const extra = parts.slice(1).join('&').trim();
-      if (extra) {
-        s.extraInfo = s.extraInfo ? s.extraInfo + '\n' + extra : extra;
-      }
-    }
-
-    // Handle - (Note)
-    if (val.includes('-')) {
-      const parts = val.split('-');
-      val = parts[0].trim();
-      const note = parts.slice(1).join('-').trim();
-      if (note) {
-        b.note = b.note ? b.note + '\n' + note : note;
-      }
-    }
-
-    // Handle time suffix (e.g. 10m)
-    const mMatch = val.match(/\s+(\d+)m$/i);
-    if (mMatch) {
-      b.minutes = Math.max(1, parseInt(mMatch[1], 10));
-      b.pinned = true;
-      val = val.slice(0, val.length - mMatch[0].length).trim();
-    }
-
-    if (val) {
-      b.title = val;
-    } else {
-      s.blocks = s.blocks.filter(x => x.id !== b.id);
-      if (s.blocks.length === 0) {
-        s.blocks = [{ id: uid(), title: '', minutes: 10, note: '', warning: true, pinned: false }];
-      }
-    }
-    
-    const currentId = b.id;
-    commitBlockEdit();
-
-    if (addNew) {
-      addBlockAfter(currentId);
-    }
-  }
-
   function commitBlockEdit() {
-    editingBlockId = null;
-    editingBlockField = null;
     updateTimeFeedback();
     renderEndControl();
     syncTimerToAgenda();
@@ -2317,40 +1854,28 @@
     if (isViewMode) return;
     const newId = uid();
     s.blocks = [...s.blocks, { id: newId, title: '', minutes: 10, note: '', warning: true, pinned: false }];
-    updateTimeFeedback();
-    renderEndControl();
-    syncTimerToAgenda();
-    partsDraftDirty = false;
-    appState.persist();
-    notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
-    editingBlockId = newId;
-    editingBlockField = 'name';
+    commitBlockEdit();
   }
 
   function addBlockAfter(id: string) {
     if (isViewMode) return;
     const idx = s.blocks.findIndex(x => x.id === id);
     if (idx < 0) return;
-    
     const newId = uid();
     const newBlock: Block = { id: newId, title: '', minutes: 10, note: '', warning: true, pinned: false };
-    
-    s.blocks.splice(idx + 1, 0, newBlock);
-    s.blocks = [...s.blocks];
-    
-    updateTimeFeedback();
-    renderEndControl();
-    syncTimerToAgenda();
-    partsDraftDirty = false;
-    appState.persist();
-    notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
-    
-    setTimeout(() => {
-      editingBlockId = newId;
-      editingBlockField = 'name';
-    }, 0);
+    const next = [...s.blocks];
+    next.splice(idx + 1, 0, newBlock);
+    s.blocks = next;
+    commitBlockEdit();
   }
 
+  function deleteBlock(id: string) {
+    s.blocks = s.blocks.filter(x => x.id !== id);
+    if (s.blocks.length === 0) {
+      s.blocks = [{ id: uid(), title: '', minutes: 10, note: '', warning: true, pinned: false }];
+    }
+    commitBlockEdit();
+  }
   function aiPayload(extra: Record<string, unknown>) {
     return {
       provider: aiConfig.provider,
@@ -2648,22 +2173,94 @@ Regler:
     window.removeEventListener('pointerup', endAgendaResize);
   }
 
+  function handleOutsideClick(e: MouseEvent) {
+    if (!(e.target as Element).closest('.mini-menu-shell')) optionsMenuOpen = false;
+  }
+
+  function isInputFocused() {
+    const active = document.activeElement;
+    if (!active) return false;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return true;
+    return (active as HTMLElement).isContentEditable;
+  }
+
+  let toastMsg = $state('');
+  let toastTimer: ReturnType<typeof setTimeout> | null = null;
+  function showToast(msg: string) {
+    toastMsg = msg;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastMsg = ''; }, 2000);
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.altKey && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+      e.preventDefault();
+      if (confirm('Återställ timern? All sparad data raderas.')) {
+        appState.reset();
+        window.location.reload();
+      }
+      return;
+    }
+
+    const key = e.key.toLowerCase();
+    const isAltOnly = e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey;
+    const isNoMod = !e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey;
+
+    if ((isAltOnly || (isNoMod && !isInputFocused()))) {
+      if (key === 'n') {
+        e.preventDefault();
+        setActiveSection('now');
+      } else if (key === 'p') {
+        e.preventDefault();
+        setActiveSection('plan');
+      } else if (key === 'b') {
+        e.preventDefault();
+        setActiveSection('library');
+      } else if (key === 'k') {
+        e.preventDefault();
+        setActiveSection('workspace');
+      } else if (key === 'i') {
+        e.preventDefault();
+        s.showHelpHints = !s.showHelpHints;
+        appState.persist();
+      } else if (key === 's') {
+        if (!isViewMode) {
+          e.preventDefault();
+          if (s.isLocked) {
+            showToast('Låst – lås upp (l) för att växla');
+            return;
+          }
+          s.agendaView = s.agendaView === 'school' ? 'private' : 'school';
+          const labels: Record<string, string> = { school: 'Öppet', private: 'Eget' };
+          showToast(labels[s.agendaView]);
+          appState.persist();
+        }
+      } else if (key === 'l') {
+        e.preventDefault();
+        if (s.isLocked) {
+          const code = prompt('Ange kontokod för att låsa upp:');
+          if (code === s.syncKey || (!s.syncKey && code === '')) {
+            s.isLocked = false;
+            showToast('Upplåst');
+          } else {
+            alert('Fel kod.');
+          }
+        } else {
+          s.isLocked = true;
+          s.agendaView = 'school';
+          showToast('Låst (Öppet läge)');
+        }
+        appState.persist();
+      }
+    }
+  }
+
   onMount(() => {
     pageOrigin = window.location.origin;
     const handleViewport = () => {
       showAgendaOverlay = window.innerWidth > 980;
     };
     handleViewport();
-    const helpShortcut = (e: KeyboardEvent) => {
-      if (e.repeat) return;
-      if (e.altKey && !e.ctrlKey && (e.code === 'KeyI' || e.key === 'i' || e.key === 'I')) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        s.showHelpHints = !s.showHelpHints;
-        appState.persist();
-      }
-    };
     // View mode: load shared state and start polling
     const vt = new URLSearchParams(location.search).get('view');
     let viewPollId: ReturnType<typeof setInterval> | null = null;
@@ -2768,47 +2365,9 @@ Regler:
     calendarMonthCursor = monthKey(parseIsoDate(selectedDay?.date ?? localDateISO()));
     tick();
     const id = setInterval(tick, 1000);
-    document.addEventListener('keydown', helpShortcut, true);
-    document.addEventListener('keyup', helpShortcut, true);
 
-    function handleOutsideClick(e: MouseEvent) {
-      if (!(e.target as Element).closest('.mini-menu-shell')) optionsMenuOpen = false;
-    }
     document.addEventListener('click', handleOutsideClick);
 
-    function handleKeydown(e: KeyboardEvent) {
-      if (e.altKey && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
-        e.preventDefault();
-        if (confirm('Återställ timern? All sparad data raderas.')) {
-          appState.reset();
-          window.location.reload();
-        }
-      }
-      if (e.altKey && !e.ctrlKey && !e.shiftKey) {
-        const key = e.key.toLowerCase();
-        if (key === 'n') {
-          e.preventDefault();
-          setActiveSection('now');
-        } else if (key === 'p') {
-          e.preventDefault();
-          setActiveSection('plan');
-        } else if (key === 'b') {
-          e.preventDefault();
-          setActiveSection('library');
-        } else if (key === 'k') {
-          e.preventDefault();
-          setActiveSection('workspace');
-        } else if (key === 's') {
-          e.preventDefault();
-          if (!isViewMode) {
-            const order = ['school', 'school+private', 'private', 'private+school'] as const;
-            agendaDraft = '';
-            s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
-            appState.persist();
-          }
-        }
-      }
-    }
     window.addEventListener('keydown', handleKeydown);
     window.addEventListener('resize', handleViewport);
 
@@ -2818,8 +2377,6 @@ Regler:
       if (viewVisibilityHandler) document.removeEventListener('visibilitychange', viewVisibilityHandler);
       resizeObservers.forEach(ro => ro.disconnect());
       document.removeEventListener('click', handleOutsideClick);
-      document.removeEventListener('keydown', helpShortcut, true);
-      document.removeEventListener('keyup', helpShortcut, true);
       window.removeEventListener('keydown', handleKeydown);
       window.removeEventListener('resize', handleViewport);
     };
@@ -2897,7 +2454,6 @@ Regler:
       s.showMin + s.showFive + s.showQuarter + s.showSegLabels + s.showCenterEnd + s.segMinutesMode + s.clockSpan +
       s.agendaText + s.agendaDate + s.agendaText2 + s.agendaDate2 + s.agendaView;
     agendaItems; // track agenda for 12h mode
-    renderClock();
   });
 
   function toggleCollapse() {
@@ -3125,64 +2681,18 @@ Regler:
 
 <div class="app">
   <aside class="sidebar" bind:this={sidebarEl}>
-    <div class="seglist">
-      {#each s.blocks as b, i (b.id)}
-        {@const elapsed = elapsedMin()}
-        {@const ct = clockTheme(s.palette, s.dark)}
-        {@const cumMin = s.blocks.slice(0, i).reduce((a, x) => a + x.minutes, 0)}
-        {@const segEnd = cumMin + b.minutes}
-        {@const isActive = elapsed >= cumMin && elapsed < segEnd}
-        {@const isPast = elapsed >= segEnd}
-        <div class="row" class:active={isActive} class:past={isPast}>
-          <span class="dot" style="background:{ct.colors[i % 8]}"></span>
-          {#if editingBlockId === b.id && editingBlockField === 'name'}
-            <input class="inline-edit name-inp" use:focusOnMount
-              value={b.title}
-              onblur={(e) => handleSidebarNameBlur(b, (e.target as HTMLInputElement).value)}
-              onkeydown={(e) => handleSidebarNameKeydown(e, b)}
-              onclick={(e) => e.stopPropagation()} />
-          {:else}
-            <button class="name seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'name')}>{b.title}</button>
-          {/if}
-          {#if editingBlockId === b.id && editingBlockField === 'min'}
-            <input class="inline-edit min-inp" type="number" min="1" use:focusOnMount
-              value={b.minutes}
-              onblur={(e) => { const v = parseInt((e.target as HTMLInputElement).value); if (v > 0) { b.minutes = v; b.pinned = true; } commitBlockEdit(); }}
-              onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
-              onclick={(e) => e.stopPropagation()} />
-          {:else if s.segMinutesMode === 'planned'}
-            <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{b.minutes}m</button>
-          {:else if s.segMinutesMode === 'remaining'}
-            <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsed)) : b.minutes}m kvar</button>
-          {/if}
-        </div>
-        {#if s.showSegNotes}
-          {#if editingBlockId === b.id && editingBlockField === 'note'}
-            <textarea class="inline-edit note note-inp" use:focusOnMount
-              onblur={(e) => handleSidebarNoteBlur(b, (e.target as HTMLTextAreaElement).value)}
-              onkeydown={(e) => handleSidebarNoteKeydown(e, b)}
-              onclick={(e) => e.stopPropagation()}>{b.note}</textarea>
-          {:else if b.note}
-            <button class="note seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'note')}>{b.note}</button>
-          {/if}
-        {/if}
-      {/each}
-      {#if s.showExtraInfo}
-        {#if editingBlockField === 'extra'}
-          <textarea class="inline-edit infobox extra-inp" use:focusOnMount
-            onblur={(e) => handleSidebarExtraBlur((e.target as HTMLTextAreaElement).value)}
-            onkeydown={(e) => handleSidebarExtraKeydown(e)}
-            onclick={(e) => e.stopPropagation()}>{s.extraInfo}</textarea>
-        {:else if s.extraInfo}
-          <button class="infobox seg-inline-btn" type="button" onclick={startExtraEdit}>{s.extraInfo}</button>
-        {/if}
-      {/if}
-      {#if !isViewMode}
-        <div class="sidebar-add-row">
-          <button class="seg-add-btn" onclick={addBlock}>+</button>
-        </div>
-      {/if}
-    </div>
+    <Sidebar
+      bind:blocks={s.blocks}
+      palette={s.palette}
+      dark={s.dark}
+      segMinutesMode={s.segMinutesMode}
+      showSegNotes={s.showSegNotes}
+      showExtraInfo={s.showExtraInfo}
+      bind:extraInfo={s.extraInfo}
+      isViewMode={isViewMode}
+      elapsedMin={elapsedMin()}
+      onCommitEdit={commitBlockEdit}
+    />
   </aside>
 
   <div class="resize-handle-sb" role="separator" aria-orientation="vertical" onpointerdown={startSidebarResize}></div>
@@ -3219,7 +2729,30 @@ Regler:
     </div>
 
     <div class="clock-wrap">
-      <svg class="clock" viewBox="0 0 360 360" style="overflow:visible" bind:this={svgEl}></svg>
+      <Clock
+        bind:svgEl={svgEl}
+        palette={s.palette}
+        dark={s.dark}
+        blocks={s.blocks}
+        startMin={s.startMin}
+        clockSpan={s.clockSpan}
+        hollow={s.hollow}
+        textOutside={s.textOutside}
+        showCenterEnd={s.showCenterEnd}
+        showMin={s.showMin}
+        showFive={s.showFive}
+        showQuarter={s.showQuarter}
+        showSegLabels={s.showSegLabels}
+        segMinutesMode={s.segMinutesMode}
+        nowMin={nowMinLive}
+        agendaItems={agendaItems}
+        isViewMode={isViewMode}
+        locked={locked}
+        onLoadAgendaFlow={loadAgendaFlow}
+        onStartBoundaryDrag={startBoundaryDrag}
+        onStartEndDrag={startEndDrag}
+        onStartStartDrag={startStartDrag}
+      />
     </div>
 
     <div class="mini-menu-shell">
@@ -3237,14 +2770,14 @@ Regler:
         }}
       >
         <div class="toolbar-side toolbar-side-left" class:collapsed={!miniMenuOpen}>
-          <button class="icon" onclick={() => { s.showControls = !s.showControls; appState.persist(); }} title="Inställningar">✎</button>
-          <button class="icon" onclick={(e) => { e.stopPropagation(); optionsMenuOpen = !optionsMenuOpen; }} title="Visningsalternativ">⚙︎</button>
+          <button class="icon" onclick={() => { s.showControls = !s.showControls; appState.persist(); }} title="Skapa och planera timers">✎</button>
+          <button class="icon" onclick={(e) => { e.stopPropagation(); optionsMenuOpen = !optionsMenuOpen; }} title="Visningsalternativ">⚙</button>
           <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : '1h'}</button>
+          <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
         </div>
 
         {#if !isViewMode}
           <div class="toolbar-center" style="display:flex; align-items:center; gap:0;">
-            <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
             <button
               class="mini-menu-toggle"
               class:open={miniMenuOpen}
@@ -3269,7 +2802,7 @@ Regler:
               <span class="theme-trigger-swatch" style="background:{PALETTE_COLORS[s.palette]}; width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,0,0,0.1); display:inline-block;"></span>
             </button>
             {#if themePickerOpen}
-              <div class="warnings-popup theme-popup-new" onclick={(e) => e.stopPropagation()}>
+              <div class="warnings-popup theme-popup-new" role="none" onclick={(e) => e.stopPropagation()}>
                 <div class="field-label" style="font-size:10px;margin-bottom:8px;opacity:.7;">Teman</div>
                 <div class="warn-dots-grid" style="gap:8px;">
                   {#each PALETTES as p}
@@ -3315,7 +2848,7 @@ Regler:
               ♪+
             </button>
             {#if warningsOpen}
-              <div class="warnings-popup" onclick={(e) => e.stopPropagation()}>
+              <div class="warnings-popup" role="none" onclick={(e) => e.stopPropagation()}>
                 <div class="field-label" style="font-size:10px;margin-bottom:6px;opacity:.7;">Aviseringar</div>
                 <div class="warn-dots-grid">
                   {#each s.blocks as b, i (b.id)}
@@ -3438,13 +2971,16 @@ Regler:
             <div class="menu-list">
               {#if !isViewMode}
                 <button class="menu-row" type="button" class:on={s.agendaView !== 'school'} onclick={() => {
-                  const order = ['school', 'school+private', 'private', 'private+school'] as const;
-                  agendaDraft = '';
-                  s.agendaView = order[(order.indexOf(s.agendaView as typeof order[number]) + 1) % order.length];
+                  if (s.isLocked) {
+                    showToast('Låst – lås upp (l) för att växla');
+                    return;
+                  }
+                  s.agendaView = s.agendaView === 'school' ? 'private' : 'school';
                   appState.persist();
-                }}>
-                  <span>Jobb / fritid</span><span class="menu-row-state">{{ school: 'Jobb', 'school+private': 'Båda', private: 'Fritid', 'private+school': 'Fritid + jobb' }[s.agendaView]}</span>
-                </button>
+                  }}>
+                  <span>Öppet / Eget</span><span class="menu-row-state">{{ school: 'Öppet', private: 'Eget' }[s.agendaView]}</span>
+                  </button>
+
               {:else}
                 <div class="menu-help" style="margin-top:0;">Visas som snapshot i delningsläge.</div>
               {/if}
@@ -3520,7 +3056,6 @@ Regler:
             actionHint={planActionHint}
             saveStatusLabel={activePanelStatusLabel}
             canRevert={canRevertPanel}
-            showHelpHints={s.showHelpHints}
             showTitleHelp={helpVisible(sessionTitleHelpOpen)}
             showPartsHelp={helpVisible(sessionPartsHelpOpen)}
             showTimeHelp={helpVisible(sessionTimeHelpOpen)}
@@ -3532,7 +3067,14 @@ Regler:
             {shareMode}
             {shareCopyText}
             shareUrl={shareToken && pageOrigin ? `${pageOrigin}/?view=${shareToken}` : ''}
-            onTitleInput={(value) => { s.dayTitle = value; syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}
+            onTitleInput={(value) => { 
+              s.dayTitle = value; 
+              if (s.activeSection !== 'plan') {
+                syncTimerToAgenda(); 
+              }
+              appState.persist(); 
+              notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); 
+            }}
             onPartsInput={handlePartsInput}
             onPartsKeyDown={handlePartsKeyDown}
             onCopyPrompt={() => {
@@ -3548,9 +3090,14 @@ Regler:
             onRunAi={runAiParts}
             onAction={() => {
               if (s.activeSection === 'plan') {
-                if (selectedAgendaDetails && planSelectionExplicit) {
-                  syncTimerToAgenda();
+                const baseline = planPanelBaseline;
+                const timeChanged = baseline ? baseline.startMin !== s.startMin : false;
+
+                if (selectedAgendaDetails && planSelectionExplicit && !timeChanged) {
+                  // Only title or parts changed, update existing block
+                  syncTimerToAgenda(true);
                 } else {
+                  // Time changed or no selection, create new block
                   const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
                   const flow: Flow = {
                     id: uid(),
@@ -3677,179 +3224,69 @@ Regler:
   </main>
 
   <div class="resize-handle-ag" role="separator" aria-orientation="vertical" onpointerdown={startAgendaResize}></div>
-  <aside class="agenda" bind:this={agendaEl}>
-    {#if !isViewMode && s.activeSection === 'plan'}
-      <AgendaImportPanel
-        {agendaInputOpen}
-        {agendaDraft}
-        draftStatus={agendaDraftStatus}
-        selectedDateLabel={selectedDay?.date ? fmtAgendaDate(selectedDay.date) : 'Odaterad dag'}
-        {savedAgendaMsg}
-        {icsImportOpen}
-        {icsDraft}
-        icsSummary={icsPreviewSummary}
-        {icsPreviewLines}
-        icsError={icsImportError}
-        icsHasPreview={icsPreviewEvents.length > 0}
-        {icsCanImport}
-        {copyAgendaPromptText}
-        hasAiKey={!!aiApiKey}
-        {agendaAiOpen}
-        {agendaAiInput}
-        aiPlanMode={aiConfig.planMode}
-        {agendaAiError}
-        {agendaAiLoading}
-        showHelpHints={s.showHelpHints}
-        showImportHelp={helpVisible(agendaImportHelpOpen)}
-        showIcsHelp={helpVisible(agendaIcsHelpOpen)}
-        onToggleOpen={() => agendaInputOpen = !agendaInputOpen}
-        onDraftChange={(value) => { agendaDraft = value; agendaDraftDirty = true; agendaDraftDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO(); }}
-        onDraftPaste={() => {}}
-        onSave={saveAgenda}
-        onToggleIcsOpen={() => icsImportOpen = !icsImportOpen}
-        onIcsDraftChange={(value) => { icsDraft = value; resetIcsPreview(); }}
-        onIcsFileChange={readIcsFile}
-        onPreviewIcs={previewIcsImport}
-        onImportIcs={importPreviewedIcs}
-        onCopyPrompt={() => {
-          navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
-            copyAgendaPromptText = '✓ Kopierad';
-            setTimeout(() => { copyAgendaPromptText = 'AI-prompt'; }, 1500);
-          });
-        }}
-        onToggleAi={() => agendaAiOpen = !agendaAiOpen}
-        onAgendaAiInputChange={(value) => agendaAiInput = value}
-        onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
-        onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
-        onRunAi={runAiAgenda}
-        onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
-        onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}
-      />
-    {/if}
-
-    <div class="agenda-calendar" class:collapsed={!agendaCalendarOpen}>
-      <div class="agenda-input-header" style="margin-bottom:8px;">
-        <span class="agenda-input-label">Kalender</span>
-        <button class="agenda-input-toggle" onclick={() => agendaCalendarOpen = !agendaCalendarOpen}>
-          {agendaCalendarOpen ? '△' : '▽'}
-        </button>
-      </div>
-      {#if agendaCalendarOpen}
-        <div class="agenda-calendar-head">
-          <button class="agenda-nav-btn" onclick={() => calendarMonthCursor = shiftMonth(calendarMonthCursor || monthKey(parseIsoDate(selectedDay?.date ?? localDateISO())), -1)}>‹</button>
-          <span class="agenda-date-label">{monthLabel(calendarMonthCursor || monthKey(parseIsoDate(selectedDay?.date ?? localDateISO())))}</span>
-          <button class="agenda-nav-btn" onclick={() => calendarMonthCursor = shiftMonth(calendarMonthCursor || monthKey(parseIsoDate(selectedDay?.date ?? localDateISO())), 1)}>›</button>
-        </div>
-        <div class="agenda-calendar-weekdays">
-          {#each ['S','M','T','O','T','F','L'] as weekday}
-            <span>{weekday}</span>
-          {/each}
-        </div>
-        <div class="agenda-calendar-grid">
-          {#each calendarCells as cell (cell.iso)}
-            <button
-              class="agenda-calendar-day"
-              class:muted={!cell.inMonth}
-              class:selected={cell.isSelected}
-              class:has-content={cell.hasContent}
-              onclick={() => selectAgendaDate(cell.iso)}
-            >
-              <span>{cell.label}</span>
-              <span class="agenda-calendar-density" style={`opacity:${cell.density}`}></span>
-            </button>
-          {/each}
-        </div>
-      {/if}
-    </div>
-
-    {#if selectedDay}
-      <div class="agenda-nav">
-        <button class="agenda-nav-btn" onclick={prevDay} disabled={!agendaDays || selectedDayIdx <= 0}>‹</button>
-        <span class="agenda-date-label">{fmtAgendaDate(selectedDay?.date ?? null)}</span>
-        {#if !schoolPrimary() && !isViewMode}
-          <span class="agenda-mode-badge">Fritid</span>
-        {/if}
-        <button class="agenda-nav-btn" onclick={nextDay} disabled={!agendaDays || selectedDayIdx >= (agendaDays.length - 1)}>›</button>
-      </div>
-    {/if}
-
-    {#if agendaItems.length === 0}
-      <p class="agenda-empty">{selectedDay?.date ? `Ingen plan sparad för ${fmtAgendaDate(selectedDay.date)} än.` : 'Skriv in dagplanen ovan, eller spara flöden via ✎-panelen.'}</p>
-      <button class="quickstart agenda-plan-link" onclick={() => setActiveSection('plan')}>Gå till Planera</button>
-    {:else}
-      {@const windowStart = Math.floor(agendaItems[0].startMin / 60) * 60}
-      <div class="agenda-timeline" class:has-overlay={overlayItems.length > 0} bind:this={timelineEl}>
-        {#if agendaMoveState && agendaMoveState.previewValid && agendaMoveState.previewStart !== null}
-          {@const previewTop = ((agendaMoveState.previewStart - windowStart) / 720 * 100).toFixed(3)}
-          <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>
-        {/if}
-        {#each agendaItems as item, ai (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-${ai}`)}
-          {@const itemColor = sectorColors[ai % sectorColors.length]}
-          {@const isPast = nowMinLive >= item.startMin + item.totalMin}
-          {@const isActive = nowMinLive >= item.startMin && nowMinLive < item.startMin + item.totalMin}
-          {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
-          {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
-          {@const itemMeta = item.fromText && selectedDay ? s.agendaMeta[makeAgendaMetaKeyForFlow(selectedDay.date ?? null, item.flow, item.startMin)] ?? null : null}
-          <div class="agenda-block"
-               role="button"
-               tabindex="0"
-               class:past={isPast}
-               class:active={isActive}
-               class:dragging={agendaMoveState?.dayIdx === selectedDayIdx && agendaMoveState?.flowIdx === ai}
-               style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
-              onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}
-               onkeydown={(e) => {
-                 if (e.key === 'Enter' || e.key === ' ') {
-                   e.preventDefault();
-                   if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin, 'plan', true) : loadFlow(item.flow.id);
-                 }
-               }}>
-            <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
-            {#if itemMeta}
-              <span class="agenda-source-badge" class:template={itemMeta.source === 'template'} class:ai={itemMeta.source === 'ai'} class:imported={itemMeta.source === 'import'} title={agendaMetaLabel(itemMeta)}>
-                {agendaMetaBadge(itemMeta)}
-              </span>
-            {/if}
-            <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
-            {#if item.fromText && !isViewMode}
-              {#if s.activeSection !== 'now'}
-                <button
-                  class="agenda-move-btn"
-                  onclick={(e) => e.stopPropagation()}
-                  onpointerdown={(e) => startAgendaMove(e, ai)}
-                  title="Flytta block i ordningen"
-                >⋮⋮</button>
-              {/if}
-              <button class="agenda-del-btn" onclick={(e) => { e.stopPropagation(); deleteAgendaItem(ai); }} title="Ta bort block">🗑</button>
-              <div class="agenda-drag-top" role="separator" aria-orientation="horizontal" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
-              <div class="agenda-drag-bottom" role="separator" aria-orientation="horizontal" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
-            {/if}
-          </div>
-        {/each}
-        {#each overlayItems as item, oi (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-overlay-${oi}`)}
-          {@const itemEnd = item.startMin + item.totalMin}
-          {@const visStart = Math.max(item.startMin, windowStart)}
-          {@const visEnd = Math.min(itemEnd, windowStart + 720)}
-          {#if visEnd > visStart}
-            {@const topPct = ((visStart - windowStart) / 720 * 100).toFixed(3)}
-            {@const heightPct = ((visEnd - visStart) / 720 * 100).toFixed(3)}
-            <div class="agenda-block ghost"
-                 style="top: {topPct}%; height: {heightPct}%; border-left-color: var(--muted)">
-              <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
-              <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
-            </div>
-          {/if}
-        {/each}
-      </div>
-    {/if}
-  </aside>
+  <AgendaPanel
+    {sectorColors}
+    {isViewMode}
+    {agendaDraftStatus}
+    {savedAgendaMsg}
+    {icsPreviewSummary}
+    {icsPreviewLines}
+    {icsImportError}
+    {icsCanImport}
+    {agendaAiError}
+    {agendaAiLoading}
+    {selectedDay}
+    {agendaDays}
+    {selectedDayIdx}
+    {agendaItems}
+    {overlayItems}
+    {agendaMoveState}
+    {nowMinLive}
+    {agendaDragMoved}
+    {calendarCells}
+    {aiApiKey}
+    {aiConfig}
+    {icsPreviewEvents}
+    {activeAgendaDate}
+    {saveAgenda}
+    {resetIcsPreview}
+    {readIcsFile}
+    {previewIcsImport}
+    {importPreviewedIcs}
+    {runAiAgenda}
+    {toggleHelpOverride}
+    {selectAgendaDate}
+    {prevDay}
+    {nextDay}
+    {loadAgendaFlow}
+    {loadFlow}
+    {startAgendaMove}
+    {deleteAgendaItem}
+    {startAgendaDrag}
+    {schoolPrimary}
+    {saveAiConfig}
+    onSetActiveSection={setActiveSection}
+    bind:agendaEl
+    bind:timelineEl
+    bind:agendaInputOpen
+    bind:agendaCalendarOpen
+    bind:calendarMonthCursor
+    bind:agendaDraft
+    bind:agendaDraftDirty
+    bind:agendaDraftDate
+    bind:icsDraft
+    bind:icsImportOpen
+    bind:copyAgendaPromptText
+    bind:agendaAiOpen
+    bind:agendaAiInput
+  />
 
   <button class="agenda-toggle-btn" onclick={toggleAgenda} title="Dagagenda">
     {s.agendaOpen ? '›' : '‹'}
   </button>
 
   <nav class="mobile-tabs">
-    <button class:active={s.activeSection === 'now' && mobileTab === 'timer'} onclick={() => setActiveSection('now')}>
+    <button class:active={s.activeSection === 'now' && mobileTab === 'now'} onclick={() => setActiveSection('now')}>
       <span>◷</span> Nu
     </button>
     <button class:active={s.activeSection === 'plan' && mobileTab === 'plan'} onclick={() => setActiveSection('plan')}>
@@ -3937,8 +3374,16 @@ Regler:
       <li><b>Mobilvy</b> — flikarna Nu / Planera / Bibliotek / Konto längst ner på skärmen.</li>
     </ul>
 
-    <p class="help-foot" style="margin-top:12px">Genväg: <code>Alt+i</code> visar eller gömmer hjälp. <code>Alt+Shift+R</code> återställer timern (all data raderas).</p>
+    <p class="help-foot" style="margin-top:12px">Snabbval: Tryck <code>n</code> (Nu), <code>p</code> (Planera), <code>b</code> (Bibl), <code>k</code> (Konto) eller <code>i</code> (Hjälp) när inget skrivfält är markerat.</p>
+    <p class="help-foot">Genväg: <code>Alt+Shift+R</code> återställer timern (all data raderas).</p>
     <p class="help-foot">Klockan följer faktisk klocktid — visaren är alltid rätt.</p>
     <p class="help-foot">Frågor? Mejla <a href="mailto:timer@ximon.se">timer@ximon.se</a></p>
   </div>
 </div>
+
+{#if toastMsg}
+  {#key toastMsg}
+    <div class="toast-pill">{toastMsg}</div>
+  {/key}
+{/if}
+
