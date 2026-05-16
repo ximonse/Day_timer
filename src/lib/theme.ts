@@ -28,7 +28,7 @@ export const SECTOR_COLORS: Record<Palette, string[]> = {
   mlp:         ['#cdb4db','#ffc8dd','#ffafcc','#bde0fe','#a2d2ff','#b898d0','#ff90b8','#80c8f8'],
   bright:      ['#f9c80e','#f86624','#ea3546','#662e9b','#43bccd','#d4a808','#c44818','#8840c0'],
   clear:       ['#5f0f40','#9a031e','#fb8b24','#e36414','#0f4c5c','#8a1560','#c20428','#d46010'],
-  vitgra:      ['#111111','#404040','#6c6c6c','#959595','#bcbcbc','#d33b3b','#7a7a7a','#d9d9d9'],
+  vitgra:      ['#2a2a2a','#404040','#6c6c6c','#959595','#bcbcbc','#d33b3b','#7a7a7a','#d9d9d9'],
   psychedelic: ['#ff00ff','#ff0000','#ff8800','#ffff00','#00ff44','#00ffff','#4400ff','#ff00aa'],
 };
 

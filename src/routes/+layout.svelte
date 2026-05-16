@@ -224,10 +224,20 @@
   :global(.toolbar .clock-span-btn) { font-size: 11px; font-weight: 700; letter-spacing: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; min-width: 34px; text-align: center; border: 1px solid var(--pill-on); background: var(--pill-on); color: var(--pill-on-fg); border-color: var(--pill-on); }
   :global(.toolbar .clock-span-btn:hover) { opacity: .8; }
   :global(.toolbar .clock-span-btn.active) { background: transparent; color: var(--muted); border-color: color-mix(in srgb, var(--border) 72%, transparent); font-weight: 600; }
-  :global(.warn-dots) { display: flex; gap: 6px; padding: 0 2px 0 9px; border-left: 1px solid color-mix(in srgb, var(--border) 72%, transparent); }
-  :global(.warn-dots .wd) { width: 20px; height: 20px; border: 0; cursor: pointer; background: transparent; color: color-mix(in srgb, var(--muted) 58%, var(--border) 42%); padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; line-height: 1; border-radius: 999px; opacity: .82; transition: color .15s, opacity .15s, background .15s, transform .15s; }
-  :global(.warn-dots .wd:hover) { background: var(--pill); color: var(--fg); opacity: 1; }
-  :global(.warn-dots .wd.on) { color: var(--warn-color); opacity: 1; text-shadow: 0 0 7px color-mix(in srgb, var(--warn-color) 32%, transparent); transform: scale(1.06); }
+  :global(.warnings-popup) {
+    position: absolute; bottom: calc(100% + 12px); right: -10px;
+    background: var(--menu-panel); border: 1px solid var(--menu-border);
+    border-radius: 12px; padding: 10px; width: max-content; max-width: 180px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.15); z-index: 100;
+  }
+  :global(.warnings-popup::after) {
+    content: ''; position: absolute; top: 100%; right: 20px;
+    border: 6px solid transparent; border-top-color: var(--menu-border);
+  }
+  :global(.warn-dots-grid) { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; }
+  :global(.warn-dots-grid .wd) { width: 22px; height: 22px; border: 0; cursor: pointer; background: transparent; color: color-mix(in srgb, var(--muted) 45%, var(--border) 55%); padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; line-height: 1; border-radius: 999px; transition: all .12s; }
+  :global(.warn-dots-grid .wd:hover) { background: var(--pill); color: var(--fg); }
+  :global(.warn-dots-grid .wd.on) { color: var(--warn-color); text-shadow: 0 0 8px color-mix(in srgb, var(--warn-color) 40%, transparent); transform: scale(1.1); }
   :global(.options-menu) { width: 100%; display: none; flex-direction: column; gap: 10px; background: var(--menu-panel); border: 1px solid var(--menu-border); border-radius: 14px; padding: 12px; color: var(--menu-fg); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
   :global(.options-menu.open) { display: flex; }
   :global(.pill) { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 999px; background: var(--menu-pill); color: var(--menu-fg); cursor: pointer; font-size: 13px; border: 0; }

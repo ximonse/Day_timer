@@ -960,6 +960,8 @@
     return `${item.startMin}-${item.totalMin}-${item.flow.title}-${item.flow.parts.length}`;
   }
 
+  let warningsOpen = $state(false);
+
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
     document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-now', 'm-plan', 'm-library', 'm-workspace', 'page-locked');
@@ -3024,20 +3026,33 @@ Regler:
         <div class="toolbar-side toolbar-side-right" class:collapsed={!miniMenuOpen}>
           <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
           <button class="icon lock-btn" class:locked onclick={() => locked = !locked} title={locked ? 'Lås upp' : 'Lås sidan'}>{locked ? '○' : '⊠'}</button>
-          <div class="warn-dots">
-            {#each s.blocks as b, i (b.id)}
-              {@const ct = clockTheme(s.palette, s.dark)}
-              <button class="wd" class:on={b.warning} style={`--warn-color:${ct.colors[i % 8]}`}
-                title="Plingar 3 minuter innan och vid aktivitetsbyte"
-                onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
-              >♪</button>
-            {/each}
+          
+          <div style="position:relative; display:flex; align-items:center;">
+            <button class="icon" 
+              onclick={(e) => { e.stopPropagation(); warningsOpen = !warningsOpen; }} 
+              title="Hantera ljudaviseringar">
+              ♪+
+            </button>
+            {#if warningsOpen}
+              <div class="warnings-popup" onclick={(e) => e.stopPropagation()}>
+                <div class="field-label" style="font-size:10px;margin-bottom:6px;opacity:.7;">Aviseringar</div>
+                <div class="warn-dots-grid">
+                  {#each s.blocks as b, i (b.id)}
+                    {@const ct = clockTheme(s.palette, s.dark)}
+                    <button class="wd" class:on={b.warning} style={`--warn-color:${ct.colors[i % ct.colors.length]}`}
+                      title={b.title || 'Aktivitet'}
+                      onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
+                    >♪</button>
+                  {/each}
+                </div>
+              </div>
+            {/if}
           </div>
+
           <span style="font-size:12px;opacity:.55;padding:0 6px;border-left:1px solid var(--border);cursor:default;" title={loggedInUser ? `Inloggad som ${loggedInUser}` : 'Inte inloggad'}>
             {loggedInUser ? '👤' : '👤︎'}
           </span>
-          </div>
-          </div>
+        </div>
       {#if optionsMenuOpen}
         <div class="options-menu" class:open={optionsMenuOpen}>
           <div class="menu-section">
