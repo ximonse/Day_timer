@@ -532,17 +532,14 @@
     :global(.mobile-tabs button.active) { color: var(--fg); }
     :global(.mobile-tabs button.active span) { color: var(--accent); }
     /* Visa rätt sektion beroende på aktiv flik */
-    :global(body.m-timer .sidebar) { display: block; padding-bottom: 60px; }
-    :global(body.m-timer .resize-handle-sb) { display: none; }
-    :global(body.m-delar .main) { display: none; }
-    :global(body.m-delar .resize-handle-sb) { display: none; }
-    :global(body.m-plan .main) { display: none; }
-    :global(body.m-plan .sidebar) { display: none; }
-    :global(body.m-plan .resize-handle-sb) { display: none; }
-    :global(body.m-plan .agenda) { display: flex !important; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); }
-    /* Ge utrymme för flikraden */
-    :global(body.m-timer .main), :global(body.m-delar .sidebar), :global(body.m-plan .agenda) {
-      padding-bottom: 60px;
+    :global(body.m-now .sidebar) { display: block; }
+    :global(body.m-now .resize-handle-sb) { display: none; }
+    :global(body.m-plan .sidebar), :global(body.m-library .sidebar), :global(body.m-workspace .sidebar) { display: none; }
+    :global(body.m-now .resize-handle-sb), :global(body.m-plan .resize-handle-sb), :global(body.m-library .resize-handle-sb), :global(body.m-workspace .resize-handle-sb) { display: none; }
+    :global(body.m-plan .agenda) { display: flex !important; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); order: 2; }
+    /* Ge utrymme för flikraden på det sista elementet i varje vy */
+    :global(body.m-now .sidebar), :global(body.m-plan .agenda), :global(body.m-library .main), :global(body.m-workspace .main) {
+      padding-bottom: 80px;
     }
     /* Temaväljare som dropdown på mobil */
     :global(.theme-dots) { z-index: 200; }
@@ -623,7 +620,7 @@
     :global(.resize-handle-sb), :global(.resize-handle-ag) { display: none; }
     :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
     :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
-    :global(.main) { order: 1; padding: 8px 8px 64px; gap: 6px; }
+    :global(.main) { order: 1; padding: 8px 8px 0; gap: 6px; }
     :global(.main-header) { display: flex; min-height: 0; }
     :global(.lesson-title) { max-width: 100%; text-align: center; }
     :global(.top-time) { position: static; align-items: center; text-align: center; }
@@ -654,6 +651,6 @@
     :global(.sidebar) { display: flex; width: 240px; min-width: 0; height: 100%; border-right: 1px solid var(--border); border-bottom: none; order: 0; padding: 8px 10px 60px; overflow-y: auto; }
     :global(.seglist .row) { font-size: 16px; padding: 4px 6px; }
     :global(.mobile-tabs) { flex-direction: column; width: 52px; height: 100%; border-top: none; border-right: 1px solid var(--border); bottom: 0; left: auto; right: 0; }
-    :global(body.m-timer .sidebar), :global(body.m-delar .main) { display: flex; }
+    :global(body.m-now .sidebar) { display: flex; }
   }
 </style>

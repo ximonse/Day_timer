@@ -106,7 +106,7 @@
 
   let nowMinLive = $state(nowMinutes());
   let lastAutoLoadKey = $state('');
-  let mobileTab = $state<'timer'|'plan'>('timer');
+  let mobileTab = $state<AppSection>('now');
   let showAgendaOverlay = $state(typeof window !== 'undefined' ? window.innerWidth > 980 : true);
   let nowText = $state('--:--');
   let leftText = $state('');
@@ -722,7 +722,7 @@
       agendaInputOpen = true;
     }
     if (typeof window !== 'undefined' && window.innerWidth <= 800) {
-      mobileTab = section === 'plan' ? 'plan' : 'timer';
+      mobileTab = section;
       syncBodyClasses();
     }
     appState.persist();
@@ -962,7 +962,7 @@
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
-    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-timer', 'm-delar', 'm-plan', 'page-locked');
+    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-now', 'm-plan', 'm-library', 'm-workspace', 'page-locked');
     if (s.palette) document.body.classList.add(s.palette);
     if (s.dark && s.palette !== 'psychedelic') document.body.classList.add('dark');
     if (s.sbCollapsed) document.body.classList.add('sb-collapsed');
