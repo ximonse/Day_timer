@@ -194,8 +194,9 @@
   
   {#if reliabilityOpen}
     <div class="section-copy muted" style="margin-bottom:8px;">
-      Används på egen risk. Den här funktionen räknar ut hur mycket tid dina sessioner brukar ta baserat på historik. 
-      Bekräftade pass förbättrar rekommendationerna för hur långa framtida block brukar bli.
+      Den här funktionen är under utveckling och tanken är att den ska hjälpa med tidsuppskattningen av framtida pass. 
+      Om man ändrar och bekräftar sina pass tidsåtgång så kommer den över tid ge tidsförslag när du skriver samma pass eller aktivitet i planeringen. 
+      Observera att funktionen fortfarande slipas på.
     </div>
     <div class="section-copy">Bekräftade pass: <strong>{confirmedActualCount}</strong> · Obekräftade idag: <strong>{pendingActualCount}</strong></div>
     <div style="margin-top:8px;">
