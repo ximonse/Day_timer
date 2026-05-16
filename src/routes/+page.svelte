@@ -3053,6 +3053,8 @@ Regler:
             {loggedInUser ? '👤' : '👤︎'}
           </span>
         </div>
+      </div> <!-- toolbar end -->
+
       {#if optionsMenuOpen}
         <div class="options-menu" class:open={optionsMenuOpen}>
           <div class="menu-section">
