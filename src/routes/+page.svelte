@@ -2145,39 +2145,6 @@
     editingBlockField = 'name';
   }
 
-  let sidebarExtraInfoOpen = $state(false);
-  let sidebarExtraInfoEl = $state<HTMLTextAreaElement | null>(null);
-
-  function openSidebarComment() {
-    if (isViewMode) return;
-    sidebarExtraInfoOpen = true;
-    s.showExtraInfo = true;
-    appState.persist();
-    requestAnimationFrame(() => sidebarExtraInfoEl?.focus());
-  }
-
-  function updateSidebarExtraInfo(text: string) {
-    s.extraInfo = text;
-    syncTimerToAgenda();
-    appState.persist();
-    notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
-  }
-
-  function handleCommentKeyDown(e: KeyboardEvent) {
-    const node = e.currentTarget as HTMLTextAreaElement | null;
-    if (!node || e.key !== 'Tab') return;
-    e.preventDefault();
-    const start = node.selectionStart ?? 0;
-    const end = node.selectionEnd ?? start;
-    const insert = '\n- ';
-    const next = node.value.slice(0, start) + insert + node.value.slice(end);
-    updateSidebarExtraInfo(next);
-    requestAnimationFrame(() => {
-      node.focus();
-      node.setSelectionRange(start + insert.length, start + insert.length);
-    });
-  }
-
   function aiPayload(extra: Record<string, unknown>) {
     return {
       provider: aiConfig.provider,
@@ -2952,23 +2919,12 @@ Regler:
           <div class="note">{b.note}</div>
         {/if}
       {/each}
-      {#if s.showExtraInfo || sidebarExtraInfoOpen}
-        <div class="sidebar-comment-head">
-          <span class="field-label">Kommentar</span>
-        </div>
-        <textarea
-          bind:this={sidebarExtraInfoEl}
-          class="comment-box sidebar-extra-info-box"
-          placeholder="Skriv en kommentar…"
-          value={s.extraInfo}
-          oninput={(e) => updateSidebarExtraInfo((e.target as HTMLTextAreaElement).value)}
-          onkeydown={handleCommentKeyDown}
-        ></textarea>
+      {#if s.extraInfo && s.showExtraInfo}
+        <div class="infobox">{s.extraInfo}</div>
       {/if}
       {#if !isViewMode}
         <div class="sidebar-add-row">
           <button class="seg-add-btn" onclick={addBlock}>+</button>
-          <button class="seg-add-btn comment-add-btn" onclick={openSidebarComment}>✎</button>
         </div>
       {/if}
     </div>
@@ -3657,7 +3613,7 @@ Regler:
       <li><code>Frukost 20m</code> — aktivitet med fast tid (pinnad)</li>
       <li><code>Promenad</code> — aktivitet utan tid (fördelas automatiskt)</li>
       <li><code>- ta med vatten</code> — undernotering på föregående aktivitet</li>
-      <li><code>&amp; Kom ihåg möte kl 9</code> — kommentar som skrivs i sidopanelen</li>
+      <li><code>&amp; Kom ihåg möte kl 9</code> — kommentar som sparas i dagplanen eller Planera</li>
     </ul>
 
     <h3>Klockvyer</h3>
