@@ -1511,6 +1511,15 @@
     });
   }
 
+  function currentLinePrefix(value: string, caret: number) {
+    const lineStart = value.lastIndexOf('\n', Math.max(0, caret - 1)) + 1;
+    const prefix = value.slice(lineStart, caret).trimStart();
+    if (prefix.startsWith('#')) return '# ';
+    if (prefix.startsWith('&')) return '& ';
+    if (prefix.startsWith('-')) return '- ';
+    return '';
+  }
+
   function handlePartsKeyDown(e: KeyboardEvent) {
     const node = e.currentTarget as HTMLTextAreaElement | null;
     if (!node) return;
@@ -1520,7 +1529,7 @@
       const start = node.selectionStart ?? 0;
       const end = node.selectionEnd ?? start;
       const value = node.value;
-      const insert = '\n- ';
+      const insert = `\n${currentLinePrefix(value, start) || '- '}`;
       const next = value.slice(0, start) + insert + value.slice(end);
       replaceTextareaSelection(node, next, start + insert.length);
       return;
@@ -1531,7 +1540,7 @@
       const start = node.selectionStart ?? 0;
       const end = node.selectionEnd ?? start;
       const value = node.value;
-      const insert = '\n';
+      const insert = `\n${currentLinePrefix(value, start)}`;
       const next = value.slice(0, start) + insert + value.slice(end);
       replaceTextareaSelection(node, next, start + insert.length);
     }
@@ -3216,7 +3225,6 @@ Regler:
             savedFlowMsg={savedFlowMsg}
             titleValue={s.dayTitle}
             partsValue={partsFieldValue}
-            extraInfoValue={s.extraInfo}
             {copyBtnText}
             {partsFeedbackText}
             {timeFeedbackText}
@@ -3299,7 +3307,6 @@ Regler:
               capturePanelBaseline('now');
               notifyPanelMutation('now');
             }}
-            onExtraInfoInput={(value) => { s.extraInfo = value; syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}
             onStartTimeInput={(value) => {
               const [h, m] = value.split(':').map(Number);
               if (isNaN(h) || isNaN(m)) return;
@@ -3645,7 +3652,7 @@ Regler:
       <li><code>Frukost 20m</code> — aktivitet med fast tid (pinnad)</li>
       <li><code>Promenad</code> — aktivitet utan tid (fördelas automatiskt)</li>
       <li><code>- ta med vatten</code> — undernotering på föregående aktivitet</li>
-      <li><code>&amp; Kom ihåg möte kl 9</code> — kommentar som visas som egen ruta</li>
+      <li><code>&amp; Kom ihåg möte kl 9</code> — kommentar som skrivs i sidopanelen</li>
     </ul>
 
     <h3>Klockvyer</h3>
