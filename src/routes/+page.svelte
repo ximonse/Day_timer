@@ -3033,12 +3033,11 @@ Regler:
               >♪</button>
             {/each}
           </div>
-          {#if loggedInUser}
-            <span style="font-size:11px;opacity:.55;padding:0 4px;font-weight:500;border-left:1px solid var(--border);">👤 {loggedInUser}</span>
-          {/if}
-        </div>
-      </div>
-
+          <span style="font-size:12px;opacity:.55;padding:0 6px;border-left:1px solid var(--border);cursor:default;" title={loggedInUser ? `Inloggad som ${loggedInUser}` : 'Inte inloggad'}>
+            {loggedInUser ? '👤' : '👤︎'}
+          </span>
+          </div>
+          </div>
       {#if optionsMenuOpen}
         <div class="options-menu" class:open={optionsMenuOpen}>
           <div class="menu-section">
