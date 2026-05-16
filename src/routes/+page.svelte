@@ -55,6 +55,8 @@
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean } | null>(null);
   let planSelectionExplicit = $state(false);
+  let partsDraft = $state('');
+  let partsDraftDirty = $state(false);
   type AgendaFlowRef = {
     date: string | null;
     title: string;
@@ -554,7 +556,7 @@
     })
   );
 
-  const partsFieldValue = $derived(serializeBlocks(s.blocks));
+  const partsFieldValue = $derived(partsDraft);
   const partsFeedbackText = $derived(`${s.blocks.length}${s.blocks.length === 1 ? ' del' : ' delar'}`);
   const timeFeedbackText = $derived(`${totalMin()} min → slutar ${fmtHM(s.startMin + totalMin())}`);
   const activePanelStatus = $derived(s.activeSection === 'plan' ? planPanelStatus : nowPanelStatus);
@@ -805,6 +807,7 @@
   function revertActivePanel() {
     const baseline = s.activeSection === 'plan' ? planPanelBaseline : nowPanelBaseline;
     if (!baseline) return;
+    partsDraftDirty = false;
     restoreSnapshot(baseline);
     notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
   }
@@ -829,6 +832,7 @@
     planSelectionExplicit = false;
     sessionSource = { kind: 'unscheduled' };
     agendaDraftDirty = false;
+    partsDraftDirty = false;
     appState.persist();
   }
 
@@ -1373,6 +1377,7 @@
       partCount: s.blocks.length
     };
     if (oldKey && activeAgendaFlowRef) moveAgendaMeta(oldKey, makeAgendaMetaKeyForRef(activeAgendaFlowRef));
+    partsDraftDirty = false;
     markPlanSaved();
   }
 
@@ -1381,6 +1386,7 @@
     window.removeEventListener('pointermove', onDrag);
     window.removeEventListener('pointerup', endDrag);
     syncTimerToAgenda();
+    partsDraftDirty = false;
     appState.persist();
   }
 
@@ -1495,6 +1501,8 @@
   }
 
   function handlePartsInput(input: string) {
+    partsDraft = input;
+    partsDraftDirty = true;
     const result = parseParts(input, s.blocks);
     s.blocks = result.blocks;
     if (result.dayTitle) s.dayTitle = result.dayTitle;
@@ -1620,6 +1628,7 @@
     setActiveSection(targetSection);
     capturePanelBaseline('now');
     capturePanelBaseline('plan');
+    syncPartsDraftFromState(true);
     appState.persist();
   }
 
@@ -2122,6 +2131,7 @@
     updateTimeFeedback();
     renderEndControl();
     syncTimerToAgenda();
+    partsDraftDirty = false;
     appState.persist();
     notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
   }
@@ -2133,6 +2143,7 @@
     updateTimeFeedback();
     renderEndControl();
     syncTimerToAgenda();
+    partsDraftDirty = false;
     appState.persist();
     notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
     editingBlockId = newId;
@@ -2384,6 +2395,14 @@ Regler:
     s.agendaOpen && s.clockSpan === 720 ? AI_PROMPT_AGENDA : AI_PROMPT_PARTS
   );
 
+  function syncPartsDraftFromState(force = false) {
+    const source = serializeBlocks(s.blocks, s.dayTitle, s.extraInfo);
+    if (force || !partsDraftDirty) {
+      partsDraft = source;
+      partsDraftDirty = false;
+    }
+  }
+
   function syncAgendaDraftFromState(force = false) {
     const currentDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
     const source = serializeSelectedAgendaDay(currentDate, agendaDays);
@@ -2623,6 +2642,14 @@ Regler:
   });
 
   $effect(() => {
+    // Watch for state changes that should update the parts draft
+    const _blocks = s.blocks;
+    const _title = s.dayTitle;
+    const _extra = s.extraInfo;
+    syncPartsDraftFromState();
+  });
+
+  $effect(() => {
     if (!shareToken || shareMode !== 'active-session-live') return;
     let id: ReturnType<typeof setInterval> | null = null;
 
@@ -2807,6 +2834,7 @@ Regler:
     setActiveSection(targetSection);
     capturePanelBaseline('plan');
     capturePanelBaseline('now');
+    syncPartsDraftFromState(true);
     updateTimeFeedback(); renderEndControl(); appState.persist();
   }
 
@@ -3241,6 +3269,7 @@ Regler:
                   planSelectionExplicit = true;
                 }
                 capturePanelBaseline('plan');
+                partsDraftDirty = false;
                 notifyPanelMutation('plan');
                 appState.persist();
                 return;
@@ -3260,6 +3289,7 @@ Regler:
               addFlowToAgendaToday(f, true, sessionAgendaMeta());
               lastAutoLoadKey = `${f.startMin}-${totalFlowMinutes(f)}-${f.title}-${f.parts.length}`;
               capturePanelBaseline('now');
+              partsDraftDirty = false;
               notifyPanelMutation('now');
             }}
             onStartTimeInput={(value) => {
