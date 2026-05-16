@@ -2129,6 +2129,67 @@
     editingBlockField = field;
   }
 
+  function handleSidebarNameKeydown(e: KeyboardEvent, b: Block) {
+    if (e.key === 'Escape') {
+      editingBlockId = null;
+      editingBlockField = null;
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const input = e.target as HTMLInputElement;
+      parseAndCommitSidebarName(b, input.value, true);
+    }
+  }
+
+  function handleSidebarNameBlur(b: Block, value: string) {
+    if (editingBlockId === b.id && editingBlockField === 'name') {
+      parseAndCommitSidebarName(b, value, false);
+    }
+  }
+
+  function parseAndCommitSidebarName(b: Block, rawValue: string, addNew: boolean) {
+    let val = rawValue;
+    
+    // Handle & (Extra Info)
+    if (val.includes('&')) {
+      const parts = val.split('&');
+      val = parts[0].trim();
+      const extra = parts.slice(1).join('&').trim();
+      if (extra) {
+        s.extraInfo = s.extraInfo ? s.extraInfo + '\n' + extra : extra;
+      }
+    }
+
+    // Handle - (Note)
+    if (val.includes('-')) {
+      const parts = val.split('-');
+      val = parts[0].trim();
+      const note = parts.slice(1).join('-').trim();
+      if (note) {
+        b.note = b.note ? b.note + '\n' + note : note;
+      }
+    }
+
+    // Handle time suffix (e.g. 10m)
+    const mMatch = val.match(/\s+(\d+)m$/i);
+    if (mMatch) {
+      b.minutes = Math.max(1, parseInt(mMatch[1], 10));
+      b.pinned = true;
+      val = val.slice(0, val.length - mMatch[0].length).trim();
+    }
+
+    if (val) b.title = val;
+    
+    const currentId = b.id;
+    commitBlockEdit();
+
+    if (addNew) {
+      addBlockAfter(currentId);
+    }
+  }
+
   function commitBlockEdit() {
     editingBlockId = null;
     editingBlockField = null;
@@ -2143,7 +2204,7 @@
   function addBlock() {
     if (isViewMode) return;
     const newId = uid();
-    s.blocks = [...s.blocks, { id: newId, title: 'Ny aktivitet', minutes: 10, note: '', warning: true, pinned: false }];
+    s.blocks = [...s.blocks, { id: newId, title: '', minutes: 10, note: '', warning: true, pinned: false }];
     updateTimeFeedback();
     renderEndControl();
     syncTimerToAgenda();
@@ -2152,6 +2213,30 @@
     notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
     editingBlockId = newId;
     editingBlockField = 'name';
+  }
+
+  function addBlockAfter(id: string) {
+    if (isViewMode) return;
+    const idx = s.blocks.findIndex(x => x.id === id);
+    if (idx < 0) return;
+    
+    const newId = uid();
+    const newBlock: Block = { id: newId, title: '', minutes: 10, note: '', warning: true, pinned: false };
+    
+    s.blocks.splice(idx + 1, 0, newBlock);
+    s.blocks = [...s.blocks];
+    
+    updateTimeFeedback();
+    renderEndControl();
+    syncTimerToAgenda();
+    partsDraftDirty = false;
+    appState.persist();
+    notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+    
+    setTimeout(() => {
+      editingBlockId = newId;
+      editingBlockField = 'name';
+    }, 0);
   }
 
   function aiPayload(extra: Record<string, unknown>) {
@@ -2923,8 +3008,8 @@ Regler:
           {#if editingBlockId === b.id && editingBlockField === 'name'}
             <input class="inline-edit name-inp" use:focusOnMount
               value={b.title}
-              onblur={(e) => { const v = (e.target as HTMLInputElement).value.trim(); if (v) b.title = v; commitBlockEdit(); }}
-              onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+              onblur={(e) => handleSidebarNameBlur(b, (e.target as HTMLInputElement).value)}
+              onkeydown={(e) => handleSidebarNameKeydown(e, b)}
               onclick={(e) => e.stopPropagation()} />
           {:else}
             <button class="name seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'name')}>{b.title}</button>
