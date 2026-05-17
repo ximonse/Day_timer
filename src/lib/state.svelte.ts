@@ -148,6 +148,7 @@ function defaultState(): AppState {
     nowDraft: defaultDraft(now.getHours()),
     planDraft: defaultDraft(8),
     onboardingStep: 0,
+    firstVisit: true,
   };
 }
 
