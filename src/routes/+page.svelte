@@ -20,6 +20,7 @@
   import AgendaImportPanel from '$lib/components/AgendaImportPanel.svelte';
   import Clock from '$lib/components/Clock.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
+  import OnboardingTour from '$lib/components/OnboardingTour.svelte';
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
@@ -2546,7 +2547,7 @@
   <main class="main">
     <div class="main-header">
       {#if !isViewMode && !locked}
-        <input class="lesson-title lesson-title-editable hero-text"
+        <input id="lesson-title-input" class="lesson-title lesson-title-editable hero-text"
           placeholder="Rubrik…"
           value={titleDraftValue || s.dayTitle}
           onfocus={() => { titleDraftValue = s.dayTitle; }}
@@ -2567,7 +2568,7 @@
       </div>
     </div>
 
-    <div class="clock-wrap">
+    <div id="clock-wrap" class="clock-wrap">
       <Clock
         bind:svgEl={svgEl}
         palette={s.palette}
@@ -2618,6 +2619,7 @@
         {#if !isViewMode}
           <div class="toolbar-center" style="display:flex; align-items:center; gap:0;">
             <button
+              id="mini-menu-toggle"
               class="mini-menu-toggle"
               class:open={miniMenuOpen}
               type="button"
@@ -3164,7 +3166,7 @@
     bind:agendaAiInput
   />
 
-  <button class="agenda-toggle-btn" onclick={toggleAgenda} title="Dagagenda">
+  <button id="agenda-toggle-btn" class="agenda-toggle-btn" onclick={toggleAgenda} title="Dagagenda">
     {s.agendaOpen ? '›' : '‹'}
   </button>
 
@@ -3264,9 +3266,22 @@
   </div>
 </div>
 
-{#if toastMsg}
-  {#key toastMsg}
-    <div class="toast-pill">{toastMsg}</div>
-  {/key}
-{/if}
+  {#if toastMsg}
+    {#key toastMsg}
+      <div class="toast-pill">{toastMsg}</div>
+    {/key}
+  {/if}
+
+  <OnboardingTour
+    step={s.onboardingStep}
+    onNext={() => {
+      s.onboardingStep++;
+      if (s.onboardingStep > 5) s.onboardingStep = 0;
+      appState.persist();
+    }}
+    onExit={() => {
+      s.onboardingStep = 0;
+      appState.persist();
+    }}
+  />
 

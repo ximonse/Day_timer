@@ -90,6 +90,7 @@ export interface AppState {
   activeSection: AppSection;
   nowDraft: EditorDraft;
   planDraft: EditorDraft;
+  onboardingStep: number;
 }
 
 export function uid() {
@@ -146,6 +147,7 @@ function defaultState(): AppState {
     activeSection: 'now',
     nowDraft: defaultDraft(now.getHours()),
     planDraft: defaultDraft(8),
+    onboardingStep: 0,
   };
 }
 

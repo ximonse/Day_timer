@@ -149,7 +149,7 @@
 
 </script>
 
-<aside class="agenda" bind:this={agendaEl}>
+<aside id="agenda-panel" class="agenda" bind:this={agendaEl}>
     {#if !isViewMode && s.activeSection === 'plan'}
       <AgendaImportPanel
         {agendaInputOpen}

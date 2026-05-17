@@ -178,7 +178,7 @@
     {#if showPartsHelp}
       <div class="feedback">Skriv eller klistra in aktiviteter här. En per rad. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rad.</div>
     {/if}
-    <textarea placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
+    <textarea id="plan-activities-input" placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
       bind:this={textareaEl}
       oninput={(e) => onPartsInput((e.target as HTMLTextAreaElement).value)}
       onkeydown={onPartsKeyDown}></textarea>

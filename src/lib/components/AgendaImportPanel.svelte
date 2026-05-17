@@ -82,6 +82,7 @@
   } = $props();
 
   let promptHelpOpen = $state(false);
+  let promptMenuOpen = $state(false);
 </script>
 
 <div class="agenda-input-header">
@@ -115,27 +116,12 @@
       title="Sparar dagtexten och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
       {savedAgendaMsg || '📅 Spara i dagplan'}
     </button>
-    <div style="display:flex; gap:4px; align-items:center;">
-      <button class="agenda-save-btn" onclick={() => onCopyPrompt('plan')} title="Kopiera prompt för ny planering">
-        {copyAgendaPromptText === 'AI-prompt' ? 'AI-plan' : copyAgendaPromptText}
-      </button>
-      <button class="agenda-save-btn" onclick={() => onCopyPrompt('calendar')} title="Kopiera prompt för kalender-konvertering">
-        {copyAgendaPromptText === 'AI-prompt' ? 'AI-konvertera' : copyAgendaPromptText}
-      </button>
-      <button class="info-btn" style="margin-bottom:0;" onclick={() => promptHelpOpen = !promptHelpOpen}>i</button>
-    </div>
     {#if hasAiKey}
       <button class="agenda-save-btn agenda-ai-btn" onclick={onToggleAi}>
         ✨ Skapa med AI
       </button>
     {/if}
   </div>
-  {#if promptHelpOpen}
-    <div class="feedback" style="margin-top:6px; border-left: 2px solid var(--accent); padding-left: 8px;">
-      <strong>AI-plan</strong>: Kopierar en prompt där du efteråt skriver din egen lösa planering som AI:n formaterar.<br/>
-      <strong>AI-konvertera</strong>: Kopierar en prompt där du efteråt klistrar in rörig kalenderdata (t.ex. från Google) som AI:n gör om till appens format.
-    </div>
-  {/if}
   {#if showImportHelp}
     <div class="feedback" style="margin-top:6px;">
       Källstatus som <strong>Import</strong>, <strong>Mall</strong> och <strong>AI</strong> visas diskret i tidslinjen och fullt ut i planeringseditorn.
@@ -164,6 +150,33 @@
       </button>
     </div>
   {/if}
+{/if}
+
+<div class="agenda-input-header" style="margin-top:12px;">
+  <span class="agenda-input-label">Prompter för planering och import</span>
+  <button class="info-btn" onclick={() => promptHelpOpen = !promptHelpOpen}>i</button>
+  <button class="agenda-input-toggle" onclick={() => promptMenuOpen = !promptMenuOpen}>
+    {promptMenuOpen ? '△' : '▽'}
+  </button>
+</div>
+{#if promptHelpOpen}
+  <div class="feedback" style="margin-bottom:8px;">
+    Använd dessa prompter i t.ex. Gemini eller ChatGPT för att förbereda text som appen förstår.
+  </div>
+{/if}
+{#if promptMenuOpen}
+  <div class="agenda-save-row" style="margin-top:8px;">
+    <button class="agenda-save-btn" onclick={() => onCopyPrompt('plan')} title="Kopiera prompt för ny planering från anteckningar">
+      {copyAgendaPromptText === 'AI-prompt' ? 'Från anteckningar' : copyAgendaPromptText}
+    </button>
+    <button class="agenda-save-btn" onclick={() => onCopyPrompt('calendar')} title="Kopiera prompt för att konvertera kalenderdata">
+      {copyAgendaPromptText === 'AI-prompt' ? 'Från kalender' : copyAgendaPromptText}
+    </button>
+  </div>
+  <div class="feedback" style="margin-top:6px; border-left: 2px solid var(--accent); padding-left: 8px;">
+    <strong>Från anteckningar</strong>: Kopierar en prompt där du efteråt skriver din egen lösa planering som AI:n formaterar.<br/>
+    <strong>Från kalender</strong>: Kopierar en prompt där du efteråt klistrar in rörig kalenderdata (t.ex. från Google) som AI:n gör om till appens format.
+  </div>
 {/if}
 
 <div class="agenda-input-header" style="margin-top:12px;">
