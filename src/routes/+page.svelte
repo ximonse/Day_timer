@@ -3202,71 +3202,72 @@
   }}>
   <div class="help-card">
     <button class="help-close" onclick={() => helpOpen = false} title="Stäng">×</button>
-    <h2>Så här använder du Day Timer</h2>
+    <h2 style="margin-bottom: 24px; color: var(--accent);">Välkommen till Day Timer</h2>
 
-    <h3>Grunderna</h3>
-    <ul>
-      <li><b>Nu</b> är snabbvägen: skriv rubrik och delar, eller ladda en mall, och tryck sedan <b>Kör!</b>.</li>
-      <li><b>Planera</b> är dagläget: välj datum i kalendern, skriv eller klistra in dagtext och spara längst ner.</li>
-      <li><b>Alt+i</b> visar eller gömmer hjälp globalt. Lokala <span class="ico">i</span>-knappar kan ändå öppna eller stänga just sin ruta.</li>
-      <li><b>Allt sparas automatiskt</b> i webbläsaren tills du klickar <b>Spara</b> i dagplanen eller ändrar något i timern.</li>
-    </ul>
+    <div class="help-grid">
+      <div class="help-column">
+        <h3>Grunderna</h3>
+        <p>Day Timer hjälper dig att visualisera tid i klassrummet eller under arbetsdagen.</p>
+        <div class="help-box">
+          <strong>Nu</strong>: Skapa snabbt en timer som börjar direkt.<br/>
+          <strong>Planera</strong>: Förbered lektioner för valda dagar i kalendern utan att störa den aktiva timern.
+        </div>
+        
+        <h3>Genvägar</h3>
+        <ul class="help-list">
+          <li><code>n</code> — Fliken Nu</li>
+          <li><code>p</code> — Fliken Planera</li>
+          <li><code>i</code> — Visa/Dölj hjälprutor</li>
+          <li><code>Alt+Shift+R</code> — Radera allt</li>
+        </ul>
+      </div>
 
-    <h3>Inmatningsformat</h3>
-    <ul>
-      <li><code>#Rubrik</code> — sätter dag­titeln (visas i klockan och sidopanelen)</li>
-      <li><code>Frukost 20m</code> — aktivitet med fast tid (pinnad)</li>
-      <li><code>Promenad</code> — aktivitet utan tid (fördelas automatiskt)</li>
-      <li><code>- ta med vatten</code> — undernotering på föregående aktivitet</li>
-      <li><code>&amp; Kom ihåg möte kl 9</code> — kommentar som sparas i dagplanen eller Planera</li>
-    </ul>
+      <div class="help-column">
+        <h3>Inmatning & Format</h3>
+        <p>Skriv rubrik i det övre fältet och aktiviteter under.</p>
+        <div class="help-box">
+          <code>Genomgång 10m</code> — Låst tid<br/>
+          <code>Eget arbete</code> — Automatisk tid<br/>
+          <code>- instruktion</code> — Undertext<br/>
+          <code>&amp; kommentar</code> — Sista info-ruta
+        </div>
 
-    <h3>Klockvyer</h3>
-    <ul>
-      <li><b>1h-vy</b> (standard) — visar kommande timme, minutvisare.</li>
-      <li><b>2h-vy</b> — slå på i <span class="ico">⚙︎</span>. Visar två timmar.</li>
-      <li><b>12h-vy</b> — slå på i <span class="ico">⚙︎</span>. Visar hela dagen med timvisare. Kombinera med Dagplan.</li>
-    </ul>
+        <h3>Klockvyn</h3>
+        <p>I <span class="ico">⚙</span> kan du toggla klockvyn:</p>
+        <div class="help-box">
+          <strong>1h</strong>: Kommande timme (minutvisare).<br/>
+          <strong>12h</strong>: Hela dagen (timvisare).
+        </div>
+      </div>
+    </div>
 
-    <h3>Dagplan (agenda)</h3>
-    <ul>
-      <li>Öppna agendan med <b>▷</b>-knappen till höger om klockan. Kalendern kan fällas ihop och visar en kompakt översikt.</li>
-      <li>Klicka en dag i kalendern för att visa just den dagtexten. Tom dag går också att välja och skriva på.</li>
-      <li>I tidslinjen kan du klicka ett block för att ladda det i timern, dra i över- och underkant för tid och dra i flytthandtaget för ordningen.</li>
-      <li>Status som <b>Mall</b>, <b>Import</b> och <b>AI</b> visas diskret och blir tydligare vid hover eller i planeringsläget.</li>
-    </ul>
-
-    <h3>AI-planering</h3>
-    <ul>
-      <li>Öppna <span class="ico">✎</span> och scrolla ner till <b>AI-planering</b>.</li>
-      <li>Välj provider: <b>Claude</b>, <b>GPT</b>, <b>Gemini</b> eller <b>Anpassad</b> (valfri OpenAI-kompatibel, t.ex. Mistral, Groq).</li>
-      <li>Klistra in din API-nyckel — sparas lokalt, skickas till vår server enbart för att nå vald AI-leverantör.</li>
-      <li>Klicka <b>▽ Planera med AI</b> under aktivitetsfältet → beskriv på fritt språk → schemat fylls i automatiskt.</li>
-      <li>I agendapanelen: klicka <b>✨ AI-dagplan</b> för att generera dagtext för vald dag.</li>
-      <li><b>AI-prompt</b>-knappen bredvid aktivitetsfältet kopierar en prompt du kan klistra in i valfritt AI-verktyg manuellt.</li>
-    </ul>
-
-    <h3>Flöden &amp; synkronisering</h3>
-    <ul>
-      <li><b>Spara som mall</b> 💾 sparar det aktuella schemat som en återanvändbar mall i Bibliotek.</li>
-      <li>Mallnamnet laddar mallen i <b>Planera</b> eller <b>Nu</b> beroende på var du är. <b>＋</b> lägger till mallen på vald dag.</li>
-      <li><b>☁ Ladda / ☁ Spara</b> hämtar eller skickar mallar och dagplaner till molnet.</li>
-    </ul>
-
-    <h3>Utseende</h3>
-    <ul>
-      <li><b>Paletter</b> — färgpunkterna längst ner till höger byter tema.</li>
-      <li><b>Mörkt läge</b> — ☽/☀-knappen bredvid paletterna.</li>
-      <li><b>Toggle-pills</b> (<span class="ico">⚙︎</span>) styr vad som visas: tid kvar, etiketter, markeringar m.m.</li>
-      <li><b>Mobilvy</b> — flikarna Nu / Planera / Bibliotek / Konto längst ner på skärmen.</li>
-    </ul>
-
-    <p class="help-foot" style="margin-top:12px">Snabbval: Tryck <code>n</code> (Nu), <code>p</code> (Planera), <code>b</code> (Bibl), <code>k</code> (Konto) eller <code>i</code> (Hjälp) när inget skrivfält är markerat.</p>
-    <p class="help-foot">Genväg: <code>Alt+Shift+R</code> återställer timern (all data raderas).</p>
-    <p class="help-foot">Klockan följer faktisk klocktid — visaren är alltid rätt.</p>
-    <p class="help-foot">Frågor? Mejla <a href="mailto:timer@ximon.se">timer@ximon.se</a></p>
+    <div class="help-footer-actions">
+      <button class="quickstart" style="background:var(--accent); color:white;" onclick={() => { helpOpen = false; s.onboardingStep = 1; }}>
+        Starta introduktionsguiden
+      </button>
+      <p class="help-foot">Frågor? Mejla <a href="mailto:timer@ximon.se">timer@ximon.se</a></p>
+    </div>
   </div>
 </div>
+
+{#if s.firstVisit}
+  <div class="welcome-overlay" in:fade={{ duration: 400 }}>
+    <div class="welcome-card" in:fly={{ y: 20, duration: 500, delay: 200 }}>
+      <h1>Hej! 👋</h1>
+      <p>Det här är Day Timer — ett verktyg för att visualisera tid och planera dina pass snyggt och enkelt.</p>
+      <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px;">
+        <button class="quickstart" style="background:var(--accent); color:white; justify-content:center;" 
+          onclick={() => { s.firstVisit = false; s.onboardingStep = 1; appState.persist(); }}>
+          Visa hur det funkar (30 sek)
+        </button>
+        <button class="quickstart quickstart-subtle" style="justify-content:center;" 
+          onclick={() => { s.firstVisit = false; appState.persist(); }}>
+          Jag fattar, kör igång!
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
   {#if toastMsg}
     {#key toastMsg}
