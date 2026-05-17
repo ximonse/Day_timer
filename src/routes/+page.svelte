@@ -2154,9 +2154,15 @@
       s.startMin = d.getHours() * 60;
       s.showControls = true;
     }
-    // On touch devices with narrow viewport (iPad portrait range), close agenda to avoid crowding
-    if (navigator.maxTouchPoints > 1 && window.innerWidth < 1100 && window.innerWidth > 800) {
-      s.agendaOpen = false;
+    // On touch devices: force sensible defaults on every load
+    if (navigator.maxTouchPoints > 1) {
+      s.sbCollapsed = false;
+      s.showControls = true;
+      s.activeSection = 'now';
+      mobileTab = 'now';
+      if (window.innerWidth < 1100 && window.innerWidth > 800) {
+        s.agendaOpen = false; // iPad portrait: stäng agenda för att inte tränga
+      }
       appState.persist();
     }
     syncBodyClasses();
