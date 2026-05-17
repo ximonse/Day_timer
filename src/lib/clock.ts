@@ -33,3 +33,11 @@ export function nowMinutes(): number {
 export function truncate(s: string, n: number): string {
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
+
+export function isOnlyEmoji(s: string): boolean {
+  if (!s.trim()) return false;
+  // This regex matches emojis including combined ones (like skin tones, flags, etc.)
+  // It allows spaces between emojis.
+  const emojiRegex = /^(\s|\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])+$/;
+  return emojiRegex.test(s);
+}

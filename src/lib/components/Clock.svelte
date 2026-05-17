@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CX, CY, R, Ri, polar, arcPath, fmtHM, truncate } from '$lib/clock.js';
+  import { CX, CY, R, Ri, polar, arcPath, fmtHM, truncate, isOnlyEmoji } from '$lib/clock.js';
   import { clockTheme, labelColorFor, type Palette } from '$lib/theme.js';
   import type { Block, Flow } from '$lib/state.svelte.js';
 
@@ -85,6 +85,8 @@
       const midAngle = (a0 + a1) / 2;
       const [lx, ly] = textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R * 0.65);
 
+      const pureEmoji = isOnlyEmoji(item.flow.title);
+
       return {
         id: `agenda-${i}`,
         item,
@@ -95,7 +97,8 @@
         lx, ly,
         splitAngle: ((nowMin - periodStart) / 720) * 360,
         fillText: labelColorFor(baseColor, i, isPast, palette, dark),
-        label: `${truncate(item.flow.title, 10)} ${fmtHM(item.startMin)}`
+        label: pureEmoji ? item.flow.title : `${truncate(item.flow.title, 10)} ${fmtHM(item.startMin)}`,
+        fontSize: pureEmoji ? 24 : (textOutside ? 14 : 13)
       };
     }).filter((s): s is NonNullable<typeof s> => s !== null);
   });
@@ -115,12 +118,16 @@
       const midAngle = (a0 + a1) / 2;
       const [lx, ly] = textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R / 2);
       
-      let labelText = truncate(b.title, 14);
-      if (segMinutesMode === 'planned') {
-        labelText += ` ${b.minutes}m`;
-      } else if (segMinutesMode === 'remaining') {
-        const mins = isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEndMin - elapsed)) : b.minutes;
-        labelText += ` ${mins}m kvar`;
+      const pureEmoji = isOnlyEmoji(b.title);
+      let labelText = pureEmoji ? b.title : truncate(b.title, 14);
+
+      if (!pureEmoji) {
+        if (segMinutesMode === 'planned') {
+          labelText += ` ${b.minutes}m`;
+        } else if (segMinutesMode === 'remaining') {
+          const mins = isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEndMin - elapsed)) : b.minutes;
+          labelText += ` ${mins}m kvar`;
+        }
       }
 
       const res = {
@@ -133,7 +140,8 @@
         lx, ly,
         splitAngle: startAngle + (elapsed / clockSpan) * 360,
         fillText: labelColorFor(baseColor, i, isPast, palette, dark),
-        label: labelText
+        label: labelText,
+        fontSize: pureEmoji ? 48 : (textOutside ? 14 : 13)
       };
       cumMin = segEndMin;
       return res;
@@ -364,7 +372,7 @@
           use:registerLabel={id}
           x={s.lx} y={s.ly} 
           text-anchor="middle" dominant-baseline="middle" 
-          font-size={textOutside ? '14' : '13'} font-weight="600" fill={s.fillText}>
+          font-size={s.fontSize} font-weight="600" fill={s.fillText}>
           {s.label}
         </text>
       </g>
