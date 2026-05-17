@@ -76,6 +76,24 @@
   let aiConfigOpen = $state(false);
 </script>
 
+<div class="ai-key-section" style="margin-bottom:24px;">
+  <div class="field-label">Introduktionsguide</div>
+  <div class="section-copy muted" style="margin-top:4px;">Få en guidad tur genom appens viktigaste funktioner.</div>
+  
+  <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+    <button class="quickstart" style="width:100%; justify-content:center; background:var(--accent); color:white;" onclick={() => appState.value.onboardingStep = 1}>
+      Starta hela guiden
+    </button>
+    
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+      <button class="quickstart quickstart-subtle" style="font-size:12px; padding: 6px;" onclick={() => appState.value.onboardingStep = 1}>1. Grunderna</button>
+      <button class="quickstart quickstart-subtle" style="font-size:12px; padding: 6px;" onclick={() => { appState.value.activeSection = 'now'; appState.value.onboardingStep = 7; }}>2. Nu-läget</button>
+      <button class="quickstart quickstart-subtle" style="font-size:12px; padding: 6px;" onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 10; }}>3. Planera</button>
+      <button class="quickstart quickstart-subtle" style="font-size:12px; padding: 6px;" onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 13; }}>4. Avancerat</button>
+    </div>
+  </div>
+</div>
+
 <div class="ai-key-section" style="margin-bottom:20px;">
   <div class="field-label">
     Hjälpläge
