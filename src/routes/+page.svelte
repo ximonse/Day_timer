@@ -2634,74 +2634,76 @@
         <div class="toolbar-side toolbar-side-right" class:collapsed={!miniMenuOpen}>
           <button class="icon lock-btn" class:locked onclick={() => locked = !locked} title={locked ? 'Lås upp' : 'Lås sidan'}>{locked ? '○' : '⊠'}</button>
           
-          <div style="position:relative; display:flex; align-items:center;"
-            use:clickOutside={() => { themePickerOpen = false; }}>
-            <button class="icon" 
-              aria-label={`Tema: ${PALETTE_LABELS[s.palette]}`}
-              onclick={(e) => { e.stopPropagation(); themePickerOpen = !themePickerOpen; }}
-              title={`Tema: ${PALETTE_LABELS[s.palette]}`}>
-              <span class="theme-trigger-swatch" style="background:{PALETTE_COLORS[s.palette]}; width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,0,0,0.1); display:inline-block;"></span>
-            </button>
-            {#if themePickerOpen}
-              <div class="warnings-popup theme-popup-new" role="none" onclick={(e) => e.stopPropagation()}>
-                <div class="field-label" style="font-size:10px;margin-bottom:8px;opacity:.7;">Teman</div>
-                <div class="warn-dots-grid" style="gap:8px;">
-                  {#each PALETTES as p}
-                    <button class="wd on"
-                      style={`--warn-color:${PALETTE_COLORS[p]}; width:24px; height:24px;`}
-                      title={PALETTE_LABELS[p]}
-                      onclick={() => { s.palette = p; syncBodyClasses(); appState.persist(); themePickerOpen = false; }}
-                    >●</button>
-                  {/each}
+          <div id="theme-and-audio" style="display:flex; align-items:center; gap:0;">
+            <div style="position:relative; display:flex; align-items:center;"
+              use:clickOutside={() => { themePickerOpen = false; }}>
+              <button class="icon" 
+                aria-label={`Tema: ${PALETTE_LABELS[s.palette]}`}
+                onclick={(e) => { e.stopPropagation(); themePickerOpen = !themePickerOpen; }}
+                title={`Tema: ${PALETTE_LABELS[s.palette]}`}>
+                <span class="theme-trigger-swatch" style="background:{PALETTE_COLORS[s.palette]}; width:12px; height:12px; border-radius:50%; border:1px solid rgba(0,0,0,0.1); display:inline-block;"></span>
+              </button>
+              {#if themePickerOpen}
+                <div class="warnings-popup theme-popup-new" role="none" onclick={(e) => e.stopPropagation()}>
+                  <div class="field-label" style="font-size:10px;margin-bottom:8px;opacity:.7;">Teman</div>
+                  <div class="warn-dots-grid" style="gap:8px;">
+                    {#each PALETTES as p}
+                      <button class="wd on"
+                        style={`--warn-color:${PALETTE_COLORS[p]}; width:24px; height:24px;`}
+                        title={PALETTE_LABELS[p]}
+                        onclick={() => { s.palette = p; syncBodyClasses(); appState.persist(); themePickerOpen = false; }}
+                      >●</button>
+                    {/each}
+                  </div>
+                  <div style="margin-top:12px; padding-top:8px; border-top:1px solid var(--menu-border); display:flex; justify-content:center;">
+                    <button id="darkToggle" class:active={s.dark} title="Dag/Natt"
+                      style="width:40px; height:22px; border-radius:11px; font-size:12px; display:flex; align-items:center; justify-content:center; padding:0; border: 1px solid color-mix(in srgb, var(--menu-border) 40%, transparent);"
+                      onclick={() => { if (s.palette !== 'psychedelic') { s.dark = !s.dark; syncBodyClasses(); appState.persist(); } }}>
+                      {#if s.dark}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                      {:else}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="12" r="5"></circle>
+                          <line x1="12" y1="1" x2="12" y2="4"></line>
+                          <line x1="12" y1="20" x2="12" y2="23"></line>
+                          <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"></line>
+                          <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"></line>
+                          <line x1="1" y1="12" x2="4" y2="12"></line>
+                          <line x1="20" y1="12" x2="23" y2="12"></line>
+                          <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"></line>
+                          <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"></line>
+                        </svg>
+                      {/if}
+                    </button>
+                  </div>
                 </div>
-                <div style="margin-top:12px; padding-top:8px; border-top:1px solid var(--menu-border); display:flex; justify-content:center;">
-                  <button id="darkToggle" class:active={s.dark} title="Dag/Natt"
-                    style="width:40px; height:22px; border-radius:11px; font-size:12px; display:flex; align-items:center; justify-content:center; padding:0; border: 1px solid color-mix(in srgb, var(--menu-border) 40%, transparent);"
-                    onclick={() => { if (s.palette !== 'psychedelic') { s.dark = !s.dark; syncBodyClasses(); appState.persist(); } }}>
-                    {#if s.dark}
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                      </svg>
-                    {:else}
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"></circle>
-                        <line x1="12" y1="1" x2="12" y2="4"></line>
-                        <line x1="12" y1="20" x2="12" y2="23"></line>
-                        <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"></line>
-                        <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"></line>
-                        <line x1="1" y1="12" x2="4" y2="12"></line>
-                        <line x1="20" y1="12" x2="23" y2="12"></line>
-                        <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"></line>
-                        <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"></line>
-                      </svg>
-                    {/if}
-                  </button>
-                </div>
-              </div>
-            {/if}
-          </div>
+              {/if}
+            </div>
 
-          <div style="position:relative; display:flex; align-items:center;"
-            use:clickOutside={() => { warningsOpen = false; }}>
-            <button class="icon" 
-              onclick={(e) => { e.stopPropagation(); warningsOpen = !warningsOpen; }} 
-              title="Hantera ljudaviseringar">
-              ♪+
-            </button>
-            {#if warningsOpen}
-              <div class="warnings-popup" role="none" onclick={(e) => e.stopPropagation()}>
-                <div class="field-label" style="font-size:10px;margin-bottom:6px;opacity:.7;">Aviseringar</div>
-                <div class="warn-dots-grid">
-                  {#each s.blocks as b, i (b.id)}
-                    {@const ct = clockTheme(s.palette, s.dark)}
-                    <button class="wd" class:on={b.warning} style={`--warn-color:${ct.colors[i % ct.colors.length]}`}
-                      title={b.title || 'Aktivitet'}
-                      onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
-                    >♪</button>
-                  {/each}
+            <div style="position:relative; display:flex; align-items:center;"
+              use:clickOutside={() => { warningsOpen = false; }}>
+              <button class="icon" 
+                onclick={(e) => { e.stopPropagation(); warningsOpen = !warningsOpen; }} 
+                title="Hantera ljudaviseringar">
+                ♪+
+              </button>
+              {#if warningsOpen}
+                <div class="warnings-popup" role="none" onclick={(e) => e.stopPropagation()}>
+                  <div class="field-label" style="font-size:10px;margin-bottom:6px;opacity:.7;">Aviseringar</div>
+                  <div class="warn-dots-grid">
+                    {#each s.blocks as b, i (b.id)}
+                      {@const ct = clockTheme(s.palette, s.dark)}
+                      <button class="wd" class:on={b.warning} style={`--warn-color:${ct.colors[i % ct.colors.length]}`}
+                        title={b.title || 'Aktivitet'}
+                        onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
+                      >♪</button>
+                    {/each}
+                  </div>
                 </div>
-              </div>
-            {/if}
+              {/if}
+            </div>
           </div>
 
           <span style="font-size:12px;opacity:.55;padding:0 6px;border-left:1px solid var(--border);cursor:default;" title={loggedInUser ? `Inloggad som ${loggedInUser}` : 'Inte inloggad'}>
