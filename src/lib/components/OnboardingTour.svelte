@@ -53,7 +53,7 @@
     {
       id: 'teaser1',
       section: 'now',
-      target: '.mini-menu-shell',
+      target: '#theme-and-audio',
       title: 'Extra tips',
       text: 'I minimenyn kan du också välja färgteman och ställa in ljudaviseringar för varje del!',
       pos: 'top'
