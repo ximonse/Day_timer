@@ -35,7 +35,6 @@
   let svgEl = $state<SVGSVGElement>(null!);
   let sidebarEl = $state<HTMLElement>(null!);
   let flashEl = $state<HTMLElement>(null!);
-  let endControlEl = $state<HTMLElement>(null!);
   let loginName = $state('');
   let loginPass = $state('');
   let loggedInUser = $state('');
@@ -725,7 +724,7 @@
       syncBodyClasses();
     }
     updateTimeFeedback();
-    renderEndControl();
+    
     appState.persist();
   }
 
@@ -791,7 +790,7 @@
     endMode = snapshot.endMode;
     s.endMode = snapshot.endMode;
     warnedSet.clear();
-    renderEndControl();
+    
     updateTimeFeedback();
     syncTimerToAgenda();
     appState.persist();
@@ -1043,7 +1042,7 @@
       if (newTotal < minTotal) newTotal = minTotal;
       if (newTotal > s.clockSpan) newTotal = s.clockSpan;
       scaleMinutesTo(Math.round(newTotal));
-      renderEndControl(); return;
+       return;
     }
     if (drag.type === 'start') {
       let delta = ang - drag.pointerAng0;
@@ -1057,7 +1056,7 @@
       if (newTotal > s.clockSpan) { newTotal = s.clockSpan; newStart = drag.endMin0 - newTotal; }
       s.startMin = newStart;
       scaleMinutesTo(newTotal);
-      renderEndControl(); return;
+       return;
       }
 
     const targetCumMin = (rel / 360) * s.clockSpan;
@@ -1068,7 +1067,7 @@
     newLeft = Math.max(2, Math.min(pair - 2, newLeft));
     s.blocks[drag.i].minutes = Math.round(newLeft);
     s.blocks[drag.i + 1].minutes = pair - Math.round(newLeft);
-    renderEndControl();
+    
   }
 
   function syncTimerToAgenda(forceUpdate = false) {
@@ -1110,42 +1109,6 @@
     syncTimerToAgenda();
     partsDraftDirty = false;
     appState.persist();
-  }
-
-  // ── End control ──
-  function renderEndControl() {
-    if (!endControlEl) return;
-    endControlEl.innerHTML = '';
-    const style = 'background:var(--menu-surface);color:var(--menu-fg);border:1px solid var(--menu-border);border-radius:8px;padding:8px 10px;font-size:14px;width:100%;font-family:inherit;';
-    if (endMode === 'end') {
-      const inp = document.createElement('input');
-      inp.type = 'time'; inp.value = fmtHM(s.startMin + totalMin()); inp.style.cssText = style;
-      inp.addEventListener('input', () => {
-        const [h, m] = inp.value.split(':').map(Number);
-        if (isNaN(h) || isNaN(m)) return;
-        let end = h * 60 + m;
-        if (end <= s.startMin) end += 24 * 60;
-        const diff = end - s.startMin;
-        if (diff < s.blocks.length * 2) return;
-        scaleMinutesTo(diff);
-        renderEndControl(); updateTimeFeedback();
-        syncTimerToAgenda(); appState.persist();
-        notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
-      });
-      endControlEl.appendChild(inp);
-    } else {
-      const inp = document.createElement('input');
-      inp.type = 'number'; inp.min = String(s.blocks.length * 2); inp.value = String(totalMin()); inp.style.cssText = style;
-      inp.addEventListener('input', () => {
-        const v = Number(inp.value);
-        if (!v || v < s.blocks.length * 2) return;
-        scaleMinutesTo(v);
-        renderEndControl(); updateTimeFeedback();
-        syncTimerToAgenda(); appState.persist();
-        notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
-      });
-      endControlEl.appendChild(inp);
-    }
   }
 
   function updateTimeFeedback() {}
@@ -1229,7 +1192,7 @@
     if (applyTitle && result.dayTitle) s.dayTitle = result.dayTitle;
     s.extraInfo = result.extraInfo;
     updateTimeFeedback();
-    renderEndControl();
+    
     if (s.activeSection !== 'plan') {
       syncTimerToAgenda();
     }
@@ -1334,7 +1297,7 @@
       s.startMin = suggestedStartMinForDate(targetDate, totalFlowMinutes(f));
     }
     warnedSet.clear();
-    updateTimeFeedback(); renderEndControl();
+    updateTimeFeedback(); 
     activeAgendaFlowRef = null;
     planSelectionExplicit = false;
     sessionSource = { kind: 'template', templateId: f.id, title: f.title };
@@ -1803,7 +1766,7 @@
 
   function commitBlockEdit() {
     updateTimeFeedback();
-    renderEndControl();
+    
     syncTimerToAgenda();
     partsDraftDirty = false;
     appState.persist();
@@ -2234,7 +2197,7 @@
       untrack(() => goToTimerNow());
     }
 
-    renderEndControl();
+    
     updateTimeFeedback();
     capturePanelBaseline('now');
     capturePanelBaseline('plan');
@@ -2382,7 +2345,7 @@
       ? { kind: 'agenda', date: selectedDay?.date ?? null, title: active.flow.title, startMin: s.startMin }
       : { kind: 'unscheduled' };
     updateTimeFeedback();
-    renderEndControl();
+    
     capturePanelBaseline('now');
     capturePanelBaseline('plan');
     appState.persist();
@@ -2486,7 +2449,7 @@
     capturePanelBaseline('plan');
     capturePanelBaseline('now');
     syncPartsDraftFromState(true);
-    updateTimeFeedback(); renderEndControl(); appState.persist();
+    updateTimeFeedback();  appState.persist();
   }
 
   function goToTimerNow() {
@@ -2946,6 +2909,9 @@
               {aiLoading}
               aiPlanMode={aiConfig.planMode}
               startTimeValue={fmtHM(s.startMin)}
+              endTimeValue={fmtHM(s.startMin + totalMin())}
+              totalMinutesValue={totalMin()}
+              minTotalMinutes={s.blocks.length * 2}
               {endMode}
               actionLabel={s.activeSection === 'plan' ? 'Spara' : 'Kör!'}
               actionHint={planActionHint}
@@ -3015,7 +2981,7 @@
                 }
                 const d = new Date();
                 s.startMin = d.getHours() * 60 + d.getMinutes();
-                warnedSet.clear(); renderEndControl(); updateTimeFeedback();
+                warnedSet.clear(); updateTimeFeedback();
                 const f: Flow = {
                   id: uid(), title: s.dayTitle || 'Session',
                   startMin: s.startMin,
@@ -3035,11 +3001,29 @@
                 const [h, m] = value.split(':').map(Number);
                 if (isNaN(h) || isNaN(m)) return;
                 s.startMin = h * 60 + m; warnedSet.clear();
-                renderEndControl(); updateTimeFeedback();
+                updateTimeFeedback();
                 syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
               }}
-              onEndModeChange={(mode) => { endMode = mode; s.endMode = mode; renderEndControl(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}  
-              onEndControlMount={(node) => { endControlEl = node ?? null!; renderEndControl(); }}
+              onEndTimeInput={(value) => {
+                const [h, m] = value.split(':').map(Number);
+                if (isNaN(h) || isNaN(m)) return;
+                let end = h * 60 + m;
+                if (end <= s.startMin) end += 24 * 60;
+                const diff = end - s.startMin;
+                if (diff < s.blocks.length * 2) return;
+                scaleMinutesTo(diff);
+                updateTimeFeedback();
+                syncTimerToAgenda(); appState.persist();
+                notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+              }}
+              onTotalMinutesInput={(value) => {
+                if (!value || value < s.blocks.length * 2) return;
+                scaleMinutesTo(value);
+                updateTimeFeedback();
+                syncTimerToAgenda(); appState.persist();
+                notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+              }}
+              onEndModeChange={(mode) => { endMode = mode; s.endMode = mode; appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}  
               onRevert={revertActivePanel}
               onToggleTitleHelp={() => sessionTitleHelpOpen = toggleHelpOverride(sessionTitleHelpOpen)}
               onTogglePartsHelp={() => sessionPartsHelpOpen = toggleHelpOverride(sessionPartsHelpOpen)}

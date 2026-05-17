@@ -47,6 +47,11 @@
     onExportActualHistory,
     startTimeValue,
     onStartTimeInput,
+    endTimeValue,
+    onEndTimeInput,
+    totalMinutesValue,
+    onTotalMinutesInput,
+    minTotalMinutes,
     endMode,
     onEndModeChange,
     onToggleTimeHelp,
@@ -66,8 +71,7 @@
     onCopyShareLink,
     onStopSharing,
     onStartSessionShare,
-    onStartDayShare,
-    onEndControlMount
+    onStartDayShare
   }: {
     hasSelection: boolean;
     targetDateLabel: string;
@@ -108,6 +112,11 @@
     onExportActualHistory: () => void;
     startTimeValue: string;
     onStartTimeInput: (value: string) => void;
+    endTimeValue: string;
+    onEndTimeInput: (value: string) => void;
+    totalMinutesValue: number;
+    onTotalMinutesInput: (value: number) => void;
+    minTotalMinutes: number;
     endMode: 'end' | 'len';
     onEndModeChange: (mode: 'end' | 'len') => void;
     onToggleTimeHelp: () => void;
@@ -128,14 +137,8 @@
     onStopSharing: () => void;
     onStartSessionShare: () => void;
     onStartDayShare: () => void;
-    onEndControlMount: (node: HTMLElement | null) => void;
   } = $props();
 
-  let endControlHost = $state<HTMLElement | null>(null);
-
-  $effect(() => {
-    onEndControlMount(endControlHost);
-  });
 </script>
 
 <div class="plan-editor">
@@ -187,7 +190,7 @@
         </button>
         {#if aiPanelOpen}
           <div class="feedback" style="margin-bottom:8px; opacity:0.8;">
-            Används på egen risk. Din API-nyckel används enbart för att skicka instruktioner direkt till AI-leverantören.
+            Används på egen risk. Din API-nyckel används enbart för att skicka instruktioner direkt till AI-leverantör.
           </div>
           <textarea class="ai-input" placeholder="Beskriv vad du vill planera..."
             value={aiInput}
@@ -256,7 +259,13 @@
     </div>
     <div>
       <div class="field-label">{endMode === 'end' ? 'Sluttid' : 'Längd (min)'}</div>
-      <div bind:this={endControlHost}></div>
+      {#if endMode === 'end'}
+        <input type="time" value={endTimeValue}
+          oninput={(e) => onEndTimeInput((e.target as HTMLInputElement).value)} />
+      {:else}
+        <input type="number" min={minTotalMinutes} value={totalMinutesValue}
+          oninput={(e) => onTotalMinutesInput(Number((e.target as HTMLInputElement).value))} />
+      {/if}
     </div>
   </div>
   <div class="mode-toggle">

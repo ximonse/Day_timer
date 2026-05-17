@@ -46,8 +46,12 @@
     onRunAi,
     onAction,
     onStartTimeInput,
+    endTimeValue,
+    onEndTimeInput,
+    totalMinutesValue,
+    onTotalMinutesInput,
+    minTotalMinutes,
     onEndModeChange,
-    onEndControlMount,
     onRevert,
     onToggleTitleHelp,
     onTogglePartsHelp,
@@ -83,6 +87,9 @@
     aiLoading: boolean;
     aiPlanMode: 'strict' | 'helpful';
     startTimeValue: string;
+    endTimeValue: string;
+    totalMinutesValue: number;
+    minTotalMinutes: number;
     endMode: 'end' | 'len';
     actionLabel: string;
     actionHint: string;
@@ -110,8 +117,9 @@
     onRunAi: () => void;
     onAction: () => void;
     onStartTimeInput: (value: string) => void;
+    onEndTimeInput: (value: string) => void;
+    onTotalMinutesInput: (value: number) => void;
     onEndModeChange: (mode: 'end' | 'len') => void;
-    onEndControlMount: (node: HTMLElement | null) => void;
     onRevert: () => void;
     onToggleTitleHelp: () => void;
     onTogglePartsHelp: () => void;
@@ -217,6 +225,11 @@
       {onExportActualHistory}
       {startTimeValue}
       {onStartTimeInput}
+      {endTimeValue}
+      {onEndTimeInput}
+      {totalMinutesValue}
+      {onTotalMinutesInput}
+      {minTotalMinutes}
       {endMode}
       {onEndModeChange}
       {onToggleTimeHelp}
@@ -237,7 +250,6 @@
       {onStopSharing}
       {onStartSessionShare}
       {onStartDayShare}
-      {onEndControlMount}
     />
   </div>
 {/if}
