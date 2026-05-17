@@ -1214,12 +1214,12 @@
     checkWarnings();
   }
 
-  function handlePartsInput(input: string) {
+  function handlePartsInput(input: string, applyTitle = false) {
     partsDraft = input;
     partsDraftDirty = true;
     const result = parseParts(input, s.blocks);
     s.blocks = result.blocks;
-    if (result.dayTitle) s.dayTitle = result.dayTitle;
+    if (applyTitle && result.dayTitle) s.dayTitle = result.dayTitle;
     s.extraInfo = result.extraInfo;
     updateTimeFeedback();
     renderEndControl();
@@ -1834,7 +1834,7 @@
     aiLoading = true; aiError = '';
     try {
       const text = await requestAiPlan(aiConfig, aiInput, 'parts', { startMin: s.startMin });
-      handlePartsInput(text);
+      handlePartsInput(text, true);
       aiPanelOpen = false;
       aiInput = '';
     } catch (e: any) { 

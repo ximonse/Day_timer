@@ -1,4 +1,12 @@
 <script lang="ts">
+  let textareaEl: HTMLTextAreaElement | null = $state(null);
+
+  $effect(() => {
+    if (textareaEl && textareaEl.value !== partsValue) {
+      textareaEl.value = partsValue;
+    }
+  });
+
   let {
     titleValue,
     partsValue,
@@ -75,7 +83,7 @@
       <div class="feedback">En rad per aktivitet. Tider som slutar med <code>m</code> låses, övriga delar fördelas automatiskt. Börja en rad med <code>#</code> för rubrik, <code>-</code> för underpunkt och <code>&amp;</code> för kommentar. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rad.</div>
     {/if}
     <textarea placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
-      value={partsValue}
+      bind:this={textareaEl}
       oninput={(e) => onPartsInput((e.target as HTMLTextAreaElement).value)}
       onkeydown={onPartsKeyDown}></textarea>
     <div class="feedback">{partsFeedbackText}</div>

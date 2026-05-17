@@ -1,4 +1,12 @@
 <script lang="ts">
+  let textareaEl: HTMLTextAreaElement | null = $state(null);
+
+  $effect(() => {
+    if (textareaEl && textareaEl.value !== partsValue) {
+      textareaEl.value = partsValue;
+    }
+  });
+
   let {
     hasSelection,
     targetDateLabel,
@@ -168,7 +176,7 @@
       <div class="feedback">Skriv eller klistra in aktiviteter här. En per rad. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rad.</div>
     {/if}
     <textarea placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
-      value={partsValue}
+      bind:this={textareaEl}
       oninput={(e) => onPartsInput((e.target as HTMLTextAreaElement).value)}
       onkeydown={onPartsKeyDown}></textarea>
     <div class="feedback">{partsFeedbackText}</div>
