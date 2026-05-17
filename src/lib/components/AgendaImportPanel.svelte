@@ -186,8 +186,8 @@
     </button>
   </div>
   <div class="feedback" style="margin-top:6px; border-left: 2px solid var(--accent); padding-left: 8px;">
-    <strong>Från anteckningar</strong>: Kopiera denna prompt till Gemini och skriv sedan ner dina lösa planer. AI:n formaterar dem åt dig.<br/>
-    <strong>Från kalender</strong>: Kopiera denna prompt till Gemini. AI:n hämtar dina kalenderhändelser (om den har tillgång) och skriver ut dem i appens format.
+    <strong>Från anteckningar</strong>: Kopiera denna prompt till Gemini och skriv ner dina lösa planer. Klistra sedan in resultatet i "Redigera dagtext" ovan.<br/>
+    <strong>Från kalender</strong>: Kopiera denna prompt till Gemini. AI:n hämtar dina kalenderhändelser och skriver ut dem i appens format. Klistra sedan in resultatet i "Redigera dagtext" ovan.
   </div>
 {/if}
 
