@@ -164,7 +164,6 @@
         icsError={icsImportError}
         icsHasPreview={icsPreviewEvents.length > 0}
         {icsCanImport}
-        {copyAgendaPromptText}
         hasAiKey={!!aiApiKey}
         {agendaAiOpen}
         {agendaAiInput}
