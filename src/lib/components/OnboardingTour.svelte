@@ -32,7 +32,7 @@
       section: 'now',
       target: '#sidebar-blocks',
       title: 'Undertext & Kommentarer',
-      text: 'När du redigerar, använd "-" för underpunkter (instruktioner) och "&" för en slutlig kommentar. De sparas direkt i listan.',
+      text: 'När du redigerar, använd "-" för underpunkter (instruktioner) och "&" för en sammanfattande kommentar. De sparas direkt i listan.',
       pos: 'right'
     },
     {
@@ -155,7 +155,6 @@
 
     // Ensure we are in the correct section for this step
     if (appState.value.activeSection !== currentStep.section) {
-      // Small delay to allow UI to render after section change
       appState.value.activeSection = currentStep.section as any;
       setTimeout(() => updateSpotlight(scrollIntoView), 50);
       return;
@@ -167,14 +166,19 @@
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       const rect = el.getBoundingClientRect();
-      spotlightRect = {
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height
-      };
+      
+      if (Math.abs(spotlightRect.top - rect.top) > 0.5 || 
+          Math.abs(spotlightRect.left - rect.left) > 0.5 ||
+          spotlightRect.width !== rect.width ||
+          spotlightRect.height !== rect.height) {
+        spotlightRect = {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height
+        };
+      }
     } else {
-      // Element not found (maybe inside a collapsed menu), fallback to center
       spotlightRect = {
         top: window.innerHeight / 2 - 50,
         left: window.innerWidth / 2 - 50,
@@ -186,22 +190,16 @@
 
   $effect(() => {
     if (step > 0) {
-      // Step changed, scroll to it
       updateSpotlight(true);
       
-      // Setup listeners for resizing and scrolling
-      const refresher = () => updateSpotlight(false);
-      window.addEventListener('resize', refresher);
-      window.addEventListener('scroll', refresher, true); 
+      let rafId: number;
+      const loop = () => {
+        updateSpotlight(false);
+        rafId = requestAnimationFrame(loop);
+      };
+      rafId = requestAnimationFrame(loop);
       
-      // Periodic check to catch UI movements
-      const interval = setInterval(refresher, 200);
-      
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('resize', refresher);
-        window.removeEventListener('scroll', refresher, true);
-      }
+      return () => cancelAnimationFrame(rafId);
     }
   });
 
@@ -214,17 +212,14 @@
     const tooltipH = 180; // Estimated height
 
     let left = spotlightRect.left + spotlightRect.width / 2;
-    // Bounds check horizontal
     if (left - tooltipW/2 < 10) left = tooltipW/2 + 10;
     if (left + tooltipW/2 > winW - 10) left = winW - tooltipW/2 - 10;
 
     let finalPos = currentStep.pos;
     
-    // Safety check: if pos is 'top' but we are too close to the top of the screen, flip to bottom
     if (finalPos === 'top' && spotlightRect.top < tooltipH + margin) {
       finalPos = 'bottom';
     }
-    // Similarly for bottom
     if (finalPos === 'bottom' && winH - (spotlightRect.top + spotlightRect.height) < tooltipH + margin) {
       finalPos = 'top';
     }
@@ -238,7 +233,6 @@
     } else if (finalPos === 'left') {
       let right = winW - spotlightRect.left + margin;
       let top = spotlightRect.top + spotlightRect.height / 2;
-      // Safety: keep tooltip within vertical bounds
       if (top - tooltipH/2 < 10) top = tooltipH/2 + 10;
       if (top + tooltipH/2 > winH - 10) top = winH - tooltipH/2 - 10;
       return `top: ${top}px; right: ${right}px; transform: translateY(-50%);`;
@@ -257,12 +251,22 @@
 
 {#if step > 0 && currentStep}
   <div class="onboarding-overlay" in:fade={{ duration: 200 }} onclick={onExit} role="presentation">
-    <div class="spotlight" style="
-      top: {spotlightRect.top - 8}px;
-      left: {spotlightRect.left - 8}px;
-      width: {spotlightRect.width + 16}px;
-      height: {spotlightRect.height + 16}px;
-    "></div>
+    <svg class="onboarding-mask-svg" width="100%" height="100%">
+      <defs>
+        <mask id="spotlight-mask">
+          <rect width="100%" height="100%" fill="white" />
+          <rect 
+            x={spotlightRect.left - 8} 
+            y={spotlightRect.top - 8} 
+            width={spotlightRect.width + 16} 
+            height={spotlightRect.height + 16} 
+            rx="12" 
+            fill="black" 
+          />
+        </mask>
+      </defs>
+      <rect width="100%" height="100%" fill="rgba(0,0,0,0.7)" mask="url(#spotlight-mask)" />
+    </svg>
 
     <div class="onboarding-tooltip" style={tooltipStyle} in:fly={{ y: 10, duration: 300 }} onclick={(e) => e.stopPropagation()} role="presentation">
       <button class="close-tour" onclick={onExit} title="Stäng guide">×</button>
@@ -296,13 +300,13 @@
     pointer-events: none;
   }
 
-  .spotlight {
+  .onboarding-mask-svg {
     position: absolute;
-    background: transparent;
-    border-radius: 12px;
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: auto; /* Allow clicking on the highlighted area to exit or interact */
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    width: 100%;
+    height: 100%;
   }
 
   .onboarding-tooltip {
@@ -316,6 +320,7 @@
     border: 1px solid var(--menu-border);
     pointer-events: auto;
     z-index: 10001;
+    will-change: top, left, bottom, right, transform;
   }
 
   .close-tour {
