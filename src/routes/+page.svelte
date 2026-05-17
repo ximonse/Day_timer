@@ -3287,6 +3287,7 @@
       if (s.onboardingStep < 1) s.onboardingStep = 1;
       appState.persist();
     }}
+    onLoadDummy={() => {}},
     onExit={() => {
       s.onboardingStep = 0;
       appState.persist();
