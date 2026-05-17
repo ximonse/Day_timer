@@ -90,8 +90,7 @@ function parseTimeStr(s: string): number | undefined {
 
 // @YYMMDD, @YYYYMMDD or @YYYY-MM-DD → ISO string or null
 function parseDateMarker(raw: string): string | null {
-  const s = raw.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const s = raw.trim().replace(/-/g, '');
   if (/^\d{8}$/.test(s)) return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
   if (/^\d{6}$/.test(s)) {
     const y = 2000 + parseInt(s.slice(0, 2), 10);
@@ -264,8 +263,14 @@ export function serializeAgenda(days: AgendaDay[]): string {
     if (!firstDay) lines.push('');
     firstDay = false;
     if (day.date !== null) {
-      const [y, m, d] = day.date.split('-');
-      lines.push(`@${y}${m}${d}`);
+      const parts = day.date.split('-');
+      const y = parts[0], m = parts[1], d = parts[2];
+      // Use 6-digit format if year is 20xx for a cleaner look
+      if (y.startsWith('20') && y.length === 4) {
+        lines.push(`@${y.slice(2)}${m}${d}`);
+      } else {
+        lines.push(`@${y}${m}${d}`);
+      }
     }
     for (const flow of day.flows) {
       if (flow.startMin !== undefined) {
