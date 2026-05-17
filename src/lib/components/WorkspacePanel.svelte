@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appState, type AiProvider } from '$lib/state.svelte.js';
   let {
     loggedInUser,
     syncStatusText,
