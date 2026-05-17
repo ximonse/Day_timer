@@ -1950,6 +1950,8 @@
 
   function syncPartsDraftFromState(force = false) {
     const source = serializeBlocks(s.blocks, undefined, s.extraInfo);
+    // ONLY sync from the state into the editable parts draft 
+    // IF the user hasn't started editing the draft yet OR if we force it.
     if (force || !partsDraftDirty) {
       partsDraft = source;
       partsDraftDirty = false;
@@ -1959,6 +1961,8 @@
   function syncAgendaDraftFromState(force = false) {
     const currentDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
     const source = serializeSelectedAgendaDay(currentDate, agendaDays);
+    // ONLY sync from the state into the editable agenda draft 
+    // IF the user hasn't started editing the draft yet OR if we force it.
     if (force || agendaDraftDate !== currentDate || !agendaDraftDirty) {
       agendaDraft = source;
       agendaDraftDate = currentDate;
@@ -2252,7 +2256,9 @@
   $effect(() => {
     const _selectedDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
     const _agendaText = activeAgendaText();
-    if (s.activeSection === 'plan') {
+    // Only sync from the persistent state into the editable draft 
+    // IF the user hasn't started editing the draft yet.
+    if (s.activeSection === 'plan' && !agendaDraftDirty) {
       syncAgendaDraftFromState();
     }
   });
