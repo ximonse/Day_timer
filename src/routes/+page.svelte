@@ -3271,8 +3271,9 @@
 {#if s.firstVisit}
   <div class="welcome-overlay" in:fade={{ duration: 400 }}>
     <div class="welcome-card" in:fly={{ y: 20, duration: 500, delay: 200 }}>
-      <h1>Hej! 👋</h1>
+      <h1>Hej!</h1>
       <p>Det här är Day Timer — ett verktyg för att visualisera tid och planera dina pass snyggt och enkelt.</p>
+      
       <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px;">
         <button class="quickstart" style="background:var(--accent); color:white; justify-content:center;" 
           onclick={() => { s.firstVisit = false; s.onboardingStep = 1; appState.persist(); }}>
@@ -3282,6 +3283,12 @@
           onclick={() => { s.firstVisit = false; appState.persist(); }}>
           Jag fattar, kör igång!
         </button>
+      </div>
+
+      <div style="margin-top: 32px; text-align: left; font-size: 13px; line-height: 1.6; opacity: 0.85; border-top: 1px solid var(--menu-border); padding-top: 24px;">
+        <p style="margin-bottom: 12px;">Den här timern är lika mycket ett verktyg för dig som planerar andras dag som för dig som behöver hjälp att planera din egen.</p>
+        <p style="margin-bottom: 12px;">Att göra tid synlig – som utrymme med tydlig progress och historik – är inte bara intuitivt. Det bygger på forskning om hur hjärnan hanterar tid, motivation och självreglering.</p>
+        <p>Starta direkt – ingen inloggning, inget krångel. När du är redo finns schemaläggning för hela dagar och veckor, med synk mot din kalender. Och för den som vill ha hjälp att planera finns AI-stöd – med din egen nyckel eller via de verktyg du redan använder.</p>
       </div>
     </div>
   </div>
