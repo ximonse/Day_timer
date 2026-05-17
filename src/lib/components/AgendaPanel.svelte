@@ -183,11 +183,9 @@
         onIcsFileChange={readIcsFile}
         onPreviewIcs={previewIcsImport}
         onImportIcs={importPreviewedIcs}
-        onCopyPrompt={() => {
-          navigator.clipboard.writeText(AI_PROMPT_AGENDA).then(() => {
-            copyAgendaPromptText = '✓ Kopierad';
-            setTimeout(() => { copyAgendaPromptText = 'AI-prompt'; }, 1500);
-          });
+        onCopyPrompt={async (type) => {
+          const prompt = type === 'plan' ? AI_PROMPT_AGENDA : AI_PROMPT_CALENDAR_CONVERT;
+          await navigator.clipboard.writeText(prompt);
         }}
         onToggleAi={() => agendaAiOpen = !agendaAiOpen}
         onAgendaAiInputChange={(value) => agendaAiInput = value}
