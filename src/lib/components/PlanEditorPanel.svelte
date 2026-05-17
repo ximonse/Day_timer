@@ -248,7 +248,7 @@
     </div>
   </div>
 
-  <div class="row2">
+  <div id="plan-time-row" class="row2">
     <div>
       <div class="field-head">
         <div class="field-label">Starttid</div>

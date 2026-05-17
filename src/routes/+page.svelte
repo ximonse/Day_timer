@@ -3281,6 +3281,11 @@
       if (s.onboardingStep > 15) s.onboardingStep = 0;
       appState.persist();
     }}
+    onBack={() => {
+      s.onboardingStep--;
+      if (s.onboardingStep < 1) s.onboardingStep = 1;
+      appState.persist();
+    }}
     onExit={() => {
       s.onboardingStep = 0;
       appState.persist();
