@@ -130,6 +130,41 @@ function sectionsToFlows(sections: RawSection[]): Flow[] {
   });
 }
 
+export function totalFlowMinutes(flow: Flow): number {
+  return flow.minutes.reduce((sum, minutes) => sum + minutes, 0);
+}
+
+export function mergeAgendaDayData(existing: string, incoming: AgendaDay[]): AgendaDay[] {
+  const baseDays = existing.trim() ? parseAgenda(existing) : [];
+  const dayMap = new Map<string, AgendaDay>();
+
+  for (const day of baseDays) {
+    dayMap.set(day.date ?? `undated-${dayMap.size}`, { ...day, flows: [...day.flows] });
+  }
+
+  for (const day of incoming) {
+    const key = day.date ?? `undated-${dayMap.size}`;
+    const existingDay = dayMap.get(key);
+    if (!existingDay) {
+      dayMap.set(key, { ...day, flows: [...day.flows] });
+      continue;
+    }
+
+    const mergedFlows = [...existingDay.flows];
+    for (const flow of day.flows) {
+      const replaceIdx = mergedFlows.findIndex(existingFlow =>
+        existingFlow.startMin === flow.startMin && existingFlow.title === flow.title
+      );
+      if (replaceIdx >= 0) mergedFlows[replaceIdx] = flow;
+      else mergedFlows.push(flow);
+    }
+    mergedFlows.sort((a, b) => (a.startMin ?? 0) - (b.startMin ?? 0) || a.title.localeCompare(b.title));
+    dayMap.set(key, { ...existingDay, flows: mergedFlows });
+  }
+
+  return [...dayMap.values()].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+}
+
 export function parseAgenda(text: string): AgendaDay[] {
   const lines = text.split('\n').map(l => l.replace(/\s+$/, ''));
   const days: AgendaDay[] = [];
