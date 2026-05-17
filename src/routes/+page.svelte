@@ -2908,7 +2908,7 @@
         {/if}
 
         {#if s.activeSection === 'now' || s.activeSection === 'plan'}
-          <div in:fade={{ duration: 300 }}>
+          <div in:fade={{ duration: 150 }}>
             <SessionEditorPanel
               mode={s.activeSection}
               hasSelection={!!selectedAgendaDetails}
@@ -3041,7 +3041,7 @@
             />
           </div>
         {:else if s.activeSection === 'library'}
-          <div in:fade={{ duration: 300 }}>
+          <div in:fade={{ duration: 150 }}>
             <LibraryPanel
               savedFlowMsg={savedFlowMsg}
               flows={s.flows}
@@ -3056,7 +3056,7 @@
             />
           </div>
         {:else}
-          <div in:fade={{ duration: 300 }}>
+          <div in:fade={{ duration: 150 }}>
             <WorkspacePanel
               {loggedInUser}
               {syncStatusText}

@@ -149,7 +149,7 @@
 </script>
 
 {#if mode === 'now'}
-  <div in:fade={{ duration: 300 }}>
+  <div in:fade={{ duration: 150 }}>
     <NowEditorPanel
       {titleValue}
       {partsValue}
@@ -176,7 +176,7 @@
     />
   </div>
 {:else}
-  <div in:fade={{ duration: 300 }}>
+  <div in:fade={{ duration: 150 }}>
     <PlanEditorPanel
       {hasSelection}
       {targetDateLabel}
