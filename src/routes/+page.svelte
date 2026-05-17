@@ -2,6 +2,7 @@
   import AgendaPanel from '$lib/components/AgendaPanel.svelte';
   
   import { onMount, untrack } from 'svelte';
+  import { fade } from 'svelte/transition';
   import { appState, uid, type ActualTimeEntry, type AgendaFlowMeta, type AppSection, type Block, type Flow } from '$lib/state.svelte.js';
   import { PALETTES, PALETTE_COLORS, PALETTE_LABELS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
@@ -2907,189 +2908,194 @@
         {/if}
 
         {#if s.activeSection === 'now' || s.activeSection === 'plan'}
-          <SessionEditorPanel
-            mode={s.activeSection}
-            hasSelection={!!selectedAgendaDetails}
-            savedFlowMsg={savedFlowMsg}
-            titleValue={s.dayTitle}
-            partsValue={partsFieldValue}
-            {copyBtnText}
-            {partsFeedbackText}
-            {timeFeedbackText}
-            hasAiKey={!!aiApiKey}
-            {aiPanelOpen}
-            {aiInput}
-            {aiError}
-            {aiLoading}
-            aiPlanMode={aiConfig.planMode}
-            startTimeValue={fmtHM(s.startMin)}
-            {endMode}
-            actionLabel={s.activeSection === 'plan' ? 'Spara' : 'Kör!'}
-            actionHint={planActionHint}
-            saveStatusLabel={activePanelStatusLabel}
-            canRevert={canRevertPanel}
-            showTitleHelp={helpVisible(sessionTitleHelpOpen)}
-            showPartsHelp={helpVisible(sessionPartsHelpOpen)}
-            showTimeHelp={helpVisible(sessionTimeHelpOpen)}
-            targetDateLabel={targetDateLabel}
-            sourceLabel={selectedAgendaSourceLabel}
-            sourceHelp={selectedAgendaSourceHelp}
-            showSourceHelp={helpVisible(planSourceHelpOpen)}
-            {shareToken}
-            {shareMode}
-            {shareCopyText}
-            shareUrl={shareToken && pageOrigin ? `${pageOrigin}/?view=${shareToken}` : ''}
-            onTitleInput={(value) => { 
-              s.dayTitle = value; 
-              if (s.activeSection !== 'plan') {
-                syncTimerToAgenda(); 
-              }
-              appState.persist(); 
-              notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); 
-            }}
-            onPartsInput={handlePartsInput}
-            onPartsKeyDown={handlePartsKeyDown}
-            onCopyPrompt={() => {
-              navigator.clipboard.writeText(currentAiPrompt).then(() => {
-                copyBtnText = '✓ Kopierad';
-                setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
-              });
-            }}
-            onToggleAiPanel={() => aiPanelOpen = !aiPanelOpen}
-            onAiInputChange={(value) => aiInput = value}
-            onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
-            onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
-            onRunAi={runAiParts}
-            onAction={() => {
-              if (s.activeSection === 'plan') {
-                const baseline = planPanelBaseline;
-                const timeChanged = baseline ? baseline.startMin !== s.startMin : false;
-
-                if (selectedAgendaDetails && planSelectionExplicit && !timeChanged) {
-                  // Only title or parts changed, update existing block
-                  syncTimerToAgenda(true);
-                } else {
-                  // Time changed or no selection, create new block
-                  const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
-                  const flow: Flow = {
-                    id: uid(),
-                    title: s.dayTitle || 'Session',
-                    startMin: s.startMin,
-                    parts: s.blocks.map(b => b.title),
-                    minutes: s.blocks.map(b => b.minutes),
-                    warnings: s.blocks.map(b => b.warning),
-                    notes: s.blocks.map(b => b.note),
-                    extraInfo: s.extraInfo,
-                  };
-                  addFlowToAgendaDate(targetDate, flow, true, sessionAgendaMeta());
-                  planSelectionExplicit = true;
+          <div in:fade={{ duration: 150 }}>
+            <SessionEditorPanel
+              mode={s.activeSection}
+              hasSelection={!!selectedAgendaDetails}
+              savedFlowMsg={savedFlowMsg}
+              titleValue={s.dayTitle}
+              partsValue={partsFieldValue}
+              {copyBtnText}
+              {partsFeedbackText}
+              {timeFeedbackText}
+              hasAiKey={!!aiApiKey}
+              {aiPanelOpen}
+              {aiInput}
+              {aiError}
+              {aiLoading}
+              aiPlanMode={aiConfig.planMode}
+              startTimeValue={fmtHM(s.startMin)}
+              {endMode}
+              actionLabel={s.activeSection === 'plan' ? 'Spara' : 'Kör!'}
+              actionHint={planActionHint}
+              saveStatusLabel={activePanelStatusLabel}
+              canRevert={canRevertPanel}
+              showTitleHelp={helpVisible(sessionTitleHelpOpen)}
+              showPartsHelp={helpVisible(sessionPartsHelpOpen)}
+              showTimeHelp={helpVisible(sessionTimeHelpOpen)}
+              targetDateLabel={targetDateLabel}
+              sourceLabel={selectedAgendaSourceLabel}
+              sourceHelp={selectedAgendaSourceHelp}
+              showSourceHelp={helpVisible(planSourceHelpOpen)}
+              {shareToken}
+              {shareMode}
+              {shareCopyText}
+              shareUrl={shareToken && pageOrigin ? `${pageOrigin}/?view=${shareToken}` : ''}
+              onTitleInput={(value) => {
+                s.dayTitle = value;
+                if (s.activeSection !== 'plan') {
+                  syncTimerToAgenda();
                 }
-                capturePanelBaseline('plan');
-                partsDraftDirty = false;
-                notifyPanelMutation('plan');
                 appState.persist();
-                return;
-              }
-              const d = new Date();
-              s.startMin = d.getHours() * 60 + d.getMinutes();
-              warnedSet.clear(); renderEndControl(); updateTimeFeedback();
-              const f: Flow = {
-                id: uid(), title: s.dayTitle || 'Session',
-                startMin: s.startMin,
-                parts: s.blocks.map(b => b.title),
-                minutes: s.blocks.map(b => b.minutes),
-                warnings: s.blocks.map(b => b.warning),
-                notes: s.blocks.map(b => b.note),
-                extraInfo: s.extraInfo,
-              };
-              addFlowToAgendaToday(f, true, sessionAgendaMeta());
-              lastAutoLoadKey = `${f.startMin}-${totalFlowMinutes(f)}-${f.title}-${f.parts.length}`;
-              capturePanelBaseline('now');
-              partsDraftDirty = false;
-              notifyPanelMutation('now');
-            }}
-            onStartTimeInput={(value) => {
-              const [h, m] = value.split(':').map(Number);
-              if (isNaN(h) || isNaN(m)) return;
-              s.startMin = h * 60 + m; warnedSet.clear();
-              renderEndControl(); updateTimeFeedback();
-              syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
-            }}
-            onEndModeChange={(mode) => { endMode = mode; s.endMode = mode; renderEndControl(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}
-            onEndControlMount={(node) => { endControlEl = node ?? null!; renderEndControl(); }}
-            onRevert={revertActivePanel}
-            onToggleTitleHelp={() => sessionTitleHelpOpen = toggleHelpOverride(sessionTitleHelpOpen)}
-            onTogglePartsHelp={() => sessionPartsHelpOpen = toggleHelpOverride(sessionPartsHelpOpen)}
-            onToggleTimeHelp={() => sessionTimeHelpOpen = toggleHelpOverride(sessionTimeHelpOpen)}
-            onToggleSourceHelp={() => planSourceHelpOpen = toggleHelpOverride(planSourceHelpOpen)}
-            onCopyShareLink={copyShareLink}
-            onStopSharing={stopSharing}
-            onStartLiveShare={() => startSharing('active-session-live')}
-            onSaveFlow={saveFlow}
-            onStartSessionShare={() => startSharing('selected-session-snapshot')}
-            onStartDayShare={() => startSharing('selected-day-snapshot')}
-            actualHistoryOpen={actualHistoryOpen}
-            onToggleActualHistory={() => actualHistoryOpen = !actualHistoryOpen}
-            currentSubjectCategory={currentSubjectCategory}
-            suggestedDuration={suggestedDuration}
-            pendingActualEntries={pendingActualEntries}
-            onConfirmActualEntry={confirmActualEntry}
-            onDeleteActualEntry={deleteActualEntry}
-            onExportActualHistory={exportActualHistory}
-          />
+                notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+              }}
+              onPartsInput={handlePartsInput}
+              onPartsKeyDown={handlePartsKeyDown}
+              onCopyPrompt={() => {
+                navigator.clipboard.writeText(currentAiPrompt).then(() => {
+                  copyBtnText = '✓ Kopierad';
+                  setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
+                });
+              }}
+              onToggleAiPanel={() => aiPanelOpen = !aiPanelOpen}
+              onAiInputChange={(value) => aiInput = value}
+              onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
+              onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
+              onRunAi={runAiParts}
+              onAction={() => {
+                if (s.activeSection === 'plan') {
+                  const baseline = planPanelBaseline;
+                  const timeChanged = baseline ? baseline.startMin !== s.startMin : false;
+
+                  if (selectedAgendaDetails && planSelectionExplicit && !timeChanged) {
+                    // Only title or parts changed, update existing block
+                    syncTimerToAgenda(true);
+                  } else {
+                    // Time changed or no selection, create new block
+                    const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+                    const flow: Flow = {
+                      id: uid(),
+                      title: s.dayTitle || 'Session',
+                      startMin: s.startMin,
+                      parts: s.blocks.map(b => b.title),
+                      minutes: s.blocks.map(b => b.minutes),
+                      warnings: s.blocks.map(b => b.warning),
+                      notes: s.blocks.map(b => b.note),
+                      extraInfo: s.extraInfo,
+                    };
+                    addFlowToAgendaDate(targetDate, flow, true, sessionAgendaMeta());
+                    planSelectionExplicit = true;
+                  }
+                  capturePanelBaseline('plan');
+                  partsDraftDirty = false;
+                  notifyPanelMutation('plan');
+                  appState.persist();
+                  return;
+                }
+                const d = new Date();
+                s.startMin = d.getHours() * 60 + d.getMinutes();
+                warnedSet.clear(); renderEndControl(); updateTimeFeedback();
+                const f: Flow = {
+                  id: uid(), title: s.dayTitle || 'Session',
+                  startMin: s.startMin,
+                  parts: s.blocks.map(b => b.title),
+                  minutes: s.blocks.map(b => b.minutes),
+                  warnings: s.blocks.map(b => b.warning),
+                  notes: s.blocks.map(b => b.note),
+                  extraInfo: s.extraInfo,
+                };
+                addFlowToAgendaToday(f, true, sessionAgendaMeta());
+                lastAutoLoadKey = `${f.startMin}-${totalFlowMinutes(f)}-${f.title}-${f.parts.length}`;
+                capturePanelBaseline('now');
+                partsDraftDirty = false;
+                notifyPanelMutation('now');
+              }}
+              onStartTimeInput={(value) => {
+                const [h, m] = value.split(':').map(Number);
+                if (isNaN(h) || isNaN(m)) return;
+                s.startMin = h * 60 + m; warnedSet.clear();
+                renderEndControl(); updateTimeFeedback();
+                syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+              }}
+              onEndModeChange={(mode) => { endMode = mode; s.endMode = mode; renderEndControl(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}  
+              onEndControlMount={(node) => { endControlEl = node ?? null!; renderEndControl(); }}
+              onRevert={revertActivePanel}
+              onToggleTitleHelp={() => sessionTitleHelpOpen = toggleHelpOverride(sessionTitleHelpOpen)}
+              onTogglePartsHelp={() => sessionPartsHelpOpen = toggleHelpOverride(sessionPartsHelpOpen)}
+              onToggleTimeHelp={() => sessionTimeHelpOpen = toggleHelpOverride(sessionTimeHelpOpen)}
+              onToggleSourceHelp={() => planSourceHelpOpen = toggleHelpOverride(planSourceHelpOpen)}
+              onCopyShareLink={copyShareLink}
+              onStopSharing={stopSharing}
+              onStartLiveShare={() => startSharing('active-session-live')}
+              onSaveFlow={saveFlow}
+              onStartSessionShare={() => startSharing('selected-session-snapshot')}
+              onStartDayShare={() => startSharing('selected-day-snapshot')}
+              actualHistoryOpen={actualHistoryOpen}
+              onToggleActualHistory={() => actualHistoryOpen = !actualHistoryOpen}
+              currentSubjectCategory={currentSubjectCategory}
+              suggestedDuration={suggestedDuration}
+              pendingActualEntries={pendingActualEntries}
+              onConfirmActualEntry={confirmActualEntry}
+              onDeleteActualEntry={deleteActualEntry}
+              onExportActualHistory={exportActualHistory}
+            />
+          </div>
         {:else if s.activeSection === 'library'}
-          <LibraryPanel
-            savedFlowMsg={savedFlowMsg}
-            flows={s.flows}
-            flowsOpen={flowsOpen}
-            {describeFlow}
-            {formatLastUsed}
-            onSaveFlow={saveFlow}
-            onToggleFlows={() => flowsOpen = !flowsOpen}
-            onLoadFlow={(id) => loadFlow(id, selectedDay?.date ? 'plan' : 'now')}
-            onAddToAgenda={addTemplateToSelectedAgendaDate}
-            onDeleteFlow={deleteFlow}
-          />
+          <div in:fade={{ duration: 150 }}>
+            <LibraryPanel
+              savedFlowMsg={savedFlowMsg}
+              flows={s.flows}
+              flowsOpen={flowsOpen}
+              {describeFlow}
+              {formatLastUsed}
+              onSaveFlow={saveFlow}
+              onToggleFlows={() => flowsOpen = !flowsOpen}
+              onLoadFlow={(id) => loadFlow(id, selectedDay?.date ? 'plan' : 'now')}
+              onAddToAgenda={addTemplateToSelectedAgendaDate}
+              onDeleteFlow={deleteFlow}
+            />
+          </div>
         {:else}
-          <WorkspacePanel
-            {loggedInUser}
-            {syncStatusText}
-            {syncStatusError}
-            {loginName}
-            {loginPass}
-            aiProvider={aiConfig.provider}
-            aiProviderLabels={AI_PROVIDER_LABELS}
-            aiKeyPlaceholders={AI_KEY_PLACEHOLDERS}
-            aiApiKey={aiApiKey}
-            aiKeyVisible={aiKeyVisible}
-            aiBaseUrl={aiConfig.baseUrl}
-            aiCustomModel={aiConfig.customModel}
-            syncReady={!!loggedInUser}
-            aiReady={!!aiApiKey}
-            showHelpHints={s.showHelpHints}
-            confirmedActualCount={confirmedActualCount}
-            pendingActualCount={pendingActualEntries.length}
-            reliabilityPercent={reliabilityPercent}
-            reliabilityLevel={reliabilityLevel}
-            reliabilityHint={reliabilityHint}
-            timeDataOpen={workspaceTimeDataOpen}
-            onToggleTimeData={() => workspaceTimeDataOpen = !workspaceTimeDataOpen}
-            onLogout={logout}
-            onSyncLoad={syncLoad}
-            onSyncSave={syncSave}
-            onLogin={login}
-            onLoginNameChange={(value) => loginName = value}
-            onLoginPassChange={(value) => loginPass = value}
-            onToggleHelpHints={() => { s.showHelpHints = !s.showHelpHints; appState.persist(); }}
-            onProviderChange={(value) => { aiConfig.provider = value as AiProvider; aiKeyVisible = false; saveAiConfig(); }}
-            onToggleAiKeyVisible={() => aiKeyVisible = !aiKeyVisible}
-            onClearAiConfig={clearAiConfig}
-            onAiApiKeyChange={(value) => { aiConfig.apiKey = value; saveAiConfig(); }}
-            onAiBaseUrlChange={(value) => { aiConfig.baseUrl = value; saveAiConfig(); }}
-            onAiCustomModelChange={(value) => { aiConfig.customModel = value; saveAiConfig(); }}
-          />
-        {/if}
-        </div>
+          <div in:fade={{ duration: 150 }}>
+            <WorkspacePanel
+              {loggedInUser}
+              {syncStatusText}
+              {syncStatusError}
+              {loginName}
+              {loginPass}
+              aiProvider={aiConfig.provider}
+              aiProviderLabels={AI_PROVIDER_LABELS}
+              aiKeyPlaceholders={AI_KEY_PLACEHOLDERS}
+              aiApiKey={aiApiKey}
+              aiKeyVisible={aiKeyVisible}
+              aiBaseUrl={aiConfig.baseUrl}
+              aiCustomModel={aiConfig.customModel}
+              syncReady={!!loggedInUser}
+              aiReady={!!aiApiKey}
+              showHelpHints={s.showHelpHints}
+              confirmedActualCount={confirmedActualCount}
+              pendingActualCount={pendingActualEntries.length}
+              reliabilityPercent={reliabilityPercent}
+              reliabilityLevel={reliabilityLevel}
+              reliabilityHint={reliabilityHint}
+              timeDataOpen={workspaceTimeDataOpen}
+              onToggleTimeData={() => workspaceTimeDataOpen = !workspaceTimeDataOpen}
+              onLogout={logout}
+              onSyncLoad={syncLoad}
+              onSyncSave={syncSave}
+              onLogin={login}
+              onLoginNameChange={(value) => loginName = value}
+              onLoginPassChange={(value) => loginPass = value}
+              onToggleHelpHints={() => { s.showHelpHints = !s.showHelpHints; appState.persist(); }}
+              onProviderChange={(value) => { aiConfig.provider = value as AiProvider; aiKeyVisible = false; saveAiConfig(); }}
+              onToggleAiKeyVisible={() => aiKeyVisible = !aiKeyVisible}
+              onClearAiConfig={clearAiConfig}
+              onAiApiKeyChange={(value) => { aiConfig.apiKey = value; saveAiConfig(); }}
+              onAiBaseUrlChange={(value) => { aiConfig.baseUrl = value; saveAiConfig(); }}
+              onAiCustomModelChange={(value) => { aiConfig.customModel = value; saveAiConfig(); }}
+            />
+          </div>
+        {/if}        </div>
       {/if}
       </div>
     </div>
