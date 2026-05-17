@@ -6,8 +6,9 @@
   import { PALETTES, PALETTE_COLORS, PALETTE_LABELS, clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
-  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, type AgendaDay } from '$lib/parse.js';
+  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
+  import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, type AiProvider, type AiPlanMode, type AiConfig, type PersistedAiConfig } from '$lib/ai.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory, toJsonl } from '$lib/learning.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
@@ -126,10 +127,6 @@
   let syncStatusError = $state(false);
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
 
-  type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'custom';
-  type AiPlanMode = 'strict' | 'helpful';
-  interface AiConfig { provider: AiProvider; apiKey: string; baseUrl: string; customModel: string; planMode: AiPlanMode; }
-  type PersistedAiConfig = Omit<AiConfig, 'apiKey'>;
   let aiConfig = $state<AiConfig>({ provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '', planMode: 'helpful' });
   let aiKeyVisible = $state(false);
   let aiPanelOpen = $state(false);
@@ -228,10 +225,6 @@
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
 
   const sectorColors = $derived(clockTheme(s.palette, s.dark).colors);
-
-  function totalFlowMinutes(flow: Flow): number {
-    return flow.minutes.reduce((sum, minutes) => sum + minutes, 0);
-  }
 
   function deriveAgendaDayStart(day: AgendaDay, fallbackStart: number): number {
     const firstExplicitIdx = day.flows.findIndex(f => f.startMin !== undefined);
@@ -1364,37 +1357,6 @@
     if (loggedInUser) syncSave();
   }
 
-  function mergeAgendaDayData(existing: string, incoming: AgendaDay[]): AgendaDay[] {
-    const baseDays = existing.trim() ? parseAgenda(existing) : [];
-    const dayMap = new Map<string, AgendaDay>();
-
-    for (const day of baseDays) {
-      dayMap.set(day.date ?? `undated-${dayMap.size}`, { ...day, flows: [...day.flows] });
-    }
-
-    for (const day of incoming) {
-      const key = day.date ?? `undated-${dayMap.size}`;
-      const existingDay = dayMap.get(key);
-      if (!existingDay) {
-        dayMap.set(key, { ...day, flows: [...day.flows] });
-        continue;
-      }
-
-      const mergedFlows = [...existingDay.flows];
-      for (const flow of day.flows) {
-        const replaceIdx = mergedFlows.findIndex(existingFlow =>
-          existingFlow.startMin === flow.startMin && existingFlow.title === flow.title
-        );
-        if (replaceIdx >= 0) mergedFlows[replaceIdx] = flow;
-        else mergedFlows.push(flow);
-      }
-      mergedFlows.sort((a, b) => (a.startMin ?? 0) - (b.startMin ?? 0) || a.title.localeCompare(b.title));
-      dayMap.set(key, { ...existingDay, flows: mergedFlows });
-    }
-
-    return [...dayMap.values()].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
-  }
-
   function deleteFlow(id: string) {
     if (!confirm(`Radera flödet?`)) return;
     s.flows = s.flows.filter(f => f.id !== id);
@@ -1876,32 +1838,19 @@
     }
     commitBlockEdit();
   }
-  function aiPayload(extra: Record<string, unknown>) {
-    return {
-      provider: aiConfig.provider,
-      apiKey: aiConfig.apiKey,
-      planMode: aiConfig.planMode,
-      ...(aiConfig.provider === 'custom' ? { baseUrl: aiConfig.baseUrl, customModel: aiConfig.customModel } : {}),
-      ...extra
-    };
-  }
-
   async function runAiParts() {
     if (!aiInput.trim()) return;
     aiLoading = true; aiError = '';
     try {
-      const res = await fetch('/api/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(aiPayload({ message: aiInput, mode: 'parts', context: { startMin: s.startMin } }))
-      });
-      const data = await res.json();
-      if (data.error) { aiError = data.error; return; }
-      handlePartsInput(data.text);
+      const text = await requestAiPlan(aiConfig, aiInput, 'parts', { startMin: s.startMin });
+      handlePartsInput(text);
       aiPanelOpen = false;
       aiInput = '';
-    } catch { aiError = 'Nätverksfel'; }
-    finally { aiLoading = false; }
+    } catch (e: any) { 
+      aiError = e.message || 'Nätverksfel'; 
+    } finally { 
+      aiLoading = false; 
+    }
   }
 
   async function runAiAgenda() {
@@ -1909,15 +1858,9 @@
     agendaAiLoading = true; agendaAiError = '';
     try {
       const todayISO = localDateISO();
-      const res = await fetch('/api/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(aiPayload({ message: agendaAiInput, mode: 'agenda', context: { date: todayISO } }))
-      });
-      const data = await res.json();
-      if (data.error) { agendaAiError = data.error; return; }
-      setActiveAgendaText(data.text);
-      const aiDays = parseAgenda(data.text);
+      const text = await requestAiPlan(aiConfig, agendaAiInput, 'agenda', { date: todayISO });
+      setActiveAgendaText(text);
+      const aiDays = parseAgenda(text);
       for (const day of aiDays) {
         const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
         for (const item of items) {
@@ -1929,8 +1872,11 @@
       appState.persist();
       agendaAiOpen = false;
       agendaAiInput = '';
-    } catch { agendaAiError = 'Nätverksfel'; }
-    finally { agendaAiLoading = false; }
+    } catch (e: any) { 
+      agendaAiError = e.message || 'Nätverksfel'; 
+    } finally { 
+      agendaAiLoading = false; 
+    }
   }
 
   function setFlowMinutes(flow: Flow, newTotal: number): Flow {
@@ -2035,87 +1981,6 @@
     setTimeout(() => { agendaDragMoved = false; }, 0);
     appState.persist();
   }
-
-  const AI_PROMPT_PARTS = `Du är en hjälpsam planeringsassistent för en visuell timer.
-
-Målet är inte bara att formatera texten, utan att göra planen mer genomförbar och lugn.
-Tänk som en omtänksam lärare eller coach: föreslå rimlig ordning, lägg till små övergångar när det behövs och påpeka kort när något verkar tajt eller saknas.
-
-Returnera BARA en lista i detta format:
-- aktiviteter på egna rader
-- underpunkter börjar med -
-- kommentarer börjar med &
-- inga rubriker, ingen inledning, ingen avslutning
-
-Exempel:
-Vakna 5m
-
-Toa 5m
-- ta med telefonen
-
-Medicin 2m
-
-Frukost 20m
-- kolla inte skärm
-
-& Om du vill hinna i tid kan det vara bra att lägga in 5 min buffert efter frukost.
-
-Regler:
-- Håll aktiviteterna korta och svenska, max 3 ord per namn
-- Föreslå en rimlig ordning om användaren skriver saker huller om buller
-- Lägg gärna till små saker som förberedelse, hämtning, paus eller ställtid om det gör planen mer realistisk
-- Om något känns stressigt, skriv en kort kommentarrad med ett konkret tips
-- Om något verkar saknas, fyll gärna på med 1-3 rimliga steg
-- Var hjälpsam och tydlig, men håll formatet enkelt nog att kunna läsas i timern
-
----
-
-[Klistra in dina aktiviteter här]`;
-
-  const AI_PROMPT_AGENDA = `Du är en hjälpsam planeringsassistent för hela eller delar av en dag.
-
-Ditt jobb är att göra planen realistisk, tydlig och snäll mot användarens energi.
-Om användaren beskriver en lös idé, hjälper du till att strukturera dagen, lägga in pauser och föreslå bra övergångar.
-Om något är oklart, gör ett klokt antagande och markera det kort i en kommentar.
-
-Returnera BARA en dagplan i detta format:
-- datumrad med @YYMMDD
-- sessionsrubriker som #Rubrik HH:MM
-- aktiviteter på egna rader med tid
-- underpunkter börjar med -
-- dagskommentarer börjar med &
-- inga förklaringar eller extra text utanför formatet
-
-Exempel:
-@260509
-#Morgonrutin 07:00
-Vakna 5m
-Toa 5m
-Frukost 20m
-- kolla inte skärm
-Förberedelse 10m
-
-#Arbetspass 09:00
-Planering 10m
-Epost 20m
-Djuparbete 60m
-- stäng av notiser
-Paus 10m
-Uppföljning 15m
-
-& Det här upplägget ser hållbart ut, men lägg gärna in en kort paus efter första arbetspasset om dagen blir lång.
-
-Regler:
-- Var realistisk och gärna lite generös med tid
-- Lägg till ställtid, pauser och övergångar när det förbättrar flödet
-- Gör dagen begriplig, inte bara korrekt
-- Om användaren verkar ha glömt något viktigt, lägg till det som ett kort råd i en &-rad
-- Håll svenska namn korta, helst max 3 ord per aktivitet
-- Behåll formatet strikt nog att appen kan läsa det
-
----
-
-[Beskriv din dag här]`;
 
   const currentAiPrompt = $derived(
     s.agendaOpen && s.clockSpan === 720 ? AI_PROMPT_AGENDA : AI_PROMPT_PARTS
