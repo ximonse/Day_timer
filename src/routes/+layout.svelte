@@ -464,7 +464,10 @@
   /* ── Mobilflikar ── */
   :global(.mobile-tabs) { display: none; }
   @media (max-width: 800px) {
-    :global(.agenda) { display: none; }
+    :global(.app) { flex-direction: column; overflow-y: auto; height: auto; min-height: 100dvh; display: flex; }
+    :global(.main) { height: auto; min-height: 450px; overflow: visible; padding-bottom: 24px; order: 1; flex: none; width: 100%; }
+    :global(.sidebar) { width: 100%; max-width: 100%; border-right: none; border-top: 1px solid var(--border); height: auto; order: 2; margin-left: 0 !important; overflow: visible; flex: none; }
+    :global(.agenda) { display: none; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); height: auto; order: 2; margin-right: 0 !important; overflow: visible; flex: none; }
     :global(.agenda-toggle-btn) { display: none; }
     :global(.collapse-btn) { display: none; }
     :global(.mobile-tabs) {
@@ -490,7 +493,7 @@
     :global(body.m-now .resize-handle-sb) { display: none; }
     :global(body.m-plan .sidebar), :global(body.m-library .sidebar), :global(body.m-workspace .sidebar) { display: none; }
     :global(body.m-now .resize-handle-sb), :global(body.m-plan .resize-handle-sb), :global(body.m-library .resize-handle-sb), :global(body.m-workspace .resize-handle-sb) { display: none; }
-    :global(body.m-plan .agenda) { display: flex !important; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); order: 2; }
+    :global(body.m-plan .agenda) { display: flex !important; }
     /* Ge utrymme för flikraden på det sista elementet i varje vy */
     :global(body.m-now .sidebar), :global(body.m-plan .agenda), :global(body.m-library .main), :global(body.m-workspace .main) {
       padding-bottom: 80px;
