@@ -2823,8 +2823,10 @@
                   appState.persist();
                   }}>
                   <span>Öppet / Eget</span><span class="menu-row-state">{{ school: 'Öppet', private: 'Eget' }[s.agendaView]}</span>
-                  </button>
-
+                </button>
+                <button class="menu-row" type="button" class:on={s.agendaDimPast} onclick={() => { s.agendaDimPast = !s.agendaDimPast; appState.persist(); }}>
+                  <span>Tona ner passerad tid</span><span class="menu-row-state">{s.agendaDimPast ? 'På' : 'Av'}</span>
+                </button>
               {:else}
                 <div class="menu-help" style="margin-top:0;">Visas som snapshot i delningsläge.</div>
               {/if}
@@ -3132,6 +3134,7 @@
     {nowMinLive}
     {agendaDragMoved}
     {calendarCells}
+    agendaDimPast={s.agendaDimPast}
     {aiApiKey}
     {aiConfig}
     {icsPreviewEvents}
