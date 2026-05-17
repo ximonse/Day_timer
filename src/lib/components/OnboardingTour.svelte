@@ -126,10 +126,13 @@
   let currentStep = $derived(steps[step - 1]);
   let spotlightRect = $state({ top: 0, left: 0, width: 0, height: 0 });
 
-  function updateSpotlight() {
+  function updateSpotlight(scrollIntoView = false) {
     if (!currentStep) return;
     const el = document.querySelector(currentStep.target);
     if (el) {
+      if (scrollIntoView) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       const rect = el.getBoundingClientRect();
       spotlightRect = {
         top: rect.top,
@@ -150,13 +153,21 @@
 
   $effect(() => {
     if (step > 0) {
-      updateSpotlight();
-      // Wait for transitions/UI changes
-      const timeout = setTimeout(updateSpotlight, 100);
-      window.addEventListener('resize', updateSpotlight);
+      // Step changed, scroll to it
+      updateSpotlight(true);
+      
+      // Setup listeners for resizing and scrolling
+      const refresher = () => updateSpotlight(false);
+      window.addEventListener('resize', refresher);
+      window.addEventListener('scroll', refresher, true); // true for capture to catch all scrolls
+      
+      // Extra check after potential smooth scroll / UI transition
+      const timeout = setTimeout(refresher, 500);
+      
       return () => {
         clearTimeout(timeout);
-        window.removeEventListener('resize', updateSpotlight);
+        window.removeEventListener('resize', refresher);
+        window.removeEventListener('scroll', refresher, true);
       }
     }
   });
@@ -213,9 +224,9 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4);
+    background: transparent;
     z-index: 10000;
-    pointer-events: auto;
+    pointer-events: none;
   }
 
   .spotlight {
@@ -224,7 +235,7 @@
     border-radius: 12px;
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
+    pointer-events: auto; /* Allow clicking on the highlighted area to exit or interact */
   }
 
   .onboarding-tooltip {
