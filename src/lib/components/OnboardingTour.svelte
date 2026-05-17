@@ -33,7 +33,7 @@
       section: 'now',
       target: '#sidebar-blocks',
       title: 'Smarta genvägar',
-      text: 'När du redigerar: Tryck `Tab` för att skriva undertext, `&` för en slutkommentar, och `Enter` för att skapa en helt ny aktivitet!',
+      text: 'När du redigerar: Tryck **Tab** för att skriva undertext, **&** för en slutkommentar, och **Enter** för att skapa en helt ny aktivitet!',
       pos: 'bottom'
     },
     {
