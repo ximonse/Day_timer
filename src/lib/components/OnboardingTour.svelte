@@ -12,6 +12,7 @@
     // Step 1: Basic Timer Creation
     {
       id: 'title',
+      section: 'now',
       target: '#lesson-title-input',
       title: 'Huvudrubrik',
       text: 'Börja med att ge din timer ett namn. Det här är den stora rubriken som syns för alla!',
@@ -19,6 +20,7 @@
     },
     {
       id: 'activities',
+      section: 'now',
       target: '#now-activities-input',
       title: 'Aktiviteter',
       text: 'Här listar du stegen i ditt pass. Skriv t.ex. "Genomgång 10m" för att ge den en fast tid.',
@@ -26,6 +28,7 @@
     },
     {
       id: 'shorthand',
+      section: 'now',
       target: '#now-activities-input',
       title: 'Snabba kommandon',
       text: 'Använd "-" för undertext (instruktioner) och "&" för en sammanfattande kommentar.',
@@ -33,6 +36,7 @@
     },
     {
       id: 'clock',
+      section: 'now',
       target: '#clock-wrap',
       title: 'Interaktiv klocka',
       text: 'Du kan dra i kanterna på segmenten i klockan för att snabbt ändra hur långa de är!',
@@ -40,6 +44,7 @@
     },
     {
       id: 'cleanup',
+      section: 'now',
       target: '#mini-menu-toggle',
       title: 'Fokusläge',
       text: 'Klicka här för att stänga menyerna. Det ger en ren och tydlig vy för klassrummet.',
@@ -47,15 +52,17 @@
     },
     {
       id: 'teaser1',
+      section: 'now',
       target: '.mini-menu-shell',
       title: 'Extra tips',
       text: 'I minimenyn kan du också välja färgteman och ställa in ljudaviseringar för varje del!',
       pos: 'top'
     },
 
-    // Step 2: Now Mode & Sharing (id 7-9)
+    // Step 2: Now Mode & Sharing
     {
       id: 'run',
+      section: 'now',
       target: '#quickStartBtn',
       title: 'Starta timern',
       text: 'När du är nöjd i "Nu"-läget klickar du på Kör! för att starta timern direkt.',
@@ -63,6 +70,7 @@
     },
     {
       id: 'share',
+      section: 'now',
       target: '.share-section',
       title: 'Dela med elever',
       text: 'Klicka här för att få en länk. Eleverna kan se din timer live på sina egna skärmar!',
@@ -70,22 +78,25 @@
     },
     {
       id: 'template',
-      target: '.step-body button.quickstart-subtle',
+      section: 'now',
+      target: 'button.quickstart-subtle',
       title: 'Spara som mall',
       text: 'Har du ett bra upplägg? Spara det som en mall så kan du använda det igen med ett klick.',
       pos: 'top'
     },
 
-    // Step 3: Planning (id 10-12)
+    // Step 3: Planning
     {
       id: 'plan-tab',
-      target: 'nav.mobile-tabs button:nth-child(2)',
+      section: 'plan',
+      target: '#lesson-title-input',
       title: 'Planera framåt',
       text: 'I "Planera" kan du bygga lektioner för framtiden utan att störa den timer som körs.',
-      pos: 'top'
+      pos: 'bottom'
     },
     {
       id: 'agenda-toggle',
+      section: 'plan',
       target: '#agenda-toggle-btn',
       title: 'Agendan',
       text: 'Här ser du hela din dagplanering. Du kan ha olika agendor för olika behov!',
@@ -93,15 +104,17 @@
     },
     {
       id: 'agenda-drag',
+      section: 'plan',
       target: '#agenda-panel',
       title: 'Ändra i agendan',
       text: 'I tidslinjen kan du dra i blocken för att ändra ordning eller justera tider för hela dagen.',
       pos: 'left'
     },
 
-    // Step 4: Advanced (id 13-15)
+    // Step 4: Advanced
     {
       id: 'calendar',
+      section: 'plan',
       target: '.agenda-calendar',
       title: 'Kalender',
       text: 'Hoppa mellan olika dagar för att se vad du har planerat eller förbereda veckan.',
@@ -109,6 +122,7 @@
     },
     {
       id: 'prompts',
+      section: 'plan',
       target: '.agenda-input-header:nth-of-type(2)',
       title: 'AI-stöd',
       text: 'Använd våra smarta prompter för att låta Gemini eller ChatGPT bygga ditt schema åt dig!',
@@ -116,6 +130,7 @@
     },
     {
       id: 'sync-teaser',
+      section: 'workspace',
       target: '#account-sync-section',
       title: 'Alltid synkat',
       text: 'Skapa ett konto för att komma åt dina planeringar och mallar från vilken enhet som helst.',
@@ -128,7 +143,16 @@
 
   function updateSpotlight(scrollIntoView = false) {
     if (!currentStep) return;
-    const el = document.querySelector(currentStep.target);
+
+    // Ensure we are in the correct section for this step
+    if (appState.value.activeSection !== currentStep.section) {
+      // Small delay to allow UI to render after section change
+      appState.value.activeSection = currentStep.section as any;
+      setTimeout(() => updateSpotlight(scrollIntoView), 50);
+      return;
+    }
+
+    const el = document.querySelector(currentStep.target) as HTMLElement;
     if (el) {
       if (scrollIntoView) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -141,7 +165,7 @@
         height: rect.height
       };
     } else {
-      // Fallback to center if element not found
+      // Element not found (maybe inside a collapsed menu), fallback to center
       spotlightRect = {
         top: window.innerHeight / 2 - 50,
         left: window.innerWidth / 2 - 50,
@@ -159,13 +183,13 @@
       // Setup listeners for resizing and scrolling
       const refresher = () => updateSpotlight(false);
       window.addEventListener('resize', refresher);
-      window.addEventListener('scroll', refresher, true); // true for capture to catch all scrolls
+      window.addEventListener('scroll', refresher, true); 
       
-      // Extra check after potential smooth scroll / UI transition
-      const timeout = setTimeout(refresher, 500);
+      // Periodic check to catch UI movements
+      const interval = setInterval(refresher, 200);
       
       return () => {
-        clearTimeout(timeout);
+        clearInterval(interval);
         window.removeEventListener('resize', refresher);
         window.removeEventListener('scroll', refresher, true);
       }
@@ -177,18 +201,28 @@
     const margin = 16;
     const winW = window.innerWidth;
     const winH = window.innerHeight;
+    const tooltipW = 280;
 
-    let style = '';
+    let left = spotlightRect.left + spotlightRect.width / 2;
+    // Bounds check horizontal
+    if (left - tooltipW/2 < 10) left = tooltipW/2 + 10;
+    if (left + tooltipW/2 > winW - 10) left = winW - tooltipW/2 - 10;
+
     if (currentStep.pos === 'bottom') {
-      style = `top: ${spotlightRect.top + spotlightRect.height + margin}px; left: ${spotlightRect.left + spotlightRect.width / 2}px; transform: translateX(-50%);`;
+      let top = spotlightRect.top + spotlightRect.height + margin;
+      return `top: ${top}px; left: ${left}px; transform: translateX(-50%);`;
     } else if (currentStep.pos === 'top') {
-      style = `bottom: ${winH - spotlightRect.top + margin}px; left: ${spotlightRect.left + spotlightRect.width / 2}px; transform: translateX(-50%);`;
+      let bottom = winH - spotlightRect.top + margin;
+      return `bottom: ${bottom}px; left: ${left}px; transform: translateX(-50%);`;
     } else if (currentStep.pos === 'left') {
-      style = `top: ${spotlightRect.top + spotlightRect.height / 2}px; right: ${winW - spotlightRect.left + margin}px; transform: translateY(-50%);`;
+      let right = winW - spotlightRect.left + margin;
+      let top = spotlightRect.top + spotlightRect.height / 2;
+      return `top: ${top}px; right: ${right}px; transform: translateY(-50%);`;
     } else {
-      style = `top: ${spotlightRect.top + spotlightRect.height / 2}px; left: ${spotlightRect.left + spotlightRect.width + margin}px; transform: translateY(-50%);`;
+      let l = spotlightRect.left + spotlightRect.width + margin;
+      let top = spotlightRect.top + spotlightRect.height / 2;
+      return `top: ${top}px; left: ${l}px; transform: translateY(-50%);`;
     }
-    return style;
   });
 
 </script>
