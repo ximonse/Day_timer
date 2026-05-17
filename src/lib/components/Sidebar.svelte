@@ -28,6 +28,7 @@
     extraInfo = $bindable(),
     isViewMode,
     elapsedMin,
+    agendaView,
     onCommitEdit
   }: Props = $props();
 
