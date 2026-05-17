@@ -2223,11 +2223,18 @@
       writeSessionValue(AI_KEY_SESSION_STORAGE, savedAiKey);
       localStorage.removeItem('daytimer_ai_key');
     }
+    const today = localDateISO();
+    if (!isViewMode) {
+      setActiveAgendaDate(today);
+      // Automatically find and jump to the current session from the agenda if possible
+      untrack(() => goToTimerNow());
+    }
+
     renderEndControl();
     updateTimeFeedback();
     capturePanelBaseline('now');
     capturePanelBaseline('plan');
-    calendarMonthCursor = monthKey(parseIsoDate(selectedDay?.date ?? localDateISO()));
+    calendarMonthCursor = monthKey(parseIsoDate(selectedDay?.date ?? today));
     tick();
     const id = setInterval(tick, 1000);
 
