@@ -149,7 +149,7 @@ function defaultState(): AppState {
     nowDraft: defaultDraft(now.getHours()),
     planDraft: defaultDraft(8),
     onboardingStep: 0,
-    firstVisit: true,
+    firstVisit: false,
   };
 }
 
@@ -158,7 +158,7 @@ const STORAGE_KEY = 'day_timer_v1';
 function loadPersisted(): Partial<AppState> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
+    if (!raw) return { firstVisit: true };
     const data = JSON.parse(raw);
     // Migrate from old the_timer format
     if (data.theme !== undefined && data.palette === undefined) {
