@@ -82,6 +82,7 @@ export interface AppState {
   agendaDate2: string;
   agendaView: 'school' | 'private';
   agendaMeta: Record<string, AgendaFlowMeta>;
+  agendaDimPast: boolean;
   isLocked: boolean;
   actualTimeLog: ActualTimeEntry[];
   showControls: boolean;
@@ -140,6 +141,7 @@ function defaultState(): AppState {
     agendaDate2: '',
     agendaView: 'school',
     agendaMeta: {},
+    agendaDimPast: true,
     isLocked: false,
     actualTimeLog: [],
     showControls: true,

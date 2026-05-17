@@ -46,6 +46,7 @@
     deleteAgendaItem,
     startAgendaDrag,
     schoolPrimary,
+    agendaDimPast,
     saveAiConfig,
     onSetActiveSection,
     agendaEl = $bindable(),
@@ -262,7 +263,7 @@
           <div class="agenda-block"
                role="button"
                tabindex="0"
-               class:past={isPast}
+               class:past={agendaDimPast && isPast}
                class:active={isActive}
                class:dragging={agendaMoveState?.dayIdx === selectedDayIdx && agendaMoveState?.flowIdx === ai}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
