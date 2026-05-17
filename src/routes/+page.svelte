@@ -2167,20 +2167,22 @@
         s.syncKey = existingHashedToken;
         writeSessionValue(SYNC_TOKEN_STORAGE, existingHashedToken);
         localStorage.removeItem(SYNC_TOKEN_STORAGE);
-        return;
-      }
-      const legacyToken = sourceToken;
-      const idx = legacyToken.indexOf(':');
-      if (idx > 0) {
-        const name = legacyToken.slice(0, idx);
-        const pass = legacyToken.slice(idx + 1);
-        if (name && pass) {
-          s.syncKey = await deriveSyncToken(name, pass);
-          writeSessionValue(SYNC_TOKEN_STORAGE, s.syncKey);
-          localStorage.removeItem(SYNC_TOKEN_STORAGE);
-          appState.persist();
+      } else {
+        const legacyToken = sourceToken;
+        const idx = legacyToken.indexOf(':');
+        if (idx > 0) {
+          const name = legacyToken.slice(0, idx);
+          const pass = legacyToken.slice(idx + 1);
+          if (name && pass) {
+            s.syncKey = await deriveSyncToken(name, pass);
+            writeSessionValue(SYNC_TOKEN_STORAGE, s.syncKey);
+            localStorage.removeItem(SYNC_TOKEN_STORAGE);
+            appState.persist();
+          }
         }
       }
+      // Trigger sync load once we have a valid key
+      if (s.syncKey) syncLoad();
     };
     void migrateLegacyToken();
     const savedUser = localStorage.getItem('timer-login-user');
