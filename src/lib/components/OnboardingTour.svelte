@@ -113,9 +113,9 @@
     {
       id: 'agenda-drag',
       section: 'plan',
-      target: '#agenda-panel',
+      target: '#agenda-timeline',
       title: 'Ändra i agendan',
-      text: 'I tidslinjen kan du dra i blocken för att ändra ordning eller justera tider för hela dagen.',
+      text: 'I tidslinjen ser du blocken visuellt. Du kan dra i dem för att flytta hela passet eller justera tider för hela dagen.',
       pos: 'left'
     },
 
@@ -131,9 +131,9 @@
     {
       id: 'prompts',
       section: 'plan',
-      target: '.agenda-input-header:nth-of-type(2)',
-      title: 'AI-stöd',
-      text: 'Använd våra smarta prompter för att låta Gemini eller ChatGPT bygga ditt schema åt dig!',
+      target: '#agenda-text-and-prompts',
+      title: 'Smart import & Dagtext',
+      text: 'Här kan du skriva in hela dagens plan som text. Använd våra AI-prompter för att snabbt hämta data från t.ex. Google Kalender och klistra in här!',
       pos: 'left'
     },
     {

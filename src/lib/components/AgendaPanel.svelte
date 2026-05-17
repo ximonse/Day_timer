@@ -247,7 +247,7 @@
       <button class="quickstart agenda-plan-link" onclick={() => onSetActiveSection('plan')}>Gå till Planera</button>
     {:else}
       {@const windowStart = Math.floor(agendaItems[0].startMin / 60) * 60}
-      <div class="agenda-timeline" class:has-overlay={overlayItems.length > 0} bind:this={timelineEl}>
+      <div id="agenda-timeline" class="agenda-timeline" class:has-overlay={overlayItems.length > 0} bind:this={timelineEl}>
         {#if agendaMoveState && agendaMoveState.previewValid && agendaMoveState.previewStart !== null}
           {@const previewTop = ((agendaMoveState.previewStart - windowStart) / 720 * 100).toFixed(3)}
           <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>
