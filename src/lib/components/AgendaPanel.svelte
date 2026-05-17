@@ -102,6 +102,7 @@
     deleteAgendaItem: (i: number) => void;
     startAgendaDrag: (e: PointerEvent, i: number, edge: 'top' | 'bottom') => void;
     schoolPrimary: () => boolean;
+    agendaDimPast: boolean;
     saveAiConfig: () => void;
     onSetActiveSection: (s: any) => void;
     agendaEl: HTMLElement;
