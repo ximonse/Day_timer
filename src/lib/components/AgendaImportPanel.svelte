@@ -110,84 +110,86 @@
   </div>
 {/if}
 {#if agendaInputOpen}
-  <div class="section-chip-row" style="margin-bottom:8px;">
-    <span class="section-chip on">{selectedDateLabel}</span>
-    <span class="section-chip">{draftStatus}</span>
-  </div>
-  <div class="agenda-input-wrapper">
-    <textarea
-      class="agenda-input"
-      placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
-      value={agendaDraft}
-      oninput={(e) => onDraftChange((e.target as HTMLTextAreaElement).value)}
-      onpaste={(e) => onDraftPaste(e)}
-    ></textarea>
-  </div>
-  <div class="agenda-save-row">
-    <button class="agenda-save-btn" onclick={onSave}
-      title="Sparar dagtexten och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
-      {savedAgendaMsg || '📅 Spara i dagplan'}
-    </button>
-    {#if hasAiKey}
-      <button class="agenda-save-btn agenda-ai-btn" onclick={onToggleAi}>
-        ✨ Skapa med AI
+  <div id="agenda-text-and-prompts">
+    <div class="section-chip-row" style="margin-bottom:8px;">
+      <span class="section-chip on">{selectedDateLabel}</span>
+      <span class="section-chip">{draftStatus}</span>
+    </div>
+    <div class="agenda-input-wrapper">
+      <textarea
+        class="agenda-input"
+        placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
+        value={agendaDraft}
+        oninput={(e) => onDraftChange((e.target as HTMLTextAreaElement).value)}
+        onpaste={(e) => onDraftPaste(e)}
+      ></textarea>
+    </div>
+    <div class="agenda-save-row">
+      <button class="agenda-save-btn" onclick={onSave}
+        title="Sparar dagtexten och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
+        {savedAgendaMsg || '📅 Spara i dagplan'}
       </button>
+      {#if hasAiKey}
+        <button class="agenda-save-btn agenda-ai-btn" onclick={onToggleAi}>
+          ✨ Skapa med AI
+        </button>
+      {/if}
+    </div>
+    {#if showImportHelp}
+      <div class="feedback" style="margin-top:6px;">
+        Källstatus som <strong>Import</strong>, <strong>Mall</strong> och <strong>AI</strong> visas diskret i tidslinjen och fullt ut i planeringseditorn.
+      </div>
+      <div class="feedback" style="opacity:.72;margin-top:4px;">
+        Om du vill göra ett importerat block helt eget, välj det i tidslinjen och klicka <strong>Gör till manuellt block</strong>.
+      </div>
     {/if}
-  </div>
-  {#if showImportHelp}
-    <div class="feedback" style="margin-top:6px;">
-      Källstatus som <strong>Import</strong>, <strong>Mall</strong> och <strong>AI</strong> visas diskret i tidslinjen och fullt ut i planeringseditorn.
-    </div>
-    <div class="feedback" style="opacity:.72;margin-top:4px;">
-      Om du vill göra ett importerat block helt eget, välj det i tidslinjen och klicka <strong>Gör till manuellt block</strong>.
-    </div>
-  {/if}
-  {#if agendaAiOpen && hasAiKey}
-    <div class="agenda-ai-panel">
-      <div class="agenda-input-wrapper">
-        <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;"
-          value={agendaAiInput}
-          oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
+    {#if agendaAiOpen && hasAiKey}
+      <div class="agenda-ai-panel">
+        <div class="agenda-input-wrapper">
+          <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;"
+            value={agendaAiInput}
+            oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
+        </div>
+        <div class="ai-mode-row">
+          <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
+          <button class="ai-mode-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
+          <span class="ai-mode-hint">
+            {aiPlanMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
+          </span>
+        </div>
+        {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
+        <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={agendaAiLoading || !agendaAiInput.trim()}>
+          {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
+        </button>
       </div>
-      <div class="ai-mode-row">
-        <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
-        <button class="ai-mode-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
-        <span class="ai-mode-hint">
-          {aiPlanMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
-        </span>
-      </div>
-      {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
-      <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={agendaAiLoading || !agendaAiInput.trim()}>
-        {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
+    {/if}
+
+    <div class="agenda-input-header" style="margin-top:12px;">
+      <span class="agenda-input-label">Prompter för planering och import</span>
+      <button class="info-btn" onclick={() => promptHelpOpen = !promptHelpOpen}>i</button>
+      <button class="agenda-input-toggle" onclick={() => promptMenuOpen = !promptMenuOpen}>
+        {promptMenuOpen ? '△' : '▽'}
       </button>
     </div>
-  {/if}
-{/if}
-
-<div class="agenda-input-header" style="margin-top:12px;">
-  <span class="agenda-input-label">Prompter för planering och import</span>
-  <button class="info-btn" onclick={() => promptHelpOpen = !promptHelpOpen}>i</button>
-  <button class="agenda-input-toggle" onclick={() => promptMenuOpen = !promptMenuOpen}>
-    {promptMenuOpen ? '△' : '▽'}
-  </button>
-</div>
-{#if promptHelpOpen}
-  <div class="feedback" style="margin-bottom:8px;">
-    Dessa prompter hjälper en extern AI (som Gemini eller ChatGPT) att förbereda text som du sedan klistrar in i rutan "Redigera dagtext" ovan.
-  </div>
-{/if}
-{#if promptMenuOpen}
-  <div class="agenda-save-row" style="margin-top:8px;">
-    <button class="agenda-save-btn" onclick={() => handleCopy('plan')} title="Kopiera prompt för ny planering från anteckningar">
-      {copyPlanStatus}
-    </button>
-    <button class="agenda-save-btn" onclick={() => handleCopy('calendar')} title="Kopiera prompt för att hämta kalenderdata">
-      {copyCalendarStatus}
-    </button>
-  </div>
-  <div class="feedback" style="margin-top:6px; border-left: 2px solid var(--accent); padding-left: 8px;">
-    <strong>Från anteckningar</strong>: Kopiera denna prompt till Gemini och skriv ner dina lösa planer. Klistra sedan in resultatet i "Redigera dagtext" ovan.<br/>
-    <strong>Från kalender</strong>: Kopiera denna prompt till Gemini. AI:n hämtar dina kalenderhändelser och skriver ut dem i appens format. Klistra sedan in resultatet i "Redigera dagtext" ovan.
+    {#if promptHelpOpen}
+      <div class="feedback" style="margin-bottom:8px;">
+        Dessa prompter hjälper en extern AI (som Gemini eller ChatGPT) att förbereda text som du sedan klistrar in i rutan "Redigera dagtext" ovan.
+      </div>
+    {/if}
+    {#if promptMenuOpen}
+      <div class="agenda-save-row" style="margin-top:8px;">
+        <button class="agenda-save-btn" onclick={() => handleCopy('plan')} title="Kopiera prompt för ny planering från anteckningar">
+          {copyPlanStatus}
+        </button>
+        <button class="agenda-save-btn" onclick={() => handleCopy('calendar')} title="Kopiera prompt för att hämta kalenderdata">
+          {copyCalendarStatus}
+        </button>
+      </div>
+      <div class="feedback" style="margin-top:6px; border-left: 2px solid var(--accent); padding-left: 8px;">
+        <strong>Från anteckningar</strong>: Kopiera denna prompt till Gemini och skriv ner dina lösa planer. Klistra sedan in resultatet i "Redigera dagtext" ovan.<br/>
+        <strong>Från kalender</strong>: Kopiera denna prompt till Gemini. AI:n hämtar dina kalenderhändelser och skriver ut dem i appens format. Klistra sedan in resultatet i "Redigera dagtext" ovan.
+      </div>
+    {/if}
   </div>
 {/if}
 
