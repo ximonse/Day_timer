@@ -98,7 +98,8 @@
         splitAngle: ((nowMin - periodStart) / 720) * 360,
         fillText: labelColorFor(baseColor, i, isPast, palette, dark),
         label: pureEmoji ? item.flow.title : `${truncate(item.flow.title, 10)} ${fmtHM(item.startMin)}`,
-        fontSize: pureEmoji ? 24 : (textOutside ? 14 : 13)
+        fontSize: pureEmoji ? 24 : (textOutside ? 14 : 13),
+        pureEmoji
       };
     }).filter((s): s is NonNullable<typeof s> => s !== null);
   });
@@ -141,7 +142,8 @@
         splitAngle: startAngle + (elapsed / clockSpan) * 360,
         fillText: labelColorFor(baseColor, i, isPast, palette, dark),
         label: labelText,
-        fontSize: pureEmoji ? 48 : (textOutside ? 14 : 13)
+        fontSize: pureEmoji ? 48 : (textOutside ? 14 : 13),
+        pureEmoji
       };
       cumMin = segEndMin;
       return res;
@@ -358,7 +360,7 @@
       {@const id = s.id}
       {@const rect = labelRects[id]}
       <g pointer-events="none">
-        {#if rect}
+        {#if rect && !s.pureEmoji}
           <rect 
             x={rect.x - 6} y={rect.y - 1.5} 
             width={rect.w + 12} height={rect.h + 3} 
