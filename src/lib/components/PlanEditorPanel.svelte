@@ -145,7 +145,7 @@
 
   <div>
     <div class="field-head">
-      <div class="field-label">Blockrubrik</div>
+      <div class="field-label">Rubrik</div>
       <button class="info-btn" type="button" onclick={onToggleTitleHelp}>i</button>
     </div>
     {#if showTitleHelp}
@@ -158,14 +158,14 @@
 
   <div>
     <div class="field-head field-head--wrap">
-      <div class="field-label">Blockinnehåll</div>
+      <div class="field-label">Aktiviteter</div>
       <div class="field-head-actions">
         <button class="micro-btn" onclick={onCopyPrompt}>{copyBtnText}</button>
         <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
       </div>
     </div>
     {#if showPartsHelp}
-      <div class="feedback">Skriv eller klistra in hela blocket här om du vill planera med text i stället för att dra i tidslinjen. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rad.</div>
+      <div class="feedback">Skriv eller klistra in aktiviteter här. En per rad. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rad.</div>
     {/if}
     <textarea placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
       value={partsValue}
