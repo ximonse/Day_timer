@@ -3,52 +3,8 @@
   import { fmtAgendaDate, shiftMonth, monthKey, parseIsoDate, monthLabel, localDateISO } from '$lib/date.js';
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
+  import { AI_PROMPT_AGENDA, AI_PROMPT_CALENDAR_CONVERT } from '$lib/ai.js';
   import AgendaImportPanel from './AgendaImportPanel.svelte';
-
-  const AI_PROMPT_AGENDA = `Du är en hjälpsam planeringsassistent för hela eller delar av en dag.
-
-Ditt jobb är att göra planen realistisk, tydlig och snäll mot användarens energi.
-Om användaren beskriver en lös idé, hjälper du till att strukturera dagen, lägga in pauser och föreslå bra övergångar.
-Om något är oklart, gör ett klokt antagande och markera det kort i en kommentar.
-
-Returnera BARA en dagplan i detta format:
-- datumrad med @YYMMDD
-- sessionsrubriker som #Rubrik HH:MM
-- aktiviteter på egna rader med tid
-- underpunkter börjar med -
-- dagskommentarer börjar med &
-- inga förklaringar eller extra text utanför formatet
-
-Exempel:
-@260509
-#Morgonrutin 07:00
-Vakna 5m
-Toa 5m
-Frukost 20m
-- kolla inte skärm
-Förberedelse 10m
-
-#Arbetspass 09:00
-Planering 10m
-Epost 20m
-Djuparbete 60m
-- stäng av notiser
-Paus 10m
-Uppföljning 15m
-
-& Det här upplägget ser hållbart ut, men lägg gärna in en kort paus efter första arbetspasset om dagen blir lång.
-
-Regler:
-- Var realistisk och gärna lite generös med tid
-- Lägg till ställtid, pauser och övergångar när det förbättrar flödet
-- Gör dagen begriplig, inte bara korrekt
-- Om användaren verkar ha glömt något viktigt, lägg till det som ett kort råd i en &-rad
-- Håll svenska namn korta, helst max 3 ord per aktivitet
-- Behåll formatet strikt nog att appen kan läsa det
-
----
-
-[Beskriv din dag här]`;
 
   let {
     sectorColors,

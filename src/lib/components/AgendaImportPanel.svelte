@@ -71,7 +71,7 @@
     onIcsFileChange: (event: Event) => void;
     onPreviewIcs: () => void;
     onImportIcs: () => void;
-    onCopyPrompt: () => void;
+    onCopyPrompt: (type: 'plan' | 'calendar') => void;
     onToggleAi: () => void;
     onAgendaAiInputChange: (value: string) => void;
     onSetStrictMode: () => void;
@@ -80,6 +80,8 @@
     onToggleImportHelp: () => void;
     onToggleIcsHelp: () => void;
   } = $props();
+
+  let promptHelpOpen = $state(false);
 </script>
 
 <div class="agenda-input-header">
@@ -113,13 +115,27 @@
       title="Sparar dagtexten och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
       {savedAgendaMsg || '📅 Spara i dagplan'}
     </button>
-    <button class="agenda-save-btn" onclick={onCopyPrompt}>{copyAgendaPromptText}</button>
+    <div style="display:flex; gap:4px; align-items:center;">
+      <button class="agenda-save-btn" onclick={() => onCopyPrompt('plan')} title="Kopiera prompt för ny planering">
+        {copyAgendaPromptText === 'AI-prompt' ? 'AI-plan' : copyAgendaPromptText}
+      </button>
+      <button class="agenda-save-btn" onclick={() => onCopyPrompt('calendar')} title="Kopiera prompt för kalender-konvertering">
+        {copyAgendaPromptText === 'AI-prompt' ? 'AI-konvertera' : copyAgendaPromptText}
+      </button>
+      <button class="info-btn" style="margin-bottom:0;" onclick={() => promptHelpOpen = !promptHelpOpen}>i</button>
+    </div>
     {#if hasAiKey}
       <button class="agenda-save-btn agenda-ai-btn" onclick={onToggleAi}>
         ✨ Skapa med AI
       </button>
     {/if}
   </div>
+  {#if promptHelpOpen}
+    <div class="feedback" style="margin-top:6px; border-left: 2px solid var(--accent); padding-left: 8px;">
+      <strong>AI-plan</strong>: Kopierar en prompt där du efteråt skriver din egen lösa planering som AI:n formaterar.<br/>
+      <strong>AI-konvertera</strong>: Kopierar en prompt där du efteråt klistrar in rörig kalenderdata (t.ex. från Google) som AI:n gör om till appens format.
+    </div>
+  {/if}
   {#if showImportHelp}
     <div class="feedback" style="margin-top:6px;">
       Källstatus som <strong>Import</strong>, <strong>Mall</strong> och <strong>AI</strong> visas diskret i tidslinjen och fullt ut i planeringseditorn.
