@@ -2,9 +2,10 @@
   import { fade, fly } from 'svelte/transition';
   import { appState } from '$lib/state.svelte.js';
 
-  let { step, onNext, onExit }: {
+  let { step, onNext, onBack, onExit }: {
     step: number;
     onNext: () => void;
+    onBack: () => void;
     onExit: () => void;
   } = $props();
 
@@ -95,19 +96,19 @@
 
     // Step 3: Planning
     {
-      id: 'plan-tab',
+      id: 'plan-time',
       section: 'plan',
-      target: '#lesson-title-input',
-      title: 'Planera framåt',
-      text: 'I "Planera" kan du bygga lektioner för framtiden utan att störa den timer som körs.',
+      target: '#plan-time-row',
+      title: 'Planera tider',
+      text: 'I "Planera" kan du sätta exakta start- och sluttider för dina pass. Du kan även välja att ställa in total längd i minuter.',
       pos: 'bottom'
     },
     {
-      id: 'agenda-toggle',
+      id: 'agenda-view',
       section: 'plan',
-      target: '#agenda-toggle-btn',
+      target: '#agenda-panel',
       title: 'Agendan',
-      text: 'Här ser du hela din dagplanering. Du kan ha olika agendor för olika behov!',
+      text: 'Här ser du hela din dagplanering. Agendan samlar alla dina sparade pass för den valda dagen.',
       pos: 'left'
     },
     {
@@ -115,7 +116,7 @@
       section: 'plan',
       target: '#agenda-timeline',
       title: 'Ändra i agendan',
-      text: 'I tidslinjen ser du blocken visuellt. Du kan dra i dem för att flytta hela passet eller justera tider för hela dagen.',
+      text: 'I tidslinjen kan du dra i blocken för att flytta hela passet eller justera tider för hela dagen.',
       pos: 'left'
     },
 
@@ -237,6 +238,7 @@
     } else if (finalPos === 'left') {
       let right = winW - spotlightRect.left + margin;
       let top = spotlightRect.top + spotlightRect.height / 2;
+      // Safety: keep tooltip within vertical bounds
       if (top - tooltipH/2 < 10) top = tooltipH/2 + 10;
       if (top + tooltipH/2 > winH - 10) top = winH - tooltipH/2 - 10;
       return `top: ${top}px; right: ${right}px; transform: translateY(-50%);`;
@@ -267,7 +269,12 @@
       <h3>{currentStep.title}</h3>
       <p>{currentStep.text}</p>
       <div class="onboarding-actions">
-        <button class="skip-btn" onclick={onExit}>Avbryt</button>
+        <div style="display:flex; gap:8px;">
+          {#if step > 1}
+            <button class="back-btn" onclick={onBack}>Bakåt</button>
+          {/if}
+          <button class="skip-btn" onclick={onExit}>Avbryt</button>
+        </div>
         <button class="next-btn" onclick={onNext}>
           {step === steps.length ? 'Slutför' : 'Nästa'}
         </button>
@@ -356,6 +363,22 @@
 
   .next-btn:active {
     transform: scale(0.95);
+  }
+
+  .back-btn {
+    background: var(--menu-muted);
+    color: var(--menu-surface);
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    transition: opacity 0.2s;
+  }
+
+  .back-btn:hover {
+    opacity: 0.9;
   }
 
   .skip-btn {
