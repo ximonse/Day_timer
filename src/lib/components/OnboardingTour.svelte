@@ -2,11 +2,12 @@
   import { fade, fly } from 'svelte/transition';
   import { appState } from '$lib/state.svelte.js';
 
-  let { step, onNext, onBack, onExit }: {
+  let { step, onNext, onBack, onExit, onLoadDummy }: {
     step: number;
     onNext: () => void;
     onBack: () => void;
     onExit: () => void;
+    onLoadDummy: () => void;
   } = $props();
 
   const steps = [
@@ -31,8 +32,8 @@
       id: 'sidebar-shorthand',
       section: 'now',
       target: '#sidebar-blocks',
-      title: 'Undertext & Kommentarer',
-      text: 'När du redigerar, använd "-" för underpunkter (instruktioner) och "&" för en sammanfattande kommentar. De sparas direkt i listan.',
+      title: 'Smarta genvägar',
+      text: 'När du redigerar: Tryck `Tab` för att skriva undertext, `&` för en slutkommentar, och `Enter` för att skapa en helt ny aktivitet!',
       pos: 'right'
     },
     {
@@ -153,13 +154,6 @@
   function updateSpotlight(scrollIntoView = false) {
     if (!currentStep) return;
 
-    // Ensure we are in the correct section for this step
-    if (appState.value.activeSection !== currentStep.section) {
-      appState.value.activeSection = currentStep.section as any;
-      setTimeout(() => updateSpotlight(scrollIntoView), 50);
-      return;
-    }
-
     const el = document.querySelector(currentStep.target) as HTMLElement;
     if (el) {
       if (scrollIntoView) {
@@ -167,6 +161,7 @@
       }
       const rect = el.getBoundingClientRect();
       
+      // Only update if changed enough to avoid jitter
       if (Math.abs(spotlightRect.top - rect.top) > 0.5 || 
           Math.abs(spotlightRect.left - rect.left) > 0.5 ||
           spotlightRect.width !== rect.width ||
@@ -188,6 +183,17 @@
     }
   }
 
+  // Handle section changes separately from the animation loop
+  $effect(() => {
+    if (step > 0 && currentStep) {
+      if (appState.value.activeSection !== currentStep.section) {
+        appState.value.activeSection = currentStep.section as any;
+      }
+      // Give UI a moment to switch sections before scrolling
+      setTimeout(() => updateSpotlight(true), 100);
+    }
+  });
+
   $effect(() => {
     if (step > 0) {
       updateSpotlight(true);
@@ -205,11 +211,11 @@
 
   const tooltipStyle = $derived.by(() => {
     if (!spotlightRect.width) return '';
-    const margin = 20;
+    const margin = 24;
     const winW = window.innerWidth;
     const winH = window.innerHeight;
-    const tooltipW = 280;
-    const tooltipH = 180; // Estimated height
+    const tooltipW = 300;
+    const tooltipH = 180;
 
     let left = spotlightRect.left + spotlightRect.width / 2;
     if (left - tooltipW/2 < 10) left = tooltipW/2 + 10;
@@ -250,41 +256,49 @@
 </script>
 
 {#if step > 0 && currentStep}
-  <div class="onboarding-overlay" in:fade={{ duration: 200 }} onclick={onExit} role="presentation">
+  <div class="onboarding-overlay" in:fade={{ duration: 400 }} onclick={onExit} role="presentation">
     <svg class="onboarding-mask-svg" width="100%" height="100%">
       <defs>
         <mask id="spotlight-mask">
           <rect width="100%" height="100%" fill="white" />
           <rect 
-            x={spotlightRect.left - 8} 
-            y={spotlightRect.top - 8} 
-            width={spotlightRect.width + 16} 
-            height={spotlightRect.height + 16} 
-            rx="12" 
+            class="spotlight-rect"
+            x={spotlightRect.left - 12} 
+            y={spotlightRect.top - 12} 
+            width={spotlightRect.width + 24} 
+            height={spotlightRect.height + 24} 
+            rx="16" 
             fill="black" 
           />
         </mask>
       </defs>
-      <rect width="100%" height="100%" fill="rgba(0,0,0,0.7)" mask="url(#spotlight-mask)" />
+      <rect width="100%" height="100%" fill="rgba(0,0,0,0.6)" mask="url(#spotlight-mask)" />
     </svg>
 
-    <div class="onboarding-tooltip" style={tooltipStyle} in:fly={{ y: 10, duration: 300 }} onclick={(e) => e.stopPropagation()} role="presentation">
-      <button class="close-tour" onclick={onExit} title="Stäng guide">×</button>
-      <h3>{currentStep.title}</h3>
-      <p>{currentStep.text}</p>
-      <div class="onboarding-actions">
-        <div style="display:flex; gap:8px;">
-          {#if step > 1}
-            <button class="back-btn" onclick={onBack}>Bakåt</button>
-          {/if}
-          <button class="skip-btn" onclick={onExit}>Avbryt</button>
+    {#key step}
+      <div class="onboarding-tooltip" 
+           style={tooltipStyle} 
+           in:fly={{ y: 20, duration: 400, delay: 100 }} 
+           out:fade={{ duration: 200 }}
+           onclick={(e) => e.stopPropagation()} 
+           role="presentation">
+        <button class="close-tour" onclick={onExit} title="Stäng guide">×</button>
+        <h3>{currentStep.title}</h3>
+        <p>{currentStep.text}</p>
+        <div class="onboarding-actions">
+          <div style="display:flex; gap:8px;">
+            {#if step > 1}
+              <button class="back-btn" onclick={onBack}>Bakåt</button>
+            {/if}
+            <button class="skip-btn" onclick={onExit}>Avbryt</button>
+          </div>
+          <button class="next-btn" onclick={onNext}>
+            {step === steps.length ? 'Slutför' : 'Nästa'}
+          </button>
         </div>
-        <button class="next-btn" onclick={onNext}>
-          {step === steps.length ? 'Slutför' : 'Nästa'}
-        </button>
+        <div class="step-indicator">Steg {step} av {steps.length}</div>
       </div>
-      <div class="step-indicator">Steg {step} av {steps.length}</div>
-    </div>
+    {/key}
   </div>
 {/if}
 
@@ -309,14 +323,21 @@
     height: 100%;
   }
 
+  .spotlight-rect {
+    transition: x 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                y 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                width 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   .onboarding-tooltip {
     position: absolute;
-    width: 280px;
+    width: 300px;
     background: var(--menu-surface);
     color: var(--menu-fg);
-    padding: 24px;
-    border-radius: 16px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    padding: 28px;
+    border-radius: 24px;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.5);
     border: 1px solid var(--menu-border);
     pointer-events: auto;
     z-index: 10001;
@@ -325,26 +346,32 @@
 
   .close-tour {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 16px;
+    right: 16px;
     background: transparent;
     border: none;
     color: var(--menu-muted);
-    font-size: 20px;
+    font-size: 24px;
     cursor: pointer;
     line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+
+  .close-tour:hover {
+    opacity: 1;
   }
 
   .onboarding-tooltip h3 {
-    margin: 0 0 10px 0;
-    font-size: 18px;
+    margin: 0 0 12px 0;
+    font-size: 20px;
     color: var(--accent);
-    font-weight: 700;
+    font-weight: 800;
   }
 
   .onboarding-tooltip p {
-    margin: 0 0 20px 0;
-    font-size: 15px;
+    margin: 0 0 24px 0;
+    font-size: 16px;
     line-height: 1.6;
     opacity: 0.95;
   }
@@ -359,11 +386,15 @@
     background: var(--accent);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: 12px 24px;
+    border-radius: 12px;
     font-weight: 700;
     cursor: pointer;
-    transition: transform 0.1s, opacity 0.2s;
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .next-btn:hover {
+    filter: brightness(1.1);
   }
 
   .next-btn:active {
@@ -371,38 +402,39 @@
   }
 
   .back-btn {
-    background: var(--menu-muted);
-    color: var(--menu-surface);
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
+    background: var(--pill);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
-    font-size: 13px;
-    transition: opacity 0.2s;
+    font-size: 14px;
+    transition: background 0.2s;
   }
 
   .back-btn:hover {
-    opacity: 0.9;
+    background: var(--menu-surface);
   }
 
   .skip-btn {
     background: transparent;
     color: var(--menu-muted);
     border: none;
-    padding: 8px 0;
+    padding: 10px 0;
     font-size: 14px;
     cursor: pointer;
     text-decoration: underline;
   }
 
   .step-indicator {
-    margin-top: 16px;
+    margin-top: 20px;
     font-size: 11px;
     color: var(--menu-muted);
     text-align: center;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
+    font-weight: 600;
   }
 
   @media (max-width: 600px) {
