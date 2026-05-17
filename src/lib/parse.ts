@@ -12,15 +12,10 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
   const notes: string[] = [];
   const parsedMins: (number | null)[] = [];
   const infoLines: string[] = [];
-  let dayTitle = '';
+  let dayTitle = ''; // Keep for interface compatibility, but don't populate from '#'
 
   for (const l of lines) {
     const t = l.trim();
-    if (t.startsWith('#')) {
-      const title = t.slice(1).trim();
-      if (title) dayTitle = title;
-      continue;
-    }
     if (t.startsWith('&')) {
       infoLines.push(t.slice(1).trim());
       continue;

@@ -1252,16 +1252,6 @@
       replaceTextareaSelection(node, next, start + insert.length);
       return;
     }
-
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const start = node.selectionStart ?? 0;
-      const end = node.selectionEnd ?? start;
-      const value = node.value;
-      const insert = '\n';
-      const next = value.slice(0, start) + insert + value.slice(end);
-      replaceTextareaSelection(node, next, start + insert.length);
-    }
   }
 
   function saveFlow() {
