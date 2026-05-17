@@ -575,4 +575,23 @@
   }
   :global(.welcome-card h1) { margin: 0 0 16px 0; font-size: 36px; font-weight: 800; }
   :global(.welcome-card p) { font-size: 17px; line-height: 1.6; opacity: 0.9; margin-bottom: 32px; }
-</style>
+
+  :global(.toast-pill) {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--menu-pill-on); color: var(--menu-pill-on-fg);
+    padding: 10px 24px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    z-index: 12000;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    pointer-events: none;
+    animation: toast-fade-in-out 2.5s forwards;
+  }
+  @keyframes toast-fade-in-out {
+    0% { opacity: 0; transform: translate(-50%, -10px); }
+    10% { opacity: 1; transform: translate(-50%, 0); }
+    90% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -10px); }
+  }
+  </style>
