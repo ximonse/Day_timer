@@ -79,7 +79,7 @@
     {
       id: 'share',
       section: 'now',
-      target: '.share-section',
+      target: '#now-share-btn',
       title: 'Dela med elever',
       text: 'Klicka här för att få en länk. Eleverna kan se din timer live på sina egna skärmar!',
       pos: 'top'
@@ -87,7 +87,7 @@
     {
       id: 'template',
       section: 'now',
-      target: 'button.quickstart-subtle',
+      target: '#now-save-template-btn',
       title: 'Spara som mall',
       text: 'Har du ett bra upplägg? Spara det som en mall så kan du använda det igen med ett klick.',
       pos: 'top'
