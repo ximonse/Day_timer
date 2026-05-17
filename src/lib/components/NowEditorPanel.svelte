@@ -110,9 +110,9 @@
     <div class="section-copy muted">{shareSummary}</div>
     <button class="quickstart" onclick={onStopSharing}>Sluta dela</button>
   {:else}
-    <button class="quickstart" onclick={onStartLiveShare}>Dela aktiv session</button>
+    <button id="now-share-btn" class="quickstart" onclick={onStartLiveShare}>Dela aktiv session</button>
   {/if}
-  <button class="quickstart quickstart-subtle" onclick={onSaveFlow}>
+  <button id="now-save-template-btn" class="quickstart quickstart-subtle" onclick={onSaveFlow}>
     <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
   </button>
 </div>

@@ -299,8 +299,8 @@
         <button class="quickstart" onclick={onStopSharing}>Sluta dela</button>
       {:else}
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="quickstart" onclick={onStartSessionShare} disabled={!hasSelection}>Dela vald session</button>
-          <button class="quickstart" onclick={onStartDayShare}>Dela hela dagen</button>
+          <button id="plan-share-session-btn" class="quickstart" onclick={onStartSessionShare} disabled={!hasSelection}>Dela vald session</button>
+          <button id="plan-share-day-btn" class="quickstart" onclick={onStartDayShare}>Dela hela dagen</button>
         </div>
       {/if}
     </div>
