@@ -210,7 +210,7 @@
           <button class="agenda-nav-btn" onclick={() => calendarMonthCursor = shiftMonth(calendarMonthCursor || monthKey(parseIsoDate(selectedDay?.date ?? localDateISO())), 1)}>›</button>
         </div>
         <div class="agenda-calendar-weekdays">
-          {#each ['S','M','T','O','T','F','L'] as weekday}
+          {#each ['M','T','O','T','F','L','S'] as weekday}
             <span>{weekday}</span>
           {/each}
         </div>
