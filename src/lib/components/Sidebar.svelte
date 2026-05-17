@@ -248,7 +248,7 @@
   }
 </script>
 
-<div class="seglist">
+<div id="sidebar-blocks" class="seglist">
   {#each blocks as b, i (b.id)}
     {@const ct = clockTheme(palette, dark)}
     {@const cumMin = blocks.slice(0, i).reduce((a: number, x: Block) => a + x.minutes, 0)}

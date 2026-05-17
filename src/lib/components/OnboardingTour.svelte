@@ -19,27 +19,27 @@
       pos: 'bottom'
     },
     {
-      id: 'activities',
+      id: 'sidebar-edit',
       section: 'now',
-      target: '#now-activities-input',
+      target: '#sidebar-blocks',
       title: 'Aktiviteter',
-      text: 'Här listar du stegen i ditt pass. Skriv t.ex. "Genomgång 10m" för att ge den en fast tid.',
-      pos: 'bottom'
+      text: 'Klicka direkt på en text här för att ändra den. Skriv t.ex. "Genomgång 10m" för att sätta både namn och tid samtidigt.',
+      pos: 'right'
     },
     {
-      id: 'shorthand',
+      id: 'sidebar-shorthand',
       section: 'now',
-      target: '#now-activities-input',
-      title: 'Snabba kommandon',
-      text: 'Använd "-" för undertext (instruktioner) och "&" för en sammanfattande kommentar.',
-      pos: 'bottom'
+      target: '#sidebar-blocks',
+      title: 'Undertext & Kommentarer',
+      text: 'När du redigerar, använd "-" för underpunkter (instruktioner) och "&" för en slutlig kommentar. De sparas direkt i listan.',
+      pos: 'right'
     },
     {
       id: 'clock',
       section: 'now',
       target: '#clock-wrap',
       title: 'Interaktiv klocka',
-      text: 'Du kan dra i kanterna på segmenten i klockan för att snabbt ändra hur långa de är!',
+      text: 'Här ser du tiden visuellt. Du kan dra i kanten på segmenten för att justera tiderna direkt på klockan!',
       pos: 'top'
     },
     {
@@ -60,6 +60,14 @@
     },
 
     // Step 2: Now Mode & Sharing
+    {
+      id: 'now-activities',
+      section: 'now',
+      target: '#now-activities-input',
+      title: 'Snabb-inmatning',
+      text: 'Om du föredrar att skriva hela passet som text kan du använda den här rutan. Varje rad blir en ny del i timern.',
+      pos: 'bottom'
+    },
     {
       id: 'run',
       section: 'now',
