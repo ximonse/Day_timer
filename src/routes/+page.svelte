@@ -3294,6 +3294,7 @@
         <p style="margin-bottom: 12px;">Att göra tid synlig – som utrymme med tydlig progress och historik – är inte bara intuitivt. Det bygger på forskning om hur hjärnan hanterar tid, motivation och självreglering.</p>
         <p>Starta direkt – ingen inloggning, inget krångel. När du är redo finns schemaläggning för hela dagar och veckor, med synk mot din kalender. Och för den som vill ha hjälp att planera finns AI-stöd – med din egen nyckel eller via de verktyg du redan använder.</p>
         <p style="margin-top: 16px; font-weight: 600; opacity: 0.9;">/Simon</p>
+        <p style="margin-top: 24px; font-size: 11px; opacity: 0.5;">Ifall du hittar buggar kan du mejla <a href="mailto:timer@ximon.se" style="color: inherit; text-decoration: underline;">timer@ximon.se</a></p>
       </div>
     </div>
   </div>
