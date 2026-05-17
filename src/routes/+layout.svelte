@@ -185,8 +185,20 @@
   :global(.menu-row) { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--menu-border); background: var(--menu-surface); color: var(--menu-fg); border-radius: 10px; padding: 8px 10px; cursor: pointer; font: inherit; font-size: 13px; text-align: left; }
   :global(.menu-row:hover) { background: color-mix(in srgb, var(--menu-pill) 72%, var(--menu-surface) 28%); }
   :global(.menu-row.on) { background: color-mix(in srgb, var(--menu-pill-on) 14%, var(--menu-surface)); border-color: color-mix(in srgb, var(--menu-pill-on) 72%, var(--menu-border) 28%); }
-  :global(.menu-row-state) { font-size: 11px; font-weight: 700; color: var(--menu-muted); flex-shrink: 0; }
-  :global(.menu-row.on .menu-row-state) { color: var(--menu-fg); }
+  :global(.menu-row-state) {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--menu-muted);
+    flex-shrink: 0;
+    background: var(--menu-pill);
+    padding: 2px 8px;
+    border-radius: 999px;
+    transition: all .15s;
+  }
+  :global(.menu-row.on .menu-row-state) {
+    background: var(--menu-pill-on);
+    color: var(--menu-pill-on-fg);
+  }
   :global(.controls) { background: var(--menu-panel); border: 1px solid var(--menu-border); border-radius: 16px; padding: 15px; display: flex; flex-direction: column; gap: 10px; width: min(348px, 100%); color: var(--menu-fg); }
   :global(.controls label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
   :global(.field-label) { font-size: 12px; color: color-mix(in srgb, var(--menu-fg) 75%, var(--menu-muted) 25%); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
