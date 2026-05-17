@@ -206,23 +206,35 @@
 
   const tooltipStyle = $derived.by(() => {
     if (!spotlightRect.width) return '';
-    const margin = 16;
+    const margin = 20;
     const winW = window.innerWidth;
     const winH = window.innerHeight;
     const tooltipW = 280;
+    const tooltipH = 180; // Estimated height
 
     let left = spotlightRect.left + spotlightRect.width / 2;
     // Bounds check horizontal
     if (left - tooltipW/2 < 10) left = tooltipW/2 + 10;
     if (left + tooltipW/2 > winW - 10) left = winW - tooltipW/2 - 10;
 
-    if (currentStep.pos === 'bottom') {
+    let finalPos = currentStep.pos;
+    
+    // Safety check: if pos is 'top' but we are too close to the top of the screen, flip to bottom
+    if (finalPos === 'top' && spotlightRect.top < tooltipH + margin) {
+      finalPos = 'bottom';
+    }
+    // Similarly for bottom
+    if (finalPos === 'bottom' && winH - (spotlightRect.top + spotlightRect.height) < tooltipH + margin) {
+      finalPos = 'top';
+    }
+
+    if (finalPos === 'bottom') {
       let top = spotlightRect.top + spotlightRect.height + margin;
       return `top: ${top}px; left: ${left}px; transform: translateX(-50%);`;
-    } else if (currentStep.pos === 'top') {
+    } else if (finalPos === 'top') {
       let bottom = winH - spotlightRect.top + margin;
       return `bottom: ${bottom}px; left: ${left}px; transform: translateX(-50%);`;
-    } else if (currentStep.pos === 'left') {
+    } else if (finalPos === 'left') {
       let right = winW - spotlightRect.left + margin;
       let top = spotlightRect.top + spotlightRect.height / 2;
       return `top: ${top}px; right: ${right}px; transform: translateY(-50%);`;
