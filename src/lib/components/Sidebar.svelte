@@ -12,6 +12,7 @@
     extraInfo: string;
     isViewMode: boolean;
     elapsedMin: number;
+    agendaView: 'school' | 'private';
     
     // Actions/Callbacks
     onCommitEdit: () => void;
@@ -249,6 +250,11 @@
 </script>
 
 <div id="sidebar-blocks" class="seglist">
+  {#if agendaView === 'private' && !isViewMode}
+    <div style="margin-bottom: 8px; align-self: flex-end;">
+      <span class="agenda-mode-badge">Eget</span>
+    </div>
+  {/if}
   {#each blocks as b, i (b.id)}
     {@const ct = clockTheme(palette, dark)}
     {@const cumMin = blocks.slice(0, i).reduce((a: number, x: Block) => a + x.minutes, 0)}

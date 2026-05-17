@@ -440,7 +440,7 @@
   function activeAgendaDate(): string { return schoolPrimary() ? s.agendaDate : s.agendaDate2; }
   function setActiveAgendaText(v: string) { if (schoolPrimary()) s.agendaText = v; else s.agendaText2 = v; }
   function setActiveAgendaDate(v: string) { if (schoolPrimary()) s.agendaDate = v; else s.agendaDate2 = v; }
-  function hasOverlay() { return false; }
+  function hasOverlay() { return s.agendaView === 'private'; }
 
   const agendaDays = $derived.by<AgendaDay[] | null>(() => {
     const stored = activeAgendaText();
@@ -2531,6 +2531,7 @@
       bind:extraInfo={s.extraInfo}
       isViewMode={isViewMode}
       elapsedMin={elapsedMin()}
+      agendaView={s.agendaView}
       onCommitEdit={commitBlockEdit}
     />
   </aside>
