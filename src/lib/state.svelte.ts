@@ -91,6 +91,7 @@ export interface AppState {
   nowDraft: EditorDraft;
   planDraft: EditorDraft;
   onboardingStep: number;
+  firstVisit: boolean;
 }
 
 export function uid() {
