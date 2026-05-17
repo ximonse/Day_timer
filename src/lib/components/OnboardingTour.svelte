@@ -174,6 +174,7 @@
         };
       }
     } else {
+      // Fallback to center if element not found
       spotlightRect = {
         top: window.innerHeight / 2 - 50,
         left: window.innerWidth / 2 - 50,
@@ -211,7 +212,6 @@
 
   const tooltipStyle = $derived.by(() => {
     if (!spotlightRect.width) return '';
-    const margin = 24;
     const winW = window.innerWidth;
     const winH = window.innerHeight;
     const tooltipW = 300;
@@ -223,29 +223,36 @@
 
     let finalPos = currentStep.pos;
     
-    if (finalPos === 'top' && spotlightRect.top < tooltipH + margin) {
+    // Safety check: if pos is 'top' but we are too close to the top of the screen, flip to bottom
+    if (finalPos === 'top' && spotlightRect.top < tooltipH + 24) {
       finalPos = 'bottom';
     }
-    if (finalPos === 'bottom' && winH - (spotlightRect.top + spotlightRect.height) < tooltipH + margin) {
+    // Similarly for bottom
+    if (finalPos === 'bottom' && winH - (spotlightRect.top + spotlightRect.height) < tooltipH + 24) {
       finalPos = 'top';
     }
 
+    // Step 2 & 3 specific: Lower them significantly
+    const isSidebarStep = currentStep.id === 'sidebar-edit' || currentStep.id === 'sidebar-shorthand';
+    const finalMargin = isSidebarStep ? 120 : 24;
+
     if (finalPos === 'bottom') {
-      let top = spotlightRect.top + spotlightRect.height + margin;
+      let top = spotlightRect.top + spotlightRect.height + finalMargin;
       return `top: ${top}px; left: ${left}px; transform: translateX(-50%);`;
     } else if (finalPos === 'top') {
-      let bottom = winH - spotlightRect.top + margin;
+      let bottom = winH - spotlightRect.top + finalMargin;
       return `bottom: ${bottom}px; left: ${left}px; transform: translateX(-50%);`;
     } else if (finalPos === 'left') {
-      let right = winW - spotlightRect.left + margin;
+      let right = winW - spotlightRect.left + finalMargin;
       let top = spotlightRect.top + spotlightRect.height / 2;
+      // Safety: keep tooltip within vertical bounds
       if (top - tooltipH/2 < 10) top = tooltipH/2 + 10;
       if (top + tooltipH/2 > winH - 10) top = winH - tooltipH/2 - 10;
       return `top: ${top}px; right: ${right}px; transform: translateY(-50%);`;
     } else if (finalPos === 'center') {
       return `top: 50%; left: 50%; transform: translate(-50%, -50%); position: fixed;`;
     } else {
-      let l = spotlightRect.left + spotlightRect.width + margin;
+      let l = spotlightRect.left + spotlightRect.width + finalMargin;
       let top = spotlightRect.top + spotlightRect.height / 2;
       if (top - tooltipH/2 < 10) top = tooltipH/2 + 10;
       if (top + tooltipH/2 > winH - 10) top = winH - tooltipH/2 - 10;
@@ -366,7 +373,7 @@
     margin: 0 0 12px 0;
     font-size: 20px;
     color: var(--accent);
-    font-weight: 800;
+    font-weight: 500;
   }
 
   .onboarding-tooltip p {

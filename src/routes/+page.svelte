@@ -592,7 +592,7 @@
     const monthIso = calendarMonthCursor || monthKey(parseIsoDate(baseIso));
     const [year, month] = monthIso.split('-').map(Number);
     const first = new Date(year, month - 1, 1);
-    const startOffset = first.getDay();
+    const startOffset = (first.getDay() - 1 + 7) % 7;
     const gridStart = new Date(year, month - 1, 1 - startOffset);
     const cells: CalendarCell[] = [];
     const selectedIso = selectedDay?.date ?? '';
