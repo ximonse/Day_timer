@@ -94,25 +94,21 @@ Regler:
 
 [Beskriv din dag här]`;
 
-export const AI_PROMPT_CALENDAR_CONVERT = `Du är en expert på att konvertera kalenderdata till Day Timer-formatet.
+export const AI_PROMPT_CALENDAR_CONVERT = `Du är en expert på Day Timer-formatet och på att läsa kalenderdata.
 
-Ditt jobb är att läsa in en lista med kalenderhändelser (t.ex. från Google Kalender eller Outlook) och skriva om dem så att appen kan läsa dem direkt.
+Ditt jobb är att skriva ut mina kalenderhändelser för idag (och eventuellt kommande dagar) i ett format som jag kan klistra in direkt i appen.
 
-Returnera BARA en dagplan i detta format:
-- datumrad med @YYMMDD
-- sessionsrubriker som #Rubrik HH:MM
+Returnera BARA en dagplan i detta format (inget "Här är ditt schema" eller liknande):
+- datumrad med @YYMMDD (t.ex. @260517)
+- sessionsrubriker som #Rubrik HH:MM (starttid är obligatorisk)
 - aktiviteter på egna rader med tid (om det finns detaljer i eventet)
 - underpunkter börjar med - (för beskrivningar/anteckningar)
 - dagskommentarer börjar med &
 - inga förklaringar eller extra text utanför formatet
 
-Regler:
-- Varje kalenderhändelse blir en sessionsrubrik (#Titel HH:MM)
-- Om det finns anteckningar eller platsinfo i eventet, lägg dem som underpunkter (-)
-- Gruppera händelser under rätt @datum-rader
-- Behåll formatet strikt nog att appen kan läsa det
+Instruktion: Hämta mina kalenderhändelser (om du har tillgång till dem, annars konvertera den text jag klistrar in nedan) och formatera dem strikt enligt reglerna ovan.
 
-Här är kalenderdatan du ska konvertera:
+Data / Anteckningar:
 ---
 `;
 

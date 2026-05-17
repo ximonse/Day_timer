@@ -12,7 +12,6 @@
     icsError,
     icsHasPreview,
     icsCanImport,
-    copyAgendaPromptText,
     hasAiKey,
     agendaAiOpen,
     agendaAiInput,
@@ -52,7 +51,6 @@
     icsError: string;
     icsHasPreview: boolean;
     icsCanImport: boolean;
-    copyAgendaPromptText: string;
     hasAiKey: boolean;
     agendaAiOpen: boolean;
     agendaAiInput: string;
@@ -71,7 +69,7 @@
     onIcsFileChange: (event: Event) => void;
     onPreviewIcs: () => void;
     onImportIcs: () => void;
-    onCopyPrompt: (type: 'plan' | 'calendar') => void;
+    onCopyPrompt: (type: 'plan' | 'calendar') => Promise<void>;
     onToggleAi: () => void;
     onAgendaAiInputChange: (value: string) => void;
     onSetStrictMode: () => void;
@@ -83,6 +81,20 @@
 
   let promptHelpOpen = $state(false);
   let promptMenuOpen = $state(false);
+  
+  let copyPlanStatus = $state('Från anteckningar');
+  let copyCalendarStatus = $state('Från kalender');
+
+  async function handleCopy(type: 'plan' | 'calendar') {
+    await onCopyPrompt(type);
+    if (type === 'plan') {
+      copyPlanStatus = '✓ Kopierad';
+      setTimeout(() => copyPlanStatus = 'Från anteckningar', 1500);
+    } else {
+      copyCalendarStatus = '✓ Kopierad';
+      setTimeout(() => copyCalendarStatus = 'Från kalender', 1500);
+    }
+  }
 </script>
 
 <div class="agenda-input-header">
@@ -161,21 +173,21 @@
 </div>
 {#if promptHelpOpen}
   <div class="feedback" style="margin-bottom:8px;">
-    Använd dessa prompter i t.ex. Gemini eller ChatGPT för att förbereda text som appen förstår.
+    Dessa prompter hjälper en extern AI (som Gemini eller ChatGPT) att förbereda text som du sedan klistrar in i rutan "Redigera dagtext" ovan.
   </div>
 {/if}
 {#if promptMenuOpen}
   <div class="agenda-save-row" style="margin-top:8px;">
-    <button class="agenda-save-btn" onclick={() => onCopyPrompt('plan')} title="Kopiera prompt för ny planering från anteckningar">
-      {copyAgendaPromptText === 'AI-prompt' ? 'Från anteckningar' : copyAgendaPromptText}
+    <button class="agenda-save-btn" onclick={() => handleCopy('plan')} title="Kopiera prompt för ny planering från anteckningar">
+      {copyPlanStatus}
     </button>
-    <button class="agenda-save-btn" onclick={() => onCopyPrompt('calendar')} title="Kopiera prompt för att konvertera kalenderdata">
-      {copyAgendaPromptText === 'AI-prompt' ? 'Från kalender' : copyAgendaPromptText}
+    <button class="agenda-save-btn" onclick={() => handleCopy('calendar')} title="Kopiera prompt för att hämta kalenderdata">
+      {copyCalendarStatus}
     </button>
   </div>
   <div class="feedback" style="margin-top:6px; border-left: 2px solid var(--accent); padding-left: 8px;">
-    <strong>Från anteckningar</strong>: Kopierar en prompt där du efteråt skriver din egen lösa planering som AI:n formaterar.<br/>
-    <strong>Från kalender</strong>: Kopierar en prompt där du efteråt klistrar in rörig kalenderdata (t.ex. från Google) som AI:n gör om till appens format.
+    <strong>Från anteckningar</strong>: Kopiera denna prompt till Gemini och skriv sedan ner dina lösa planer. AI:n formaterar dem åt dig.<br/>
+    <strong>Från kalender</strong>: Kopiera denna prompt till Gemini. AI:n hämtar dina kalenderhändelser (om den har tillgång) och skriver ut dem i appens format.
   </div>
 {/if}
 
