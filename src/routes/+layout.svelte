@@ -540,90 +540,39 @@
   :global(.flash.on) { opacity: .35; }
   :global(.help-modal) { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
   :global(.help-modal.open) { display: flex; }
-  :global(.help-card) { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 16px; padding: 28px 32px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; line-height: 1.45; }
-  :global(.help-card h2) { margin: 0 0 14px; font-size: 24px; font-weight: 600; }
-  :global(.help-card h3) { margin: 16px 0 6px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
-  :global(.help-card ul) { padding-left: 20px; margin: 0 0 4px; }
-  :global(.help-card li) { margin-bottom: 10px; font-size: 15px; }
-  :global(.help-card code) { background: var(--pill); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
-  :global(.help-foot) { font-size: 13px; color: var(--muted); margin: 0; }
-  :global(.ico) { font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; font-weight: 500; padding: 0 2px; }
-  :global(.help-card .ico) { color: var(--muted); }
-  :global(.help-close) { position: absolute; top: 8px; right: 12px; background: transparent; border: 0; color: var(--fg); font-size: 28px; cursor: pointer; line-height: 1; }
+    :global(.help-card) { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 24px; padding: 40px; max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; line-height: 1.5; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  :global(.help-card h2) { margin: 0 0 24px; font-size: 28px; font-weight: 700; }
+  :global(.help-card h3) { margin: 24px 0 12px; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  :global(.help-grid) { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  @media (max-width: 600px) { :global(.help-grid) { grid-template-columns: 1fr; gap: 20px; } }
+  :global(.help-box) { background: var(--pill); padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.6; margin: 8px 0; border: 1px solid var(--border); }
+  :global(.help-list) { list-style: none; padding: 0; margin: 0; }
+  :global(.help-list li) { margin-bottom: 8px; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+  :global(.help-card code) { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 6px; font-size: 13px; font-family: ui-monospace, monospace; font-weight: 600; }
+  :global(.help-footer-actions) { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  :global(.help-card .ico) { color: var(--muted); font-size: 16px; }
+  :global(.help-close) { position: absolute; top: 16px; right: 16px; background: transparent; border: 0; color: var(--muted); font-size: 32px; cursor: pointer; line-height: 1; transition: color .2s; }
+  :global(.help-close:hover) { color: var(--fg); }
 
-  @media (max-width: 800px) {
-    :global(.app) { flex-direction: column; height: auto; overflow: visible; }
-    :global(.sidebar) { width: 100%; max-width: 100%; min-width: 0; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 12px 14px; order: 2; }
-    :global(.main) { height: auto; overflow: visible; }
-    :global(body.sb-collapsed .sidebar) { margin-left: 0; padding: 0; border-bottom: none; max-height: 0; overflow: hidden; }
-    :global(.seglist .row) { font-size: 20px; padding: 6px 8px; gap: 8px; }
-    :global(.seglist .dot) { width: 12px; height: 12px; margin-top: 10px; }
-    :global(.seglist .min) { font-size: 16px; margin-top: 2px; }
-    :global(.resize-handle-sb), :global(.resize-handle-ag) { display: none; }
-    :global(.seglist .note) { font-size: 15px; padding: 0 8px 6px 36px; }
-    :global(.seglist .infobox) { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
-    :global(.main) { order: 1; padding: 8px 8px 0; gap: 6px; }
-    :global(.main-header) { display: flex; min-height: 0; }
-    :global(.lesson-title) { max-width: 100%; text-align: center; }
-    :global(.top-time) { position: static; align-items: center; text-align: center; }
-    :global(.hero-text) { font-size: clamp(30px, 7cqi, 70px); }
-    :global(.top-time .left) { position: static; transform: none; font-size: 14px; margin-top: 4px; white-space: normal; }
-    :global(.clock-wrap) { margin-top: 6px; }
-    :global(.controls) { width: 100%; max-width: 100%; }
-  }
-
-  /* iPad portrait och liknande (801–1100px) — ge panelerna lagom bredd */
-  @media (min-width: 801px) and (max-width: 1100px) {
-    :global(.sidebar) { width: 200px; }
-    :global(.agenda) { width: 200px; }
-    :global(.controls) { width: min(300px, 100%); }
-    :global(svg.clock) { width: min(80vh, 45vw); height: min(80vh, 45vw); }
-    :global(.hero-text) { font-size: 36px; }
-    :global(.section-title) { font-size: 28px; }
-    :global(.agenda-date-label) { font-size: 28px; }
-  }
-
-  @media (orientation: landscape) and (max-height: 500px) {
-    :global(.app) { flex-direction: row; height: 100vh; height: 100dvh; overflow: hidden; }
-    :global(.main) { padding: 6px; gap: 4px; }
-    :global(svg.clock) { width: 48vh; height: 48vh; }
-    :global(.hero-text) { font-size: clamp(30px, 7cqi, 70px); }
-    :global(.top-time .left) { font-size: 12px; margin-top: 2px; }
-    :global(.sidebar) { display: flex; width: 240px; min-width: 0; height: 100%; border-right: 1px solid var(--border); border-bottom: none; order: 0; padding: 8px 10px 60px; overflow-y: auto; }
-    :global(.seglist .row) { font-size: 16px; padding: 4px 6px; }
-    :global(.mobile-tabs) { flex-direction: column; width: 52px; height: 100%; border-top: none; border-right: 1px solid var(--border); bottom: 0; left: auto; right: 0; }
-    :global(body.m-now .sidebar) { display: flex; }
-  }
-  :global(.beta-tag) {
-    font-size: 9px;
-    background: var(--accent);
-    color: var(--bg);
-    padding: 1px 4px;
-    border-radius: 4px;
-    vertical-align: middle;
-    font-weight: 800;
-    margin-left: 4px;
-    opacity: 0.8;
-  }
-  :global(.toast-pill) {
+  :global(.welcome-overlay) {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    background: var(--menu-pill-on);
-    color: var(--menu-pill-on-fg);
-    padding: 10px 20px;
-    border-radius: 999px;
-    font-size: 16px;
-    font-weight: 700;
-    z-index: 1000;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    pointer-events: none;
-    animation: toast-fade-in-out 2s forwards;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 11000;
+    backdrop-filter: blur(8px);
   }
-  @keyframes toast-fade-in-out {
-    0% { opacity: 0; transform: translateY(-10px); }
-    15% { opacity: 1; transform: translateY(0); }
-    85% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(-10px); }
+  :global(.welcome-card) {
+    background: var(--menu-surface);
+    color: var(--menu-fg);
+    padding: 48px 40px;
+    border-radius: 32px;
+    width: 90%;
+    max-width: 440px;
+    text-align: center;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    border: 1px solid var(--menu-border);
   }
+  :global(.welcome-card h1) { margin: 0 0 16px 0; font-size: 36px; font-weight: 800; }
+  :global(.welcome-card p) { font-size: 17px; line-height: 1.6; opacity: 0.9; margin-bottom: 32px; }
 </style>
