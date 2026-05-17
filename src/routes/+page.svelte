@@ -124,6 +124,7 @@
   let agendaOverviewHelpOpen = $state<HelpOverride>('inherit');
   let copyBtnText = $state('AI-prompt');
   let nowTemplateSelection = $state('');
+  let planTemplateSelection = $state('');
   let syncStatusText = $state('');
   let syncStatusError = $state(false);
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
@@ -754,6 +755,12 @@
     if (!id) return;
     loadFlow(id, 'now');
     nowTemplateSelection = '';
+  }
+
+  function loadPlanTemplate(id: string) {
+    if (!id) return;
+    loadFlow(id, 'plan');
+    planTemplateSelection = '';
   }
 
   function cloneBlocks(blocks: typeof s.blocks) {
@@ -2891,6 +2898,24 @@
                 disabled={sortedFlowOptions.length === 0}
                 bind:value={nowTemplateSelection}
                 onchange={(e) => loadNowTemplate((e.target as HTMLSelectElement).value)}
+              >
+                <option value="">{sortedFlowOptions.length > 0 ? 'Ladda mall...' : 'Inga mallar ännu'}</option>
+                {#each sortedFlowOptions as flow (flow.id)}
+                  <option value={flow.id}>{flow.title || '(utan rubrik)'}</option>
+                {/each}
+              </select>
+            </div>
+          </div>
+        {:else if s.activeSection === 'plan'}
+          <div class="section-hero section-hero--split section-hero--compact">
+            <div class="hero-select-wrap">
+              <label class="field-label" for="plan-template-select">Mall</label>
+              <select
+                id="plan-template-select"
+                class="hero-select"
+                disabled={sortedFlowOptions.length === 0}
+                bind:value={planTemplateSelection}
+                onchange={(e) => loadPlanTemplate((e.target as HTMLSelectElement).value)}
               >
                 <option value="">{sortedFlowOptions.length > 0 ? 'Ladda mall...' : 'Inga mallar ännu'}</option>
                 {#each sortedFlowOptions as flow (flow.id)}
