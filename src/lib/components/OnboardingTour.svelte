@@ -33,7 +33,7 @@
       section: 'now',
       target: '#sidebar-blocks',
       title: 'Smarta genvägar',
-      text: 'När du redigerar: Tryck **Tab** för att skriva undertext, **&** för en slutkommentar, och **Enter** för att skapa en helt ny aktivitet!',
+      text: 'När du redigerar: Tryck <span style="font-weight:600">Tab</span> för att skriva undertext, <span style="font-weight:600">&</span> för en slutkommentar, och <span style="font-weight:600">Enter</span> för att skapa en helt ny aktivitet!',
       pos: 'bottom'
     },
     {
@@ -224,6 +224,7 @@
 
   const tooltipStyle = $derived.by(() => {
     if (!spotlightRect.width) return '';
+    const margin = 24;
     const winW = window.innerWidth;
     const winH = window.innerHeight;
     const tooltipW = 300;
@@ -303,7 +304,7 @@
            role="presentation">
         <button class="close-tour" onclick={onExit} title="Stäng guide">×</button>
         <h3>{currentStep.title}</h3>
-        <p>{currentStep.text}</p>
+        <p>{@html currentStep.text}</p>
         <div class="onboarding-actions">
           <div style="display:flex; gap:8px;">
             {#if step > 1}
