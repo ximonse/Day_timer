@@ -187,11 +187,23 @@
   // Handle section changes separately from the animation loop
   $effect(() => {
     if (step > 0 && currentStep) {
+      // 1. Ensure correct section
       if (appState.value.activeSection !== currentStep.section) {
         appState.value.activeSection = currentStep.section as any;
       }
-      // Give UI a moment to switch sections before scrolling
-      setTimeout(() => updateSpotlight(true), 100);
+
+      // 2. Ensure sidebar is open if we are in 'now' and hitting sidebar targets
+      if (currentStep.section === 'now' && currentStep.target.includes('sidebar')) {
+        if (appState.value.sbCollapsed) appState.value.sbCollapsed = false;
+      }
+
+      // 3. Ensure agenda is open if we are in 'plan'
+      if (currentStep.section === 'plan') {
+        if (!appState.value.agendaOpen) appState.value.agendaOpen = true;
+      }
+
+      // Give UI a moment to switch sections and animate panels before scrolling
+      setTimeout(() => updateSpotlight(true), 150);
     }
   });
 
