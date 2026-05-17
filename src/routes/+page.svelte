@@ -2455,21 +2455,28 @@
 
   function goToTimerNow() {
     const now = nowMinutes();
-    if (agendaDays && selectedDay) {
-      const flows = selectedDay.flows;
-      // Derive day-start independently of s.startMin (which changes on manual loads).
-      // Strategy: find the first flow with an explicit time and work backwards.
+    const today = localDateISO();
+    
+    // 1. Always switch to today
+    setActiveAgendaDate(today);
+    
+    // 2. Check if any flow covers the current time on today
+    const stored = activeAgendaText();
+    const days = stored.trim() ? parseAgenda(stored) : [];
+    const todayEntry = days.find(d => d.date === today);
+    
+    if (todayEntry) {
       let t: number;
-      const firstExplicitIdx = flows.findIndex(f => f.startMin !== undefined);
+      const firstExplicitIdx = todayEntry.flows.findIndex(f => f.startMin !== undefined);
       if (firstExplicitIdx >= 0) {
-        t = flows[firstExplicitIdx].startMin!;
+        t = todayEntry.flows[firstExplicitIdx].startMin!;
         for (let i = firstExplicitIdx - 1; i >= 0; i--) {
-          t -= flows[i].minutes.reduce((a, b) => a + b, 0);
+          t -= todayEntry.flows[i].minutes.reduce((a, b) => a + b, 0);
         }
       } else {
         t = agendaDayStart;
       }
-      for (const flow of flows) {
+      for (const flow of todayEntry.flows) {
         if (flow.startMin !== undefined) t = flow.startMin;
         const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
         if (now >= t && now < t + totalMin) {
@@ -2479,42 +2486,22 @@
         t += totalMin;
       }
     }
-    // No block covers now — create one from the current timer state
+
+    // 3. No block covers now — reset to empty current time on today
     const roundedNow = Math.round(now / 5) * 5;
-    const newFlow: Flow = {
-      id: uid(),
-      title: s.dayTitle || 'Session',
-      startMin: roundedNow,
-      parts: s.blocks.map(b => b.title),
-      minutes: s.blocks.map(b => b.minutes),
-      warnings: s.blocks.map(b => b.warning),
-      notes: s.blocks.map(b => b.note),
-      extraInfo: s.extraInfo,
-      lastUsed: Date.now(),
-    };
-    const today = localDateISO();
-    const existingText = activeAgendaText();
-    const days = existingText.trim() ? parseAgenda(existingText) : [];
-    let todayEntry = days.find(d => d.date === today);
-    if (!todayEntry) {
-      todayEntry = { date: today, flows: [] };
-      const insertAt = days.findIndex(d => d.date !== null && d.date > today);
-      if (insertAt < 0) { days.push(todayEntry); }
-      else { days.splice(insertAt, 0, todayEntry); }
-    }
-    const insertFlowAt = todayEntry.flows.findIndex(
-      f => f.startMin !== undefined && f.startMin > roundedNow
-    );
-    if (insertFlowAt < 0) { todayEntry.flows.push(newFlow); }
-    else { todayEntry.flows.splice(insertFlowAt, 0, newFlow); }
-    setActiveAgendaText(serializeAgenda(days));
-    setActiveAgendaDate(today);
+    s.dayTitle = '';
+    s.blocks = [];
+    s.extraInfo = '';
+    s.startMin = roundedNow;
+    s.activeSection = 'now';
     lastAutoLoadKey = '';
-    loadAgendaFlow(newFlow, roundedNow, 'now', false);
-    activeAgendaFlowRef = makeAgendaFlowRef(today, newFlow, roundedNow);
-    sessionSource = { kind: 'agenda', date: today, title: newFlow.title, startMin: roundedNow };
+    activeAgendaFlowRef = null;
+    sessionSource = { kind: 'unscheduled' };
+    
     capturePanelBaseline('now');
     capturePanelBaseline('plan');
+    syncPartsDraftFromState(true);
+    updateTimeFeedback();
     appState.persist();
   }
 </script>
