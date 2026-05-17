@@ -568,7 +568,7 @@
     padding: 48px 40px;
     border-radius: 32px;
     width: 90%;
-    max-width: 440px;
+    max-width: 480px;
     text-align: center;
     box-shadow: 0 30px 80px rgba(0,0,0,0.5);
     border: 1px solid var(--menu-border);
