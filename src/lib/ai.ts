@@ -94,6 +94,28 @@ Regler:
 
 [Beskriv din dag här]`;
 
+export const AI_PROMPT_CALENDAR_CONVERT = `Du är en expert på att konvertera kalenderdata till Day Timer-formatet.
+
+Ditt jobb är att läsa in en lista med kalenderhändelser (t.ex. från Google Kalender eller Outlook) och skriva om dem så att appen kan läsa dem direkt.
+
+Returnera BARA en dagplan i detta format:
+- datumrad med @YYMMDD
+- sessionsrubriker som #Rubrik HH:MM
+- aktiviteter på egna rader med tid (om det finns detaljer i eventet)
+- underpunkter börjar med - (för beskrivningar/anteckningar)
+- dagskommentarer börjar med &
+- inga förklaringar eller extra text utanför formatet
+
+Regler:
+- Varje kalenderhändelse blir en sessionsrubrik (#Titel HH:MM)
+- Om det finns anteckningar eller platsinfo i eventet, lägg dem som underpunkter (-)
+- Gruppera händelser under rätt @datum-rader
+- Behåll formatet strikt nog att appen kan läsa det
+
+Här är kalenderdatan du ska konvertera:
+---
+`;
+
 export function buildAiPayload(config: AiConfig, extra: Record<string, unknown>) {
   return {
     provider: config.provider,
