@@ -250,6 +250,8 @@
       {onStopSharing}
       {onStartSessionShare}
       {onStartDayShare}
+      {onSaveFlow}
+      {savedFlowMsg}
     />
   </div>
 {/if}

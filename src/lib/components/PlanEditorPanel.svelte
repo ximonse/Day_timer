@@ -71,7 +71,9 @@
     onCopyShareLink,
     onStopSharing,
     onStartSessionShare,
-    onStartDayShare
+    onStartDayShare,
+    onSaveFlow,
+    savedFlowMsg
   }: {
     hasSelection: boolean;
     targetDateLabel: string;
@@ -137,6 +139,8 @@
     onStopSharing: () => void;
     onStartSessionShare: () => void;
     onStartDayShare: () => void;
+    onSaveFlow: () => void;
+    savedFlowMsg: string;
   } = $props();
 
 </script>
@@ -284,6 +288,10 @@
       <span>{saveStatusLabel}</span>
       <button class="ai-key-btn" type="button" onclick={onRevert} disabled={!canRevert}>Återställ</button>
     </div>
+
+    <button class="quickstart quickstart-subtle" style="width:100%; margin-top:4px;" onclick={onSaveFlow}>
+      <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
+    </button>
 
     <div class="share-section">
       <div class="field-label">Dela</div>
