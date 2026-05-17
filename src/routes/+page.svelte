@@ -3202,7 +3202,10 @@
   }}>
   <div class="help-card">
     <button class="help-close" onclick={() => helpOpen = false} title="Stäng">×</button>
-    <h2 style="margin-bottom: 8px; color: var(--accent);">Day Timer Manual</h2>
+    <h2 style="margin-bottom: 8px; color: var(--accent); display: flex; align-items: center; gap: 10px;">
+      Day Timer Manual
+      <span style="font-size: 10px; background: var(--accent); color: white; padding: 2px 6px; border-radius: 4px; vertical-align: middle; font-weight: 800; letter-spacing: 0.5px;">BETA</span>
+    </h2>
     <p class="help-foot" style="margin-bottom: 24px; opacity: 0.8;">Allt du behöver veta för att bemästra din tid.</p>
 
     <div class="help-grid">
@@ -3271,6 +3274,7 @@
 {#if s.firstVisit}
   <div class="welcome-overlay" in:fade={{ duration: 400 }}>
     <div class="welcome-card" in:fly={{ y: 20, duration: 500, delay: 200 }}>
+      <div style="position: absolute; top: 20px; right: 24px; font-size: 10px; background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-weight: 900; letter-spacing: 1px; opacity: 0.9;">BETA</div>
       <h1>Hej!</h1>
       <p>Det här är Day Timer — ett verktyg för att visualisera tid och planera dina pass snyggt och enkelt.</p>
       
