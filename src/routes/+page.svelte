@@ -2489,11 +2489,15 @@
 
     // 3. No block covers now — reset to empty current time on today
     const roundedNow = Math.round(now / 5) * 5;
+    
+    // Switch section first so the subsequent assignments apply to 'now'
+    setActiveSection('now');
+    
     s.dayTitle = '';
     s.blocks = [];
     s.extraInfo = '';
     s.startMin = roundedNow;
-    s.activeSection = 'now';
+    
     lastAutoLoadKey = '';
     activeAgendaFlowRef = null;
     sessionSource = { kind: 'unscheduled' };
