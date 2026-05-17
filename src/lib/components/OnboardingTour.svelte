@@ -26,7 +26,7 @@
       target: '#sidebar-blocks',
       title: 'Aktiviteter',
       text: 'Klicka direkt på en text här för att ändra den. Skriv t.ex. "Genomgång 10m" för att sätta både namn och tid samtidigt.',
-      pos: 'right'
+      pos: 'bottom'
     },
     {
       id: 'sidebar-shorthand',
@@ -34,7 +34,7 @@
       target: '#sidebar-blocks',
       title: 'Smarta genvägar',
       text: 'När du redigerar: Tryck `Tab` för att skriva undertext, `&` för en slutkommentar, och `Enter` för att skapa en helt ny aktivitet!',
-      pos: 'right'
+      pos: 'bottom'
     },
     {
       id: 'clock',
