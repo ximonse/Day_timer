@@ -3202,50 +3202,68 @@
   }}>
   <div class="help-card">
     <button class="help-close" onclick={() => helpOpen = false} title="Stäng">×</button>
-    <h2 style="margin-bottom: 24px; color: var(--accent);">Välkommen till Day Timer</h2>
+    <h2 style="margin-bottom: 8px; color: var(--accent);">Day Timer Manual</h2>
+    <p class="help-foot" style="margin-bottom: 24px; opacity: 0.8;">Allt du behöver veta för att bemästra din tid.</p>
 
     <div class="help-grid">
+      <!-- Column 1 -->
       <div class="help-column">
-        <h3>Grunderna</h3>
-        <p>Day Timer hjälper dig att visualisera tid i klassrummet eller under arbetsdagen.</p>
+        <h3>🚀 Arbetsflöden</h3>
         <div class="help-box">
-          <strong>Nu</strong>: Skapa snabbt en timer som börjar direkt.<br/>
-          <strong>Planera</strong>: Förbered lektioner för valda dagar i kalendern utan att störa den aktiva timern.
+          <strong>Nu-läget</strong>: Din snabbväg. Skriv in rubrik och aktiviteter och klicka "Kör!". Timern startar direkt från aktuell klocktid. Perfekt för spontana lektionsmoment.<br/><br/>
+          <strong>Planera</strong>: Din arbetsbänk. Här förbereder du pass för framtiden. Välj en dag i kalendern, lägg till innehåll och spara. Detta rör aldrig din aktiva timer.
         </div>
-        
-        <h3>Genvägar</h3>
+
+        <h3>📝 Format & Aktiviteter</h3>
+        <p>Skriv en aktivitet per rad i det stora fältet. Appen fördelar tiden automatiskt om du inte anger annat.</p>
+        <div class="help-box">
+          <code>Genomgång 10m</code> — Låser tiden till 10 min.<br/>
+          <code>Eget arbete</code> — Tar upp resterande tid.<br/>
+          <code>- instruktion</code> — Skapar en underpunkt (instruktionstext) som syns i sidopanelen.<br/>
+          <code>&amp; kommentar</code> — Skapar en stor inforuta i slutet av passet.
+        </div>
+
+        <h3>⌨️ Genvägar</h3>
         <ul class="help-list">
-          <li><code>n</code> — Fliken Nu</li>
-          <li><code>p</code> — Fliken Planera</li>
-          <li><code>i</code> — Visa/Dölj hjälprutor</li>
-          <li><code>Alt+Shift+R</code> — Radera allt</li>
+          <li><code>n</code> / <code>p</code> — Växla mellan Nu och Planera.</li>
+          <li><code>b</code> / <code>k</code> — Öppna Bibliotek eller Konto.</li>
+          <li><code>i</code> — Toggla alla förklarande hjälprutor i appen.</li>
+          <li><code>Tab</code> — När du skriver aktiviteter: Skapar en ny rad med <code>-</code> direkt.</li>
+          <li><code>Alt+Shift+R</code> — Totalt återställning.</li>
         </ul>
       </div>
 
+      <!-- Column 2 -->
       <div class="help-column">
-        <h3>Inmatning & Format</h3>
-        <p>Skriv rubrik i det övre fältet och aktiviteter under.</p>
+        <h3>📅 Agendan & Kalendern</h3>
+        <p>Öppna agendan med pilen <span class="ico">▷</span> till höger om klockan.</p>
         <div class="help-box">
-          <code>Genomgång 10m</code> — Låst tid<br/>
-          <code>Eget arbete</code> — Automatisk tid<br/>
-          <code>- instruktion</code> — Undertext<br/>
-          <code>&amp; kommentar</code> — Sista info-ruta
+          <strong>Tidslinjen</strong>: Här ser du hela dagen. Du kan dra i blocken för att justera deras tid eller flytta dem i ordningen.<br/><br/>
+          <strong>Dagtext</strong>: Det kraftfullaste sättet att planera. Skriv <code>@260517</code> för datum och <code>#Rubrik</code> för att snabbt bygga hela dagar med text.
         </div>
 
-        <h3>Klockvyn</h3>
-        <p>I <span class="ico">⚙</span> kan du toggla klockvyn:</p>
+        <h3>✨ AI & Smart Import</h3>
         <div class="help-box">
-          <strong>1h</strong>: Kommande timme (minutvisare).<br/>
-          <strong>12h</strong>: Hela dagen (timvisare).
+          <strong>Prompter</strong>: Vi har färdiga prompter för Gemini/ChatGPT. Kopiera dem för att be AI:n konvertera röriga anteckningar eller Google Kalender-data till Day Timer-format.<br/><br/>
+          <strong>AI-planering</strong>: Har du en egen API-nyckel? Använd den inbyggda AI-panelen i editorn för att generera hela pass från en enkel beskrivning.
         </div>
+
+        <h3>🌐 Dela & Synka</h3>
+        <ul class="help-list">
+          <li><strong>Live-delning</strong>: Skapa en länk så kan eleverna följa din aktiva klocka på sina egna skärmar i realtid.</li>
+          <li><strong>Konto</strong>: Logga in för att automatiskt synka dina mallar och dagplaner mellan din dator, iPad och telefon.</li>
+        </ul>
       </div>
     </div>
 
     <div class="help-footer-actions">
-      <button class="quickstart" style="background:var(--accent); color:white;" onclick={() => { helpOpen = false; s.onboardingStep = 1; }}>
-        Starta introduktionsguiden
+      <button class="quickstart" style="background:var(--accent); color:white; font-weight: 700; padding: 12px 24px;" onclick={() => { helpOpen = false; s.onboardingStep = 1; }}>
+        Starta den interaktiva guiden
       </button>
-      <p class="help-foot">Frågor? Mejla <a href="mailto:timer@ximon.se">timer@ximon.se</a></p>
+      <div style="text-align: center;">
+        <p class="help-foot">Klockan följer alltid faktiskt klocktid.</p>
+        <p class="help-foot">Frågor eller feedback? <a href="mailto:timer@ximon.se">timer@ximon.se</a></p>
+      </div>
     </div>
   </div>
 </div>
@@ -3279,7 +3297,7 @@
     step={s.onboardingStep}
     onNext={() => {
       s.onboardingStep++;
-      if (s.onboardingStep > 15) s.onboardingStep = 0;
+      if (s.onboardingStep > 16) s.onboardingStep = 0;
       appState.persist();
     }}
     onBack={() => {

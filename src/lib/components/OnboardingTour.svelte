@@ -135,7 +135,7 @@
       section: 'plan',
       target: '#agenda-text-and-prompts',
       title: 'Smart import & Dagtext',
-      text: 'Här kan du skriva in hela dagens plan som text. Använd våra AI-prompter för att snabbt hämta data från t.ex. Google Kalender och klistra in här!',
+      text: 'Här kan du skriva in hela dagens plan som text. Använd våra AI-prompter för att få hjälp att planera din dag eller snabbt hämta data från t.ex. Google Kalender!',
       pos: 'left'
     },
     {
