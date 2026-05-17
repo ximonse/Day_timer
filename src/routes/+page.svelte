@@ -3276,7 +3276,7 @@
     step={s.onboardingStep}
     onNext={() => {
       s.onboardingStep++;
-      if (s.onboardingStep > 5) s.onboardingStep = 0;
+      if (s.onboardingStep > 15) s.onboardingStep = 0;
       appState.persist();
     }}
     onExit={() => {

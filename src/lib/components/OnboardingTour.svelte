@@ -39,8 +39,8 @@
       section: 'now',
       target: '#clock-wrap',
       title: 'Interaktiv klocka',
-      text: 'Här ser du tiden visuellt. Du kan dra i kanten på segmenten för att justera tiderna direkt på klockan!',
-      pos: 'top'
+      text: 'Här ser du tiden visuellt. Du kan dra i kanten på segmenten i klockan för att justera tiderna direkt på klockan!',
+      pos: 'center'
     },
     {
       id: 'cleanup',
@@ -237,10 +237,16 @@
     } else if (finalPos === 'left') {
       let right = winW - spotlightRect.left + margin;
       let top = spotlightRect.top + spotlightRect.height / 2;
+      if (top - tooltipH/2 < 10) top = tooltipH/2 + 10;
+      if (top + tooltipH/2 > winH - 10) top = winH - tooltipH/2 - 10;
       return `top: ${top}px; right: ${right}px; transform: translateY(-50%);`;
+    } else if (finalPos === 'center') {
+      return `top: 50%; left: 50%; transform: translate(-50%, -50%); position: fixed;`;
     } else {
       let l = spotlightRect.left + spotlightRect.width + margin;
       let top = spotlightRect.top + spotlightRect.height / 2;
+      if (top - tooltipH/2 < 10) top = tooltipH/2 + 10;
+      if (top + tooltipH/2 > winH - 10) top = winH - tooltipH/2 - 10;
       return `top: ${top}px; left: ${l}px; transform: translateY(-50%);`;
     }
   });
