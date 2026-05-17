@@ -464,10 +464,10 @@
   /* ── Mobilflikar ── */
   :global(.mobile-tabs) { display: none; }
   @media (max-width: 800px) {
-    :global(.app) { flex-direction: column; overflow-y: auto; height: auto; min-height: 100dvh; display: flex; }
-    :global(.main) { height: auto; min-height: 450px; overflow: visible; padding-bottom: 24px; order: 1; flex: none; width: 100%; }
-    :global(.sidebar) { width: 100%; max-width: 100%; border-right: none; border-top: 1px solid var(--border); height: auto; order: 2; margin-left: 0 !important; overflow: visible; flex: none; }
-    :global(.agenda) { display: none; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); height: auto; order: 2; margin-right: 0 !important; overflow: visible; flex: none; }
+    :global(.app) { flex-direction: column; height: 100dvh; height: 100vh; overflow: hidden; display: flex; }
+    :global(.main) { flex: 0 0 auto; height: auto; min-height: 400px; padding-bottom: 16px; order: 1; width: 100%; overflow: hidden; }
+    :global(.sidebar) { flex: 1; width: 100%; max-width: 100%; border-right: none; border-top: 1px solid var(--border); order: 2; margin-left: 0 !important; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    :global(.agenda) { display: none; flex: 1; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); order: 2; margin-right: 0 !important; overflow-y: auto; -webkit-overflow-scrolling: touch; }
     :global(.agenda-toggle-btn) { display: none; }
     :global(.collapse-btn) { display: none; }
     :global(.mobile-tabs) {
