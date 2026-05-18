@@ -512,6 +512,18 @@
     :global(.hero-select-wrap) { min-width: 0; }
     :global(.hero-select) { min-width: 0; max-width: none; width: 100%; }
   }
+  @media (hover: none) and (pointer: coarse) {
+    :global(.main) { padding-top: 10px; gap: 4px; }
+    :global(.main-header) { min-height: clamp(36px, 5.2cqi, 64px); column-gap: 10px; }
+    :global(.hero-text) { font-size: clamp(30px, 5.6cqi, 64px); line-height: 1.02; }
+    :global(.top-time .left) { top: calc(100% + 2px); font-size: 16px; }
+    :global(.clock-wrap) { margin-top: clamp(10px, 2.4cqi, 20px); }
+    :global(.main .clock) { width: min(68vh, 48vw); height: min(68vh, 48vw); }
+    :global(.mini-menu-shell) { width: min(320px, 100%); }
+  }
+  @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+    :global(.main .clock) { width: min(62vh, 46vw); height: min(62vh, 46vw); }
+  }
 
   /* ── Dela-sektion ── */
   :global(.share-section) { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
