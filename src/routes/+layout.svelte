@@ -469,18 +469,21 @@
   /* ── Mobilflikar ── */
   :global(.mobile-tabs) { display: none; }
   @media (max-width: 800px) {
-    :global(.app) { flex-direction: column; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; height: auto; min-height: 100dvh; display: flex; }
+    :global(html) { overflow-x: hidden; }
+    :global(body) { display: block; min-height: 100dvh; overflow-x: hidden; }
+    :global(.app) { flex-direction: column; overflow: visible; height: auto; min-height: 100dvh; padding-bottom: calc(52px + env(safe-area-inset-bottom)); display: flex; }
     :global(.main) { flex: 0 0 auto; height: auto; min-height: auto; padding-top: 6px; padding-bottom: 16px; order: 1; width: 100%; overflow: visible; }
     :global(.main-header) { min-height: 38px; }
     :global(.clock-wrap) { margin-top: 8px; }
-    :global(.sidebar) { flex: 0 0 auto; width: 100%; max-width: 100%; border-right: none; border-top: 1px solid var(--border); order: 2; margin-left: 0 !important; overflow: visible; -webkit-overflow-scrolling: touch; height: auto; }
-    :global(.agenda) { display: none; flex: 0 0 auto; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); order: 2; margin-right: 0 !important; overflow: visible; -webkit-overflow-scrolling: touch; height: auto; }
+    :global(.sidebar) { flex: 0 0 auto; width: 100%; max-width: 100%; border-right: none; border-top: 1px solid var(--border); order: 2; margin-left: 0 !important; overflow: visible; height: auto; }
+    :global(.agenda) { display: none; flex: 0 0 auto; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); order: 2; margin-right: 0 !important; overflow: visible; height: auto; }
     :global(.agenda-toggle-btn) { display: none; }
     :global(.collapse-btn) { display: none; }
     :global(.mobile-tabs) {
       display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
       background: var(--panel); border-top: 1px solid var(--border);
-      height: 52px;
+      height: calc(52px + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
     }
     :global(.mobile-tabs button) {
       flex: 1; background: transparent; border: 0; color: var(--muted);
@@ -501,10 +504,6 @@
     :global(body.m-plan .sidebar), :global(body.m-library .sidebar), :global(body.m-workspace .sidebar) { display: none; }
     :global(body.m-now .resize-handle-sb), :global(body.m-plan .resize-handle-sb), :global(body.m-library .resize-handle-sb), :global(body.m-workspace .resize-handle-sb) { display: none; }
     :global(body.m-plan .agenda) { display: flex !important; }
-    /* Ge utrymme för flikraden på det sista elementet i varje vy */
-    :global(body.m-now .sidebar), :global(body.m-plan .agenda), :global(body.m-library .main), :global(body.m-workspace .main) {
-      padding-bottom: 80px;
-    }
     /* Temaväljare som dropdown på mobil */
     :global(.theme-dots) { z-index: 200; }
     :global(.theme-dots.open .theme-panel) { top: 22px; }
@@ -520,6 +519,15 @@
     :global(.clock-wrap) { margin-top: clamp(10px, 2.4cqi, 20px); }
     :global(.main .clock) { width: max(220px, min(88vw, 100dvh - 300px)); height: max(220px, min(88vw, 100dvh - 300px)); }
     :global(.mini-menu-shell) { width: min(320px, 100%); }
+  }
+  @media (max-width: 800px) and (orientation: portrait) {
+    :global(.main) { padding-top: max(6px, env(safe-area-inset-top)); gap: 2px; }
+    :global(.main-header) { min-height: 0; column-gap: 8px; }
+    :global(.hero-text) { font-size: clamp(26px, 7vw, 34px); line-height: 1; }
+    :global(.top-time .left) { font-size: 14px; }
+    :global(.clock-wrap) { margin-top: 6px; }
+    :global(.main .clock) { width: min(78vw, calc(100dvh - 210px)); height: min(78vw, calc(100dvh - 210px)); }
+    :global(.mini-menu-shell) { width: min(304px, 100%); }
   }
   @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
     :global(.main .clock) { width: min(70vh, 46vw); height: min(70vh, 46vw); }
