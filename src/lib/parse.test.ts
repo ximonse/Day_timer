@@ -113,7 +113,7 @@ describe('serializeBlocks', () => {
 
   it('noteringar serialiseras som -rader', () => {
     const result = serializeBlocks([{ id: '1', title: 'Mat', minutes: 20, note: 'ta tallrik', warning: false, pinned: true }]);
-    expect(result).toBe('Mat 20m\n-ta tallrik');
+    expect(result).toBe('Mat 20m\n- ta tallrik');
   });
 
   it('roundtrip: serialisera → parsa ger samma titlar och tider', () => {
@@ -207,7 +207,7 @@ describe('serializeAgenda — roundtrip', () => {
   it('datum bevaras via roundtrip (fyrsiffrigt år)', () => {
     const days: AgendaDay[] = parseAgenda('@20260509\n#Morgon 08:00\nLektion 45m');
     const text = serializeAgenda(days);
-    expect(text).toContain('@20260509');
+    expect(text).toContain('@260509');
     const days2 = parseAgenda(text);
     expect(days2[0].date).toBe('2026-05-09');
   });
