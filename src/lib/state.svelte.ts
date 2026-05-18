@@ -1,4 +1,5 @@
 import { type Palette } from './theme.js';
+import { normalizePersistedState } from './state-normalize.js';
 
 export type AppSection = 'now' | 'plan' | 'library' | 'workspace';
 export type AgendaFlowSourceKind = 'manual' | 'template' | 'ai' | 'import';
@@ -189,14 +190,14 @@ function loadPersisted(): Partial<AppState> {
       data.dayTitle = data.title;
       delete data.title;
     }
-    return data;
+    return normalizePersistedState(data, uid);
   } catch { return {}; }
 }
 
 function createAppState() {
   const def = defaultState();
   const persisted = typeof localStorage !== 'undefined' ? loadPersisted() : {};
-  let s = $state<AppState>({ ...def, ...persisted });
+  let s = $state<AppState>(normalizePersistedState({ ...def, ...persisted }, uid) as AppState);
 
   return {
     get value() { return s; },
