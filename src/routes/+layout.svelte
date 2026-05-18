@@ -518,11 +518,11 @@
     :global(.hero-text) { font-size: clamp(30px, 5.6cqi, 64px); line-height: 1.02; }
     :global(.top-time .left) { top: calc(100% + 2px); font-size: 16px; }
     :global(.clock-wrap) { margin-top: clamp(10px, 2.4cqi, 20px); }
-    :global(.main .clock) { width: min(68vh, 48vw); height: min(68vh, 48vw); }
+    :global(.main .clock) { width: max(220px, min(88vw, 100dvh - 300px)); height: max(220px, min(88vw, 100dvh - 300px)); }
     :global(.mini-menu-shell) { width: min(320px, 100%); }
   }
   @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
-    :global(.main .clock) { width: min(62vh, 46vw); height: min(62vh, 46vw); }
+    :global(.main .clock) { width: min(70vh, 46vw); height: min(70vh, 46vw); }
   }
 
   /* ── Dela-sektion ── */
