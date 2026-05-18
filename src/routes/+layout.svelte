@@ -470,7 +470,9 @@
   :global(.mobile-tabs) { display: none; }
   @media (max-width: 800px) {
     :global(.app) { flex-direction: column; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; height: auto; min-height: 100dvh; display: flex; }
-    :global(.main) { flex: 0 0 auto; height: auto; min-height: auto; padding-bottom: 16px; order: 1; width: 100%; overflow: visible; }
+    :global(.main) { flex: 0 0 auto; height: auto; min-height: auto; padding-top: 6px; padding-bottom: 16px; order: 1; width: 100%; overflow: visible; }
+    :global(.main-header) { min-height: 38px; }
+    :global(.clock-wrap) { margin-top: 8px; }
     :global(.sidebar) { flex: 0 0 auto; width: 100%; max-width: 100%; border-right: none; border-top: 1px solid var(--border); order: 2; margin-left: 0 !important; overflow: visible; -webkit-overflow-scrolling: touch; height: auto; }
     :global(.agenda) { display: none; flex: 0 0 auto; width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--border); order: 2; margin-right: 0 !important; overflow: visible; -webkit-overflow-scrolling: touch; height: auto; }
     :global(.agenda-toggle-btn) { display: none; }
