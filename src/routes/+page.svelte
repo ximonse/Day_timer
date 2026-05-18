@@ -34,6 +34,7 @@
   }
 
   let svgEl = $state<SVGSVGElement>(null!);
+  let appEl = $state<HTMLElement>(null!);
   let sidebarEl = $state<HTMLElement>(null!);
   let flashEl = $state<HTMLElement>(null!);
   let loginName = $state('');
@@ -723,10 +724,21 @@
     if (typeof window !== 'undefined' && window.innerWidth <= 800) {
       mobileTab = section;
       syncBodyClasses();
+      scrollMobileViewportTop();
     }
     updateTimeFeedback();
     
     appState.persist();
+  }
+
+  function scrollMobileViewportTop() {
+    if (typeof window === 'undefined' || window.innerWidth > 800) return;
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      appEl?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
   }
 
   function closeTransientMenus() {
@@ -2141,6 +2153,7 @@
       appState.persist();
     }
     syncBodyClasses();
+    scrollMobileViewportTop();
     const resizeObservers: ResizeObserver[] = [];
     if (sidebarEl && window.ResizeObserver) {
       const ro = new ResizeObserver(() => {
@@ -2518,7 +2531,7 @@
   }
 </script>
 
-<div class="app">
+<div class="app" bind:this={appEl}>
   <aside class="sidebar" bind:this={sidebarEl}>
     <Sidebar
       bind:blocks={s.blocks}
