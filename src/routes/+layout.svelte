@@ -107,7 +107,7 @@
   :global(.sidebar), :global(.main) { scrollbar-width: none; }
   :global(.sidebar::-webkit-scrollbar), :global(.main::-webkit-scrollbar) { display: none; }
   :global(.sidebar) { width: 400px; min-width: 160px; max-width: 720px; background: var(--panel); border-right: 1px solid var(--border); padding: 20px 16px; position: relative; transition: margin-left .25s ease; overflow-y: auto; flex-shrink: 0; height: 100%; }
-  :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 16px; gap: 8px; position: relative; overflow-y: auto; height: 100%; container-type: inline-size; }
+  :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 16px 16px; gap: 8px; position: relative; overflow-y: auto; height: 100%; container-type: inline-size; }
   :global(body.sb-collapsed .sidebar) { margin-left: calc(-1 * var(--sb-w, 400px)); }
   :global(.comment-add-btn) { font-size: 15px; }
   :global(.sidebar-comment-head) { margin-top: 12px; }
@@ -140,7 +140,7 @@
   :global(.top-time) { grid-column: 2; position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 0; justify-self: center; }
   :global(.top-time .now) { background: transparent; border: 0; color: inherit; padding: 0; cursor: pointer; }
   :global(.top-time .left) { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); font-size: 20px; color: var(--muted); margin-top: 0; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
-  :global(.clock-wrap) { position: relative; margin-top: clamp(34px, 6cqi, 64px); }
+  :global(.clock-wrap) { position: relative; margin-top: 34px; }
   :global(.mini-menu-shell) { width: min(348px, 100%); display: flex; flex-direction: column; align-items: center; gap: 7px; }  :global(.mini-menu-toggle) { width: 34px; height: 24px; border-radius: 999px; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: color .16s, opacity .16s, transform .16s; }
   :global(.mini-menu-toggle:hover) { color: var(--fg); opacity: .9; }
   :global(.mini-menu-toggle span) { display: inline-block; line-height: 1; font-size: 26px; font-weight: 700; transform: rotate(0deg); transition: transform .2s ease; }
