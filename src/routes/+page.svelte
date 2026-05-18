@@ -29,7 +29,7 @@
   import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, type AiProvider, type AiPlanMode, type AiConfig, type PersistedAiConfig } from '$lib/ai.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory, toJsonl } from '$lib/learning.js';
-  import { createCurrentFallbackSession, flowToBlocks, makeFlowFromSession } from '$lib/session.js';
+  import { createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession } from '$lib/session.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -1107,9 +1107,10 @@
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
     f.lastUsed = Date.now();
-    s.dayTitle = f.title;
-    s.blocks = flowToBlocks(f, uid, { pinned: true });
-    s.extraInfo = f.extraInfo || '';
+    const session = createSessionStateFromFlow(f, uid, { pinned: true });
+    s.dayTitle = session.dayTitle;
+    s.blocks = session.blocks;
+    s.extraInfo = session.extraInfo;
     if (targetSection === 'plan') {
       const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
       s.startMin = suggestedStartMinForDate(agendaDays, targetDate, totalFlowMinutes(f));
@@ -1286,13 +1287,14 @@
   function buildSelectedSessionSnapshot() {
     if (!selectedAgendaDetails) return null;
     const { day, flow, startMin } = selectedAgendaDetails;
+    const session = createSessionStateFromFlow(flow, uid, { pinned: true, warning: true, startMin, clockSpan: 60 });
     return {
       shareType: 'selected-session-snapshot' as const,
       ...sharedUiState(),
-      blocks: flowToBlocks(flow, uid, { pinned: true, warning: true }),
-      dayTitle: flow.title,
-      extraInfo: flow.extraInfo || '',
-      startMin,
+      blocks: session.blocks,
+      dayTitle: session.dayTitle,
+      extraInfo: session.extraInfo,
+      startMin: session.startMin,
       endMode: 'end' as const,
       clockSpan: 60 as const,
       agendaText: serializeAgenda([{ date: day.date ?? null, flows: [{ ...flow }] }]),
@@ -1305,13 +1307,14 @@
     const flows = selectedDay.flows.map(flow => ({ ...flow }));
     const first = selectedAgendaDetails?.flow ?? selectedDay.flows[0] ?? null;
     const firstStart = selectedAgendaDetails?.startMin ?? selectedDay.flows[0]?.startMin ?? agendaDayStart;
+    const session = first ? createSessionStateFromFlow(first, uid, { pinned: true, warning: true, startMin: firstStart, clockSpan: 720 }) : null;
     return {
       shareType: 'selected-day-snapshot' as const,
       ...sharedUiState(),
-      blocks: first ? flowToBlocks(first, uid, { pinned: true, warning: true }) : cloneBlocks(s.blocks),
-      dayTitle: first?.title ?? fmtAgendaDate(selectedDay.date),
-      extraInfo: first?.extraInfo ?? '',
-      startMin: firstStart,
+      blocks: session ? session.blocks : cloneBlocks(s.blocks),
+      dayTitle: session?.dayTitle ?? fmtAgendaDate(selectedDay.date),
+      extraInfo: session?.extraInfo ?? '',
+      startMin: session?.startMin ?? firstStart,
       endMode: 'end' as const,
       clockSpan: 720 as const,
       agendaText: serializeAgenda([{ date: selectedDay.date, flows }]),
@@ -2138,10 +2141,11 @@
     const key = agendaAutoLoadKey(active);
     if (key === lastAutoLoadKey) return;
     lastAutoLoadKey = key;
-    s.dayTitle = active.flow.title;
-    s.blocks = flowToBlocks(active.flow, uid, { pinned: (minutes) => minutes > 0 });
-    s.extraInfo = active.flow.extraInfo || '';
-    s.startMin = active.flow.startMin ?? active.startMin;
+    const session = createSessionStateFromFlow(active.flow, uid, { startMin: active.flow.startMin ?? active.startMin, pinned: minutes => minutes > 0 });
+    s.dayTitle = session.dayTitle;
+    s.blocks = session.blocks;
+    s.extraInfo = session.extraInfo;
+    s.startMin = session.startMin;
     warnedSet.clear();
     activeAgendaFlowRef = selectedDay
       ? makeAgendaFlowRef(selectedDay.date ?? null, active.flow, s.startMin)
@@ -2230,10 +2234,11 @@
   }
 
   function loadAgendaFlow(flow: Flow, computedStart: number, targetSection: AppSection = 'plan', markExplicitSelection = true) {
-    s.dayTitle = flow.title;
-    s.blocks = flowToBlocks(flow, uid, { pinned: (minutes) => minutes > 0 });
-    s.extraInfo = flow.extraInfo || '';
-    s.startMin = flow.startMin ?? computedStart;
+    const session = createSessionStateFromFlow(flow, uid, { startMin: flow.startMin ?? computedStart, pinned: minutes => minutes > 0, clockSpan: 60 });
+    s.dayTitle = session.dayTitle;
+    s.blocks = session.blocks;
+    s.extraInfo = session.extraInfo;
+    s.startMin = session.startMin;
     s.clockSpan = 60;
     warnedSet.clear();
     activeAgendaFlowRef = selectedDay
@@ -2754,15 +2759,13 @@
                 const d = new Date();
                 s.startMin = d.getHours() * 60 + d.getMinutes();
                 warnedSet.clear(); updateTimeFeedback();
-                const f: Flow = {
-                  id: uid(), title: s.dayTitle || 'Session',
-                  startMin: s.startMin,
-                  parts: s.blocks.map(b => b.title),
-                  minutes: s.blocks.map(b => b.minutes),
-                  warnings: s.blocks.map(b => b.warning),
-                  notes: s.blocks.map(b => b.note),
+                const f = makeFlowFromSession({
+                  id: uid(),
+                  title: s.dayTitle || 'Session',
+                  blocks: s.blocks,
                   extraInfo: s.extraInfo,
-                };
+                  startMin: s.startMin
+                }, uid);
                 addFlowToAgendaToday(f, true, sessionAgendaMeta());
                 lastAutoLoadKey = `${f.startMin}-${totalFlowMinutes(f)}-${f.title}-${f.parts.length}`;
                 capturePanelBaseline('now');

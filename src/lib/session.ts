@@ -10,12 +10,22 @@ export interface FlowBlockOptions {
 	warning?: boolean | ((minutes: number, index: number) => boolean);
 }
 
+export interface SessionFromFlowOptions extends FlowBlockOptions {
+	startMin?: number;
+	clockSpan?: 60 | 120 | 720;
+}
+
 function resolveFlowBlockFlag(
 	value: FlowBlockOptions[keyof FlowBlockOptions] | undefined,
 	minutes: number,
 	index: number
 ) {
 	return typeof value === 'function' ? value(minutes, index) : Boolean(value);
+}
+
+function resolveFlowWarning(flow: Flow, index: number, minutes: number, override?: FlowBlockOptions['warning']) {
+	if (override !== undefined) return resolveFlowBlockFlag(override, minutes, index);
+	return flow.warnings?.[index] ?? false;
 }
 
 export function flowToBlocks(flow: Flow, createId: () => string, options: FlowBlockOptions = {}): Block[] {
@@ -26,10 +36,20 @@ export function flowToBlocks(flow: Flow, createId: () => string, options: FlowBl
 			title,
 			minutes,
 			note: flow.notes?.[index] ?? '',
-			warning: resolveFlowBlockFlag(options.warning, minutes, index),
+			warning: resolveFlowWarning(flow, index, minutes, options.warning),
 			pinned: resolveFlowBlockFlag(options.pinned, minutes, index),
 		};
 	});
+}
+
+export function createSessionStateFromFlow(flow: Flow, createId: () => string, options: SessionFromFlowOptions = {}) {
+	return {
+		dayTitle: flow.title,
+		blocks: flowToBlocks(flow, createId, options),
+		extraInfo: flow.extraInfo || '',
+		startMin: options.startMin ?? flow.startMin ?? 8 * 60,
+		...(options.clockSpan !== undefined ? { clockSpan: options.clockSpan } : {}),
+	};
 }
 
 export function makeFlowFromSession(
