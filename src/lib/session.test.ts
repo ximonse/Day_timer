@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { createCurrentFallbackSession, ensureRenderableBlocks, flowToBlocks, makeFlowFromSession } from './session.js';
+import { createCurrentFallbackSession, createSessionStateFromFlow, ensureRenderableBlocks, flowToBlocks, makeFlowFromSession } from './session.js';
 import type { Block, Flow } from './state.svelte.js';
 
 function block(patch: Partial<Block> = {}): Block {
@@ -57,6 +57,24 @@ describe('session helpers', () => {
 			{ id: 'id-1', title: 'A', minutes: 10, note: 'Note A', warning: true, pinned: false },
 			{ id: 'id-2', title: 'B', minutes: 20, note: 'Note B', warning: true, pinned: true }
 		]);
+	});
+
+	test('builds session state from a flow', () => {
+		let i = 0;
+		expect(createSessionStateFromFlow(flow(), () => `id-${++i}`, {
+			startMin: 540,
+			clockSpan: 60,
+			pinned: true
+		})).toEqual({
+			dayTitle: 'Flow',
+			blocks: [
+				{ id: 'id-1', title: 'A', minutes: 10, note: 'Note A', warning: false, pinned: true },
+				{ id: 'id-2', title: 'B', minutes: 20, note: 'Note B', warning: true, pinned: true }
+			],
+			extraInfo: 'Info',
+			startMin: 540,
+			clockSpan: 60
+		});
 	});
 
 	test('makes a flow from the current session', () => {
