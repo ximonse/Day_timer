@@ -10,6 +10,10 @@
     onLoadDummy: () => void;
   } = $props();
 
+  function renderBold(text: string): { bold: boolean; text: string }[] {
+    return text.split(/\*\*(.+?)\*\*/g).map((part, i) => ({ bold: i % 2 === 1, text: part }));
+  }
+
   const steps = [
     // Step 1: Basic Timer Creation
     {
@@ -33,7 +37,7 @@
       section: 'now',
       target: '#sidebar-blocks',
       title: 'Smarta genvägar',
-      text: 'När du redigerar: Tryck <span style="font-weight:600">Tab</span> för att skriva undertext, <span style="font-weight:600">&</span> för en slutkommentar, och <span style="font-weight:600">Enter</span> för att skapa en helt ny aktivitet!',
+      text: 'När du redigerar: Tryck **Tab** för att skriva undertext, **&** för en slutkommentar, och **Enter** för att skapa en helt ny aktivitet!',
       pos: 'bottom'
     },
     {
@@ -304,7 +308,7 @@
            role="presentation">
         <button class="close-tour" onclick={onExit} title="Stäng guide">×</button>
         <h3>{currentStep.title}</h3>
-        <p>{@html currentStep.text}</p>
+        <p>{#each renderBold(currentStep.text) as part}{#if part.bold}<strong>{part.text}</strong>{:else}{part.text}{/if}{/each}</p>
         <div class="onboarding-actions">
           <div style="display:flex; gap:8px;">
             {#if step > 1}
