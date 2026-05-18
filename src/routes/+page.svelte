@@ -8,10 +8,27 @@
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
+  import {
+    agendaMetaHelp,
+    agendaMetaLabel,
+    agendaMetaSignature,
+    buildAgendaItemsForDay,
+    cloneAgendaDay,
+    makeAgendaFlowRef,
+    makeAgendaMetaKeyForFlow,
+    makeAgendaMetaKeyForRef,
+    moveAgendaMeta,
+    rebuildAgendaMetaForDay,
+    resolveAgendaFlowRef,
+    serializeSelectedAgendaDay,
+    suggestedStartMinForDate,
+    type AgendaFlowRef
+  } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, type AiProvider, type AiPlanMode, type AiConfig, type PersistedAiConfig } from '$lib/ai.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory, toJsonl } from '$lib/learning.js';
+  import { ensureRenderableBlocks } from '$lib/session.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -58,13 +75,6 @@
   let planSelectionExplicit = $state(false);
   let partsDraft = $state('');
   let partsDraftDirty = $state(false);
-  type AgendaFlowRef = {
-    date: string | null;
-    title: string;
-    startMin: number;
-    totalMin: number;
-    partCount: number;
-  };
   let activeAgendaFlowRef = $state<AgendaFlowRef | null>(null);
   type SessionSource =
     | { kind: 'unscheduled' }
@@ -229,188 +239,8 @@
 
   const sectorColors = $derived(clockTheme(s.palette, s.dark).colors);
 
-  function deriveAgendaDayStart(day: AgendaDay, fallbackStart: number): number {
-    const firstExplicitIdx = day.flows.findIndex(f => f.startMin !== undefined);
-    if (firstExplicitIdx < 0) return fallbackStart;
-    let t = day.flows[firstExplicitIdx].startMin!;
-    for (let i = firstExplicitIdx - 1; i >= 0; i--) {
-      t -= totalFlowMinutes(day.flows[i]);
-    }
-    return t;
-  }
-
-  function buildAgendaItemsForDay(day: AgendaDay, fallbackStart: number) {
-    let t = deriveAgendaDayStart(day, fallbackStart);
-    return day.flows.map((flow, flowIdx) => {
-      if (flow.startMin !== undefined) t = flow.startMin;
-      const startMin = t;
-      const totalMin = totalFlowMinutes(flow);
-      t += totalMin;
-      return { day, flow, flowIdx, startMin, totalMin };
-    });
-  }
-
-  function cloneAgendaDay(day: AgendaDay): AgendaDay {
-    return {
-      date: day.date,
-      flows: day.flows.map(flow => ({
-        ...flow,
-        parts: [...flow.parts],
-        minutes: [...flow.minutes],
-        warnings: [...flow.warnings],
-        notes: [...flow.notes]
-      }))
-    };
-  }
-
-  function serializeSelectedAgendaDay(date: string | null, days: AgendaDay[] | null) {
-    if (!date) return '';
-    const day = days?.find(entry => entry.date === date);
-    return day ? serializeAgenda([cloneAgendaDay(day)]) : `@${date.slice(2, 4)}${date.slice(5, 7)}${date.slice(8, 10)}\n`;
-  }
-
-  function suggestedStartMinForDate(date: string, durationMin = totalMin()) {
-    const day = agendaDays?.find(entry => entry.date === date) ?? null;
-    if (!day || day.flows.length === 0) return 8 * 60;
-    const items = buildAgendaItemsForDay(day, 8 * 60);
-    const last = items[items.length - 1];
-    const roundedEnd = Math.ceil((last.startMin + last.totalMin) / 5) * 5;
-    return Math.min(roundedEnd, Math.max(8 * 60, 24 * 60 - durationMin));
-  }
-
-  function makeAgendaFlowRef(date: string | null, flow: Flow, startMin: number): AgendaFlowRef {
-    return {
-      date,
-      title: flow.title,
-      startMin,
-      totalMin: totalFlowMinutes(flow),
-      partCount: flow.parts.length
-    };
-  }
-
-  function makeAgendaMetaKey(date: string | null, title: string, startMin: number, totalMin: number, partCount: number): string {
-    return JSON.stringify([date ?? '', title, startMin, totalMin, partCount]);
-  }
-
-  function makeAgendaMetaKeyForFlow(date: string | null, flow: Flow, startMin: number): string {
-    return makeAgendaMetaKey(date, flow.title, startMin, totalFlowMinutes(flow), flow.parts.length);
-  }
-
-  function agendaMetaSignature(flow: Flow, startMin: number): string {
-    return JSON.stringify([
-      startMin,
-      flow.title,
-      flow.parts,
-      flow.minutes,
-      flow.extraInfo || ''
-    ]);
-  }
-
-  function makeAgendaMetaKeyForRef(ref: AgendaFlowRef): string {
-    return makeAgendaMetaKey(ref.date, ref.title, ref.startMin, ref.totalMin, ref.partCount);
-  }
-
   function setAgendaMeta(key: string, meta: AgendaFlowMeta) {
     s.agendaMeta = { ...s.agendaMeta, [key]: meta };
-  }
-
-  function removeAgendaMetaForDate(date: string | null) {
-    const next: typeof s.agendaMeta = {};
-    for (const [key, meta] of Object.entries(s.agendaMeta)) {
-      try {
-        const [storedDate] = JSON.parse(key);
-        if ((storedDate || '') !== (date ?? '')) next[key] = meta;
-      } catch {
-        next[key] = meta;
-      }
-    }
-    s.agendaMeta = next;
-  }
-
-  function cloneAgendaMeta(meta: AgendaFlowMeta): AgendaFlowMeta {
-    return { ...meta };
-  }
-
-  function buildAgendaMetaLookup(date: string | null, day: AgendaDay | null) {
-    const exact = new Map<string, AgendaFlowMeta>();
-    const signature = new Map<string, AgendaFlowMeta>();
-    if (!day) return { exact, signature };
-    const fallbackStart = day.flows[0]?.startMin ?? agendaDayStart;
-    for (const item of buildAgendaItemsForDay(day, fallbackStart)) {
-      const key = makeAgendaMetaKeyForFlow(date, item.flow, item.startMin);
-      const meta = s.agendaMeta[key];
-      if (!meta) continue;
-      exact.set(key, cloneAgendaMeta(meta));
-      signature.set(agendaMetaSignature(item.flow, item.startMin), cloneAgendaMeta(meta));
-    }
-    return { exact, signature };
-  }
-
-  function rebuildAgendaMetaForDay(
-    date: string | null,
-    previousDay: AgendaDay | null,
-    nextDay: AgendaDay | null,
-    options?: {
-      overridesByKey?: Map<string, AgendaFlowMeta>;
-      overridesBySignature?: Map<string, AgendaFlowMeta>;
-      defaultMeta?: AgendaFlowMeta;
-    }
-  ) {
-    removeAgendaMetaForDate(date);
-    if (!nextDay) return;
-    const previousLookup = buildAgendaMetaLookup(date, previousDay);
-    const fallbackStart = nextDay.flows[0]?.startMin ?? agendaDayStart;
-    for (const item of buildAgendaItemsForDay(nextDay, fallbackStart)) {
-      const key = makeAgendaMetaKeyForFlow(date, item.flow, item.startMin);
-      const signature = agendaMetaSignature(item.flow, item.startMin);
-      const meta =
-        options?.overridesByKey?.get(key) ??
-        options?.overridesBySignature?.get(signature) ??
-        previousLookup.exact.get(key) ??
-        previousLookup.signature.get(signature) ??
-        options?.defaultMeta;
-      if (meta) setAgendaMeta(key, cloneAgendaMeta(meta));
-    }
-  }
-
-  function moveAgendaMeta(oldKey: string, newKey: string) {
-    if (oldKey === newKey) return;
-    const meta = s.agendaMeta[oldKey];
-    if (!meta) return;
-    const next = { ...s.agendaMeta };
-    delete next[oldKey];
-    next[newKey] = meta;
-    s.agendaMeta = next;
-  }
-
-  function agendaMetaLabel(meta: AgendaFlowMeta | null): string {
-    if (!meta) return 'Ospecificerad';
-    if (meta.source === 'template') return meta.label ? `Mall: ${meta.label}` : 'Mall';
-    if (meta.source === 'ai') return 'AI-planerad';
-    if (meta.source === 'import') return meta.label ? `Import: ${meta.label}` : 'Importerad';
-    return 'Manuellt skapad';
-  }
-
-  function agendaMetaBadge(meta: AgendaFlowMeta | null): string {
-    if (!meta) return '';
-    if (meta.source === 'template') return 'Mall';
-    if (meta.source === 'ai') return 'AI';
-    if (meta.source === 'import') return meta.label === 'ICS-kalender' ? 'ICS' : 'Import';
-    return 'Manuell';
-  }
-
-  function agendaMetaHelp(meta: AgendaFlowMeta | null): string {
-    if (!meta || meta.source === 'manual') {
-      return 'Det här blocket är nu ett vanligt dagplansblock utan särskild koppling.';
-    }
-    if (meta.source === 'template') {
-      return 'Blocket skapades från en mall. Ändringar här påverkar bara dagplanen, inte originalmallen.';
-    }
-    if (meta.source === 'ai') {
-      return 'Blocket skapades av AI och går nu att finjustera som ett vanligt dagplansblock.';
-    }
-    const detail = meta.detail ? ` ${meta.detail}` : '';
-    return `Blocket kom in via import.${detail} Om du vill behandla det som helt eget kan du göra det manuellt.`;
   }
 
   function sessionAgendaMeta(): AgendaFlowMeta {
@@ -418,22 +248,6 @@
       return { source: 'template', label: sessionSource.title };
     }
     return { source: 'manual' };
-  }
-
-  function resolveAgendaFlowRef(days: AgendaDay[] | null, ref: AgendaFlowRef | null) {
-    if (!days || !ref) return null;
-    const dayIdx = days.findIndex(d => d.date === ref.date);
-    if (dayIdx < 0) return null;
-    const day = days[dayIdx];
-    const items = buildAgendaItemsForDay(day, ref.startMin);
-    const exact = items.find(item => item.startMin === ref.startMin && item.flow.title === ref.title);
-    if (exact) return { ...exact, dayIdx };
-    const fallback = items.find(item =>
-      item.flow.title === ref.title &&
-      item.totalMin === ref.totalMin &&
-      item.flow.parts.length === ref.partCount
-    );
-    return fallback ? { ...fallback, dayIdx } : null;
   }
 
   function schoolPrimary() { return s.agendaView === 'school'; }
@@ -1110,7 +924,7 @@
       totalMin: totalMin(),
       partCount: s.blocks.length
     };
-    if (oldKey && activeAgendaFlowRef) moveAgendaMeta(oldKey, makeAgendaMetaKeyForRef(activeAgendaFlowRef));
+    if (oldKey && activeAgendaFlowRef) s.agendaMeta = moveAgendaMeta(s.agendaMeta, oldKey, makeAgendaMetaKeyForRef(activeAgendaFlowRef));
     partsDraftDirty = false;
     markPlanSaved();
   }
@@ -1307,7 +1121,7 @@
     s.extraInfo = f.extraInfo || '';
     if (targetSection === 'plan') {
       const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
-      s.startMin = suggestedStartMinForDate(targetDate, totalFlowMinutes(f));
+      s.startMin = suggestedStartMinForDate(agendaDays, targetDate, totalFlowMinutes(f));
     }
     warnedSet.clear();
     updateTimeFeedback(); 
@@ -1325,7 +1139,7 @@
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
     const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
-    addFlowToAgendaDate(targetDate, f, false, { source: 'template', label: f.title }, suggestedStartMinForDate(targetDate, totalFlowMinutes(f)));
+    addFlowToAgendaDate(targetDate, f, false, { source: 'template', label: f.title }, suggestedStartMinForDate(agendaDays, targetDate, totalFlowMinutes(f)));
     savedFlowMsg = 'Tillagd i dagplan ✓';
     setTimeout(() => { savedFlowMsg = ''; }, 2000);
     if (loggedInUser) syncSave();
@@ -1654,10 +1468,12 @@
     agendaDraft = serializeSelectedAgendaDay(targetDate, nextDays);
     agendaDraftDate = targetDate;
     agendaDraftDirty = false;
-    rebuildAgendaMetaForDay(
+    s.agendaMeta = rebuildAgendaMetaForDay(
+      s.agendaMeta,
       targetDate,
       previousDay,
       nextDays.find(day => day.date === targetDate) ?? null,
+      agendaDayStart,
       { defaultMeta: { source: 'manual' } }
     );
     activeAgendaFlowRef = null;
@@ -1715,7 +1531,7 @@
           }
         );
       }
-      rebuildAgendaMetaForDay(day.date ?? null, previousDay, mergedDay, { overridesBySignature });
+      s.agendaMeta = rebuildAgendaMetaForDay(s.agendaMeta, day.date ?? null, previousDay, mergedDay, agendaDayStart, { overridesBySignature });
     }
 
     if (importDays[0]?.date) setActiveAgendaDate(importDays[0].date);
@@ -2099,6 +1915,7 @@
   }
 
   onMount(() => {
+    s.blocks = ensureRenderableBlocks(s.blocks, uid);
     pageOrigin = window.location.origin;
     const handleViewport = () => {
       showAgendaOverlay = window.innerWidth > 980;
@@ -2515,7 +2332,7 @@
     setActiveSection('now');
     
     s.dayTitle = '';
-    s.blocks = [];
+    s.blocks = ensureRenderableBlocks([], uid);
     s.extraInfo = '';
     s.startMin = roundedNow;
     
@@ -3340,4 +3157,3 @@
       appState.persist();
     }}
   />
-

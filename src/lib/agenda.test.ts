@@ -1,0 +1,172 @@
+import { describe, expect, test } from 'vitest';
+import {
+	buildAgendaItemsForDay,
+	deriveAgendaDayStart,
+	agendaMetaBadge,
+	agendaMetaHelp,
+	agendaMetaLabel,
+	buildAgendaMetaLookup,
+	makeAgendaFlowRef,
+	makeAgendaMetaKeyForFlow,
+	moveAgendaMeta,
+	rebuildAgendaMetaForDay,
+	resolveAgendaFlowRef,
+	serializeSelectedAgendaDay,
+	suggestedStartMinForDate
+} from './agenda.js';
+import type { AgendaDay } from './parse.js';
+import type { Flow } from './state.svelte.js';
+
+function flow(patch: Partial<Flow>): Flow {
+	return {
+		id: patch.id ?? patch.title ?? 'flow',
+		title: patch.title ?? 'Session',
+		parts: patch.parts ?? ['Aktivitet'],
+		minutes: patch.minutes ?? [30],
+		warnings: patch.warnings ?? [true],
+		notes: patch.notes ?? [''],
+		extraInfo: patch.extraInfo ?? '',
+		...(patch.startMin !== undefined ? { startMin: patch.startMin } : {})
+	};
+}
+
+describe('agenda helpers', () => {
+	test('derives day start from the first explicit flow and preceding durations', () => {
+		const day: AgendaDay = {
+			date: '2026-05-18',
+			flows: [
+				flow({ title: 'Intro', minutes: [20] }),
+				flow({ title: 'Lektion', startMin: 9 * 60, minutes: [45] }),
+				flow({ title: 'Exit', minutes: [10] })
+			]
+		};
+
+		expect(deriveAgendaDayStart(day, 8 * 60)).toBe(8 * 60 + 40);
+		expect(buildAgendaItemsForDay(day, 8 * 60).map(item => [item.flow.title, item.startMin, item.totalMin])).toEqual([
+			['Intro', 8 * 60 + 40, 20],
+			['Lektion', 9 * 60, 45],
+			['Exit', 9 * 60 + 45, 10]
+		]);
+	});
+
+	test('serializes a selected day or returns an empty dated marker', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [flow({ title: 'Lektion', startMin: 8 * 60, parts: ['Start'], minutes: [15] })]
+		}];
+
+		expect(serializeSelectedAgendaDay('2026-05-18', days)).toContain('@260518');
+		expect(serializeSelectedAgendaDay('2026-05-19', days)).toBe('@260519\n');
+		expect(serializeSelectedAgendaDay(null, days)).toBe('');
+	});
+
+	test('suggests the next rounded start time without exceeding the day', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [
+				flow({ title: 'A', startMin: 8 * 60 + 2, minutes: [28] }),
+				flow({ title: 'B', minutes: [17] })
+			]
+		}];
+
+		expect(suggestedStartMinForDate(days, '2026-05-18', 45)).toBe(8 * 60 + 50);
+		expect(suggestedStartMinForDate(days, '2026-05-19', 45)).toBe(8 * 60);
+		expect(suggestedStartMinForDate(days, '2026-05-18', 23 * 60)).toBe(8 * 60);
+	});
+
+	test('builds stable agenda meta keys and labels', () => {
+		const item = flow({ title: 'Bild', startMin: 10 * 60, parts: ['Skiss', 'Färg'], minutes: [20, 25] });
+
+		expect(makeAgendaMetaKeyForFlow('2026-05-18', item, 10 * 60)).toBe(JSON.stringify(['2026-05-18', 'Bild', 600, 45, 2]));
+		expect(agendaMetaLabel({ source: 'template', label: 'Måndag' })).toBe('Mall: Måndag');
+		expect(agendaMetaBadge({ source: 'import', label: 'ICS-kalender' })).toBe('ICS');
+		expect(agendaMetaHelp({ source: 'manual' })).toBe('Det här blocket är nu ett vanligt dagplansblock utan särskild koppling.');
+	});
+
+	test('resolves agenda flow refs by exact match or stable fallback', () => {
+		const target = flow({ title: 'Matte', startMin: 9 * 60, parts: ['Tal'], minutes: [35] });
+		const days: AgendaDay[] = [{ date: '2026-05-18', flows: [target] }];
+		const exactRef = makeAgendaFlowRef('2026-05-18', target, 9 * 60);
+		const fallbackRef = { ...exactRef, startMin: 8 * 60 };
+
+		expect(resolveAgendaFlowRef(days, exactRef)?.startMin).toBe(9 * 60);
+		expect(resolveAgendaFlowRef(days, fallbackRef)?.flow.title).toBe('Matte');
+		expect(resolveAgendaFlowRef(days, { ...exactRef, date: '2026-05-19' })).toBeNull();
+	});
+
+	test('builds agenda meta lookup without exposing mutable meta objects', () => {
+		const matte = flow({ title: 'Matte', startMin: 9 * 60, parts: ['Tal'], minutes: [35] });
+		const key = makeAgendaMetaKeyForFlow('2026-05-18', matte, 9 * 60);
+		const meta = { [key]: { source: 'template' as const, label: 'Måndag' } };
+		const lookup = buildAgendaMetaLookup(meta, '2026-05-18', { date: '2026-05-18', flows: [matte] }, 8 * 60);
+
+		expect(lookup.exact.get(key)).toEqual({ source: 'template', label: 'Måndag' });
+		lookup.exact.get(key)!.label = 'Ändrad';
+		expect(meta[key].label).toBe('Måndag');
+	});
+
+	test('moves agenda meta by key without mutating the original map', () => {
+		const oldKey = 'old';
+		const newKey = 'new';
+		const meta = {
+			[oldKey]: { source: 'manual' as const },
+			other: { source: 'ai' as const }
+		};
+
+		const next = moveAgendaMeta(meta, oldKey, newKey);
+
+		expect(next).toEqual({
+			[newKey]: { source: 'manual' },
+			other: { source: 'ai' }
+		});
+		expect(meta).toHaveProperty(oldKey);
+	});
+
+	test('rebuilds metadata for one day and preserves other days', () => {
+		const previousFlow = flow({ title: 'Bild', startMin: 9 * 60, parts: ['Skiss'], minutes: [30] });
+		const nextFlow = flow({ title: 'Bild', startMin: 9 * 60, parts: ['Skiss'], minutes: [30], notes: ['ny notering'] });
+		const otherFlow = flow({ title: 'Engelska', startMin: 11 * 60, parts: ['Text'], minutes: [20] });
+		const staleFlow = flow({ title: 'Slöjd', startMin: 10 * 60, parts: ['Trä'], minutes: [20] });
+		const previousKey = makeAgendaMetaKeyForFlow('2026-05-18', previousFlow, 9 * 60);
+		const otherKey = makeAgendaMetaKeyForFlow('2026-05-19', otherFlow, 11 * 60);
+		const staleKey = makeAgendaMetaKeyForFlow('2026-05-18', staleFlow, 10 * 60);
+		const meta = {
+			[previousKey]: { source: 'template' as const, label: 'Bildmall' },
+			[staleKey]: { source: 'manual' as const },
+			[otherKey]: { source: 'ai' as const }
+		};
+
+		const next = rebuildAgendaMetaForDay(
+			meta,
+			'2026-05-18',
+			{ date: '2026-05-18', flows: [previousFlow] },
+			{ date: '2026-05-18', flows: [nextFlow] },
+			8 * 60
+		);
+
+		expect(next[makeAgendaMetaKeyForFlow('2026-05-18', nextFlow, 9 * 60)]).toEqual({ source: 'template', label: 'Bildmall' });
+		expect(next[staleKey]).toBeUndefined();
+		expect(next[otherKey]).toEqual({ source: 'ai' });
+	});
+
+	test('rebuilds metadata with overrides and default metadata', () => {
+		const imported = flow({ title: 'Kalender', startMin: 13 * 60, parts: ['Möte'], minutes: [45] });
+		const manual = flow({ title: 'Plan', startMin: 14 * 60, parts: ['Skriv'], minutes: [30] });
+		const overrideKey = makeAgendaMetaKeyForFlow('2026-05-18', imported, 13 * 60);
+
+		const next = rebuildAgendaMetaForDay(
+			{},
+			'2026-05-18',
+			null,
+			{ date: '2026-05-18', flows: [imported, manual] },
+			8 * 60,
+			{
+				overridesByKey: new Map([[overrideKey, { source: 'import', label: 'ICS-kalender' }]]),
+				defaultMeta: { source: 'manual' }
+			}
+		);
+
+		expect(next[overrideKey]).toEqual({ source: 'import', label: 'ICS-kalender' });
+		expect(next[makeAgendaMetaKeyForFlow('2026-05-18', manual, 14 * 60)]).toEqual({ source: 'manual' });
+	});
+});
