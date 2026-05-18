@@ -6,6 +6,7 @@ import {
 	agendaMetaHelp,
 	agendaMetaLabel,
 	buildAgendaMetaLookup,
+	findAgendaItemForTime,
 	makeAgendaFlowRef,
 	makeAgendaMetaKeyForFlow,
 	moveAgendaMeta,
@@ -72,6 +73,38 @@ describe('agenda helpers', () => {
 		expect(suggestedStartMinForDate(days, '2026-05-18', 45)).toBe(8 * 60 + 50);
 		expect(suggestedStartMinForDate(days, '2026-05-19', 45)).toBe(8 * 60);
 		expect(suggestedStartMinForDate(days, '2026-05-18', 23 * 60)).toBe(8 * 60);
+	});
+
+	test('finds the agenda item covering a specific time on a date', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [
+				flow({ title: 'Start', startMin: 8 * 60, minutes: [30] }),
+				flow({ title: 'Fortsättning', minutes: [45] })
+			]
+		}];
+
+		const item = findAgendaItemForTime(days, '2026-05-18', 8 * 60 + 40, 7 * 60);
+
+		expect(item?.flow.title).toBe('Fortsättning');
+		expect(item?.startMin).toBe(8 * 60 + 30);
+		expect(findAgendaItemForTime(days, '2026-05-18', 10 * 60, 7 * 60)).toBeNull();
+		expect(findAgendaItemForTime(days, '2026-05-19', 8 * 60 + 10, 7 * 60)).toBeNull();
+	});
+
+	test('finds items before the first explicit flow using derived day start', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [
+				flow({ title: 'Implicit', minutes: [20] }),
+				flow({ title: 'Explicit', startMin: 9 * 60, minutes: [30] })
+			]
+		}];
+
+		const item = findAgendaItemForTime(days, '2026-05-18', 8 * 60 + 45, 7 * 60);
+
+		expect(item?.flow.title).toBe('Implicit');
+		expect(item?.startMin).toBe(8 * 60 + 40);
 	});
 
 	test('builds stable agenda meta keys and labels', () => {

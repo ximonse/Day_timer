@@ -79,6 +79,14 @@ export function suggestedStartMinForDate(days: AgendaDay[] | null | undefined, d
 	return Math.min(roundedEnd, Math.max(8 * 60, 24 * 60 - durationMin));
 }
 
+export function findAgendaItemForTime(days: AgendaDay[] | null | undefined, date: string, minute: number, fallbackStart: number): AgendaItem | null {
+	const day = days?.find(entry => entry.date === date) ?? null;
+	if (!day) return null;
+	return buildAgendaItemsForDay(day, fallbackStart).find(item =>
+		minute >= item.startMin && minute < item.startMin + item.totalMin
+	) ?? null;
+}
+
 export function makeAgendaFlowRef(date: string | null, flow: Flow, startMin: number): AgendaFlowRef {
 	return {
 		date,

@@ -14,6 +14,7 @@
     agendaMetaSignature,
     buildAgendaItemsForDay,
     cloneAgendaDay,
+    findAgendaItemForTime,
     makeAgendaFlowRef,
     makeAgendaMetaKeyForFlow,
     makeAgendaMetaKeyForRef,
@@ -2294,43 +2295,19 @@
   function goToTimerNow() {
     const now = nowMinutes();
     const today = localDateISO();
-    
-    // 1. Always switch to today
+
     setActiveAgendaDate(today);
-    
-    // 2. Check if any flow covers the current time on today
     const stored = activeAgendaText();
     const days = stored.trim() ? parseAgenda(stored) : [];
-    const todayEntry = days.find(d => d.date === today);
-    
-    if (todayEntry) {
-      let t: number;
-      const firstExplicitIdx = todayEntry.flows.findIndex(f => f.startMin !== undefined);
-      if (firstExplicitIdx >= 0) {
-        t = todayEntry.flows[firstExplicitIdx].startMin!;
-        for (let i = firstExplicitIdx - 1; i >= 0; i--) {
-          t -= todayEntry.flows[i].minutes.reduce((a, b) => a + b, 0);
-        }
-      } else {
-        t = agendaDayStart;
-      }
-      for (const flow of todayEntry.flows) {
-        if (flow.startMin !== undefined) t = flow.startMin;
-        const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
-        if (now >= t && now < t + totalMin) {
-          loadAgendaFlow(flow, t, 'now', false);
-          return;
-        }
-        t += totalMin;
-      }
+    const activeItem = findAgendaItemForTime(days, today, now, agendaDayStart);
+
+    if (activeItem) {
+      loadAgendaFlow(activeItem.flow, activeItem.startMin, 'now', false);
+      return;
     }
 
-    // 3. No block covers now — reset to empty current time on today
     const roundedNow = Math.round(now / 5) * 5;
-    
-    // Switch section first so the subsequent assignments apply to 'now'
     setActiveSection('now');
-    
     s.dayTitle = '';
     s.blocks = ensureRenderableBlocks([], uid);
     s.extraInfo = '';
