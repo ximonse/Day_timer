@@ -29,7 +29,7 @@
   import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, type AiProvider, type AiPlanMode, type AiConfig, type PersistedAiConfig } from '$lib/ai.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory, toJsonl } from '$lib/learning.js';
-  import { ensureRenderableBlocks } from '$lib/session.js';
+  import { createCurrentFallbackSession, flowToBlocks, makeFlowFromSession } from '$lib/session.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -906,16 +906,13 @@
     const oldKey = activeAgendaFlowRef ? makeAgendaMetaKeyForRef(activeAgendaFlowRef) : null;
     const newDays = agendaDays.map((d, di) => di !== dayIdx ? d : {
       ...d,
-      flows: d.flows.map((f, fi) => fi !== flowIdx ? f : {
-        ...f,
+      flows: d.flows.map((f, fi) => fi !== flowIdx ? f : makeFlowFromSession({
+        id: f.id,
         title: s.dayTitle,
-        startMin: s.startMin,
-        minutes: s.blocks.map(b => b.minutes),
-        parts: s.blocks.map(b => b.title),
-        notes: s.blocks.map(b => b.note),
-        warnings: s.blocks.map(b => b.warning),
+        blocks: s.blocks,
         extraInfo: s.extraInfo,
-      }),
+        startMin: s.startMin
+      }, uid)),
     });
     setActiveAgendaText(serializeAgenda(newDays));
     activeAgendaFlowRef = {
@@ -1056,15 +1053,12 @@
     const title = s.dayTitle.trim() || 'Utan rubrik';
     if (!s.flows) s.flows = [];
     const existing = s.flows.find(f => f.title === title);
-    const data = {
-      id: existing ? existing.id : 'f-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+    const data = makeFlowFromSession({
+      id: existing?.id,
       title,
-      parts: s.blocks.map(b => b.title),
-      minutes: s.blocks.map(b => b.minutes),
-      warnings: s.blocks.map(b => b.warning),
-      notes: s.blocks.map(b => b.note),
+      blocks: s.blocks,
       extraInfo: s.extraInfo || '',
-    };
+    }, () => 'f-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
     if (existing) { Object.assign(existing, data); }
     else { s.flows.push(data); }
     flowsOpen = true;
@@ -1114,11 +1108,7 @@
     if (!f) return;
     f.lastUsed = Date.now();
     s.dayTitle = f.title;
-    s.blocks = f.parts.map((title, i) => ({
-      id: Math.random().toString(36).slice(2, 9),
-      title, minutes: f.minutes[i] ?? 45,
-      note: f.notes?.[i] ?? '', warning: f.warnings?.[i] ?? false, pinned: true,
-    }));
+    s.blocks = flowToBlocks(f, uid, { pinned: true });
     s.extraInfo = f.extraInfo || '';
     if (targetSection === 'plan') {
       const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
@@ -1299,14 +1289,7 @@
     return {
       shareType: 'selected-session-snapshot' as const,
       ...sharedUiState(),
-      blocks: flow.parts.map((title, i) => ({
-        id: uid(),
-        title,
-        minutes: flow.minutes[i] ?? 45,
-        note: flow.notes?.[i] ?? '',
-        warning: flow.warnings?.[i] ?? true,
-        pinned: true
-      })),
+      blocks: flowToBlocks(flow, uid, { pinned: true, warning: true }),
       dayTitle: flow.title,
       extraInfo: flow.extraInfo || '',
       startMin,
@@ -1325,16 +1308,7 @@
     return {
       shareType: 'selected-day-snapshot' as const,
       ...sharedUiState(),
-      blocks: first
-        ? first.parts.map((title, i) => ({
-            id: uid(),
-            title,
-            minutes: first.minutes[i] ?? 45,
-            note: first.notes?.[i] ?? '',
-            warning: first.warnings?.[i] ?? true,
-            pinned: true
-          }))
-        : cloneBlocks(s.blocks),
+      blocks: first ? flowToBlocks(first, uid, { pinned: true, warning: true }) : cloneBlocks(s.blocks),
       dayTitle: first?.title ?? fmtAgendaDate(selectedDay.date),
       extraInfo: first?.extraInfo ?? '',
       startMin: firstStart,
@@ -2165,14 +2139,7 @@
     if (key === lastAutoLoadKey) return;
     lastAutoLoadKey = key;
     s.dayTitle = active.flow.title;
-    s.blocks = active.flow.parts.map((title, i) => ({
-      id: uid(),
-      title,
-      minutes: active.flow.minutes[i] ?? 45,
-      note: active.flow.notes?.[i] ?? '',
-      warning: active.flow.warnings?.[i] ?? false,
-      pinned: (active.flow.minutes[i] ?? 0) > 0,
-    }));
+    s.blocks = flowToBlocks(active.flow, uid, { pinned: (minutes) => minutes > 0 });
     s.extraInfo = active.flow.extraInfo || '';
     s.startMin = active.flow.startMin ?? active.startMin;
     warnedSet.clear();
@@ -2264,14 +2231,7 @@
 
   function loadAgendaFlow(flow: Flow, computedStart: number, targetSection: AppSection = 'plan', markExplicitSelection = true) {
     s.dayTitle = flow.title;
-    s.blocks = flow.parts.map((title, i) => ({
-      id: uid(),
-      title,
-      minutes: flow.minutes[i] ?? 45,
-      note: flow.notes?.[i] ?? '',
-      warning: flow.warnings?.[i] ?? false,
-      pinned: flow.minutes[i] > 0,
-    }));
+    s.blocks = flowToBlocks(flow, uid, { pinned: (minutes) => minutes > 0 });
     s.extraInfo = flow.extraInfo || '';
     s.startMin = flow.startMin ?? computedStart;
     s.clockSpan = 60;
@@ -2305,13 +2265,13 @@
       return;
     }
 
-    const roundedNow = Math.round(now / 5) * 5;
+    const fallback = createCurrentFallbackSession(now, uid);
     setActiveSection('now');
-    s.dayTitle = '';
-    s.blocks = ensureRenderableBlocks([], uid);
-    s.extraInfo = '';
-    s.startMin = roundedNow;
-    
+    s.dayTitle = fallback.dayTitle;
+    s.blocks = fallback.blocks;
+    s.extraInfo = fallback.extraInfo;
+    s.startMin = fallback.startMin;
+
     lastAutoLoadKey = '';
     activeAgendaFlowRef = null;
     sessionSource = { kind: 'unscheduled' };
