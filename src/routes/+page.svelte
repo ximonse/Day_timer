@@ -1916,7 +1916,6 @@
   }
 
   onMount(() => {
-    s.blocks = ensureRenderableBlocks(s.blocks, uid);
     pageOrigin = window.location.origin;
     const handleViewport = () => {
       showAgendaOverlay = window.innerWidth > 980;
