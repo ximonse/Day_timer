@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { ensureRenderableBlocks } from './session.js';
-import type { Block } from './state.svelte.js';
+import { createCurrentFallbackSession, ensureRenderableBlocks, flowToBlocks, makeFlowFromSession } from './session.js';
+import type { Block, Flow } from './state.svelte.js';
 
 function block(patch: Partial<Block> = {}): Block {
 	return {
@@ -10,6 +10,19 @@ function block(patch: Partial<Block> = {}): Block {
 		note: patch.note ?? '',
 		warning: patch.warning ?? true,
 		pinned: patch.pinned ?? false
+	};
+}
+
+function flow(patch: Partial<Flow> = {}): Flow {
+	return {
+		id: patch.id ?? 'flow',
+		title: patch.title ?? 'Flow',
+		parts: patch.parts ?? ['A', 'B'],
+		minutes: patch.minutes ?? [10, 20],
+		warnings: patch.warnings ?? [false, true],
+		notes: patch.notes ?? ['Note A', 'Note B'],
+		extraInfo: patch.extraInfo ?? 'Info',
+		startMin: patch.startMin
 	};
 }
 
@@ -33,5 +46,55 @@ describe('session helpers', () => {
 		], () => 'fallback')).toEqual([
 			{ id: 'fallback', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }
 		]);
+	});
+
+	test('maps a flow to blocks', () => {
+		let i = 0;
+		expect(flowToBlocks(flow(), () => `id-${++i}`, {
+			pinned: (minutes) => minutes > 15,
+			warning: true
+		})).toEqual([
+			{ id: 'id-1', title: 'A', minutes: 10, note: 'Note A', warning: true, pinned: false },
+			{ id: 'id-2', title: 'B', minutes: 20, note: 'Note B', warning: true, pinned: true }
+		]);
+	});
+
+	test('makes a flow from the current session', () => {
+		expect(makeFlowFromSession({
+			id: 'existing',
+			title: '  Pass  ',
+			blocks: [block({ title: 'One', minutes: 30, warning: false }), block({ title: 'Two', minutes: 15, note: 'n' })],
+			extraInfo: 'Extra',
+			startMin: 480
+		}, () => 'new')).toEqual({
+			id: 'existing',
+			title: 'Pass',
+			parts: ['One', 'Two'],
+			minutes: [30, 15],
+			warnings: [false, true],
+			notes: ['', 'n'],
+			extraInfo: 'Extra',
+			startMin: 480
+		});
+	});
+
+	test('creates a generated flow id when the session has none', () => {
+		expect(makeFlowFromSession({
+			title: 'Draft',
+			blocks: [block({ title: 'Only' })],
+			extraInfo: ''
+		}, () => 'generated')).toMatchObject({
+			id: 'generated',
+			title: 'Draft'
+		});
+	});
+
+	test('creates a fallback session at the nearest 5-minute mark', () => {
+		expect(createCurrentFallbackSession(483, () => 'fallback')).toEqual({
+			dayTitle: '',
+			extraInfo: '',
+			startMin: 485,
+			blocks: [{ id: 'fallback', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }]
+		});
 	});
 });
