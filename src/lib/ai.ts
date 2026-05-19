@@ -1,4 +1,5 @@
 import { type Flow } from './state.svelte.js';
+import { readSessionValue, writeSessionValue, removeSessionValue } from './storage.js';
 
 export type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 export type AiPlanMode = 'strict' | 'helpful';
@@ -12,6 +13,52 @@ export interface AiConfig {
 }
 
 export type PersistedAiConfig = Omit<AiConfig, 'apiKey'>;
+
+export const DEFAULT_AI_CONFIG: AiConfig = {
+  provider: 'anthropic',
+  apiKey: '',
+  baseUrl: '',
+  customModel: '',
+  planMode: 'helpful'
+};
+
+const AI_CONFIG_STORAGE = 'daytimer_ai_config';
+const AI_KEY_SESSION_STORAGE = 'daytimer_ai_api_key';
+const AI_KEY_LEGACY_STORAGE = 'daytimer_ai_key';
+
+export function loadAiConfig(): AiConfig {
+  let config: AiConfig = { ...DEFAULT_AI_CONFIG };
+  const savedConfig = localStorage.getItem(AI_CONFIG_STORAGE);
+  if (savedConfig) {
+    try { config = { ...config, ...JSON.parse(savedConfig) }; } catch { /* ignore */ }
+  }
+  const savedKey = readSessionValue(AI_KEY_SESSION_STORAGE) ?? localStorage.getItem(AI_KEY_LEGACY_STORAGE);
+  if (savedKey) {
+    config = { ...config, apiKey: savedKey };
+    writeSessionValue(AI_KEY_SESSION_STORAGE, savedKey);
+    localStorage.removeItem(AI_KEY_LEGACY_STORAGE);
+  }
+  return config;
+}
+
+export function persistAiConfig(config: AiConfig): void {
+  const persistedConfig: PersistedAiConfig = {
+    provider: config.provider,
+    baseUrl: config.baseUrl,
+    customModel: config.customModel,
+    planMode: config.planMode
+  };
+  localStorage.setItem(AI_CONFIG_STORAGE, JSON.stringify(persistedConfig));
+  if (config.apiKey.trim()) writeSessionValue(AI_KEY_SESSION_STORAGE, config.apiKey);
+  else removeSessionValue(AI_KEY_SESSION_STORAGE);
+  localStorage.removeItem(AI_KEY_LEGACY_STORAGE);
+}
+
+export function clearStoredAiConfig(): void {
+  localStorage.removeItem(AI_CONFIG_STORAGE);
+  localStorage.removeItem(AI_KEY_LEGACY_STORAGE);
+  removeSessionValue(AI_KEY_SESSION_STORAGE);
+}
 
 export const AI_PROMPT_PARTS = `Du är en hjälpsam planeringsassistent för en visuell timer.
 
