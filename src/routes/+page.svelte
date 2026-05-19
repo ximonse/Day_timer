@@ -29,7 +29,7 @@
   import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, type AiProvider, type AiPlanMode, type AiConfig, type PersistedAiConfig } from '$lib/ai.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory, toJsonl } from '$lib/learning.js';
-  import { createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession } from '$lib/session.js';
+  import { createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -1107,15 +1107,11 @@
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
     f.lastUsed = Date.now();
-    const session = createSessionStateFromFlow(f, uid, { pinned: true });
-    s.dayTitle = session.dayTitle;
-    s.blocks = session.blocks;
-    s.extraInfo = session.extraInfo;
+    applySessionStateFromFlow(f, { pinned: true });
     if (targetSection === 'plan') {
       const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
       s.startMin = suggestedStartMinForDate(agendaDays, targetDate, totalFlowMinutes(f));
     }
-    warnedSet.clear();
     updateTimeFeedback(); 
     activeAgendaFlowRef = null;
     planSelectionExplicit = false;
@@ -1165,6 +1161,17 @@
     syncStatusText = msg; syncStatusError = isError;
     clearTimeout(syncStatusTimer);
     syncStatusTimer = setTimeout(() => { syncStatusText = ''; }, 3000);
+  }
+
+  function applySessionStateFromFlow(flow: Flow, options: SessionFromFlowOptions = {}) {
+    const session = createSessionStateFromFlow(flow, uid, options);
+    s.dayTitle = session.dayTitle;
+    s.blocks = session.blocks;
+    s.extraInfo = session.extraInfo;
+    s.startMin = session.startMin;
+    if (options.clockSpan !== undefined) s.clockSpan = options.clockSpan;
+    warnedSet.clear();
+    return session;
   }
 
   async function syncLoad() {
@@ -2141,12 +2148,7 @@
     const key = agendaAutoLoadKey(active);
     if (key === lastAutoLoadKey) return;
     lastAutoLoadKey = key;
-    const session = createSessionStateFromFlow(active.flow, uid, { startMin: active.flow.startMin ?? active.startMin, pinned: minutes => minutes > 0 });
-    s.dayTitle = session.dayTitle;
-    s.blocks = session.blocks;
-    s.extraInfo = session.extraInfo;
-    s.startMin = session.startMin;
-    warnedSet.clear();
+    applySessionStateFromFlow(active.flow, { startMin: active.flow.startMin ?? active.startMin, pinned: minutes => minutes > 0 });
     activeAgendaFlowRef = selectedDay
       ? makeAgendaFlowRef(selectedDay.date ?? null, active.flow, s.startMin)
       : null;
@@ -2234,13 +2236,7 @@
   }
 
   function loadAgendaFlow(flow: Flow, computedStart: number, targetSection: AppSection = 'plan', markExplicitSelection = true) {
-    const session = createSessionStateFromFlow(flow, uid, { startMin: flow.startMin ?? computedStart, pinned: minutes => minutes > 0, clockSpan: 60 });
-    s.dayTitle = session.dayTitle;
-    s.blocks = session.blocks;
-    s.extraInfo = session.extraInfo;
-    s.startMin = session.startMin;
-    s.clockSpan = 60;
-    warnedSet.clear();
+    applySessionStateFromFlow(flow, { startMin: flow.startMin ?? computedStart, pinned: minutes => minutes > 0, clockSpan: 60 });
     activeAgendaFlowRef = selectedDay
       ? makeAgendaFlowRef(selectedDay.date ?? null, flow, s.startMin)
       : null;
