@@ -64,6 +64,54 @@ export function cloneAgendaDay(day: AgendaDay): AgendaDay {
 	};
 }
 
+export function cloneAgendaDays(days: AgendaDay[] | null | undefined): AgendaDay[] {
+	return (days ?? []).map(cloneAgendaDay);
+}
+
+export function insertFlowIntoAgendaDate(
+	days: AgendaDay[] | null | undefined,
+	date: string,
+	flow: Flow,
+	startMin: number
+): { days: AgendaDay[]; dayIdx: number; flow: Flow } {
+	const nextDays = cloneAgendaDays(days);
+	let dayIdx = nextDays.findIndex(day => day.date === date);
+	if (dayIdx < 0) {
+		const insertAt = nextDays.findIndex(day => day.date !== null && day.date > date);
+		const newDay: AgendaDay = { date, flows: [] };
+		if (insertAt < 0) {
+			nextDays.push(newDay);
+			dayIdx = nextDays.length - 1;
+		} else {
+			nextDays.splice(insertAt, 0, newDay);
+			dayIdx = insertAt;
+		}
+	}
+
+	const flowToInsert: Flow = { ...flow, startMin };
+	const dayFlows = [...nextDays[dayIdx].flows];
+	const insertAt = dayFlows.findIndex(item => (item.startMin ?? 0) > startMin);
+	if (insertAt < 0) dayFlows.push(flowToInsert);
+	else dayFlows.splice(insertAt, 0, flowToInsert);
+	nextDays[dayIdx] = { ...nextDays[dayIdx], flows: dayFlows };
+
+	return { days: nextDays, dayIdx, flow: flowToInsert };
+}
+
+export function replaceAgendaFlowInDays(
+	days: AgendaDay[] | null | undefined,
+	dayIdx: number,
+	flowIdx: number,
+	flow: Flow
+): AgendaDay[] {
+	const nextDays = cloneAgendaDays(days);
+	if (!nextDays[dayIdx]) return nextDays;
+	const dayFlows = [...nextDays[dayIdx].flows];
+	dayFlows[flowIdx] = { ...flow };
+	nextDays[dayIdx] = { ...nextDays[dayIdx], flows: dayFlows };
+	return nextDays;
+}
+
 export function serializeSelectedAgendaDay(date: string | null, days: AgendaDay[] | null): string {
 	if (!date) return '';
 	const day = days?.find(entry => entry.date === date);
