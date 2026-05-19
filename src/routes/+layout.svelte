@@ -501,6 +501,7 @@
     /* Visa rätt sektion beroende på aktiv flik */
     :global(body.m-now .sidebar) { display: block; }
     :global(body.m-now .resize-handle-sb) { display: none; }
+    :global(.resize-handle-ag) { display: none; }
     :global(body.m-plan .sidebar), :global(body.m-library .sidebar), :global(body.m-workspace .sidebar) { display: none; }
     :global(body.m-now .resize-handle-sb), :global(body.m-plan .resize-handle-sb), :global(body.m-library .resize-handle-sb), :global(body.m-workspace .resize-handle-sb) { display: none; }
     :global(body.m-plan .agenda) { display: flex !important; }
