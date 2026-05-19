@@ -30,6 +30,8 @@
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, type AiProvider, type AiPlanMode, type AiConfig, type PersistedAiConfig } from '$lib/ai.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
+  import { clickOutside } from '$lib/actions.js';
+  import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
   import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory, toJsonl } from '$lib/learning.js';
   import { createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
   import {
@@ -53,14 +55,6 @@
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
-
-  function clickOutside(node: HTMLElement, cb: () => void) {
-    function handle(e: MouseEvent) {
-      if (!node.contains(e.target as Node)) cb();
-    }
-    document.addEventListener('click', handle, true);
-    return { destroy() { document.removeEventListener('click', handle, true); } };
-  }
 
   let svgEl = $state<SVGSVGElement>(null!);
   let appEl = $state<HTMLElement>(null!);
@@ -198,30 +192,6 @@
   const SHARE_TOKEN_STORAGE = 'daytimer_share_token';
   const SHARE_OWNER_STORAGE = 'daytimer_share_owner_token';
   const SHARE_MODE_STORAGE = 'daytimer_share_mode';
-
-  function readSessionValue(key: string) {
-    try {
-      return typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(key) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function writeSessionValue(key: string, value: string) {
-    try {
-      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(key, value);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function removeSessionValue(key: string) {
-    try {
-      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key);
-    } catch {
-      /* ignore */
-    }
-  }
 
   function saveAiConfig() {
     const persistedConfig: PersistedAiConfig = {
