@@ -470,8 +470,8 @@
   :global(.mobile-tabs) { display: none; }
   @media (max-width: 800px) {
     :global(html) { overflow-x: hidden; }
-    :global(body) { display: block; min-height: 100dvh; overflow-x: hidden; }
-    :global(.app) { flex-direction: column; overflow: visible; height: auto; min-height: 100dvh; padding-bottom: calc(52px + env(safe-area-inset-bottom)); display: flex; }
+    :global(body) { display: block; height: 100dvh; min-height: 100dvh; overflow: hidden; }
+    :global(.app) { flex-direction: column; overflow-x: hidden; overflow-y: auto; height: 100dvh; min-height: 100dvh; padding-bottom: calc(52px + env(safe-area-inset-bottom)); display: flex; -webkit-overflow-scrolling: touch; }
     :global(.main) { flex: 0 0 auto; height: auto; min-height: auto; padding-top: 6px; padding-bottom: 16px; order: 1; width: 100%; overflow: visible; }
     :global(.main-header) { min-height: 38px; }
     :global(.clock-wrap) { margin-top: 8px; }
