@@ -32,6 +32,15 @@
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory, toJsonl } from '$lib/learning.js';
   import { createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
+  import {
+    applySharedStatePayload,
+    buildLiveShareState,
+    buildSelectedDaySnapshot,
+    buildSelectedSessionSnapshot,
+    buildSyncPayload,
+    type ShareMode,
+    sharedUiStateFromState
+  } from '$lib/share-state.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -64,7 +73,6 @@
   let shareOwnerToken = $state('');
   let shareCopyText = $state('Kopiera länk');
   let pageOrigin = $state('');
-  type ShareMode = 'active-session-live' | 'selected-session-snapshot' | 'selected-day-snapshot';
   let shareMode = $state<ShareMode | null>(null);
   let isViewMode = $state(false);
   let viewToken = $state('');
@@ -1206,15 +1214,7 @@
           'Content-Type': 'application/json',
           'x-sync-token': token
         },
-        body: JSON.stringify({
-          flows: s.flows || [],
-          agendaText: s.agendaText || '',
-          agendaDate: s.agendaDate || '',
-          agendaText2: s.agendaText2 || '',
-          agendaDate2: s.agendaDate2 || '',
-          agendaMeta: s.agendaMeta || {},
-          actualTimeLog: s.actualTimeLog || [],
-        }),
+        body: JSON.stringify(buildSyncPayload(s)),
       });
       if (!res.ok) throw new Error();
       showSyncStatus('Sparat till moln ✓');
@@ -1242,82 +1242,11 @@
     appState.persist();
   }
 
-  function sharedUiState() {
-    return {
-      palette: s.palette,
-      dark: s.dark,
-      showLeft: s.showLeft,
-      showCenterEnd: s.showCenterEnd,
-      hollow: s.hollow,
-      textOutside: s.textOutside,
-      showMin: s.showMin,
-      showFive: s.showFive,
-      showQuarter: s.showQuarter,
-      segMinutesMode: s.segMinutesMode,
-      showSegNotes: s.showSegNotes,
-      showExtraInfo: s.showExtraInfo,
-      showSegLabels: s.showSegLabels,
-    };
-  }
-
-  function buildLiveShareState() {
-    return {
-      shareType: 'active-session-live' as const,
-      ...sharedUiState(),
-      blocks: cloneBlocks(s.blocks),
-      dayTitle: s.dayTitle,
-      extraInfo: s.extraInfo,
-      startMin: s.startMin,
-      endMode: s.endMode,
-      clockSpan: s.clockSpan,
-      agendaText: s.agendaText,
-      agendaDate: s.agendaDate,
-    };
-  }
-
-  function buildSelectedSessionSnapshot() {
-    if (!selectedAgendaDetails) return null;
-    const { day, flow, startMin } = selectedAgendaDetails;
-    const session = createSessionStateFromFlow(flow, uid, { pinned: true, warning: true, startMin, clockSpan: 60 });
-    return {
-      shareType: 'selected-session-snapshot' as const,
-      ...sharedUiState(),
-      blocks: session.blocks,
-      dayTitle: session.dayTitle,
-      extraInfo: session.extraInfo,
-      startMin: session.startMin,
-      endMode: 'end' as const,
-      clockSpan: 60 as const,
-      agendaText: serializeAgenda([{ date: day.date ?? null, flows: [{ ...flow }] }]),
-      agendaDate: day.date ?? '',
-    };
-  }
-
-  function buildSelectedDaySnapshot() {
-    if (!selectedDay?.date) return null;
-    const flows = selectedDay.flows.map(flow => ({ ...flow }));
-    const first = selectedAgendaDetails?.flow ?? selectedDay.flows[0] ?? null;
-    const firstStart = selectedAgendaDetails?.startMin ?? selectedDay.flows[0]?.startMin ?? agendaDayStart;
-    const session = first ? createSessionStateFromFlow(first, uid, { pinned: true, warning: true, startMin: firstStart, clockSpan: 720 }) : null;
-    return {
-      shareType: 'selected-day-snapshot' as const,
-      ...sharedUiState(),
-      blocks: session ? session.blocks : cloneBlocks(s.blocks),
-      dayTitle: session?.dayTitle ?? fmtAgendaDate(selectedDay.date),
-      extraInfo: session?.extraInfo ?? '',
-      startMin: session?.startMin ?? firstStart,
-      endMode: 'end' as const,
-      clockSpan: 720 as const,
-      agendaText: serializeAgenda([{ date: selectedDay.date, flows }]),
-      agendaDate: selectedDay.date,
-    };
-  }
-
   let lastPushedHash = '';
 
   async function pushShareState() {
     if (!shareToken || !shareOwnerToken || shareMode !== 'active-session-live') return;
-    const state = buildLiveShareState();
+    const state = buildLiveShareState(s);
     const hash = JSON.stringify(state);
     if (hash === lastPushedHash) return;
     try {
@@ -1339,41 +1268,18 @@
       const res = await fetch(`/api/share?token=${encodeURIComponent(token)}`);
       if (!res.ok) return;
       const d = await res.json();
-      shareMode = d.shareType ?? 'active-session-live';
-      if (d.blocks) s.blocks = d.blocks;
-      if (d.dayTitle !== undefined) s.dayTitle = d.dayTitle;
-      if (d.extraInfo !== undefined) s.extraInfo = d.extraInfo;
-      if (d.startMin !== undefined) s.startMin = d.startMin;
-      if (d.endMode) s.endMode = d.endMode;
-      if (d.clockSpan) s.clockSpan = d.clockSpan;
-      if (d.palette) s.palette = d.palette;
-      if (d.dark !== undefined) s.dark = d.dark;
-      if (d.showLeft !== undefined) s.showLeft = d.showLeft;
-      if (d.showCenterEnd !== undefined) s.showCenterEnd = d.showCenterEnd;
-      if (d.hollow !== undefined) s.hollow = d.hollow;
-      if (d.textOutside !== undefined) s.textOutside = d.textOutside;
-      if (d.showMin !== undefined) s.showMin = d.showMin;
-      if (d.showFive !== undefined) s.showFive = d.showFive;
-      if (d.showQuarter !== undefined) s.showQuarter = d.showQuarter;
-      if (d.segMinutesMode) s.segMinutesMode = d.segMinutesMode;
-      if (d.showSegNotes !== undefined) s.showSegNotes = d.showSegNotes;
-      if (d.showExtraInfo !== undefined) s.showExtraInfo = d.showExtraInfo;
-      if (d.showSegLabels !== undefined) s.showSegLabels = d.showSegLabels;
-      if (d.agendaText !== undefined) s.agendaText = d.agendaText;
-      if (d.agendaDate !== undefined) s.agendaDate = d.agendaDate;
-      if (d.shareType === 'selected-day-snapshot') {
-        s.clockSpan = 720;
-      }
+      shareMode = applySharedStatePayload(s, d);
       syncBodyClasses();
     } catch { /* silent */ }
   }
 
   async function startSharing(mode: ShareMode) {
+    const uiState = sharedUiStateFromState(s);
     const payload = mode === 'active-session-live'
-      ? buildLiveShareState()
+      ? buildLiveShareState(s)
       : mode === 'selected-session-snapshot'
-        ? buildSelectedSessionSnapshot()
-        : buildSelectedDaySnapshot();
+        ? (selectedAgendaDetails ? buildSelectedSessionSnapshot(selectedAgendaDetails, uiState, uid) : null)
+        : buildSelectedDaySnapshot(selectedDay, selectedAgendaDetails, agendaDayStart, { ...uiState, blocks: s.blocks }, uid);
     if (!payload) return;
     const tokens = createShareTokens();
     try {
