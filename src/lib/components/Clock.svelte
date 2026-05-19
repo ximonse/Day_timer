@@ -287,7 +287,7 @@
           aria-label="Justera blockgräns"
           aria-valuenow={s.a0}
           x1={x0} y1={y0} x2={x1} y2={y1} 
-          stroke="transparent" stroke-width="32" pointer-events="stroke" style="cursor:grab"
+          stroke="transparent" stroke-width="32" pointer-events="stroke" style="cursor:grab;touch-action:none"
           onpointerdown={(e) => onStartBoundaryDrag?.(e, s.i - 1)} />
       {/if}
     {/each}
@@ -317,7 +317,7 @@
       aria-label="Justera starttid"
       aria-valuenow={startAngle}
       x1={sx0} y1={sy0} x2={sx1} y2={sy1} 
-      stroke="transparent" stroke-width="36" pointer-events="stroke" style="cursor:grab"
+      stroke="transparent" stroke-width="36" pointer-events="stroke" style="cursor:grab;touch-action:none"
       onpointerdown={(e) => onStartStartDrag?.(e)} />
 
     {#if (totalMin / clockSpan) * 360 < 360 - 2}
@@ -330,7 +330,7 @@
         aria-label="Justera sluttid"
         aria-valuenow={aEnd}
         x1={ex0} y1={ey0} x2={ex1} y2={ey1} 
-        stroke="transparent" stroke-width="36" pointer-events="stroke" style="cursor:grab"
+        stroke="transparent" stroke-width="36" pointer-events="stroke" style="cursor:grab;touch-action:none"
         onpointerdown={(e) => onStartEndDrag?.(e)} />
     {/if}
   {/if}
@@ -386,7 +386,7 @@
   .clock {
     display: block;
     user-select: none;
-    touch-action: none;
+    touch-action: pan-y;
     overflow: visible;
     width: min(88vh, 55vw);
     height: min(88vh, 55vw);
