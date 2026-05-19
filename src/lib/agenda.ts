@@ -1,5 +1,6 @@
 import type { AgendaFlowMeta, Flow } from './state.svelte.js';
 import { serializeAgenda, totalFlowMinutes, type AgendaDay } from './parse.js';
+import { localDateISO, monthKey, parseIsoDate } from './date.js';
 
 export interface AgendaFlowRef {
 	date: string | null;
@@ -48,6 +49,77 @@ export function buildAgendaItemsForDay(day: AgendaDay, fallbackStart: number): A
 		const totalMin = totalFlowMinutes(flow);
 		cursor += totalMin;
 		return { day, flow, flowIdx, startMin, totalMin };
+	});
+}
+
+export interface AgendaDensityEntry {
+	count: number;
+	minutes: number;
+}
+
+export function computeAgendaDensity(days: AgendaDay[] | null): Map<string, AgendaDensityEntry> {
+	const map = new Map<string, AgendaDensityEntry>();
+	for (const day of days ?? []) {
+		if (!day.date) continue;
+		const minutes = day.flows.reduce((sum, flow) => sum + totalFlowMinutes(flow), 0);
+		map.set(day.date, { count: day.flows.length, minutes });
+	}
+	return map;
+}
+
+export interface CalendarCell {
+	iso: string;
+	label: number;
+	inMonth: boolean;
+	isSelected: boolean;
+	density: number;
+	hasContent: boolean;
+}
+
+export function buildCalendarCells(opts: {
+	baseIso: string;
+	monthCursor: string;
+	density: Map<string, AgendaDensityEntry>;
+	selectedIso: string;
+}): CalendarCell[] {
+	const monthIso = opts.monthCursor || monthKey(parseIsoDate(opts.baseIso));
+	const [year, month] = monthIso.split('-').map(Number);
+	const first = new Date(year, month - 1, 1);
+	const startOffset = (first.getDay() - 1 + 7) % 7;
+	const gridStart = new Date(year, month - 1, 1 - startOffset);
+	const cells: CalendarCell[] = [];
+	const densities = [...opts.density.values()].map(entry => entry.count);
+	const maxCount = densities.length ? Math.max(...densities) : 1;
+	for (let i = 0; i < 42; i++) {
+		const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+		const iso = localDateISO(date);
+		const densityEntry = opts.density.get(iso);
+		cells.push({
+			iso,
+			label: date.getDate(),
+			inMonth: date.getMonth() === first.getMonth(),
+			isSelected: iso === opts.selectedIso,
+			density: densityEntry ? Math.max(0.2, densityEntry.count / maxCount) : 0,
+			hasContent: Boolean(densityEntry)
+		});
+	}
+	return cells;
+}
+
+export interface TimelineItem {
+	flow: Flow;
+	startMin: number;
+	totalMin: number;
+}
+
+export function buildSequentialTimeline(flows: Flow[], fallbackStart: number): TimelineItem[] {
+	let cursor = fallbackStart;
+	return flows.map(flow => {
+		if (flow.startMin !== undefined) cursor = flow.startMin;
+		const startMin = cursor;
+		const totalMin = totalFlowMinutes(flow);
+		cursor += totalMin;
+		return { flow, startMin, totalMin };
 	});
 }
 

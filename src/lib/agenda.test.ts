@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
 	buildAgendaItemsForDay,
+	buildCalendarCells,
+	buildSequentialTimeline,
+	computeAgendaDensity,
 	deriveAgendaDayStart,
 	agendaMetaBadge,
 	agendaMetaHelp,
@@ -237,5 +240,58 @@ describe('agenda helpers', () => {
 
 		expect(next[overrideKey]).toEqual({ source: 'import', label: 'ICS-kalender' });
 		expect(next[makeAgendaMetaKeyForFlow('2026-05-18', manual, 14 * 60)]).toEqual({ source: 'manual' });
+	});
+});
+
+describe('computeAgendaDensity', () => {
+	test('counts flows and minutes per dated day, skipping undated', () => {
+		const days: AgendaDay[] = [
+			{ date: '2026-05-18', flows: [flow({ minutes: [30] }), flow({ minutes: [10, 20] })] },
+			{ date: null, flows: [flow({ minutes: [99] })] }
+		];
+		const density = computeAgendaDensity(days);
+		expect(density.get('2026-05-18')).toEqual({ count: 2, minutes: 60 });
+		expect(density.size).toBe(1);
+	});
+
+	test('returns an empty map for null input', () => {
+		expect(computeAgendaDensity(null).size).toBe(0);
+	});
+});
+
+describe('buildCalendarCells', () => {
+	test('produces a 42-cell Monday-first grid with selection and density', () => {
+		const density = computeAgendaDensity([
+			{ date: '2026-05-18', flows: [flow({}), flow({})] }
+		]);
+		const cells = buildCalendarCells({
+			baseIso: '2026-05-18',
+			monthCursor: '2026-05',
+			density,
+			selectedIso: '2026-05-18'
+		});
+		expect(cells).toHaveLength(42);
+		expect(cells[0].iso).toBe('2026-04-27');
+		expect(cells[0].inMonth).toBe(false);
+		const selected = cells.find(c => c.iso === '2026-05-18')!;
+		expect(selected.isSelected).toBe(true);
+		expect(selected.inMonth).toBe(true);
+		expect(selected.hasContent).toBe(true);
+		expect(selected.density).toBeGreaterThan(0);
+	});
+});
+
+describe('buildSequentialTimeline', () => {
+	test('accumulates start times and honours explicit startMin', () => {
+		const items = buildSequentialTimeline([
+			flow({ minutes: [30] }),
+			flow({ startMin: 600, minutes: [15, 15] }),
+			flow({ minutes: [10] })
+		], 480);
+		expect(items.map(i => [i.startMin, i.totalMin])).toEqual([
+			[480, 30],
+			[600, 30],
+			[630, 10]
+		]);
 	});
 });

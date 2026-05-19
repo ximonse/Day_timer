@@ -13,7 +13,10 @@
     agendaMetaLabel,
     agendaMetaSignature,
     buildAgendaItemsForDay,
+    buildCalendarCells,
+    buildSequentialTimeline,
     cloneAgendaDay,
+    computeAgendaDensity,
     insertFlowIntoAgendaDate,
     findAgendaItemForTime,
     makeAgendaFlowRef,
@@ -25,7 +28,8 @@
     resolveAgendaFlowRef,
     serializeSelectedAgendaDay,
     suggestedStartMinForDate,
-    type AgendaFlowRef
+    type AgendaFlowRef,
+    type CalendarCell
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
@@ -351,68 +355,22 @@
     const explicit = selectedDay?.date ?? activeAgendaDate() ?? '';
     return explicit ? fmtAgendaDate(explicit) : 'Ingen dag vald';
   });
-  type CalendarCell = {
-    iso: string;
-    label: number;
-    inMonth: boolean;
-    isSelected: boolean;
-    density: number;
-    hasContent: boolean;
-  };
+  const agendaDensityByDay = $derived.by(() => computeAgendaDensity(agendaDays));
 
-  const agendaDensityByDay = $derived.by(() => {
-    const map = new Map<string, { count: number; minutes: number }>();
-    for (const day of agendaDays ?? []) {
-      if (!day.date) continue;
-      const minutes = day.flows.reduce((sum, flow) => sum + totalFlowMinutes(flow), 0);
-      map.set(day.date, { count: day.flows.length, minutes });
-    }
-    return map;
-  });
-
-  const calendarCells = $derived.by<CalendarCell[]>(() => {
-    const baseIso = selectedDay?.date ?? localDateISO();
-    const monthIso = calendarMonthCursor || monthKey(parseIsoDate(baseIso));
-    const [year, month] = monthIso.split('-').map(Number);
-    const first = new Date(year, month - 1, 1);
-    const startOffset = (first.getDay() - 1 + 7) % 7;
-    const gridStart = new Date(year, month - 1, 1 - startOffset);
-    const cells: CalendarCell[] = [];
-    const selectedIso = selectedDay?.date ?? '';
-    const monthDensities = [...agendaDensityByDay.values()].map(entry => entry.count);
-    const maxCount = monthDensities.length ? Math.max(...monthDensities) : 1;
-    for (let i = 0; i < 42; i++) {
-      const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
-      const iso = localDateISO(date);
-      const densityEntry = agendaDensityByDay.get(iso);
-      cells.push({
-        iso,
-        label: date.getDate(),
-        inMonth: date.getMonth() === first.getMonth(),
-        isSelected: iso === selectedIso,
-        density: densityEntry ? Math.max(0.2, densityEntry.count / maxCount) : 0,
-        hasContent: Boolean(densityEntry)
-      });
-    }
-    return cells;
-  });
+  const calendarCells = $derived.by<CalendarCell[]>(() => buildCalendarCells({
+    baseIso: selectedDay?.date ?? localDateISO(),
+    monthCursor: calendarMonthCursor,
+    density: agendaDensityByDay,
+    selectedIso: selectedDay?.date ?? ''
+  }));
 
   const agendaItems = $derived.by(() => {
     const flows = selectedDay?.flows ?? (agendaDays ? [] : s.flows);
     const fromText = agendaDays !== null;
-    if (!selectedDay) {
-      let t = s.startMin;
-      return flows.map(flow => {
-        if (flow.startMin !== undefined) t = flow.startMin;
-        const startMin = t;
-        const totalMin = totalFlowMinutes(flow);
-        t += totalMin;
-        return { flow, startMin, totalMin, fromText };
-      });
-    }
-    return buildAgendaItemsForDay(selectedDay, agendaDayStart).map(({ flow, startMin, totalMin }) => ({
-      flow, startMin, totalMin, fromText
-    }));
+    const timeline = selectedDay
+      ? buildAgendaItemsForDay(selectedDay, agendaDayStart)
+      : buildSequentialTimeline(flows, s.startMin);
+    return timeline.map(({ flow, startMin, totalMin }) => ({ flow, startMin, totalMin, fromText }));
   });
 
   const overlayItems = $derived.by(() => {
@@ -428,14 +386,7 @@
       ?? overlayDays[0]
       ?? null;
     if (!day) return [];
-    let t = s.startMin;
-    return day.flows.map(flow => {
-      if (flow.startMin !== undefined) t = flow.startMin;
-      const startMin = t;
-      const totalMin = flow.minutes.reduce((a, b) => a + b, 0);
-      t += totalMin;
-      return { flow, startMin, totalMin };
-    });
+    return buildSequentialTimeline(day.flows, s.startMin);
   });
 
   function describeFlow(flow: Flow): string {
