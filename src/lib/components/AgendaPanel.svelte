@@ -3,7 +3,8 @@
   import { fmtAgendaDate, shiftMonth, monthKey, parseIsoDate, monthLabel, localDateISO } from '$lib/date.js';
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
-  import { AI_PROMPT_AGENDA, AI_PROMPT_CALENDAR_CONVERT } from '$lib/ai.js';
+  import { getAiPromptAgenda, AI_PROMPT_CALENDAR_CONVERT } from '$lib/ai.js';
+  import { parseMarkdownHtml } from '$lib/markdown.js';
   import AgendaImportPanel from './AgendaImportPanel.svelte';
 
   let {
@@ -185,7 +186,7 @@
         onPreviewIcs={previewIcsImport}
         onImportIcs={importPreviewedIcs}
         onCopyPrompt={async (type) => {
-          const prompt = type === 'plan' ? AI_PROMPT_AGENDA : AI_PROMPT_CALENDAR_CONVERT;
+          const prompt = type === 'plan' ? getAiPromptAgenda(localDateISO()) : AI_PROMPT_CALENDAR_CONVERT;
           await navigator.clipboard.writeText(prompt);
         }}
         onToggleAi={() => agendaAiOpen = !agendaAiOpen}
@@ -281,7 +282,7 @@
                 {agendaMetaBadge(itemMeta)}
               </span>
             {/if}
-            <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
+            <span class="agenda-name">{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</span>
             {#if item.fromText && !isViewMode}
               {#if s.activeSection !== 'now'}
                 <button
@@ -307,7 +308,7 @@
             <div class="agenda-block ghost"
                  style="top: {topPct}%; height: {heightPct}%; border-left-color: var(--muted)">
               <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
-              <span class="agenda-name">{item.flow.title || '(utan rubrik)'}</span>
+              <span class="agenda-name">{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</span>
             </div>
           {/if}
         {/each}

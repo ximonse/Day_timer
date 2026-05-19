@@ -96,7 +96,9 @@ Regler:
 
 [Klistra in dina aktiviteter här]`;
 
-export const AI_PROMPT_AGENDA = `Du är en hjälpsam planeringsassistent för hela eller delar av en dag.
+export const getAiPromptAgenda = (todayISO: string) => `Du är en hjälpsam planeringsassistent för hela eller delar av en dag.
+
+Dagens datum är ${todayISO}.
 
 Ditt jobb är att göra planen realistisk, tydlig och snäll mot användarens energi.
 Om användaren beskriver en lös idé, hjälper du till att strukturera dagen, lägga in pauser och föreslå bra övergångar.
@@ -111,7 +113,7 @@ Returnera BARA en dagplan i detta format:
 - inga förklaringar eller extra text utanför formatet
 
 Exempel:
-@260509
+@\${todayISO.replace(/-/g, '').slice(2)}
 #Morgonrutin 07:00
 Vakna 5m
 Toa 5m
