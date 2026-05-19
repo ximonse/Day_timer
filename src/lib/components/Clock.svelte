@@ -2,6 +2,7 @@
   import { CX, CY, R, Ri, polar, arcPath, fmtHM, truncate, isOnlyEmoji } from '$lib/clock.js';
   import { clockTheme, labelColorFor, type Palette } from '$lib/theme.js';
   import type { Block, Flow } from '$lib/state.svelte.js';
+  import { parseMarkdownSvg } from '$lib/markdown.js';
 
   interface Props {
     palette: Palette;
@@ -375,7 +376,14 @@
           x={s.lx} y={s.ly} 
           text-anchor="middle" dominant-baseline="middle" 
           font-size={s.fontSize} font-weight="600" fill={s.fillText}>
-          {s.label}
+          {#each parseMarkdownSvg(s.label) as seg}
+            <tspan 
+              font-weight={seg.bold ? '800' : 'inherit'}
+              font-style={seg.italic ? 'italic' : 'inherit'}
+              text-decoration={seg.strike && seg.under ? 'line-through underline' : seg.strike ? 'line-through' : seg.under ? 'underline' : 'inherit'}
+              baseline-shift={seg.sup ? 'super' : seg.sub ? 'sub' : 'inherit'}
+            >{seg.text}</tspan>
+          {/each}
         </text>
       </g>
     {/each}

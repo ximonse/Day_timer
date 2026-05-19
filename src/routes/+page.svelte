@@ -32,7 +32,7 @@
     type CalendarCell
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
-  import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
+  import { AI_PROMPT_PARTS, getAiPromptAgenda, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -1556,7 +1556,7 @@
   }
 
   const currentAiPrompt = $derived(
-    s.agendaOpen && s.clockSpan === 720 ? AI_PROMPT_AGENDA : AI_PROMPT_PARTS
+    s.agendaOpen && s.clockSpan === 720 ? getAiPromptAgenda(localDateISO()) : AI_PROMPT_PARTS
   );
 
   function syncPartsDraftFromState(force = false) {

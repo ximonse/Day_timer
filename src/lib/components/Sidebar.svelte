@@ -1,6 +1,7 @@
 <script lang="ts">
   import { clockTheme, type Palette } from '$lib/theme.js';
   import { uid, type Block } from '$lib/state.svelte.js';
+  import { parseMarkdownHtml, toggleStrikethrough } from '$lib/markdown.js';
 
   interface Props {
     blocks: Block[];
@@ -34,6 +35,7 @@
 
   let editingBlockId = $state<string | null>(null);
   let editingBlockField = $state<'name' | 'min' | 'note' | 'extra' | null>(null);
+  let revealedCheckId = $state<string | null>(null);
 
   function focusOnMount(node: HTMLElement) {
     if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
@@ -58,6 +60,7 @@
   function commitEdit() {
     editingBlockId = null;
     editingBlockField = null;
+    revealedCheckId = null;
     onCommitEdit();
   }
 
@@ -94,6 +97,20 @@
       editingBlockField = 'name';
     }
     onCommitEdit();
+  }
+
+  function toggleCheck(b: Block, lineIdx: number) {
+    if (isViewMode) return;
+    const lines = b.note.split('\n');
+    lines[lineIdx] = toggleStrikethrough(lines[lineIdx]);
+    b.note = lines.join('\n');
+    commitEdit();
+  }
+
+  function toggleTitleCheck(b: Block) {
+    if (isViewMode) return;
+    b.title = toggleStrikethrough(b.title);
+    commitEdit();
   }
 
   function handleSidebarNameKeydown(e: KeyboardEvent, b: Block) {
@@ -271,7 +288,12 @@
           onkeydown={(e) => handleSidebarNameKeydown(e, b)}
           onclick={(e) => e.stopPropagation()} />
       {:else}
-        <button class="name seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'name')}>{b.title}</button>
+        <button class="name seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'name')} oncontextmenu={(e) => { e.preventDefault(); revealedCheckId = `${b.id}-title`; }}>
+          {@html parseMarkdownHtml(b.title)}
+        </button>
+        <div class="title-check-btn" class:revealed={revealedCheckId === `${b.id}-title`} onclick={(e) => { e.stopPropagation(); toggleTitleCheck(b); revealedCheckId = null; }} title="Bocka av block">
+          {#if b.title.includes('~~')}✓{/if}
+        </div>
       {/if}
       {#if editingBlockId === b.id && editingBlockField === 'min'}
         <input class="inline-edit min-inp" type="number" min="1" use:focusOnMount
@@ -292,7 +314,18 @@
           onkeydown={(e) => handleSidebarNoteKeydown(e, b)}
           onclick={(e) => e.stopPropagation()}>{b.note}</textarea>
       {:else if b.note}
-        <button class="note seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'note')}>{b.note}</button>
+        <button class="note seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'note')}>
+          {#each b.note.split('\n') as line, lineIdx}
+            {#if line.trim()}
+              <div class="note-line" oncontextmenu={(e) => { e.preventDefault(); revealedCheckId = `${b.id}-${lineIdx}`; }}>
+                <span class="note-text">{@html parseMarkdownHtml(line)}</span>
+                <div class="check-btn" class:revealed={revealedCheckId === `${b.id}-${lineIdx}`} onclick={(e) => { e.stopPropagation(); toggleCheck(b, lineIdx); revealedCheckId = null; }} title="Bocka av">
+                  {#if line.includes('~~')}✓{/if}
+                </div>
+              </div>
+            {/if}
+          {/each}
+        </button>
       {/if}
     {/if}
   {/each}
@@ -303,7 +336,7 @@
         onkeydown={(e) => handleSidebarExtraKeydown(e)}
         onclick={(e) => e.stopPropagation()}>{extraInfo}</textarea>
     {:else if extraInfo}
-      <button class="infobox seg-inline-btn" type="button" onclick={startExtraEdit}>{extraInfo}</button>
+      <button class="infobox seg-inline-btn" type="button" onclick={startExtraEdit}>{@html parseMarkdownHtml(extraInfo)}</button>
     {/if}
   {/if}
   {#if !isViewMode}
@@ -341,8 +374,46 @@
   .sidebar-add-row { display: flex; gap: 8px; margin-top: 4px; }
   .sidebar-add-row .seg-add-btn { flex: 1; }
   .seglist .note { color: var(--sidebar-subheading); font-size: 33px; line-height: 1.2; padding: 0 12px 8px 50px; white-space: pre-wrap; }
+  
+  .note-line { display: flex; align-items: flex-start; gap: 10px; }
+  .note-line .check-btn {
+    flex-shrink: 0; margin-top: 5px;
+    background: transparent; border: 2px solid currentColor; border-radius: 6px;
+    color: inherit; opacity: 0; width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; font-weight: bold; transition: opacity 0.25s ease;
+  }
+  .note-line:hover .check-btn { opacity: 0.4; }
+  .note-line .check-btn:hover, .note-line .check-btn.revealed { opacity: 1 !important; }
+
+  .title-check-btn {
+    flex-shrink: 0; margin-top: 15px; margin-right: 4px;
+    background: transparent; border: 2px solid currentColor; border-radius: 8px;
+    color: inherit; opacity: 0; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 22px; font-weight: bold; transition: opacity 0.25s ease;
+  }
+  .row:hover .title-check-btn { opacity: 0.4; }
+  .title-check-btn:hover, .title-check-btn.revealed { opacity: 1 !important; }
+
   .seglist .infobox { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: #ffffff; color: #1a1410; border: 1px solid #b8b0a4; font-size: 26px; line-height: 1.35; white-space: pre-wrap; font-style: italic; }
   :global(.dark) .seglist .infobox { background: #ececec; color: #000000; border: none; }
+  
+  /* Sänk överstrykningen och låt den sticka ut utanför orden */
+  :global(del) {
+    text-decoration: none;
+    background-image: linear-gradient(color-mix(in srgb, currentColor, #000 25%), color-mix(in srgb, currentColor, #000 25%));
+    background-position: center 60%;
+    background-size: 100% 0.08em;
+    background-repeat: no-repeat;
+    padding: 0 0.18em;
+    margin: 0 -0.18em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  :global(.dark del) {
+    background-image: linear-gradient(color-mix(in srgb, currentColor, #fff 25%), color-mix(in srgb, currentColor, #fff 25%));
+  }
 
   @media (max-width: 800px) {
     .seglist .row { font-size: 20px; padding: 6px 8px; gap: 8px; }
