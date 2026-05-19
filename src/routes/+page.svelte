@@ -14,12 +14,14 @@
     agendaMetaSignature,
     buildAgendaItemsForDay,
     cloneAgendaDay,
+    insertFlowIntoAgendaDate,
     findAgendaItemForTime,
     makeAgendaFlowRef,
     makeAgendaMetaKeyForFlow,
     makeAgendaMetaKeyForRef,
     moveAgendaMeta,
     rebuildAgendaMetaForDay,
+    replaceAgendaFlowInDays,
     resolveAgendaFlowRef,
     serializeSelectedAgendaDay,
     suggestedStartMinForDate,
@@ -904,16 +906,13 @@
     if (!active || !agendaDays) return;
     const { dayIdx, flowIdx } = active;
     const oldKey = activeAgendaFlowRef ? makeAgendaMetaKeyForRef(activeAgendaFlowRef) : null;
-    const newDays = agendaDays.map((d, di) => di !== dayIdx ? d : {
-      ...d,
-      flows: d.flows.map((f, fi) => fi !== flowIdx ? f : makeFlowFromSession({
-        id: f.id,
-        title: s.dayTitle,
-        blocks: s.blocks,
-        extraInfo: s.extraInfo,
-        startMin: s.startMin
-      }, uid)),
-    });
+    const newDays = replaceAgendaFlowInDays(agendaDays, dayIdx, flowIdx, makeFlowFromSession({
+      id: active.flow.id,
+      title: s.dayTitle,
+      blocks: s.blocks,
+      extraInfo: s.extraInfo,
+      startMin: s.startMin
+    }, uid));
     setActiveAgendaText(serializeAgenda(newDays));
     activeAgendaFlowRef = {
       ...activeAgendaFlowRef!,
@@ -1071,30 +1070,15 @@
   function addFlowToAgendaDate(date: string, f: Flow, activate = false, meta: AgendaFlowMeta | null = null, startMinOverride?: number) {
     const startMin = startMinOverride ?? s.startMin;
     const flowToAdd: Flow = { ...f, id: uid(), startMin };
-    let days: AgendaDay[] = agendaDays
-      ? agendaDays.map(d => ({ ...d, flows: [...d.flows] }))
-      : [];
-
-    let dayIdx = days.findIndex(d => d.date === date);
-    if (dayIdx < 0) {
-      const insertAt = days.findIndex(d => d.date !== null && d.date > date);
-      const newDay: AgendaDay = { date, flows: [] };
-      if (insertAt < 0) { days.push(newDay); dayIdx = days.length - 1; }
-      else { days.splice(insertAt, 0, newDay); dayIdx = insertAt; }
-    }
-
-    const dayFlows = [...days[dayIdx].flows];
-    const insertAt = dayFlows.findIndex(fl => (fl.startMin ?? 0) > startMin);
-    if (insertAt < 0) { dayFlows.push(flowToAdd); }
-    else { dayFlows.splice(insertAt, 0, flowToAdd); }
-
-    days[dayIdx] = { ...days[dayIdx], flows: dayFlows };
+    const inserted = insertFlowIntoAgendaDate(agendaDays, date, flowToAdd, startMin);
+    const days = inserted.days;
+    const insertedFlow = inserted.flow;
     setActiveAgendaText(serializeAgenda(days));
     setActiveAgendaDate(date);
-    if (meta) setAgendaMeta(makeAgendaMetaKeyForFlow(date, flowToAdd, flowToAdd.startMin ?? startMin), meta);
+    if (meta) setAgendaMeta(makeAgendaMetaKeyForFlow(date, insertedFlow, insertedFlow.startMin ?? startMin), meta);
     if (activate) {
-      activeAgendaFlowRef = makeAgendaFlowRef(date, flowToAdd, flowToAdd.startMin ?? startMin);
-      sessionSource = { kind: 'agenda', date, title: flowToAdd.title, startMin: flowToAdd.startMin ?? startMin };
+      activeAgendaFlowRef = makeAgendaFlowRef(date, insertedFlow, insertedFlow.startMin ?? startMin);
+      sessionSource = { kind: 'agenda', date, title: insertedFlow.title, startMin: insertedFlow.startMin ?? startMin };
     }
     appState.persist();
   }

@@ -6,11 +6,14 @@ import {
 	agendaMetaHelp,
 	agendaMetaLabel,
 	buildAgendaMetaLookup,
+	cloneAgendaDays,
 	findAgendaItemForTime,
+	insertFlowIntoAgendaDate,
 	makeAgendaFlowRef,
 	makeAgendaMetaKeyForFlow,
 	moveAgendaMeta,
 	rebuildAgendaMetaForDay,
+	replaceAgendaFlowInDays,
 	resolveAgendaFlowRef,
 	serializeSelectedAgendaDay,
 	suggestedStartMinForDate
@@ -153,6 +156,39 @@ describe('agenda helpers', () => {
 			other: { source: 'ai' }
 		});
 		expect(meta).toHaveProperty(oldKey);
+	});
+
+	test('inserts a flow into the correct date without mutating the original days', () => {
+		const days: AgendaDay[] = [
+			{ date: '2026-05-18', flows: [flow({ title: 'A', startMin: 8 * 60, minutes: [30] })] },
+			{ date: '2026-05-20', flows: [flow({ title: 'C', startMin: 10 * 60, minutes: [20] })] }
+		];
+
+		const result = insertFlowIntoAgendaDate(days, '2026-05-19', flow({ title: 'B', minutes: [25] }), 9 * 60);
+
+		expect(result.dayIdx).toBe(1);
+		expect(result.days.map(day => day.date)).toEqual(['2026-05-18', '2026-05-19', '2026-05-20']);
+		expect(result.days[1].flows[0]).toMatchObject({ title: 'B', startMin: 9 * 60 });
+		expect(days.map(day => day.date)).toEqual(['2026-05-18', '2026-05-20']);
+	});
+
+	test('replaces a flow in agenda days without mutating the original days', () => {
+		const days: AgendaDay[] = [
+			{ date: '2026-05-18', flows: [flow({ title: 'A', startMin: 8 * 60, minutes: [30] })] }
+		];
+
+		const next = replaceAgendaFlowInDays(days, 0, 0, flow({ title: 'B', startMin: 8 * 60 + 5, minutes: [35] }));
+
+		expect(next[0].flows[0]).toMatchObject({ title: 'B', startMin: 8 * 60 + 5 });
+		expect(days[0].flows[0].title).toBe('A');
+	});
+
+	test('clones agenda days deeply', () => {
+		const days: AgendaDay[] = [{ date: '2026-05-18', flows: [flow({ title: 'A', minutes: [15] })] }];
+		const clone = cloneAgendaDays(days);
+
+		clone[0].flows[0].title = 'B';
+		expect(days[0].flows[0].title).toBe('A');
 	});
 
 	test('rebuilds metadata for one day and preserves other days', () => {
