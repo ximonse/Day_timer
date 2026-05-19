@@ -28,7 +28,7 @@
     type AgendaFlowRef
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
-  import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, type AiProvider, type AiPlanMode, type AiConfig, type PersistedAiConfig } from '$lib/ai.js';
+  import { AI_PROMPT_PARTS, AI_PROMPT_AGENDA, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -145,7 +145,7 @@
   let syncStatusError = $state(false);
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
 
-  let aiConfig = $state<AiConfig>({ provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '', planMode: 'helpful' });
+  let aiConfig = $state<AiConfig>({ ...DEFAULT_AI_CONFIG });
   let aiKeyVisible = $state(false);
   let aiPanelOpen = $state(false);
   let aiInput = $state('');
@@ -187,29 +187,16 @@
     return 'inherit';
   }
 
-  const AI_CONFIG_STORAGE = 'daytimer_ai_config';
-  const AI_KEY_SESSION_STORAGE = 'daytimer_ai_api_key';
   const SHARE_TOKEN_STORAGE = 'daytimer_share_token';
   const SHARE_OWNER_STORAGE = 'daytimer_share_owner_token';
   const SHARE_MODE_STORAGE = 'daytimer_share_mode';
 
   function saveAiConfig() {
-    const persistedConfig: PersistedAiConfig = {
-      provider: aiConfig.provider,
-      baseUrl: aiConfig.baseUrl,
-      customModel: aiConfig.customModel,
-      planMode: aiConfig.planMode
-    };
-    localStorage.setItem(AI_CONFIG_STORAGE, JSON.stringify(persistedConfig));
-    if (aiConfig.apiKey.trim()) writeSessionValue(AI_KEY_SESSION_STORAGE, aiConfig.apiKey);
-    else removeSessionValue(AI_KEY_SESSION_STORAGE);
-    localStorage.removeItem('daytimer_ai_key'); // migrate away from old key
+    persistAiConfig(aiConfig);
   }
   function clearAiConfig() {
-    aiConfig = { provider: 'anthropic', apiKey: '', baseUrl: '', customModel: '', planMode: 'helpful' };
-    localStorage.removeItem(AI_CONFIG_STORAGE);
-    localStorage.removeItem('daytimer_ai_key');
-    removeSessionValue(AI_KEY_SESSION_STORAGE);
+    aiConfig = { ...DEFAULT_AI_CONFIG };
+    clearStoredAiConfig();
   }
 
   // derived shorthand used in templates
@@ -1861,16 +1848,7 @@
     void migrateLegacyToken();
     const savedUser = localStorage.getItem('timer-login-user');
     if (savedUser) loggedInUser = savedUser;
-    const savedAiConfig = localStorage.getItem(AI_CONFIG_STORAGE);
-    if (savedAiConfig) {
-      try { aiConfig = { ...aiConfig, ...JSON.parse(savedAiConfig) }; } catch { /* ignore */ }
-    }
-    const savedAiKey = readSessionValue(AI_KEY_SESSION_STORAGE) ?? localStorage.getItem('daytimer_ai_key');
-    if (savedAiKey) {
-      aiConfig = { ...aiConfig, apiKey: savedAiKey };
-      writeSessionValue(AI_KEY_SESSION_STORAGE, savedAiKey);
-      localStorage.removeItem('daytimer_ai_key');
-    }
+    aiConfig = loadAiConfig();
     const today = localDateISO();
     if (!isViewMode) {
       setActiveAgendaDate(today);
