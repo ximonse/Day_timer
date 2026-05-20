@@ -318,7 +318,8 @@
   }
   :global(.agenda-timeline:not(.has-overlay) .agenda-drop-indicator) { right: 0; }
   :global(.agenda-timeline.has-overlay .agenda-block:not(.ghost)) { right: 37%; }
-  :global(.agenda-block.ghost) { left: 65%; right: 0; border-left-width: 8px; opacity: .55; pointer-events: none; }
+  :global(.agenda-block.ghost) { left: 65%; right: 0; border-left-width: 8px; pointer-events: none; }
+  :global(.agenda-block.ghost.past) { opacity: .4; }
   :global(.agenda-block.ghost .agenda-name) { font-size: 14px; font-weight: 500; line-height: 1.15; padding: 0; }
   :global(.agenda-block.ghost .agenda-time) { font-size: 10px; }
   :global(.agenda-mode-badge) {
