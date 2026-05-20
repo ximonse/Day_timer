@@ -259,11 +259,8 @@
         {/if}
         {#each agendaItems as item, ai (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-${ai}`)}
           {@const itemColor = sectorColors[ai % sectorColors.length]}
-          {@const itemEnd = item.startMin + item.totalMin}
-          {@const today = localDateISO()}
-          {@const itemDate = selectedDay?.date || today}
-          {@const isPast = itemDate < today || (itemDate === today && nowMinLive >= itemEnd)}
-          {@const isActive = itemDate === today && nowMinLive >= item.startMin && nowMinLive < itemEnd}
+          {@const isPast = nowMinLive >= item.startMin + item.totalMin}
+          {@const isActive = nowMinLive >= item.startMin && nowMinLive < item.startMin + item.totalMin}
           {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
           {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
           {@const itemMeta = item.fromText && selectedDay ? s.agendaMeta[makeAgendaMetaKeyForFlow(selectedDay.date ?? null, item.flow, item.startMin)] ?? null : null}
@@ -314,9 +311,7 @@
         {/each}
         {#each overlayItems as item, oi (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-overlay-${oi}`)}
           {@const itemEnd = item.startMin + item.totalMin}
-          {@const today = localDateISO()}
-          {@const activeDate = activeAgendaDate() || today}
-          {@const isPast = activeDate < today || (activeDate === today && nowMinLive >= itemEnd)}
+          {@const isPast = nowMinLive >= itemEnd}
           {@const visStart = Math.max(item.startMin, windowStart)}
           {@const visEnd = Math.min(itemEnd, windowStart + 720)}
           {#if visEnd > visStart}
