@@ -404,10 +404,6 @@
     .clock { width: min(95vw, 70vh); height: min(95vw, 70vh); }
   }
 
-  @media (max-width: 800px) and (orientation: portrait) and (hover: none) and (pointer: coarse) {
-    .clock [role='slider'] { pointer-events: none; }
-  }
-
   @media (min-width: 801px) and (max-width: 1100px) {
     .clock { width: min(80vh, 45vw); height: min(80vh, 45vw); }
   }
