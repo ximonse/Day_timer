@@ -394,7 +394,7 @@
   .clock {
     display: block;
     user-select: none;
-    touch-action: pan-y;
+    touch-action: none;
     overflow: visible;
     width: min(88vh, 55vw);
     height: min(88vh, 55vw);
