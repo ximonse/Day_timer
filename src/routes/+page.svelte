@@ -69,13 +69,14 @@
   let loginName = $state('');
   let loginPass = $state('');
   let loggedInUser = $state('');
-  let shareToken = $state('');
-  let shareOwnerToken = $state('');
+  type ShareEntry = { viewToken: string; ownerToken: string; mode: ShareMode };
+  let shareEntries = $state<Record<string, ShareEntry>>({});
   let shareCopyText = $state('Kopiera länk');
+  let shareCopyTargetKey = $state('');
   let pageOrigin = $state('');
-  let shareMode = $state<ShareMode | null>(null);
   let isViewMode = $state(false);
   let viewToken = $state('');
+  let viewShareMode = $state<ShareMode | null>(null);
   let agendaInputOpen = $state(true);
   let agendaCalendarOpen = $state(true);
   let savedAgendaMsg = $state('');
@@ -195,6 +196,17 @@
   const SHARE_TOKEN_STORAGE = 'daytimer_share_token';
   const SHARE_OWNER_STORAGE = 'daytimer_share_owner_token';
   const SHARE_MODE_STORAGE = 'daytimer_share_mode';
+  const SHARE_ENTRIES_STORAGE = 'daytimer_share_entries';
+
+  const ACTIVE_SHARE_KEY = 'active';
+  function sessionShareKey(flowId: string): string { return `session:${flowId}`; }
+  function dayShareKey(date: string): string { return `day:${date}`; }
+  function shareKeyFromModeAndPayload(mode: ShareMode, flowId?: string | null, date?: string | null): string | null {
+    if (mode === 'active-session-live') return ACTIVE_SHARE_KEY;
+    if (mode === 'selected-session-snapshot') return flowId ? sessionShareKey(flowId) : null;
+    if (mode === 'selected-day-snapshot') return date ? dayShareKey(date) : null;
+    return null;
+  }
 
   function saveAiConfig() {
     persistAiConfig(aiConfig);
@@ -262,6 +274,15 @@
   );
 
   const selectedAgendaDetails = $derived.by(() => resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef));
+
+  const currentSessionShareKey = $derived(selectedAgendaDetails ? sessionShareKey(selectedAgendaDetails.flow.id) : null);
+  const currentDayShareKey = $derived(selectedDay?.date ? dayShareKey(selectedDay.date) : null);
+  const activeShareEntry = $derived(shareEntries[ACTIVE_SHARE_KEY] ?? null);
+  const sessionShareEntry = $derived(currentSessionShareKey ? (shareEntries[currentSessionShareKey] ?? null) : null);
+  const dayShareEntry = $derived(currentDayShareKey ? (shareEntries[currentDayShareKey] ?? null) : null);
+  const activeShareUrl = $derived(activeShareEntry && pageOrigin ? `${pageOrigin}/?view=${activeShareEntry.viewToken}` : '');
+  const sessionShareUrl = $derived(sessionShareEntry && pageOrigin ? `${pageOrigin}/?view=${sessionShareEntry.viewToken}` : '');
+  const dayShareUrl = $derived(dayShareEntry && pageOrigin ? `${pageOrigin}/?view=${dayShareEntry.viewToken}` : '');
   const selectedAgendaMeta = $derived.by(() => {
     if (!selectedAgendaDetails) return null;
     return s.agendaMeta[makeAgendaMetaKeyForFlow(selectedAgendaDetails.day.date ?? null, selectedAgendaDetails.flow, selectedAgendaDetails.startMin)] ?? null;
@@ -1042,13 +1063,24 @@
   const SYNC_TOKEN_STORAGE = 'timer-sync-token';
   let syncStatusTimer: ReturnType<typeof setTimeout>;
 
-  function persistShareState(token: string, ownerToken: string, mode: ShareMode) {
-    writeSessionValue(SHARE_TOKEN_STORAGE, token);
-    writeSessionValue(SHARE_OWNER_STORAGE, ownerToken);
-    writeSessionValue(SHARE_MODE_STORAGE, mode);
+  function persistShareEntries() {
+    try {
+      localStorage.setItem(SHARE_ENTRIES_STORAGE, JSON.stringify(shareEntries));
+    } catch { /* silent */ }
   }
 
-  function clearPersistedShareState() {
+  function loadPersistedShareEntries(): Record<string, ShareEntry> {
+    try {
+      const raw = localStorage.getItem(SHARE_ENTRIES_STORAGE);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') return parsed as Record<string, ShareEntry>;
+      }
+    } catch { /* silent */ }
+    return {};
+  }
+
+  function clearLegacyShareState() {
     removeSessionValue(SHARE_TOKEN_STORAGE);
     removeSessionValue(SHARE_OWNER_STORAGE);
     removeSessionValue(SHARE_MODE_STORAGE);
@@ -1153,16 +1185,17 @@
   let lastPushedHash = '';
 
   async function pushShareState() {
-    if (!shareToken || !shareOwnerToken || shareMode !== 'active-session-live') return;
+    const entry = shareEntries[ACTIVE_SHARE_KEY];
+    if (!entry || entry.mode !== 'active-session-live') return;
     const state = buildLiveShareState(s);
     const hash = JSON.stringify(state);
     if (hash === lastPushedHash) return;
     try {
-      const res = await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
+      const res = await fetch(`/api/share?token=${encodeURIComponent(entry.viewToken)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-share-owner': shareOwnerToken
+          'x-share-owner': entry.ownerToken
         },
         body: hash,
       });
@@ -1176,7 +1209,7 @@
       const res = await fetch(`/api/share?token=${encodeURIComponent(token)}`);
       if (!res.ok) return;
       const d = await res.json();
-      shareMode = applySharedStatePayload(s, d);
+      viewShareMode = applySharedStatePayload(s, d);
       syncBodyClasses();
     } catch { /* silent */ }
   }
@@ -1189,7 +1222,16 @@
         ? (selectedAgendaDetails ? buildSelectedSessionSnapshot(selectedAgendaDetails, uiState, uid) : null)
         : buildSelectedDaySnapshot(selectedDay, selectedAgendaDetails, agendaDayStart, { ...uiState, blocks: s.blocks }, uid);
     if (!payload) return;
-    const tokens = createShareTokens();
+    const key = shareKeyFromModeAndPayload(
+      mode,
+      selectedAgendaDetails?.flow.id ?? null,
+      selectedDay?.date ?? null
+    );
+    if (!key) return;
+    const existing = shareEntries[key];
+    const tokens = existing
+      ? { viewToken: existing.viewToken, ownerToken: existing.ownerToken }
+      : createShareTokens();
     try {
       const hash = JSON.stringify(payload);
       const res = await fetch(`/api/share?token=${encodeURIComponent(tokens.viewToken)}`, {
@@ -1201,36 +1243,41 @@
         body: hash,
       });
       if (!res.ok) throw new Error();
-      shareToken = tokens.viewToken;
-      shareOwnerToken = tokens.ownerToken;
-      shareMode = mode;
-      lastPushedHash = mode === 'active-session-live' ? hash : '';
-      persistShareState(tokens.viewToken, tokens.ownerToken, mode);
+      shareEntries = { ...shareEntries, [key]: { viewToken: tokens.viewToken, ownerToken: tokens.ownerToken, mode } };
+      if (mode === 'active-session-live') lastPushedHash = hash;
+      persistShareEntries();
     } catch {
       showSyncStatus('Kunde inte starta delning', true);
     }
   }
 
-  async function stopSharing() {
-    if (!shareToken || !shareOwnerToken) return;
+  async function stopSharingByKey(key: string) {
+    const entry = shareEntries[key];
+    if (!entry) return;
     try {
-      await fetch(`/api/share?token=${encodeURIComponent(shareToken)}`, {
+      await fetch(`/api/share?token=${encodeURIComponent(entry.viewToken)}`, {
         method: 'DELETE',
-        headers: { 'x-share-owner': shareOwnerToken }
+        headers: { 'x-share-owner': entry.ownerToken }
       });
     } catch { /* silent */ }
-    shareToken = '';
-    shareOwnerToken = '';
-    shareMode = null;
-    lastPushedHash = '';
-    clearPersistedShareState();
+    const next = { ...shareEntries };
+    delete next[key];
+    shareEntries = next;
+    if (key === ACTIVE_SHARE_KEY) lastPushedHash = '';
+    persistShareEntries();
   }
 
-  async function copyShareLink() {
-    const link = `${pageOrigin}/?view=${shareToken}`;
+  async function copyShareLinkForKey(key: string) {
+    const entry = shareEntries[key];
+    if (!entry) return;
+    const link = `${pageOrigin}/?view=${entry.viewToken}`;
     await navigator.clipboard.writeText(link);
+    shareCopyTargetKey = key;
     shareCopyText = '✓ Kopierad!';
-    setTimeout(() => { shareCopyText = 'Kopiera länk'; }, 2000);
+    setTimeout(() => {
+      shareCopyText = 'Kopiera länk';
+      shareCopyTargetKey = '';
+    }, 2000);
   }
 
   function saveAgenda() {
@@ -1729,16 +1776,19 @@
       document.addEventListener('visibilitychange', viewVisibilityHandler);
     }
 
-    const savedShare = readSessionValue(SHARE_TOKEN_STORAGE);
-    const savedShareOwner = readSessionValue(SHARE_OWNER_STORAGE);
-    const savedShareMode = readSessionValue(SHARE_MODE_STORAGE);
-    if (savedShare && savedShareOwner) {
-      shareToken = savedShare;
-      shareOwnerToken = savedShareOwner;
-      shareMode = (savedShareMode as ShareMode | null) ?? 'active-session-live';
-    } else {
-      clearPersistedShareState();
+    shareEntries = loadPersistedShareEntries();
+    const legacyToken = readSessionValue(SHARE_TOKEN_STORAGE) ?? localStorage.getItem(SHARE_TOKEN_STORAGE);
+    const legacyOwner = readSessionValue(SHARE_OWNER_STORAGE) ?? localStorage.getItem(SHARE_OWNER_STORAGE);
+    const legacyMode = (readSessionValue(SHARE_MODE_STORAGE) ?? localStorage.getItem(SHARE_MODE_STORAGE)) as ShareMode | null;
+    if (legacyToken && legacyOwner) {
+      const mode = legacyMode ?? 'active-session-live';
+      const fallbackKey = mode === 'active-session-live' ? ACTIVE_SHARE_KEY : `legacy:${legacyToken}`;
+      if (!shareEntries[fallbackKey]) {
+        shareEntries = { ...shareEntries, [fallbackKey]: { viewToken: legacyToken, ownerToken: legacyOwner, mode } };
+        persistShareEntries();
+      }
     }
+    clearLegacyShareState();
 
     if (!localStorage.getItem('day_timer_v1')) {
       const d = new Date();
@@ -1882,7 +1932,8 @@
   });
 
   $effect(() => {
-    if (!shareToken || shareMode !== 'active-session-live') return;
+    const activeEntry = shareEntries[ACTIVE_SHARE_KEY];
+    if (!activeEntry || activeEntry.mode !== 'active-session-live') return;
     let id: ReturnType<typeof setInterval> | null = null;
 
     function startPush() {
@@ -2108,7 +2159,7 @@
   </button>
 
   {#if isViewMode}
-    <div class="live-badge">{shareMode === 'active-session-live' ? '● Live' : '◌ Snapshot'}</div>
+    <div class="live-badge">{viewShareMode === 'active-session-live' ? '● Live' : '◌ Snapshot'}</div>
   {/if}
 
   <main class="main">
@@ -2321,10 +2372,14 @@
               sourceLabel={selectedAgendaSourceLabel}
               sourceHelp={selectedAgendaSourceHelp}
               showSourceHelp={helpVisible(planSourceHelpOpen)}
-              {shareToken}
-              {shareMode}
               {shareCopyText}
-              shareUrl={shareToken && pageOrigin ? `${pageOrigin}/?view=${shareToken}` : ''}
+              {activeShareUrl}
+              {sessionShareUrl}
+              {dayShareUrl}
+              sessionShareDisabled={!selectedAgendaDetails}
+              isCopyingActive={shareCopyTargetKey === ACTIVE_SHARE_KEY}
+              isCopyingSession={!!currentSessionShareKey && shareCopyTargetKey === currentSessionShareKey}
+              isCopyingDay={!!currentDayShareKey && shareCopyTargetKey === currentDayShareKey}
               onTitleInput={(value) => {
                 s.dayTitle = value;
                 if (s.activeSection !== 'plan') {
@@ -2438,8 +2493,12 @@
               onTogglePartsHelp={() => sessionPartsHelpOpen = toggleHelpOverride(sessionPartsHelpOpen)}
               onToggleTimeHelp={() => sessionTimeHelpOpen = toggleHelpOverride(sessionTimeHelpOpen)}
               onToggleSourceHelp={() => planSourceHelpOpen = toggleHelpOverride(planSourceHelpOpen)}
-              onCopyShareLink={copyShareLink}
-              onStopSharing={stopSharing}
+              onCopyActiveShare={() => copyShareLinkForKey(ACTIVE_SHARE_KEY)}
+              onCopySessionShare={() => currentSessionShareKey && copyShareLinkForKey(currentSessionShareKey)}
+              onCopyDayShare={() => currentDayShareKey && copyShareLinkForKey(currentDayShareKey)}
+              onStopActiveShare={() => stopSharingByKey(ACTIVE_SHARE_KEY)}
+              onStopSessionShare={() => currentSessionShareKey && stopSharingByKey(currentSessionShareKey)}
+              onStopDayShare={() => currentDayShareKey && stopSharingByKey(currentDayShareKey)}
               onStartLiveShare={() => startSharing('active-session-live')}
               onSaveFlow={saveFlow}
               onStartSessionShare={() => startSharing('selected-session-snapshot')}

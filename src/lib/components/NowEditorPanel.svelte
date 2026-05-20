@@ -16,13 +16,11 @@
     onPartsKeyDown,
     onAction,
     actionLabel,
-    shareToken,
-    shareUrl,
-    shareModeLabel,
+    activeShareUrl,
     shareCopyText,
-    shareSummary,
-    onCopyShareLink,
-    onStopSharing,
+    isCopyingActive,
+    onCopyActiveShare,
+    onStopActiveShare,
     onStartLiveShare,
     onSaveFlow,
     savedFlowMsg,
@@ -39,13 +37,11 @@
     onPartsKeyDown: (e: KeyboardEvent) => void;
     onAction: () => void;
     actionLabel: string;
-    shareToken: string;
-    shareUrl: string;
-    shareModeLabel: string;
+    activeShareUrl: string;
     shareCopyText: string;
-    shareSummary: string;
-    onCopyShareLink: () => void;
-    onStopSharing: () => void;
+    isCopyingActive: boolean;
+    onCopyActiveShare: () => void;
+    onStopActiveShare: () => void;
     onStartLiveShare: () => void;
     onSaveFlow: () => void;
     savedFlowMsg: string;
@@ -99,16 +95,16 @@
 
 <div class="share-section">
   <div class="field-label">Dela</div>
-  {#if shareToken}
+  {#if activeShareUrl}
     <div class="share-link-box">
-      <span class="share-link-text">{shareUrl}</span>
+      <span class="share-link-text">{activeShareUrl}</span>
       <div class="share-link-actions">
-        {#if shareModeLabel}<span class="section-chip">{shareModeLabel}</span>{/if}
-        <button class="ai-key-btn" onclick={onCopyShareLink}>{shareCopyText}</button>
+        <span class="section-chip">Live</span>
+        <button class="ai-key-btn" onclick={onCopyActiveShare}>{isCopyingActive ? shareCopyText : 'Kopiera länk'}</button>
       </div>
     </div>
-    <div class="section-copy muted">{shareSummary}</div>
-    <button class="quickstart" onclick={onStopSharing}>Sluta dela</button>
+    <div class="section-copy muted">Aktiva sessionen delas live — uppdateringar syns för mottagaren.</div>
+    <button class="quickstart" onclick={onStopActiveShare}>Sluta dela</button>
   {:else}
     <button id="now-share-btn" class="quickstart" onclick={onStartLiveShare}>Dela aktiv session</button>
   {/if}

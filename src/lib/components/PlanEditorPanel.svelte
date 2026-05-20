@@ -64,13 +64,16 @@
     saveStatusLabel,
     onRevert,
     canRevert,
-    shareToken,
-    shareUrl,
-    shareModeLabel,
+    sessionShareUrl,
+    dayShareUrl,
+    sessionShareDisabled,
     shareCopyText,
-    shareSummary,
-    onCopyShareLink,
-    onStopSharing,
+    isCopyingSession,
+    isCopyingDay,
+    onCopySessionShare,
+    onCopyDayShare,
+    onStopSessionShare,
+    onStopDayShare,
     onStartSessionShare,
     onStartDayShare,
     onSaveFlow,
@@ -132,13 +135,16 @@
     saveStatusLabel: string;
     onRevert: () => void;
     canRevert: boolean;
-    shareToken: string;
-    shareUrl: string;
-    shareModeLabel: string;
+    sessionShareUrl: string;
+    dayShareUrl: string;
+    sessionShareDisabled: boolean;
     shareCopyText: string;
-    shareSummary: string;
-    onCopyShareLink: () => void;
-    onStopSharing: () => void;
+    isCopyingSession: boolean;
+    isCopyingDay: boolean;
+    onCopySessionShare: () => void;
+    onCopyDayShare: () => void;
+    onStopSessionShare: () => void;
+    onStopDayShare: () => void;
     onStartSessionShare: () => void;
     onStartDayShare: () => void;
     onSaveFlow: () => void;
@@ -299,22 +305,34 @@
     </button>
 
     <div class="share-section">
-      <div class="field-label">Dela</div>
-      {#if shareToken}
+      <div class="field-label">Dela vald session</div>
+      {#if sessionShareUrl}
         <div class="share-link-box">
-          <span class="share-link-text">{shareUrl}</span>
+          <span class="share-link-text">{sessionShareUrl}</span>
           <div class="share-link-actions">
-            {#if shareModeLabel}<span class="section-chip">{shareModeLabel}</span>{/if}
-            <button class="ai-key-btn" onclick={onCopyShareLink}>{shareCopyText}</button>
+            <span class="section-chip">Pass</span>
+            <button class="ai-key-btn" onclick={onCopySessionShare}>{isCopyingSession ? shareCopyText : 'Kopiera länk'}</button>
           </div>
         </div>
-        <div class="section-copy muted">{shareSummary}</div>
-        <button class="quickstart" onclick={onStopSharing}>Sluta dela</button>
+        <button class="quickstart" onclick={onStopSessionShare}>Sluta dela passet</button>
       {:else}
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button id="plan-share-session-btn" class="quickstart" onclick={onStartSessionShare} disabled={!hasSelection}>Dela vald session</button>
-          <button id="plan-share-day-btn" class="quickstart" onclick={onStartDayShare}>Dela hela dagen</button>
+        <button id="plan-share-session-btn" class="quickstart" onclick={onStartSessionShare} disabled={sessionShareDisabled} style="width:100%;">Dela vald session</button>
+      {/if}
+    </div>
+
+    <div class="share-section" style="margin-top:8px;">
+      <div class="field-label">Dela hela dagen</div>
+      {#if dayShareUrl}
+        <div class="share-link-box">
+          <span class="share-link-text">{dayShareUrl}</span>
+          <div class="share-link-actions">
+            <span class="section-chip">Dag</span>
+            <button class="ai-key-btn" onclick={onCopyDayShare}>{isCopyingDay ? shareCopyText : 'Kopiera länk'}</button>
+          </div>
         </div>
+        <button class="quickstart" onclick={onStopDayShare}>Sluta dela dagen</button>
+      {:else}
+        <button id="plan-share-day-btn" class="quickstart" onclick={onStartDayShare} style="width:100%;">Dela hela dagen</button>
       {/if}
     </div>
   </div>
