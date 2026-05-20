@@ -31,10 +31,7 @@
     sourceLabel,
     sourceHelp,
     showSourceHelp,
-    shareToken,
-    shareMode,
     shareCopyText,
-    shareUrl,
     onTitleInput,
     onPartsInput,
     onPartsKeyDown,
@@ -58,12 +55,23 @@
     onTogglePartsHelp,
     onToggleTimeHelp,
     onToggleSourceHelp,
-    onCopyShareLink,
-    onStopSharing,
-    onStartLiveShare,
     onSaveFlow,
+    onStartLiveShare,
     onStartSessionShare,
     onStartDayShare,
+    onStopActiveShare,
+    onStopSessionShare,
+    onStopDayShare,
+    onCopyActiveShare,
+    onCopySessionShare,
+    onCopyDayShare,
+    activeShareUrl,
+    sessionShareUrl,
+    dayShareUrl,
+    sessionShareDisabled,
+    isCopyingActive,
+    isCopyingSession,
+    isCopyingDay,
     actualHistoryOpen,
     onToggleActualHistory,
     currentSubjectCategory,
@@ -103,10 +111,14 @@
     sourceLabel: string;
     sourceHelp: string;
     showSourceHelp: boolean;
-    shareToken: string;
-    shareMode: 'active-session-live' | 'selected-session-snapshot' | 'selected-day-snapshot' | null;
     shareCopyText: string;
-    shareUrl: string;
+    activeShareUrl: string;
+    sessionShareUrl: string;
+    dayShareUrl: string;
+    sessionShareDisabled: boolean;
+    isCopyingActive: boolean;
+    isCopyingSession: boolean;
+    isCopyingDay: boolean;
     onTitleInput: (value: string) => void;
     onPartsInput: (value: string) => void;
     onPartsKeyDown: (e: KeyboardEvent) => void;
@@ -127,12 +139,16 @@
     onTogglePartsHelp: () => void;
     onToggleTimeHelp: () => void;
     onToggleSourceHelp: () => void;
-    onCopyShareLink: () => void;
-    onStopSharing: () => void;
-    onStartLiveShare: () => void;
     onSaveFlow: () => void;
+    onStartLiveShare: () => void;
     onStartSessionShare: () => void;
     onStartDayShare: () => void;
+    onStopActiveShare: () => void;
+    onStopSessionShare: () => void;
+    onStopDayShare: () => void;
+    onCopyActiveShare: () => void;
+    onCopySessionShare: () => void;
+    onCopyDayShare: () => void;
     actualHistoryOpen: boolean;
     onToggleActualHistory: () => void;
     currentSubjectCategory: string;
@@ -143,19 +159,6 @@
     onExportActualHistory: () => void;
   } = $props();
 
-  const shareSummary = $derived.by(() => {
-    if (shareMode === 'active-session-live') return 'Aktiv session delas live.';
-    if (shareMode === 'selected-day-snapshot') return 'Vald dag delas som snapshot.';
-    if (shareMode === 'selected-session-snapshot') return 'Vald session delas som snapshot.';
-    return '';
-  });
-
-  const shareModeLabel = $derived.by(() => {
-    if (shareMode === 'active-session-live') return 'Live';
-    if (shareMode === 'selected-day-snapshot') return 'Dag';
-    if (shareMode === 'selected-session-snapshot') return 'Pass';
-    return '';
-  });
 </script>
 
 {#if mode === 'now'}
@@ -169,13 +172,11 @@
       {onPartsKeyDown}
       {onAction}
       {actionLabel}
-      {shareToken}
-      {shareUrl}
-      {shareModeLabel}
+      {activeShareUrl}
       {shareCopyText}
-      {shareSummary}
-      {onCopyShareLink}
-      {onStopSharing}
+      {isCopyingActive}
+      {onCopyActiveShare}
+      {onStopActiveShare}
       {onStartLiveShare}
       {onSaveFlow}
       {savedFlowMsg}
@@ -244,13 +245,16 @@
       {saveStatusLabel}
       {onRevert}
       {canRevert}
-      {shareToken}
-      {shareUrl}
-      {shareModeLabel}
+      {sessionShareUrl}
+      {dayShareUrl}
+      {sessionShareDisabled}
       {shareCopyText}
-      {shareSummary}
-      {onCopyShareLink}
-      {onStopSharing}
+      {isCopyingSession}
+      {isCopyingDay}
+      {onCopySessionShare}
+      {onCopyDayShare}
+      {onStopSessionShare}
+      {onStopDayShare}
       {onStartSessionShare}
       {onStartDayShare}
       {onSaveFlow}
