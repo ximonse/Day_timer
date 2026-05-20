@@ -45,6 +45,7 @@
     onSetHelpfulMode,
     onRunAi,
     onAction,
+    onCreateNew,
     onStartTimeInput,
     endTimeValue,
     onEndTimeInput,
@@ -116,6 +117,7 @@
     onSetHelpfulMode: () => void;
     onRunAi: () => void;
     onAction: () => void;
+    onCreateNew: () => void;
     onStartTimeInput: (value: string) => void;
     onEndTimeInput: (value: string) => void;
     onTotalMinutesInput: (value: number) => void;
@@ -236,6 +238,7 @@
       {showTimeHelp}
       {timeFeedbackText}
       {onAction}
+      {onCreateNew}
       {actionLabel}
       {actionHint}
       {saveStatusLabel}

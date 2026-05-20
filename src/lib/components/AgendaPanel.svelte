@@ -8,6 +8,7 @@
   import AgendaImportPanel from './AgendaImportPanel.svelte';
 
   let {
+    selectedFlowId,
     sectorColors,
     isViewMode,
     agendaDraftStatus,
@@ -64,6 +65,7 @@
     agendaAiOpen = $bindable(),
     agendaAiInput = $bindable()
   }: {
+    selectedFlowId: string | null;
     sectorColors: string[];
     isViewMode: boolean;
     agendaDraftStatus: string;
@@ -283,6 +285,9 @@
               </span>
             {/if}
             <span class="agenda-name">{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</span>
+            {#if item.flow.id === selectedFlowId}
+              <span class="agenda-editing-badge" title="Redigeras i panelen">✎</span>
+            {/if}
             {#if item.fromText && !isViewMode}
               {#if s.activeSection !== 'now'}
                 <button

@@ -2337,14 +2337,9 @@
               onRunAi={runAiParts}
               onAction={() => {
                 if (s.activeSection === 'plan') {
-                  const baseline = planPanelBaseline;
-                  const timeChanged = baseline ? baseline.startMin !== s.startMin : false;
-
-                  if (selectedAgendaDetails && planSelectionExplicit && !timeChanged) {
-                    // Only title or parts changed, update existing block
+                  if (selectedAgendaDetails && planSelectionExplicit) {
                     syncTimerToAgenda(true);
                   } else {
-                    // Time changed or no selection, create new block
                     const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
                     const flow: Flow = {
                       id: uid(),
@@ -2380,6 +2375,25 @@
                 capturePanelBaseline('now');
                 partsDraftDirty = false;
                 notifyPanelMutation('now');
+              }}
+              onCreateNew={() => {
+                const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+                const flow: Flow = {
+                  id: uid(),
+                  title: s.dayTitle || 'Session',
+                  startMin: s.startMin,
+                  parts: s.blocks.map(b => b.title),
+                  minutes: s.blocks.map(b => b.minutes),
+                  warnings: s.blocks.map(b => b.warning),
+                  notes: s.blocks.map(b => b.note),
+                  extraInfo: s.extraInfo,
+                };
+                addFlowToAgendaDate(targetDate, flow, true, sessionAgendaMeta());
+                planSelectionExplicit = true;
+                capturePanelBaseline('plan');
+                partsDraftDirty = false;
+                notifyPanelMutation('plan');
+                appState.persist();
               }}
               onStartTimeInput={(value) => {
                 const [h, m] = value.split(':').map(Number);
@@ -2492,6 +2506,7 @@
 
   <div class="resize-handle-ag" role="separator" aria-orientation="vertical" onpointerdown={startAgendaResize}></div>
   <AgendaPanel
+    selectedFlowId={(s.activeSection === 'plan' && planSelectionExplicit && selectedAgendaDetails) ? selectedAgendaDetails.flow.id : null}
     {sectorColors}
     {isViewMode}
     {agendaDraftStatus}

@@ -375,6 +375,11 @@
   @media (hover: none) {
     :global(.agenda-source-badge) { display: none; }
   }
+  :global(.agenda-editing-badge) {
+    position: absolute; top: 4px; right: 6px;
+    font-size: 14px; line-height: 1; pointer-events: none;
+    opacity: .85;
+  }
   :global(.agenda-dur) { font-size: 12px; color: var(--muted); flex-shrink: 0; }
   :global(.agenda-empty) { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; padding: 4px 2px; }
   :global(.agenda-input-wrapper) { width: 100%; display: block; position: relative; }
