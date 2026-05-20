@@ -128,10 +128,10 @@ export function cloneAgendaDay(day: AgendaDay): AgendaDay {
 		date: day.date,
 		flows: day.flows.map(flow => ({
 			...flow,
-			parts: [...flow.parts],
-			minutes: [...flow.minutes],
-			warnings: [...flow.warnings],
-			notes: [...flow.notes]
+			parts: Array.isArray(flow.parts) ? [...flow.parts] : [],
+			minutes: Array.isArray(flow.minutes) ? [...flow.minutes] : [],
+			warnings: Array.isArray(flow.warnings) ? [...flow.warnings] : [],
+			notes: Array.isArray(flow.notes) ? [...flow.notes] : []
 		}))
 	};
 }
