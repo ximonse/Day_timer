@@ -106,7 +106,7 @@
   :global(.app) { display: flex; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; }
   :global(.sidebar), :global(.main) { scrollbar-width: none; }
   :global(.sidebar::-webkit-scrollbar), :global(.main::-webkit-scrollbar) { display: none; }
-  :global(.sidebar) { width: 400px; min-width: 160px; max-width: 720px; background: var(--panel); border-right: 1px solid var(--border); padding: 20px 16px; position: relative; transition: margin-left .25s ease; overflow-y: auto; flex-shrink: 0; height: 100%; }
+  :global(.sidebar) { width: 400px; min-width: 160px; max-width: 720px; background: var(--panel); border-right: 1px solid var(--border); padding: 20px 16px; position: relative; transition: margin-left .25s ease; overflow-y: auto; flex-shrink: 0; height: 100%; line-height: 1; }
   :global(.main) { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0 16px 16px; gap: 8px; position: relative; overflow-y: auto; height: 100%; container-type: inline-size; }
   :global(body.sb-collapsed .sidebar) { margin-left: calc(-1 * var(--sb-w, 400px)); }
   :global(.comment-add-btn) { font-size: 15px; }
