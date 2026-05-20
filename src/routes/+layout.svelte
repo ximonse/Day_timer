@@ -32,8 +32,8 @@
     --menu-pill: var(--pill);
     --menu-pill-on: var(--pill-on);
     --menu-pill-on-fg: var(--pill-on-fg);
-    --sidebar-heading: var(--fg);
-    --sidebar-subheading: color-mix(in srgb, var(--fg) 75%, var(--muted));
+    --sidebar-heading: #5f6f8f;
+    --sidebar-subheading: #5f8f7a;
   }
   :global(body.dark:not(.psychedelic)) {
     --bg: #1c1a16; --fg: #ede8dc; --panel: #26231e; --border: #3c3830;
