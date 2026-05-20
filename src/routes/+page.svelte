@@ -1543,11 +1543,16 @@
       const updatedItem = buildAgendaItemsForDay(updatedDay, d.blockStart)[d.i];
       if (updatedItem) {
         activeAgendaFlowRef = makeAgendaFlowRef(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin);
+        s.startMin = updatedItem.startMin;
       }
     }
   }
 
   function endAgendaDrag() {
+    if (agendaDragState && selectedAgendaDetails?.dayIdx === agendaDragState.dayIdx && selectedAgendaDetails.flowIdx === agendaDragState.i) {
+      capturePanelBaseline('plan');
+      capturePanelBaseline('now');
+    }
     agendaDragState = null;
     window.removeEventListener('pointermove', onAgendaDrag);
     window.removeEventListener('pointerup', endAgendaDrag);
@@ -2012,12 +2017,18 @@
       return { ...day, flows };
     });
     setActiveAgendaText(serializeAgenda(newDays));
+    const movedFlowId = agendaDays[move.dayIdx]?.flows[move.flowIdx]?.id;
     if (selectedAgendaDetails?.dayIdx === move.dayIdx) {
       const updatedDay = newDays[move.dayIdx];
       const updatedItems = buildAgendaItemsForDay(updatedDay, agendaDayStart);
       const updatedItem = updatedItems.find(item => item.flow.id === selectedAgendaDetails.flow.id) ?? updatedItems.find(item => item.flow.title === selectedAgendaDetails.flow.title);
       if (updatedItem) {
         activeAgendaFlowRef = makeAgendaFlowRef(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin);
+        if (movedFlowId && updatedItem.flow.id === movedFlowId) {
+          s.startMin = updatedItem.startMin;
+          capturePanelBaseline('plan');
+          capturePanelBaseline('now');
+        }
       }
     }
     appState.persist();
