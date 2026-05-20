@@ -259,15 +259,18 @@
         {/if}
         {#each agendaItems as item, ai (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-${ai}`)}
           {@const itemColor = sectorColors[ai % sectorColors.length]}
-          {@const isPast = nowMinLive >= item.startMin + item.totalMin}
-          {@const isActive = nowMinLive >= item.startMin && nowMinLive < item.startMin + item.totalMin}
+          {@const itemEnd = item.startMin + item.totalMin}
+          {@const today = localDateISO()}
+          {@const itemDate = selectedDay?.date || today}
+          {@const isPast = itemDate < today || (itemDate === today && nowMinLive >= itemEnd)}
+          {@const isActive = itemDate === today && nowMinLive >= item.startMin && nowMinLive < itemEnd}
           {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
           {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
           {@const itemMeta = item.fromText && selectedDay ? s.agendaMeta[makeAgendaMetaKeyForFlow(selectedDay.date ?? null, item.flow, item.startMin)] ?? null : null}
           <div class="agenda-block"
                role="button"
                tabindex="0"
-               class:past={agendaDimPast && isPast}
+               class:past={isPast}
                class:active={isActive}
                class:dragging={agendaMoveState?.dayIdx === selectedDayIdx && agendaMoveState?.flowIdx === ai}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
@@ -278,13 +281,19 @@
                    if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin, 'plan', true) : loadFlow(item.flow.id);
                  }
                }}>
-            <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(item.startMin + item.totalMin)}</span>
+            <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
             {#if itemMeta}
               <span class="agenda-source-badge" class:template={itemMeta.source === 'template'} class:ai={itemMeta.source === 'ai'} class:imported={itemMeta.source === 'import'} title={agendaMetaLabel(itemMeta)}>
                 {agendaMetaBadge(itemMeta)}
               </span>
             {/if}
-            <span class="agenda-name">{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</span>
+            <span class="agenda-name">
+              {#if isPast}
+                <del>{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</del>
+              {:else}
+                {@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}
+              {/if}
+            </span>
             {#if item.flow.id === selectedFlowId}
               <span class="agenda-editing-badge" title="Redigeras i panelen">✎</span>
             {/if}
@@ -305,15 +314,25 @@
         {/each}
         {#each overlayItems as item, oi (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-overlay-${oi}`)}
           {@const itemEnd = item.startMin + item.totalMin}
+          {@const today = localDateISO()}
+          {@const activeDate = activeAgendaDate() || today}
+          {@const isPast = activeDate < today || (activeDate === today && nowMinLive >= itemEnd)}
           {@const visStart = Math.max(item.startMin, windowStart)}
           {@const visEnd = Math.min(itemEnd, windowStart + 720)}
           {#if visEnd > visStart}
             {@const topPct = ((visStart - windowStart) / 720 * 100).toFixed(3)}
             {@const heightPct = ((visEnd - visStart) / 720 * 100).toFixed(3)}
             <div class="agenda-block ghost"
+                 class:past={isPast}
                  style="top: {topPct}%; height: {heightPct}%; border-left-color: var(--muted)">
               <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
-              <span class="agenda-name">{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</span>
+              <span class="agenda-name">
+                {#if isPast}
+                  <del>{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</del>
+                {:else}
+                  {@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}
+                {/if}
+              </span>
             </div>
           {/if}
         {/each}
