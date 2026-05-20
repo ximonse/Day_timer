@@ -36,7 +36,15 @@
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
-  import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory, toJsonl } from '$lib/learning.js';
+  import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory } from '$lib/learning.js';
+  import {
+    makeActualEntryId,
+    upsertActualEntry,
+    finalizeUnconfirmedForDate,
+    confirmActualEntry,
+    deleteActualEntry,
+    exportActualHistoryJsonl
+  } from '$lib/actuals.js';
   import { createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
   import {
     applySharedStatePayload,
@@ -627,18 +635,6 @@
     if (m === 0) return `${h}h till start`;
     return `${h}h ${m}m till start`;
   }
-  function makeActualEntryId(date: string, startMin: number, title: string) {
-    return `${date}|${startMin}|${title.trim().toLowerCase()}`;
-  }
-  function upsertActualEntry(entry: ActualTimeEntry) {
-    const idx = s.actualTimeLog.findIndex((item) => item.id === entry.id);
-    if (idx < 0) s.actualTimeLog = [...s.actualTimeLog, entry];
-    else {
-      const next = [...s.actualTimeLog];
-      next[idx] = entry;
-      s.actualTimeLog = next;
-    }
-  }
   function trackActualForActiveAgendaItem() {
     const date = localDateISO();
     const nowMin = nowMinutes();
@@ -674,42 +670,32 @@
     };
     const wasNew = !existing;
     const wasChanged = updated.endMinActual !== base.endMinActual || updated.durationActualMin !== base.durationActualMin;
-    upsertActualEntry(updated);
+    s.actualTimeLog = upsertActualEntry(s.actualTimeLog, updated);
     if (wasNew || (wasChanged && nowMin % 5 === 0)) appState.persist();
   }
-  function finalizeUnconfirmedForDate(date: string) {
-    let changed = false;
-    s.actualTimeLog = s.actualTimeLog.map((entry) => {
-      if (entry.date !== date || entry.confirmed) return entry;
-      changed = true;
-      return {
-        ...entry,
-        confirmed: true,
-        confirmedAt: Date.now(),
-        autoFinalized: true
-      };
-    });
-    if (changed) appState.persist();
+  function finalizeUnconfirmedForDateLocal(date: string) {
+    const { log, changed } = finalizeUnconfirmedForDate(s.actualTimeLog, date);
+    if (changed) {
+      s.actualTimeLog = log;
+      appState.persist();
+    }
   }
-  function confirmActualEntry(id: string) {
-    const hit = s.actualTimeLog.find((entry) => entry.id === id);
-    if (!hit || hit.confirmed) return;
-    upsertActualEntry({
-      ...hit,
-      confirmed: true,
-      confirmedAt: Date.now(),
-      autoFinalized: false
-    });
-    appState.persist();
+  function confirmActualEntryLocal(id: string) {
+    const { log, changed } = confirmActualEntry(s.actualTimeLog, id);
+    if (changed) {
+      s.actualTimeLog = log;
+      appState.persist();
+    }
   }
-  function deleteActualEntry(id: string) {
-    const before = s.actualTimeLog.length;
-    s.actualTimeLog = s.actualTimeLog.filter((entry) => entry.id !== id);
-    if (s.actualTimeLog.length !== before) appState.persist();
+  function deleteActualEntryLocal(id: string) {
+    const { log, changed } = deleteActualEntry(s.actualTimeLog, id);
+    if (changed) {
+      s.actualTimeLog = log;
+      appState.persist();
+    }
   }
   async function exportActualHistory() {
-    const confirmed = s.actualTimeLog.filter((entry) => entry.confirmed || entry.autoFinalized);
-    const jsonl = toJsonl(confirmed);
+    const jsonl = exportActualHistoryJsonl(s.actualTimeLog);
     const blob = new Blob([jsonl], { type: 'application/x-ndjson;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -938,7 +924,7 @@
     const now = new Date();
     const todayIso = localDateISO(now);
     if (todayIso !== lastSeenDate) {
-      finalizeUnconfirmedForDate(lastSeenDate);
+      finalizeUnconfirmedForDateLocal(lastSeenDate);
       lastSeenDate = todayIso;
     }
     nowMinLive = nowMinutes();
@@ -2493,8 +2479,8 @@
               currentSubjectCategory={currentSubjectCategory}
               suggestedDuration={suggestedDuration}
               pendingActualEntries={pendingActualEntries}
-              onConfirmActualEntry={confirmActualEntry}
-              onDeleteActualEntry={deleteActualEntry}
+              onConfirmActualEntry={confirmActualEntryLocal}
+              onDeleteActualEntry={deleteActualEntryLocal}
               onExportActualHistory={exportActualHistory}
             />
           </div>
