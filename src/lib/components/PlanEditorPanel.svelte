@@ -58,6 +58,7 @@
     showTimeHelp,
     timeFeedbackText,
     onAction,
+    onCreateNew,
     actionLabel,
     actionHint,
     saveStatusLabel,
@@ -125,6 +126,7 @@
     showTimeHelp: boolean;
     timeFeedbackText: string;
     onAction: () => void;
+    onCreateNew: () => void;
     actionLabel: string;
     actionHint: string;
     saveStatusLabel: string;
@@ -282,7 +284,10 @@
   <div class="feedback">{timeFeedbackText}</div>
 
   <div class="plan-editor-bottom">
-    <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={onAction}><span class="ico">✓</span> {actionLabel}</button>
+    <div style="display:flex; gap:6px;">
+      <button id="quickStartBtn" class="quickstart" style="flex:1;" onclick={onAction}><span class="ico">✓</span> {actionLabel}</button>
+      <button class="quickstart" style="flex:1;" onclick={onCreateNew} title="Skapa nytt block med aktuella värden"><span class="ico">＋</span> Nytt</button>
+    </div>
     <div class="feedback">{actionHint}</div>
     <div class="feedback" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <span>{saveStatusLabel}</span>
