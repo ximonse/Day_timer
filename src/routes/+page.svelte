@@ -1591,6 +1591,11 @@
       if (updatedItem) {
         activeAgendaFlowRef = makeAgendaFlowRef(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin);
         s.startMin = updatedItem.startMin;
+        // Sync editor blocks and text to match the resized agenda item
+        updatedItem.flow.minutes.forEach((m, bi) => {
+          if (s.blocks[bi]) s.blocks[bi].minutes = m;
+        });
+        syncPartsDraftFromState(true);
       }
     }
   }
@@ -2074,6 +2079,7 @@
         activeAgendaFlowRef = makeAgendaFlowRef(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin);
         if (movedFlowId && updatedItem.flow.id === movedFlowId) {
           s.startMin = updatedItem.startMin;
+          syncPartsDraftFromState(true);
           capturePanelBaseline('plan');
           capturePanelBaseline('now');
         }
