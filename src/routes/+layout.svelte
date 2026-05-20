@@ -376,7 +376,7 @@
     :global(.agenda-source-badge) { display: none; }
   }
   :global(.agenda-editing-badge) {
-    position: absolute; top: 4px; right: 6px;
+    position: absolute; top: 4px; left: 6px;
     font-size: 14px; line-height: 1; pointer-events: none;
     opacity: .85;
   }
