@@ -1076,17 +1076,21 @@
   function persistShareEntries() {
     try {
       localStorage.setItem(SHARE_ENTRIES_STORAGE, JSON.stringify(shareEntries));
-    } catch { /* silent */ }
+    } catch (err) {
+      console.warn('[day_timer] failed to persist share entries', err);
+    }
   }
 
   function loadPersistedShareEntries(): Record<string, ShareEntry> {
+    const raw = localStorage.getItem(SHARE_ENTRIES_STORAGE);
+    if (!raw) return {};
     try {
-      const raw = localStorage.getItem(SHARE_ENTRIES_STORAGE);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') return parsed as Record<string, ShareEntry>;
-      }
-    } catch { /* silent */ }
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed as Record<string, ShareEntry>;
+      console.warn('[day_timer] share entries had unexpected shape, ignoring');
+    } catch (err) {
+      console.warn('[day_timer] failed to parse share entries, ignoring', err);
+    }
     return {};
   }
 
@@ -1790,13 +1794,10 @@
     const legacyToken = readSessionValue(SHARE_TOKEN_STORAGE) ?? localStorage.getItem(SHARE_TOKEN_STORAGE);
     const legacyOwner = readSessionValue(SHARE_OWNER_STORAGE) ?? localStorage.getItem(SHARE_OWNER_STORAGE);
     const legacyMode = (readSessionValue(SHARE_MODE_STORAGE) ?? localStorage.getItem(SHARE_MODE_STORAGE)) as ShareMode | null;
-    if (legacyToken && legacyOwner) {
-      const mode = legacyMode ?? 'active-session-live';
-      const fallbackKey = mode === 'active-session-live' ? ACTIVE_SHARE_KEY : `legacy:${legacyToken}`;
-      if (!shareEntries[fallbackKey]) {
-        shareEntries = { ...shareEntries, [fallbackKey]: { viewToken: legacyToken, ownerToken: legacyOwner, mode } };
-        persistShareEntries();
-      }
+    const legacyIsActive = legacyToken && legacyOwner && (legacyMode ?? 'active-session-live') === 'active-session-live';
+    if (legacyIsActive && !shareEntries[ACTIVE_SHARE_KEY]) {
+      shareEntries = { ...shareEntries, [ACTIVE_SHARE_KEY]: { viewToken: legacyToken, ownerToken: legacyOwner, mode: 'active-session-live' } };
+      persistShareEntries();
     }
     clearLegacyShareState();
 
