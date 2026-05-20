@@ -235,6 +235,16 @@
     return { source: 'manual' };
   }
 
+  function flowFromCurrentSession(): Flow {
+    return makeFlowFromSession({
+      id: uid(),
+      title: s.dayTitle || 'Session',
+      blocks: s.blocks,
+      extraInfo: s.extraInfo,
+      startMin: s.startMin
+    }, uid);
+  }
+
   function schoolPrimary() { return s.agendaView === 'school'; }
   function activeAgendaText(): string { return schoolPrimary() ? s.agendaText : s.agendaText2; }
   function activeAgendaDate(): string { return s.agendaDate; }
@@ -2407,17 +2417,7 @@
                     syncTimerToAgenda(true);
                   } else {
                     const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
-                    const flow: Flow = {
-                      id: uid(),
-                      title: s.dayTitle || 'Session',
-                      startMin: s.startMin,
-                      parts: s.blocks.map(b => b.title),
-                      minutes: s.blocks.map(b => b.minutes),
-                      warnings: s.blocks.map(b => b.warning),
-                      notes: s.blocks.map(b => b.note),
-                      extraInfo: s.extraInfo,
-                    };
-                    addFlowToAgendaDate(targetDate, flow, true, sessionAgendaMeta());
+                    addFlowToAgendaDate(targetDate, flowFromCurrentSession(), true, sessionAgendaMeta());
                     planSelectionExplicit = true;
                   }
                   capturePanelBaseline('plan');
@@ -2429,13 +2429,7 @@
                 const d = new Date();
                 s.startMin = d.getHours() * 60 + d.getMinutes();
                 warnedSet.clear(); updateTimeFeedback();
-                const f = makeFlowFromSession({
-                  id: uid(),
-                  title: s.dayTitle || 'Session',
-                  blocks: s.blocks,
-                  extraInfo: s.extraInfo,
-                  startMin: s.startMin
-                }, uid);
+                const f = flowFromCurrentSession();
                 addFlowToAgendaToday(f, true, sessionAgendaMeta());
                 lastAutoLoadKey = `${f.startMin}-${totalFlowMinutes(f)}-${f.title}-${f.parts.length}`;
                 capturePanelBaseline('now');
@@ -2444,17 +2438,7 @@
               }}
               onCreateNew={() => {
                 const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
-                const flow: Flow = {
-                  id: uid(),
-                  title: s.dayTitle || 'Session',
-                  startMin: s.startMin,
-                  parts: s.blocks.map(b => b.title),
-                  minutes: s.blocks.map(b => b.minutes),
-                  warnings: s.blocks.map(b => b.warning),
-                  notes: s.blocks.map(b => b.note),
-                  extraInfo: s.extraInfo,
-                };
-                addFlowToAgendaDate(targetDate, flow, true, sessionAgendaMeta());
+                addFlowToAgendaDate(targetDate, flowFromCurrentSession(), true, sessionAgendaMeta());
                 planSelectionExplicit = true;
                 capturePanelBaseline('plan');
                 partsDraftDirty = false;
