@@ -279,7 +279,7 @@
       {/if}
       
       <!-- Boundary Drag Handle -->
-      {#if s.i > 0}
+      {#if s.i > 0 && !isViewMode}
         {@const [x0, y0] = polar(s.a0, ri || 0)}
         {@const [x1, y1] = polar(s.a0, R)}
         <line 
@@ -309,7 +309,7 @@
   {/if}
 
   <!-- Start/End handles for 1h/2h mode -->
-  {#if !use12hAgenda}
+  {#if !use12hAgenda && !isViewMode}
     {@const [sx0, sy0] = polar(startAngle, ri || 0)}
     {@const [sx1, sy1] = polar(startAngle, R)}
     <line 
