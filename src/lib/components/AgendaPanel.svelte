@@ -284,13 +284,7 @@
                 {agendaMetaBadge(itemMeta)}
               </span>
             {/if}
-            <span class="agenda-name">
-              {#if isPast}
-                <del>{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</del>
-              {:else}
-                {@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}
-              {/if}
-            </span>
+            <span class="agenda-name">{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</span>
             {#if item.flow.id === selectedFlowId}
               <span class="agenda-editing-badge" title="Redigeras i panelen">✎</span>
             {/if}
@@ -311,23 +305,15 @@
         {/each}
         {#each overlayItems as item, oi (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-overlay-${oi}`)}
           {@const itemEnd = item.startMin + item.totalMin}
-          {@const isPast = nowMinLive >= itemEnd}
           {@const visStart = Math.max(item.startMin, windowStart)}
           {@const visEnd = Math.min(itemEnd, windowStart + 720)}
           {#if visEnd > visStart}
             {@const topPct = ((visStart - windowStart) / 720 * 100).toFixed(3)}
             {@const heightPct = ((visEnd - visStart) / 720 * 100).toFixed(3)}
             <div class="agenda-block ghost"
-                 class:past={isPast}
                  style="top: {topPct}%; height: {heightPct}%; border-left-color: var(--muted)">
               <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
-              <span class="agenda-name">
-                {#if isPast}
-                  <del>{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</del>
-                {:else}
-                  {@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}
-                {/if}
-              </span>
+              <span class="agenda-name">{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</span>
             </div>
           {/if}
         {/each}
