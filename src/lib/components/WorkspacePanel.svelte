@@ -2,6 +2,8 @@
   import { appState } from '$lib/state.svelte.js';
   import type { AiProvider } from '$lib/ai.js';
   let {
+    userLevel,
+    onUpgrade,
     loggedInUser,
     syncStatusText,
     syncStatusError,
@@ -38,6 +40,8 @@
     onAiBaseUrlChange,
     onAiCustomModelChange
   }: {
+    userLevel: number;
+    onUpgrade: (code: string) => void;
     loggedInUser: string;
     syncStatusText: string;
     syncStatusError: boolean;
@@ -76,6 +80,7 @@
   } = $props();
 
   let aiConfigOpen = $state(false);
+  let inviteCode = $state('');
 </script>
 
 <div class="ai-key-section" style="margin-bottom:24px;">
@@ -135,61 +140,63 @@
   {/if}
 </div>
 
-<div class="ai-key-section">
-  <div class="field-label">
-    AI-planering <span class="beta-tag">BETA</span>
-    <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen} style="margin-left:4px;">
-      {aiConfigOpen ? '▲' : '▼'}
-    </button>
-  </div>
-  
-  {#if aiConfigOpen}
-    <div class="section-copy muted" style="margin-bottom:8px;">
-      Används på egen risk. Var väldigt försiktig med att skriva in din API-nyckel på nätet. 
-      Här används nyckeln enbart för att skicka förfrågningar direkt till vald AI-leverantör från din webbläsare, 
-      och den sparas enbart lokalt i den här sessionen.
+{#if userLevel >= 2}
+  <div class="ai-key-section">
+    <div class="field-label">
+      AI-planering <span class="beta-tag">BETA</span>
+      <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen} style="margin-left:4px;">
+        {aiConfigOpen ? '▲' : '▼'}
+      </button>
     </div>
-
-    <select class="sync-input ai-provider-select"
-      value={aiProvider}
-      onchange={(e) => onProviderChange((e.target as HTMLSelectElement).value)}>
-      {#each Object.entries(aiProviderLabels) as [val, label]}
-        <option value={val}>{label}</option>
-      {/each}
-    </select>
-    {#if aiApiKey}
-      <div class="ai-key-row">
-        <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
-        <button class="ai-key-btn" onclick={onToggleAiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
-        <button class="ai-key-btn" onclick={onClearAiConfig}>Rensa</button>
+    
+    {#if aiConfigOpen}
+      <div class="section-copy muted" style="margin-bottom:8px;">
+        Används på egen risk. Var väldigt försiktig med att skriva in din API-nyckel på nätet. 
+        Här används nyckeln enbart för att skicka förfrågningar direkt till vald AI-leverantör från din webbläsare, 
+        och den sparas enbart lokalt i den här sessionen.
       </div>
-      {#if aiKeyVisible}
+
+      <select class="sync-input ai-provider-select"
+        value={aiProvider}
+        onchange={(e) => onProviderChange((e.target as HTMLSelectElement).value)}>
+        {#each Object.entries(aiProviderLabels) as [val, label]}
+          <option value={val}>{label}</option>
+        {/each}
+      </select>
+      {#if aiApiKey}
+        <div class="ai-key-row">
+          <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
+          <button class="ai-key-btn" onclick={onToggleAiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
+          <button class="ai-key-btn" onclick={onClearAiConfig}>Rensa</button>
+        </div>
+        {#if aiKeyVisible}
+          <input type="password" class="sync-input" 
+            value={aiApiKey}
+            oninput={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value)}
+            placeholder={aiKeyPlaceholders[aiProvider]} />
+        {/if}
+      {:else}
         <input type="password" class="sync-input" 
           value={aiApiKey}
           oninput={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value)}
           placeholder={aiKeyPlaceholders[aiProvider]} />
       {/if}
-    {:else}
-      <input type="password" class="sync-input" 
-        value={aiApiKey}
-        oninput={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value)}
-        placeholder={aiKeyPlaceholders[aiProvider]} />
-    {/if}
 
-    {#if aiProvider === 'custom'}
-      <div class="field-label" style="margin-top:12px;">Base URL</div>
-      <input type="text" class="sync-input" 
-        value={aiBaseUrl}
-        oninput={(e) => onAiBaseUrlChange((e.target as HTMLInputElement).value)}
-        placeholder="https://api.openai.com/v1" />
-      <div class="field-label" style="margin-top:8px;">Model name</div>
-      <input type="text" class="sync-input" 
-        value={aiCustomModel}
-        oninput={(e) => onAiCustomModelChange((e.target as HTMLInputElement).value)}
-        placeholder="gpt-4o" />
+      {#if aiProvider === 'custom'}
+        <div class="field-label" style="margin-top:12px;">Base URL</div>
+        <input type="text" class="sync-input" 
+          value={aiBaseUrl}
+          oninput={(e) => onAiBaseUrlChange((e.target as HTMLInputElement).value)}
+          placeholder="https://api.openai.com/v1" />
+        <div class="field-label" style="margin-top:8px;">Model name</div>
+        <input type="text" class="sync-input" 
+          value={aiCustomModel}
+          oninput={(e) => onAiCustomModelChange((e.target as HTMLInputElement).value)}
+          placeholder="gpt-4o" />
+      {/if}
     {/if}
-  {/if}
-</div>
+  </div>
+{/if}
 
 <div class="ai-key-section" style="margin-top:16px;">
   <div class="field-label">
@@ -217,4 +224,14 @@
       </div>
     {/if}
   {/if}
+</div>
+
+<div style="margin-top: auto; padding-top: 40px; display: flex; justify-content: flex-end;">
+  <input 
+    type="text" 
+    bind:value={inviteCode}
+    onkeydown={(e) => { if (e.key === 'Enter') { onUpgrade(inviteCode); inviteCode = ''; } }}
+    style="opacity: 0.05; background: transparent; border: none; width: 60px; color: currentColor; font-size: 10px; cursor: default;"
+    title="Unlock Level 2"
+  />
 </div>

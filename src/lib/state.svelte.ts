@@ -1,7 +1,7 @@
 import { type Palette } from './theme.js';
 import { normalizePersistedState } from './state-normalize.js';
 
-export type AppSection = 'now' | 'plan' | 'library' | 'workspace';
+export type AppSection = 'now' | 'plan' | 'library' | 'workspace' | 'admin';
 export type AgendaFlowSourceKind = 'manual' | 'template' | 'ai' | 'import';
 
 export interface AgendaFlowMeta {
@@ -94,6 +94,7 @@ export interface AppState {
   planDraft: EditorDraft;
   onboardingStep: number;
   firstVisit: boolean;
+  userLevel: number;
 }
 
 export function uid() {
@@ -153,6 +154,7 @@ function defaultState(): AppState {
     planDraft: defaultDraft(8),
     onboardingStep: 0,
     firstVisit: false,
+    userLevel: 1,
   };
 }
 

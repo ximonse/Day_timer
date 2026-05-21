@@ -4,6 +4,7 @@
   import PlanEditorPanel from './PlanEditorPanel.svelte';
 
   let {
+    userLevel,
     mode,
     hasSelection,
     savedFlowMsg,
@@ -81,6 +82,7 @@
     onDeleteActualEntry,
     onExportActualHistory
   }: {
+    userLevel: number;
     mode: 'now' | 'plan';
     hasSelection: boolean;
     savedFlowMsg: string;
@@ -189,6 +191,7 @@
 {:else}
   <div in:fade={{ duration: 150 }}>
     <PlanEditorPanel
+      {userLevel}
       {hasSelection}
       {targetDateLabel}
       {sourceLabel}

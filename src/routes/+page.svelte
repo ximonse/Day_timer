@@ -66,6 +66,7 @@
   import OptionsMenu from '$lib/components/OptionsMenu.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
   import OnboardingTour from '$lib/components/OnboardingTour.svelte';
+  import AdminPanel from '$lib/components/AdminPanel.svelte';
 
   const s = appState.value;
   const NS = 'http://www.w3.org/2000/svg';
@@ -170,6 +171,9 @@
   let agendaAiError = $state('');
   let agendaAiOpen = $state(false);
 
+  let adminPassword = $state('');
+  let inviteCodeResult = $state('');
+
   const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
     anthropic: 'Claude (Anthropic)',
     openai: 'GPT (OpenAI)',
@@ -187,7 +191,8 @@
     now: 'Nu',
     plan: 'Planera',
     library: 'Bibliotek',
-    workspace: 'Konto & AI'
+    workspace: 'Konto & AI',
+    admin: 'Admin'
   };
 
   function helpVisible(override: HelpOverride) {
@@ -1135,6 +1140,9 @@
       if (Array.isArray(data.actualTimeLog)) {
         s.actualTimeLog = data.actualTimeLog;
       }
+      if (typeof data.userLevel === 'number') {
+        s.userLevel = data.userLevel;
+      }
       activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
       capturePanelBaseline('now');
@@ -1161,12 +1169,60 @@
     } catch { showSyncStatus('Kunde inte spara', true); }
   }
 
+  async function upgradeLevel(code: string) {
+    const token = s.syncKey || '';
+    if (!token) { showSyncStatus('Logga in för att låsa upp', true); return; }
+    try {
+      const res = await fetch('/api/upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-sync-token': token
+        },
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.message || 'Ogiltig kod');
+      }
+      const data = await res.json();
+      s.userLevel = data.level;
+      appState.persist();
+      showToast('Nivå 2 upplåst! ✨');
+    } catch (e: any) {
+      showToast(e.message);
+    }
+  }
+
+  async function generateInvite(code: string, multi: boolean) {
+    if (!loggedInUser || !s.syncKey) { showSyncStatus('Inte inloggad', true); return; }
+    try {
+      const res = await fetch('/api/admin/invites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': adminPassword // Using same as syncKey for simple local test or custom input
+        },
+        body: JSON.stringify({ code, multi }),
+      });
+      if (!res.ok) throw new Error('Kunde inte skapa inbjudan');
+      inviteCodeResult = code.toUpperCase();
+      showToast('Inbjudan skapad ✓');
+    } catch (e: any) {
+      showToast(e.message);
+    }
+  }
+
   async function login() {
     const name = loginName.trim();
     const pass = loginPass.trim();
     if (!name || !pass) { showSyncStatus('Ange namn och lösenord', true); return; }
     s.syncKey = await deriveSyncToken(name, pass);
     loggedInUser = name;
+    if (name.toLowerCase() === 'admin') {
+      adminPassword = pass;
+      localStorage.setItem('admin-password', pass);
+    }
     writeSessionValue(SYNC_TOKEN_STORAGE, s.syncKey);
     localStorage.setItem('timer-login-user', name);
     appState.persist();
@@ -1718,6 +1774,9 @@
       } else if (key === 'k') {
         e.preventDefault();
         setActiveSection('workspace');
+      } else if (key === 'a' && loggedInUser.toLowerCase() === 'admin') {
+        e.preventDefault();
+        setActiveSection('admin');
       } else if (key === 'i') {
         e.preventDefault();
         s.showHelpHints = !s.showHelpHints;
@@ -1855,7 +1914,10 @@
     };
     void migrateLegacyToken();
     const savedUser = localStorage.getItem('timer-login-user');
-    if (savedUser) loggedInUser = savedUser;
+    if (savedUser) {
+      loggedInUser = savedUser;
+      if (savedUser.toLowerCase() === 'admin') adminPassword = localStorage.getItem('admin-password') || '';
+    }
     aiConfig = loadAiConfig();
     const today = localDateISO();
     if (!isViewMode) {
@@ -2345,7 +2407,9 @@
         {#if s.activeSection === 'now' || s.activeSection === 'plan'}
           <div in:fade={{ duration: 150 }}>
             <SessionEditorPanel
+              userLevel={s.userLevel}
               mode={s.activeSection}
+
               hasSelection={!!selectedAgendaDetails}
               savedFlowMsg={savedFlowMsg}
               titleValue={s.dayTitle}
@@ -2505,10 +2569,13 @@
               onDeleteFlow={deleteFlow}
             />
           </div>
-        {:else}
+        {:else if s.activeSection === 'workspace'}
           <div in:fade={{ duration: 150 }}>
             <WorkspacePanel
+              userLevel={s.userLevel}
+              onUpgrade={upgradeLevel}
               {loggedInUser}
+
               {syncStatusText}
               {syncStatusError}
               {loginName}
@@ -2545,7 +2612,16 @@
               onAiCustomModelChange={(value) => { aiConfig.customModel = value; saveAiConfig(); }}
             />
           </div>
-        {/if}        </div>
+        {:else if s.activeSection === 'admin'}
+          <div in:fade={{ duration: 150 }}>
+            <AdminPanel
+              {adminPassword}
+              onGenerateInvite={generateInvite}
+              {inviteCodeResult}
+            />
+          </div>
+        {/if}
+        </div>
       {/if}
       </div>
     </div>

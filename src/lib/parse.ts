@@ -83,6 +83,7 @@ interface RawSection {
   startMin?: number;
   items: { title: string; minutes: number | null; note: string }[];
   extraInfo: string;
+  id?: string;
 }
 
 function parseTimeStr(s: string): number | undefined {
@@ -116,7 +117,7 @@ function sectionsToFlows(sections: RawSection[]): Flow[] {
       ? Math.max(1, Math.round(Math.max(unpinnedCount, available - pinnedSum) / unpinnedCount))
       : 0;
     return {
-      id: uid(),
+      id: sec.id ?? uid(),
       title: sec.title,
       startMin: sec.startMin,
       parts: sec.items.map(b => b.title),
@@ -203,18 +204,28 @@ export function parseAgenda(text: string): AgendaDay[] {
     if (t.startsWith('#')) {
       if (cur) sections.push(cur);
       const content = t.slice(1).trim();
-      const timeMatch = content.match(/^(.*?)\s+(\d{1,2}:\d{2})\s*$/);
-      let title = content;
+      
+      // Extract hidden ID if present: <!--id:abc-123-->
+      let extractedId: string | undefined;
+      const idMatch = content.match(/<!--id:([a-z0-9-]+)-->/i);
+      let titleContent = content;
+      if (idMatch) {
+        extractedId = idMatch[1];
+        titleContent = content.replace(idMatch[0], '').trim();
+      }
+
+      const timeMatch = titleContent.match(/^(.*?)\s+(\d{1,2}:\d{2})\s*$/);
+      let title = titleContent;
       let startMin: number | undefined;
       if (timeMatch) {
         const parsed = parseTimeStr(timeMatch[2]);
         if (parsed !== undefined) { title = timeMatch[1].trim() || 'Session'; startMin = parsed; }
       }
-      cur = { title: title || 'Session', startMin, items: [], extraInfo: '' };
+      cur = { title: title || 'Session', startMin, items: [], extraInfo: '', id: extractedId };
       continue;
     }
 
-    if (!cur) cur = { title: 'Session', startMin: undefined, items: [], extraInfo: '' };
+    if (!cur) cur = { title: 'Session', startMin: undefined, items: [], extraInfo: '', id: undefined };
 
     if (t.startsWith('& ') || t === '&') { cur.extraInfo = t.slice(1).trim(); continue; }
 
@@ -277,12 +288,13 @@ export function serializeAgenda(days: AgendaDay[]): string {
       }
     }
     for (const flow of day.flows) {
+      const idTag = ` <!--id:${flow.id}-->`;
       if (flow.startMin !== undefined) {
         const h = String(Math.floor(flow.startMin / 60)).padStart(2, '0');
         const mi = String(flow.startMin % 60).padStart(2, '0');
-        lines.push(`#${flow.title} ${h}:${mi}`);
+        lines.push(`#${flow.title} ${h}:${mi}${idTag}`);
       } else {
-        lines.push(`#${flow.title}`);
+        lines.push(`#${flow.title}${idTag}`);
       }
       for (let i = 0; i < flow.parts.length; i++) {
         lines.push(`${flow.parts[i]} ${flow.minutes[i]}m`);
