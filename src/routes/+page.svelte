@@ -370,6 +370,7 @@
     if (s.activeSection === 'now') return 'Kör det som händer nu utan planeringsbrus.';
     if (s.activeSection === 'plan') return '';
     if (s.activeSection === 'library') return 'Spara och återanvänd mallar utan att blanda ihop dem med dagens plan.';
+    if (s.activeSection === 'admin') return 'Hantera inbjudningar och systemnivåer.';
     return 'Hantera konto, synk och AI-stöd.';
   });
   const sortedFlowOptions = $derived.by(() =>
