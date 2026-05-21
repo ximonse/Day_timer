@@ -231,7 +231,9 @@
     type="text" 
     bind:value={inviteCode}
     onkeydown={(e) => { if (e.key === 'Enter') { onUpgrade(inviteCode); inviteCode = ''; } }}
-    style="opacity: 0.05; background: transparent; border: none; width: 60px; color: currentColor; font-size: 10px; cursor: default;"
+    style="opacity: 0.15; background: transparent; border: none; width: 80px; color: currentColor; font-size: 11px; cursor: default; transition: opacity 0.2s;"
+    class="secret-unlock-input"
     title="Unlock Level 2"
   />
 </div>
+
