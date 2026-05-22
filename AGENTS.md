@@ -14,6 +14,20 @@
 - **Tänk efter före**: Om användaren vill ändra kärnlogik eller lägga till stora features ska detta **motiveras och genomtänkas noggrant**. Fråga hellre en gång för mycket än att börja riva i stabil kod.
 - **Inga kommentarer i kod**: All förklaring ska ligga i dokumentationen eller commit-meddelanden.
 
+### Långsiktigt arbetssätt
+
+För Day Timer gäller följande grundhållning:
+
+- **Bygg inte stort för tidigt. Bygg rent tidigt.**
+- **Modulär monolit först**: håll app och backend enkla så länge det går.
+- **Datamodellen är viktigare än tidig infra**: produktens kärndata ska vara tydlig även om implementationen är enkel.
+- **Skala på faktisk smärta, inte på fantasi**: bygg inte tung infrastruktur utan verkliga signaler.
+- **Skydda framtida vägval**: undvik lösningar som låser appen till en viss lagring, syncmodell eller authmodell.
+
+Se även [`VISION_FRAMEWORK.md`](./VISION_FRAMEWORK.md) för full långsiktig riktning.
+För konkreta sync- och workspacebeslut, se även [`WORKSPACE_SYNC_ARCHITECTURE.md`](./WORKSPACE_SYNC_ARCHITECTURE.md).
+För första praktiska implementationsfasen, se även [`WORKSPACE_PHASE1_SPEC.md`](./WORKSPACE_PHASE1_SPEC.md).
+
 ---
 
 ## Nuläge (Klar maj 2026)
@@ -75,3 +89,14 @@ interface AppState {
 - **Snabbhet**: Från tanke till startad timer på <10 sekunder.
 - **Visuellt språk**: Samma som the_timer (sektorfärger, chip-etiketter).
 - **Motivation**: Varje ny feature måste ha ett tydligt "varför".
+
+## Arkitekturprinciper
+
+- **Separera state tydligt**:
+  - lokal UI-state
+  - syncad användardata
+  - tillfällig delnings-/sessionsdata
+- **Synk är produktkärna, inte hjälpfunktion**: det som följer mellan enheter ska ha tydligt dataägarskap och på sikt versionering/historik.
+- **Workspace först**: syncad data ska på sikt modelleras som ett tydligt workspace-dokument, inte som lösa fristående fält.
+- **Stabil identitet före smarta genvägar**: dagar, block, flows och workspaces ska kunna följas robust över tid.
+- **Trygg data väger tyngre än teknisk elegans**: beslut som minskar risk för dataförlust prioriteras högt.

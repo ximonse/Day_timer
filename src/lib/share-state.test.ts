@@ -8,7 +8,7 @@ import {
 	sharedUiStateFromState
 } from './share-state.js';
 import type { AgendaDay } from './parse.js';
-import type { AppState, Block, Flow } from './state.svelte.js';
+import type { AppState, Block, EditorDraft, Flow } from './state.svelte.js';
 
 function block(patch: Partial<Block> = {}): Block {
 	return {
@@ -31,6 +31,15 @@ function flow(patch: Partial<Flow> = {}): Flow {
 		notes: patch.notes ?? [''],
 		extraInfo: patch.extraInfo ?? '',
 		...(patch.startMin !== undefined ? { startMin: patch.startMin } : {})
+	};
+}
+
+function draft(patch: Partial<EditorDraft> = {}): EditorDraft {
+	return {
+		dayTitle: patch.dayTitle ?? 'Utkast',
+		blocks: patch.blocks ?? [block({ title: 'Draft' })],
+		extraInfo: patch.extraInfo ?? 'Info',
+		startMin: patch.startMin ?? 8 * 60
 	};
 }
 
@@ -97,6 +106,8 @@ describe('share-state helpers', () => {
 	});
 
 	test('builds sync payload and applies shared payload', () => {
+		const sourceNowDraft = draft({ dayTitle: 'Nu' });
+		const sourcePlanDraft = draft({ dayTitle: 'Plan', blocks: [block({ title: 'Planblock' })] });
 		const payload = buildSyncPayload({
 			flows: [flow()],
 			agendaText: 'a',
@@ -104,10 +115,16 @@ describe('share-state helpers', () => {
 			agendaText2: 'c',
 			agendaDate2: 'd',
 			agendaMeta: {},
-			actualTimeLog: []
+			actualTimeLog: [],
+			nowDraft: sourceNowDraft,
+			planDraft: sourcePlanDraft
 		});
 		expect(payload.flows).toHaveLength(1);
 		expect(payload.agendaText2).toBe('c');
+		expect(payload.nowDraft.dayTitle).toBe('Nu');
+		expect(payload.planDraft.blocks[0].title).toBe('Planblock');
+		payload.planDraft.blocks[0].title = 'Muterad';
+		expect(sourcePlanDraft.blocks[0].title).toBe('Planblock');
 
 		const target = {
 			...sharedState(),
