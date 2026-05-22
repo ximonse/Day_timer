@@ -3,7 +3,7 @@
   
   import { onMount, untrack } from 'svelte';
   import { fade, fly } from 'svelte/transition';
-  import { appState, uid, type ActualTimeEntry, type AgendaFlowMeta, type AppSection, type Block, type Flow } from '$lib/state.svelte.js';
+  import { appState, uid, type ActualTimeEntry, type AgendaFlowMeta, type AppSection, type Block, type EditorDraft, type Flow } from '$lib/state.svelte.js';
   import { clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
@@ -37,6 +37,7 @@
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
   import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory } from '$lib/learning.js';
+  import { normalizePersistedState } from '$lib/state-normalize.js';
   import {
     makeActualEntryId,
     upsertActualEntry,
@@ -464,36 +465,18 @@
     const oldSection = s.activeSection;
     if (oldSection === section) return;
 
-    // Save current state to the appropriate draft
     if (oldSection === 'now') {
-      s.nowDraft = {
-        dayTitle: s.dayTitle,
-        blocks: cloneBlocks(s.blocks),
-        extraInfo: s.extraInfo,
-        startMin: s.startMin
-      };
+      s.nowDraft = currentEditorDraft();
     } else if (oldSection === 'plan') {
-      s.planDraft = {
-        dayTitle: s.dayTitle,
-        blocks: cloneBlocks(s.blocks),
-        extraInfo: s.extraInfo,
-        startMin: s.startMin
-      };
+      s.planDraft = currentEditorDraft();
     }
 
     s.activeSection = section;
 
-    // Load state from the new section's draft
     if (section === 'now') {
-      s.dayTitle = s.nowDraft.dayTitle;
-      s.blocks = cloneBlocks(s.nowDraft.blocks);
-      s.extraInfo = s.nowDraft.extraInfo;
-      s.startMin = s.nowDraft.startMin;
+      applyEditorDraft(s.nowDraft);
     } else if (section === 'plan') {
-      s.dayTitle = s.planDraft.dayTitle;
-      s.blocks = cloneBlocks(s.planDraft.blocks);
-      s.extraInfo = s.planDraft.extraInfo;
-      s.startMin = s.planDraft.startMin;
+      applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
       agendaInputOpen = true;
     }
@@ -555,6 +538,88 @@
 
   function cloneBlocks(blocks: typeof s.blocks) {
     return blocks.map(block => ({ ...block }));
+  }
+
+  function cloneDraft(draft: EditorDraft): EditorDraft {
+    return {
+      dayTitle: draft.dayTitle,
+      blocks: cloneBlocks(draft.blocks),
+      extraInfo: draft.extraInfo,
+      startMin: draft.startMin
+    };
+  }
+
+  function currentEditorDraft(): EditorDraft {
+    return {
+      dayTitle: s.dayTitle,
+      blocks: cloneBlocks(s.blocks),
+      extraInfo: s.extraInfo,
+      startMin: s.startMin
+    };
+  }
+
+  function syncActiveDraftFromEditor() {
+    if (s.activeSection === 'now') {
+      s.nowDraft = currentEditorDraft();
+    } else if (s.activeSection === 'plan') {
+      s.planDraft = currentEditorDraft();
+    }
+  }
+
+  function blockHasContent(block: Block) {
+    return block.title.trim() !== 'Lektion'
+      || block.minutes !== 45
+      || block.note.trim() !== ''
+      || block.warning !== true
+      || block.pinned !== false;
+  }
+
+  function draftHasContent(draft: EditorDraft) {
+    return draft.dayTitle.trim() !== ''
+      || draft.extraInfo.trim() !== ''
+      || draft.startMin !== 8 * 60
+      || draft.blocks.length !== 1
+      || draft.blocks.some(blockHasContent);
+  }
+
+  function emptyDraft(): EditorDraft {
+    return {
+      dayTitle: '',
+      extraInfo: '',
+      startMin: 8 * 60,
+      blocks: [{ id: 'sync-empty', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }]
+    };
+  }
+
+  function syncPayloadHasContent(payload: ReturnType<typeof buildSyncPayload>) {
+    return payload.flows.length > 0
+      || payload.agendaText.trim() !== ''
+      || payload.agendaText2.trim() !== ''
+      || Object.keys(payload.agendaMeta).length > 0
+      || payload.actualTimeLog.length > 0
+      || draftHasContent(payload.nowDraft)
+      || draftHasContent(payload.planDraft);
+  }
+
+  function applyEditorDraft(draft: EditorDraft) {
+    s.dayTitle = draft.dayTitle;
+    s.blocks = cloneBlocks(draft.blocks);
+    s.extraInfo = draft.extraInfo;
+    s.startMin = draft.startMin;
+    warnedSet.clear();
+    updateTimeFeedback();
+  }
+
+  function restoreCurrentEditorFromDraft() {
+    if (s.activeSection === 'now') {
+      applyEditorDraft(s.nowDraft);
+    } else if (s.activeSection === 'plan') {
+      applyEditorDraft(s.planDraft);
+      s.agendaOpen = true;
+      agendaInputOpen = true;
+    }
+    partsDraftDirty = false;
+    syncPartsDraftFromState(true);
   }
 
   function currentSnapshot(): SessionSnapshot {
@@ -1122,25 +1187,55 @@
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      // Merge flows: cloud wins for same ID, keep local-only flows
-      const cloudFlows: Flow[] = data.flows || [];
+      const normalized = normalizePersistedState(data, uid);
+      const localSnapshot = buildSyncPayload(s);
+      const cloudSnapshot = buildSyncPayload({
+        flows: normalized.flows || [],
+        agendaText: typeof normalized.agendaText === 'string' ? normalized.agendaText : '',
+        agendaDate: typeof normalized.agendaDate === 'string' ? normalized.agendaDate : '',
+        agendaText2: typeof normalized.agendaText2 === 'string' ? normalized.agendaText2 : '',
+        agendaDate2: typeof normalized.agendaDate2 === 'string' ? normalized.agendaDate2 : '',
+        agendaMeta: normalized.agendaMeta && typeof normalized.agendaMeta === 'object' ? normalized.agendaMeta : {},
+        actualTimeLog: Array.isArray(normalized.actualTimeLog) ? normalized.actualTimeLog : [],
+        nowDraft: normalized.nowDraft ? cloneDraft(normalized.nowDraft) : emptyDraft(),
+        planDraft: normalized.planDraft ? cloneDraft(normalized.planDraft) : emptyDraft()
+      });
+      if (!syncPayloadHasContent(cloudSnapshot) && syncPayloadHasContent(localSnapshot)) {
+        lastSyncedHash = JSON.stringify(localSnapshot);
+        appState.persist();
+        queueMicrotask(() => { void syncSave(); });
+        showSyncStatus('Molnet var tomt. Lokal data laddades upp ✓');
+        return;
+      }
+      const cloudFlows: Flow[] = normalized.flows || [];
       const cloudIds = new Set(cloudFlows.map((f: Flow) => f.id));
       const localOnly = (s.flows || []).filter(f => !cloudIds.has(f.id));
       s.flows = [...cloudFlows, ...localOnly];
-      // Restore agenda from cloud if it has content
       if ('agendaText' in data) {
-        s.agendaText = data.agendaText;
-        s.agendaDate = data.agendaDate || '';
+        s.agendaText = typeof normalized.agendaText === 'string' ? normalized.agendaText : '';
+        s.agendaDate = typeof normalized.agendaDate === 'string' ? normalized.agendaDate : '';
       }
       if ('agendaText2' in data) {
-        s.agendaText2 = data.agendaText2;
-        s.agendaDate2 = data.agendaDate2 || '';
+        s.agendaText2 = typeof normalized.agendaText2 === 'string' ? normalized.agendaText2 : '';
+        s.agendaDate2 = typeof normalized.agendaDate2 === 'string' ? normalized.agendaDate2 : '';
       }
-      if (data.agendaMeta && typeof data.agendaMeta === 'object') {
-        s.agendaMeta = data.agendaMeta;
+      if (normalized.agendaMeta && typeof normalized.agendaMeta === 'object') {
+        s.agendaMeta = normalized.agendaMeta;
       }
-      if (Array.isArray(data.actualTimeLog)) {
-        s.actualTimeLog = data.actualTimeLog;
+      if (Array.isArray(normalized.actualTimeLog)) {
+        s.actualTimeLog = normalized.actualTimeLog;
+      }
+      let restoredDraft = false;
+      if (normalized.nowDraft) {
+        s.nowDraft = cloneDraft(normalized.nowDraft);
+        restoredDraft = restoredDraft || s.activeSection === 'now';
+      }
+      if (normalized.planDraft) {
+        s.planDraft = cloneDraft(normalized.planDraft);
+        restoredDraft = restoredDraft || s.activeSection === 'plan';
+      }
+      if (restoredDraft) {
+        restoreCurrentEditorFromDraft();
       }
       if (typeof data.userLevel === 'number') {
         s.userLevel = data.userLevel;
@@ -1159,6 +1254,7 @@
   async function syncSave() {
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
+    syncActiveDraftFromEditor();
     const payloadStr = JSON.stringify(buildSyncPayload(s));
     try {
       const res = await fetch('/api/sync', {
@@ -2005,6 +2101,15 @@
   });
 
   $effect(() => {
+    const _section = s.activeSection;
+    const _title = s.dayTitle;
+    const _extra = s.extraInfo;
+    const _start = s.startMin;
+    const _blocks = JSON.stringify(s.blocks);
+    syncActiveDraftFromEditor();
+  });
+
+  $effect(() => {
     const activeEntry = shareEntries[ACTIVE_SHARE_KEY];
     if (!activeEntry || activeEntry.mode !== 'active-session-live') return;
     let id: ReturnType<typeof setInterval> | null = null;
@@ -2502,6 +2607,7 @@
                   partsDraftDirty = false;
                   notifyPanelMutation('plan');
                   appState.persist();
+                  if (loggedInUser) void syncSave();
                   return;
                 }
                 const d = new Date();
@@ -2513,6 +2619,7 @@
                 capturePanelBaseline('now');
                 partsDraftDirty = false;
                 notifyPanelMutation('now');
+                if (loggedInUser) void syncSave();
               }}
               onCreateNew={() => {
                 const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
@@ -2522,6 +2629,7 @@
                 partsDraftDirty = false;
                 notifyPanelMutation('plan');
                 appState.persist();
+                if (loggedInUser) void syncSave();
               }}
               onStartTimeInput={(value) => {
                 const [h, m] = value.split(':').map(Number);

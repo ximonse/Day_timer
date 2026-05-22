@@ -2,7 +2,7 @@ import type { AgendaDay } from './parse.js';
 import { serializeAgenda } from './parse.js';
 import { fmtAgendaDate } from './date.js';
 import { createSessionStateFromFlow } from './session.js';
-import type { AppState, Block, Flow } from './state.svelte.js';
+import type { AppState, Block, EditorDraft, Flow } from './state.svelte.js';
 
 export type ShareMode = 'active-session-live' | 'selected-session-snapshot' | 'selected-day-snapshot';
 
@@ -72,6 +72,21 @@ export interface SyncPayload {
 	agendaDate2: string;
 	agendaMeta: AppState['agendaMeta'];
 	actualTimeLog: AppState['actualTimeLog'];
+	nowDraft: EditorDraft;
+	planDraft: EditorDraft;
+}
+
+function cloneBlocks(blocks: Block[]): Block[] {
+	return blocks.map(block => ({ ...block }));
+}
+
+function cloneDraft(draft: EditorDraft): EditorDraft {
+	return {
+		dayTitle: draft.dayTitle,
+		blocks: cloneBlocks(draft.blocks),
+		extraInfo: draft.extraInfo,
+		startMin: draft.startMin
+	};
 }
 
 export function sharedUiStateFromState(state: Pick<AppState, keyof SharedUiState>): SharedUiState {
@@ -96,7 +111,7 @@ export function buildLiveShareState(state: Pick<AppState, keyof SharedUiState | 
 	return {
 		shareType: 'active-session-live',
 		...sharedUiStateFromState(state),
-		blocks: state.blocks.map(block => ({ ...block })),
+		blocks: cloneBlocks(state.blocks),
 		dayTitle: state.dayTitle,
 		extraInfo: state.extraInfo,
 		startMin: state.startMin,
@@ -147,7 +162,7 @@ export function buildSelectedDaySnapshot(
 	return {
 		shareType: 'selected-day-snapshot',
 		...sharedUiStateFromState(state),
-		blocks: session ? session.blocks : state.blocks.map(block => ({ ...block })),
+		blocks: session ? session.blocks : cloneBlocks(state.blocks),
 		dayTitle: session?.dayTitle ?? first?.title ?? fmtAgendaDate(selectedDay.date),
 		extraInfo: session?.extraInfo ?? first?.extraInfo ?? '',
 		startMin: session?.startMin ?? firstStart,
@@ -158,7 +173,7 @@ export function buildSelectedDaySnapshot(
 	};
 }
 
-export function buildSyncPayload(state: Pick<AppState, 'flows' | 'agendaText' | 'agendaDate' | 'agendaText2' | 'agendaDate2' | 'agendaMeta' | 'actualTimeLog'>): SyncPayload {
+export function buildSyncPayload(state: Pick<AppState, 'flows' | 'agendaText' | 'agendaDate' | 'agendaText2' | 'agendaDate2' | 'agendaMeta' | 'actualTimeLog' | 'nowDraft' | 'planDraft'>): SyncPayload {
 	return {
 		flows: state.flows || [],
 		agendaText: state.agendaText || '',
@@ -166,7 +181,9 @@ export function buildSyncPayload(state: Pick<AppState, 'flows' | 'agendaText' | 
 		agendaText2: state.agendaText2 || '',
 		agendaDate2: state.agendaDate2 || '',
 		agendaMeta: state.agendaMeta || {},
-		actualTimeLog: state.actualTimeLog || []
+		actualTimeLog: state.actualTimeLog || [],
+		nowDraft: cloneDraft(state.nowDraft),
+		planDraft: cloneDraft(state.planDraft)
 	};
 }
 
@@ -179,7 +196,7 @@ export function applySharedStatePayload(
 	payload: Partial<LiveShareState | SelectedSessionShareState | SelectedDayShareState> & { shareType?: ShareMode }
 ): ShareMode {
 	const shareMode = payload.shareType ?? 'active-session-live';
-	if (payload.blocks) state.blocks = payload.blocks.map(block => ({ ...block }));
+	if (payload.blocks) state.blocks = cloneBlocks(payload.blocks);
 	if (payload.dayTitle !== undefined) state.dayTitle = payload.dayTitle;
 	if (payload.extraInfo !== undefined) state.extraInfo = payload.extraInfo;
 	if (payload.startMin !== undefined) state.startMin = payload.startMin;
