@@ -96,6 +96,7 @@
   let savedAgendaMsg = $state('');
   let savedFlowMsg = $state('');
   let copyAgendaPromptText = $state('AI-prompt');
+  let workspaceAutosaveTimer: ReturnType<typeof setTimeout> | null = null;
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean } | null>(null);
   let planSelectionExplicit = $state(false);
@@ -642,6 +643,16 @@
   function notifyPanelMutation(target: 'now' | 'plan') {
     pulsePanelStatus(target);
     if (target === 'plan') markPlanSaved();
+    queueWorkspaceAutosave();
+  }
+
+  function queueWorkspaceAutosave() {
+    if (isViewMode || loadingFromCloud || !loggedInUser || !s.syncKey) return;
+    if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
+    workspaceAutosaveTimer = setTimeout(() => {
+      workspaceAutosaveTimer = null;
+      void syncSave();
+    }, 1500);
   }
 
   function revertActivePanel() {
@@ -2000,6 +2011,7 @@
 
     return () => {
       clearInterval(id);
+      if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
       if (viewPollId) clearInterval(viewPollId);
       if (viewVisibilityHandler) document.removeEventListener('visibilitychange', viewVisibilityHandler);
       resizeObservers.forEach(ro => ro.disconnect());
