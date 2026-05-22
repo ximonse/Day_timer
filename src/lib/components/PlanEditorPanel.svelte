@@ -1,5 +1,13 @@
 <script lang="ts">
+  import { createVoiceService } from '$lib/voice.js';
+  import { fade } from 'svelte/transition';
+
   let textareaEl: HTMLTextAreaElement | null = $state(null);
+  let aiTextareaEl: HTMLTextAreaElement | null = $state(null);
+
+  const voice = createVoiceService();
+  let isRecording = $state(false);
+  let recordingTarget: 'parts' | 'ai' | null = $state(null);
 
   $effect(() => {
     if (textareaEl && textareaEl.value !== partsValue) {
@@ -9,6 +17,9 @@
 
   let {
     userLevel,
+    aiProvider,
+    aiApiKey,
+    onApplySuggestedDuration,
     hasSelection,
     targetDateLabel,
     sourceLabel,
@@ -81,6 +92,9 @@
     savedFlowMsg
   }: {
     userLevel: number;
+    aiProvider: string;
+    aiApiKey: string;
+    onApplySuggestedDuration: (mins: number) => void;
     hasSelection: boolean;
     targetDateLabel: string;
     sourceLabel: string;
@@ -153,6 +167,39 @@
     savedFlowMsg: string;
   } = $props();
 
+  function startRecording(target: 'parts' | 'ai') {
+    if (isRecording) {
+      voice.stop();
+      isRecording = false;
+      recordingTarget = null;
+      return;
+    }
+
+    isRecording = true;
+    recordingTarget = target;
+    voice.start({
+      useWhisper: aiProvider === 'openai' && hasAiKey,
+      apiKey: aiApiKey,
+      onResult: (text) => {
+        if (target === 'parts') onPartsInput(partsValue ? partsValue + '\n' + text : text);
+        else onAiInputChange(aiInput ? aiInput + ' ' + text : text);
+        isRecording = false;
+        recordingTarget = null;
+      },
+      onError: (err) => {
+        console.error('Voice error:', err);
+        isRecording = false;
+        recordingTarget = null;
+      }
+    });
+  }
+
+  const showRecSuggestion = $derived(
+    userLevel >= 2 && 
+    suggestedDuration && 
+    Math.abs(suggestedDuration.minutes - totalMinutesValue) >= 2
+  );
+
 </script>
 
 <div class="plan-editor">
@@ -185,6 +232,11 @@
     <div class="field-head field-head--wrap">
       <div class="field-label">Aktiviteter</div>
       <div class="field-head-actions">
+        {#if userLevel >= 2}
+          <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-Plan">
+            🎤
+          </button>
+        {/if}
         <button class="micro-btn" onclick={onCopyPrompt}>{copyBtnText}</button>
         <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
       </div>
@@ -206,9 +258,15 @@
           <div class="feedback" style="margin-bottom:8px; opacity:0.8;">
             Används på egen risk. Din API-nyckel används enbart för att skicka instruktioner direkt till AI-leverantör.
           </div>
-          <textarea class="ai-input" placeholder="Beskriv vad du vill planera..."
-            value={aiInput}
-            oninput={(e) => onAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
+          <div style="position:relative;">
+            <textarea class="ai-input" placeholder="Beskriv vad du vill planera..."
+              bind:this={aiTextareaEl}
+              value={aiInput}
+              oninput={(e) => onAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
+            <button class="mic-overlay-btn" class:recording={isRecording && recordingTarget === 'ai'} onclick={() => startRecording('ai')} title="Prata in instruktion">
+              🎤
+            </button>
+          </div>
           <div class="ai-mode-row">
             <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
             <button class="ai-mode-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
@@ -288,6 +346,14 @@
     <button class:on={endMode === 'end'} onclick={() => onEndModeChange('end')}>Sluttid</button>
     <button class:on={endMode === 'len'} onclick={() => onEndModeChange('len')}>Längd</button>
   </div>
+
+  {#if showRecSuggestion}
+    <div class="rec-suggestion" transition:fade>
+      <span class="ico">✨</span> Tidigare har {titleValue || 'detta'} tagit <strong>{suggestedDuration?.minutes} min</strong>.
+      <button class="rec-apply-btn" onclick={() => onApplySuggestedDuration(suggestedDuration!.minutes)}>Använd</button>
+    </div>
+  {/if}
+
   {#if showTimeHelp}
     <div class="feedback">Tiden sparas på vald dag. Välj en annan dag i kalendern först om blocket ska hamna där.</div>
   {/if}
@@ -341,3 +407,63 @@
     </div>
   </div>
 </div>
+
+<style>
+  .micro-btn.recording {
+    background: #ff4444 !important;
+    color: white !important;
+    box-shadow: 0 0 8px rgba(255, 68, 68, 0.4);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+  .mic-overlay-btn {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    background: var(--menu-pill);
+    border: 1px solid var(--menu-border);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    z-index: 10;
+  }
+  .mic-overlay-btn:hover { background: var(--menu-surface); }
+  .mic-overlay-btn.recording {
+    background: #ff4444;
+    color: white;
+    border-color: #ff4444;
+    animation: pulse 1.5s infinite;
+  }
+  .rec-suggestion {
+    background: color-mix(in srgb, var(--accent) 8%, var(--menu-surface));
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--menu-border));
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .rec-apply-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-left: auto;
+  }
+</style>

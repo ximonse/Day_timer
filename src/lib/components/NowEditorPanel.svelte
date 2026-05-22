@@ -1,5 +1,10 @@
 <script lang="ts">
+  import { createVoiceService } from '$lib/voice.js';
+
   let textareaEl = $state<HTMLTextAreaElement | null>(null);
+
+  const voice = createVoiceService();
+  let isRecording = $state(false);
 
   $effect(() => {
     if (textareaEl && textareaEl.value !== partsValue) {
@@ -8,6 +13,10 @@
   });
 
   let {
+    userLevel,
+    aiProvider,
+    aiApiKey,
+    hasAiKey,
     titleValue,
     partsValue,
     partsFeedbackText,
@@ -29,6 +38,10 @@
     onToggleTitleHelp,
     onTogglePartsHelp
   }: {
+    userLevel: number;
+    aiProvider: string;
+    aiApiKey: string;
+    hasAiKey: boolean;
     titleValue: string;
     partsValue: string;
     partsFeedbackText: string;
@@ -50,6 +63,28 @@
     onToggleTitleHelp: () => void;
     onTogglePartsHelp: () => void;
   } = $props();
+
+  function startRecording() {
+    if (isRecording) {
+      voice.stop();
+      isRecording = false;
+      return;
+    }
+
+    isRecording = true;
+    voice.start({
+      useWhisper: aiProvider === 'openai' && hasAiKey,
+      apiKey: aiApiKey,
+      onResult: (text) => {
+        onPartsInput(partsValue ? partsValue + '\n' + text : text);
+        isRecording = false;
+      },
+      onError: (err) => {
+        console.error('Voice error:', err);
+        isRecording = false;
+      }
+    });
+  }
 </script>
 
 <div class="step-section">
@@ -73,7 +108,14 @@
   <div class="step-body">
     <div class="field-head">
       <div class="field-label">Aktiviteter</div>
-      <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
+      <div class="field-head-actions">
+        {#if userLevel >= 2}
+          <button class="micro-btn" class:recording={isRecording} onclick={startRecording} title="Röst-till-Plan">
+            🎤
+          </button>
+        {/if}
+        <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
+      </div>
     </div>
     {#if showPartsHelp}
       <div class="feedback">En rad per aktivitet. Tider som slutar med <code>m</code> låses, övriga delar fördelas automatiskt. Börja en rad med <code>#</code> för rubrik, <code>-</code> för underpunkt och <code>&amp;</code> för kommentar. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rad.</div>
@@ -112,3 +154,17 @@
     <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
   </button>
 </div>
+
+<style>
+  .micro-btn.recording {
+    background: #ff4444 !important;
+    color: white !important;
+    box-shadow: 0 0 8px rgba(255, 68, 68, 0.4);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+</style>
