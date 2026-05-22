@@ -1,6 +1,7 @@
 import { Redis } from '@upstash/redis';
 import { json, error } from '@sveltejs/kit';
 import { validateSyncToken } from '$lib/security.js';
+import { workspaceDataFromSyncResponse, workspaceEnvelopeFromData } from '$lib/workspace.js';
 
 const redis = new Redis({
   url: process.env.daytimer_KV_REST_API_URL!,
@@ -21,6 +22,10 @@ function userProfileKey(token: string): string {
   return `daytimer:user:${token}`;
 }
 
+function createId(): string {
+  return Math.random().toString(36).slice(2, 9);
+}
+
 export async function GET({ request }: { request: Request }) {
   const token = readSyncToken(request);
   const [data, profile] = await Promise.all([
@@ -28,9 +33,10 @@ export async function GET({ request }: { request: Request }) {
     redis.get(userProfileKey(token))
   ]) as [any, any];
   
-  const responseData = data ?? { flows: [], actualTimeLog: [] };
+  const workspace = workspaceDataFromSyncResponse(data ?? {}, createId);
+  if (!workspace) throw error(500, 'invalid workspace data');
   return json({
-    ...responseData,
+    workspace,
     userLevel: profile?.level || 1
   });
 }
@@ -38,18 +44,10 @@ export async function GET({ request }: { request: Request }) {
 export async function POST({ request }: { request: Request }) {
   const token = readSyncToken(request);
   const body = await request.json();
-  if (!Array.isArray(body?.flows)) throw error(400, 'invalid body');
+  const workspace = workspaceDataFromSyncResponse(body, createId);
+  if (!workspace) throw error(400, 'invalid body');
   
-  // Extract userLevel if present, but don't store it in the sync data itself
-  const { userLevel, ...syncData } = body;
-  
-  const tasks: Promise<any>[] = [redis.set(redisKey(token), syncData)];
-  
-  if (userLevel !== undefined) {
-    // Only update profile if we explicitly want to (e.g. after upgrade)
-    // For now, POST just saves sync data, but we could allow updating profile here too
-    // However, it's safer to have a separate endpoint for level upgrades.
-  }
+  const tasks: Promise<any>[] = [redis.set(redisKey(token), workspaceEnvelopeFromData(workspace))];
 
   await Promise.all(tasks);
   return json({ ok: true });

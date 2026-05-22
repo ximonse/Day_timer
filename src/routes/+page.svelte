@@ -37,7 +37,6 @@
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
   import { applyDayTextHeuristic, computeRecommendation, inferSubjectCategory } from '$lib/learning.js';
-  import { normalizePersistedState } from '$lib/state-normalize.js';
   import {
     makeActualEntryId,
     upsertActualEntry,
@@ -52,10 +51,15 @@
     buildLiveShareState,
     buildSelectedDaySnapshot,
     buildSelectedSessionSnapshot,
-    buildSyncPayload,
     type ShareMode,
     sharedUiStateFromState
   } from '$lib/share-state.js';
+  import {
+    applyWorkspaceDataToAppState,
+    isWorkspaceMeaningfullyEmpty,
+    workspaceDataFromAppState,
+    workspaceDataFromSyncResponse
+  } from '$lib/workspace.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -564,41 +568,6 @@
     } else if (s.activeSection === 'plan') {
       s.planDraft = currentEditorDraft();
     }
-  }
-
-  function blockHasContent(block: Block) {
-    return block.title.trim() !== 'Lektion'
-      || block.minutes !== 45
-      || block.note.trim() !== ''
-      || block.warning !== true
-      || block.pinned !== false;
-  }
-
-  function draftHasContent(draft: EditorDraft) {
-    return draft.dayTitle.trim() !== ''
-      || draft.extraInfo.trim() !== ''
-      || draft.startMin !== 8 * 60
-      || draft.blocks.length !== 1
-      || draft.blocks.some(blockHasContent);
-  }
-
-  function emptyDraft(): EditorDraft {
-    return {
-      dayTitle: '',
-      extraInfo: '',
-      startMin: 8 * 60,
-      blocks: [{ id: 'sync-empty', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }]
-    };
-  }
-
-  function syncPayloadHasContent(payload: ReturnType<typeof buildSyncPayload>) {
-    return payload.flows.length > 0
-      || payload.agendaText.trim() !== ''
-      || payload.agendaText2.trim() !== ''
-      || Object.keys(payload.agendaMeta).length > 0
-      || payload.actualTimeLog.length > 0
-      || draftHasContent(payload.nowDraft)
-      || draftHasContent(payload.planDraft);
   }
 
   function applyEditorDraft(draft: EditorDraft) {
@@ -1187,51 +1156,25 @@
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      const normalized = normalizePersistedState(data, uid);
-      const localSnapshot = buildSyncPayload(s);
-      const cloudSnapshot = buildSyncPayload({
-        flows: normalized.flows || [],
-        agendaText: typeof normalized.agendaText === 'string' ? normalized.agendaText : '',
-        agendaDate: typeof normalized.agendaDate === 'string' ? normalized.agendaDate : '',
-        agendaText2: typeof normalized.agendaText2 === 'string' ? normalized.agendaText2 : '',
-        agendaDate2: typeof normalized.agendaDate2 === 'string' ? normalized.agendaDate2 : '',
-        agendaMeta: normalized.agendaMeta && typeof normalized.agendaMeta === 'object' ? normalized.agendaMeta : {},
-        actualTimeLog: Array.isArray(normalized.actualTimeLog) ? normalized.actualTimeLog : [],
-        nowDraft: normalized.nowDraft ? cloneDraft(normalized.nowDraft) : emptyDraft(),
-        planDraft: normalized.planDraft ? cloneDraft(normalized.planDraft) : emptyDraft()
-      });
-      if (!syncPayloadHasContent(cloudSnapshot) && syncPayloadHasContent(localSnapshot)) {
-        lastSyncedHash = JSON.stringify(localSnapshot);
+      const cloudWorkspace = workspaceDataFromSyncResponse(data, uid);
+      const localWorkspace = workspaceDataFromAppState(s);
+      if (!cloudWorkspace) throw new Error();
+      if (isWorkspaceMeaningfullyEmpty(cloudWorkspace) && !isWorkspaceMeaningfullyEmpty(localWorkspace)) {
+        lastSyncedHash = JSON.stringify(localWorkspace);
         appState.persist();
         queueMicrotask(() => { void syncSave(); });
         showSyncStatus('Molnet var tomt. Lokal data laddades upp ✓');
         return;
       }
-      const cloudFlows: Flow[] = normalized.flows || [];
+      const cloudFlows: Flow[] = cloudWorkspace.flows || [];
       const cloudIds = new Set(cloudFlows.map((f: Flow) => f.id));
-      const localOnly = (s.flows || []).filter(f => !cloudIds.has(f.id));
-      s.flows = [...cloudFlows, ...localOnly];
-      if ('agendaText' in data) {
-        s.agendaText = typeof normalized.agendaText === 'string' ? normalized.agendaText : '';
-        s.agendaDate = typeof normalized.agendaDate === 'string' ? normalized.agendaDate : '';
-      }
-      if ('agendaText2' in data) {
-        s.agendaText2 = typeof normalized.agendaText2 === 'string' ? normalized.agendaText2 : '';
-        s.agendaDate2 = typeof normalized.agendaDate2 === 'string' ? normalized.agendaDate2 : '';
-      }
-      if (normalized.agendaMeta && typeof normalized.agendaMeta === 'object') {
-        s.agendaMeta = normalized.agendaMeta;
-      }
-      if (Array.isArray(normalized.actualTimeLog)) {
-        s.actualTimeLog = normalized.actualTimeLog;
-      }
+      const localOnly = localWorkspace.flows.filter((flow) => !cloudIds.has(flow.id));
+      applyWorkspaceDataToAppState(s, { ...cloudWorkspace, flows: [...cloudFlows, ...localOnly] });
       let restoredDraft = false;
-      if (normalized.nowDraft) {
-        s.nowDraft = cloneDraft(normalized.nowDraft);
+      if (cloudWorkspace.drafts.now) {
         restoredDraft = restoredDraft || s.activeSection === 'now';
       }
-      if (normalized.planDraft) {
-        s.planDraft = cloneDraft(normalized.planDraft);
+      if (cloudWorkspace.drafts.plan) {
         restoredDraft = restoredDraft || s.activeSection === 'plan';
       }
       if (restoredDraft) {
@@ -1244,7 +1187,7 @@
       sessionSource = { kind: 'unscheduled' };
       capturePanelBaseline('now');
       capturePanelBaseline('plan');
-      lastSyncedHash = JSON.stringify(buildSyncPayload(s));
+      lastSyncedHash = JSON.stringify(workspaceDataFromAppState(s));
       appState.persist();
       showSyncStatus('Laddat från moln ✓');
     } catch { showSyncStatus('Kunde inte ladda', true); }
@@ -1255,7 +1198,9 @@
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
     syncActiveDraftFromEditor();
-    const payloadStr = JSON.stringify(buildSyncPayload(s));
+    const workspace = workspaceDataFromAppState(s);
+    const workspaceHash = JSON.stringify(workspace);
+    const payloadStr = JSON.stringify({ workspace });
     try {
       const res = await fetch('/api/sync', {
         method: 'POST',
@@ -1266,7 +1211,7 @@
         body: payloadStr,
       });
       if (!res.ok) throw new Error();
-      lastSyncedHash = payloadStr;
+      lastSyncedHash = workspaceHash;
       showSyncStatus('Sparat till moln ✓');
     } catch { showSyncStatus('Kunde inte spara', true); }
   }
@@ -2142,7 +2087,7 @@
   });
 
   $effect(() => {
-    const hash = JSON.stringify(buildSyncPayload(s));
+    const hash = JSON.stringify(workspaceDataFromAppState(s));
     if (isViewMode || loadingFromCloud || !loggedInUser || !s.syncKey
       || lastSyncedHash === null || hash === lastSyncedHash) {
       return;
