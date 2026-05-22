@@ -663,7 +663,7 @@
   function queueWorkspaceAutosave() {
     if (isViewMode || loadingFromCloud || !hasSyncSession()) return;
     syncProbeState = 'queued';
-    syncProbeText = 'auto koead';
+    syncProbeText = 'Väntar...';
     if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
     workspaceAutosaveTimer = setTimeout(() => {
       workspaceAutosaveTimer = null;
@@ -1275,7 +1275,7 @@
       if (!res.ok) throw new Error();
       const data = await res.json();
       s.currentRevision = data.revision;
-      lastSyncedHash = workspaceHash;
+      lastSyncedHash = JSON.stringify(currentWorkspaceData());
       syncProbeState = 'ok';
       syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
       showSyncStatus(source === 'manual' ? 'Sparat till moln ✓' : 'Autosparat ✓');
@@ -2065,13 +2065,21 @@
       }
     };
     document.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('focus', handleFocus);
+    const syncPollId = setInterval(() => {
+      if (!document.hidden && s.syncKey && !loadingFromCloud && !syncProbeState.startsWith('saving')) {
+        void syncLoad();
+      }
+    }, 5 * 60 * 1000);
 
     return () => {
       clearInterval(id);
       if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
       if (viewPollId) clearInterval(viewPollId);
+      if (syncPollId) clearInterval(syncPollId);
       if (viewVisibilityHandler) document.removeEventListener('visibilitychange', viewVisibilityHandler);
       document.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('focus', handleFocus);
       resizeObservers.forEach(ro => ro.disconnect());
       document.removeEventListener('click', handleOutsideClick);
       window.removeEventListener('keydown', handleKeydown);
@@ -2167,12 +2175,18 @@
 
   $effect(() => {
     const hash = JSON.stringify(currentWorkspaceData());
-    if (isViewMode || loadingFromCloud || !hasSyncSession()
-      || lastSyncedHash === null || hash === lastSyncedHash) {
+    if (isViewMode || loadingFromCloud || !hasSyncSession() || hash === lastSyncedHash) {
       return;
     }
-    const timer = setTimeout(() => { void syncSave('auto-effect'); }, 4000);
+    const timer = setTimeout(() => { void syncSave('auto-effect'); }, 2000);
     return () => clearTimeout(timer);
+  });
+
+  $effect(() => {
+    if (agendaDraftDirty && !isViewMode && hasSyncSession()) {
+      const timer = setTimeout(() => { saveAgenda(); }, 3000);
+      return () => clearTimeout(timer);
+    }
   });
 
   function toggleCollapse() {
