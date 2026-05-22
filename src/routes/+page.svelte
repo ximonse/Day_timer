@@ -1356,7 +1356,7 @@
   }
 
   let lastPushedHash = '';
-  let lastSyncedHash: string | null = null;
+  let lastSyncedHash = $state<string | null>(null);
   let loadingFromCloud = $state(true);
 
   async function pushShareState() {
