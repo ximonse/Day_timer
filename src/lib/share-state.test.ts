@@ -4,7 +4,6 @@ import {
 	buildLiveShareState,
 	buildSelectedDaySnapshot,
 	buildSelectedSessionSnapshot,
-	buildSyncPayload,
 	sharedUiStateFromState
 } from './share-state.js';
 import type { AgendaDay } from './parse.js';
@@ -96,19 +95,7 @@ describe('share-state helpers', () => {
 		expect(snapshot?.clockSpan).toBe(720);
 	});
 
-	test('builds sync payload and applies shared payload', () => {
-		const payload = buildSyncPayload({
-			flows: [flow()],
-			agendaText: 'a',
-			agendaDate: 'b',
-			agendaText2: 'c',
-			agendaDate2: 'd',
-			agendaMeta: {},
-			actualTimeLog: []
-		});
-		expect(payload.flows).toHaveLength(1);
-		expect(payload.agendaText2).toBe('c');
-
+	test('applies shared payload', () => {
 		const target = {
 			...sharedState(),
 			blocks: [block({ title: 'old' })],

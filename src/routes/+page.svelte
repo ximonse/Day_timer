@@ -3,7 +3,7 @@
   
   import { onMount, untrack } from 'svelte';
   import { fade, fly } from 'svelte/transition';
-  import { appState, uid, type ActualTimeEntry, type AgendaFlowMeta, type AppSection, type Block, type Flow } from '$lib/state.svelte.js';
+  import { appState, uid, type ActualTimeEntry, type AgendaFlowMeta, type AppSection, type Block, type EditorDraft, type Flow } from '$lib/state.svelte.js';
   import { clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
@@ -51,10 +51,15 @@
     buildLiveShareState,
     buildSelectedDaySnapshot,
     buildSelectedSessionSnapshot,
-    buildSyncPayload,
     type ShareMode,
     sharedUiStateFromState
   } from '$lib/share-state.js';
+  import {
+    applyWorkspaceDataToAppState,
+    isWorkspaceMeaningfullyEmpty,
+    workspaceDataFromAppState,
+    workspaceDataFromSyncResponse
+  } from '$lib/workspace.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -91,6 +96,7 @@
   let savedAgendaMsg = $state('');
   let savedFlowMsg = $state('');
   let copyAgendaPromptText = $state('AI-prompt');
+  let workspaceAutosaveTimer: ReturnType<typeof setTimeout> | null = null;
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean } | null>(null);
   let planSelectionExplicit = $state(false);
@@ -158,6 +164,8 @@
   let planTemplateSelection = $state('');
   let syncStatusText = $state('');
   let syncStatusError = $state(false);
+  let syncProbeText = $state('');
+  let syncProbeState = $state<'idle' | 'queued' | 'loading' | 'saving' | 'ok' | 'error' | 'conflict'>('idle');
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
 
   let aiConfig = $state<AiConfig>({ ...DEFAULT_AI_CONFIG });
@@ -464,36 +472,18 @@
     const oldSection = s.activeSection;
     if (oldSection === section) return;
 
-    // Save current state to the appropriate draft
     if (oldSection === 'now') {
-      s.nowDraft = {
-        dayTitle: s.dayTitle,
-        blocks: cloneBlocks(s.blocks),
-        extraInfo: s.extraInfo,
-        startMin: s.startMin
-      };
+      s.nowDraft = currentEditorDraft();
     } else if (oldSection === 'plan') {
-      s.planDraft = {
-        dayTitle: s.dayTitle,
-        blocks: cloneBlocks(s.blocks),
-        extraInfo: s.extraInfo,
-        startMin: s.startMin
-      };
+      s.planDraft = currentEditorDraft();
     }
 
     s.activeSection = section;
 
-    // Load state from the new section's draft
     if (section === 'now') {
-      s.dayTitle = s.nowDraft.dayTitle;
-      s.blocks = cloneBlocks(s.nowDraft.blocks);
-      s.extraInfo = s.nowDraft.extraInfo;
-      s.startMin = s.nowDraft.startMin;
+      applyEditorDraft(s.nowDraft);
     } else if (section === 'plan') {
-      s.dayTitle = s.planDraft.dayTitle;
-      s.blocks = cloneBlocks(s.planDraft.blocks);
-      s.extraInfo = s.planDraft.extraInfo;
-      s.startMin = s.planDraft.startMin;
+      applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
       agendaInputOpen = true;
     }
@@ -557,6 +547,74 @@
     return blocks.map(block => ({ ...block }));
   }
 
+  function cloneDraft(draft: EditorDraft): EditorDraft {
+    return {
+      dayTitle: draft.dayTitle,
+      blocks: cloneBlocks(draft.blocks),
+      extraInfo: draft.extraInfo,
+      startMin: draft.startMin
+    };
+  }
+
+  function currentEditorDraft(): EditorDraft {
+    return {
+      dayTitle: s.dayTitle,
+      blocks: cloneBlocks(s.blocks),
+      extraInfo: s.extraInfo,
+      startMin: s.startMin
+    };
+  }
+
+  function currentWorkspaceData() {
+    const activeDraft = currentEditorDraft();
+    return workspaceDataFromAppState({
+      ...s,
+      nowDraft: s.activeSection === 'now' ? activeDraft : s.nowDraft,
+      planDraft: s.activeSection === 'plan' ? activeDraft : s.planDraft
+    }, s.currentRevision);
+  }
+
+  function hasSyncSession() {
+    return validateSyncToken(s.syncKey || '');
+  }
+
+  function probeLabel(source: 'manual' | 'auto-panel' | 'auto-effect') {
+    return source === 'manual' ? 'manuell' : 'auto';
+  }
+
+  function probeTime() {
+    return new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function syncActiveDraftFromEditor() {
+    if (s.activeSection === 'now') {
+      s.nowDraft = currentEditorDraft();
+    } else if (s.activeSection === 'plan') {
+      s.planDraft = currentEditorDraft();
+    }
+  }
+
+  function applyEditorDraft(draft: EditorDraft) {
+    s.dayTitle = draft.dayTitle;
+    s.blocks = cloneBlocks(draft.blocks);
+    s.extraInfo = draft.extraInfo;
+    s.startMin = draft.startMin;
+    warnedSet.clear();
+    updateTimeFeedback();
+  }
+
+  function restoreCurrentEditorFromDraft() {
+    if (s.activeSection === 'now') {
+      applyEditorDraft(s.nowDraft);
+    } else if (s.activeSection === 'plan') {
+      applyEditorDraft(s.planDraft);
+      s.agendaOpen = true;
+      agendaInputOpen = true;
+    }
+    partsDraftDirty = false;
+    syncPartsDraftFromState(true);
+  }
+
   function currentSnapshot(): SessionSnapshot {
     return {
       dayTitle: s.dayTitle,
@@ -599,6 +657,18 @@
   function notifyPanelMutation(target: 'now' | 'plan') {
     pulsePanelStatus(target);
     if (target === 'plan') markPlanSaved();
+    queueWorkspaceAutosave();
+  }
+
+  function queueWorkspaceAutosave() {
+    if (isViewMode || loadingFromCloud || !hasSyncSession()) return;
+    syncProbeState = 'queued';
+    syncProbeText = 'Väntar...';
+    if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
+    workspaceAutosaveTimer = setTimeout(() => {
+      workspaceAutosaveTimer = null;
+      void syncSave('auto-panel');
+    }, 1500);
   }
 
   function revertActivePanel() {
@@ -1003,7 +1073,7 @@
     appState.persist();
     savedFlowMsg = 'Sparat ✓';
     setTimeout(() => { savedFlowMsg = ''; }, 2000);
-    if (loggedInUser) syncSave();
+    if (hasSyncSession()) syncSave();
   }
 
   function addFlowToAgendaDate(date: string, f: Flow, activate = false, meta: AgendaFlowMeta | null = null, startMinOverride?: number) {
@@ -1053,7 +1123,7 @@
     addFlowToAgendaDate(targetDate, f, false, { source: 'template', label: f.title }, suggestedStartMinForDate(agendaDays, targetDate, totalFlowMinutes(f)));
     savedFlowMsg = 'Tillagd i dagplan ✓';
     setTimeout(() => { savedFlowMsg = ''; }, 2000);
-    if (loggedInUser) syncSave();
+    if (hasSyncSession()) syncSave();
   }
 
   function deleteFlow(id: string) {
@@ -1114,32 +1184,46 @@
 
   async function syncLoad() {
     const token = s.syncKey || '';
-    if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
+    if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); loadingFromCloud = false; return; }
+    loadingFromCloud = true;
+    syncProbeState = 'loading';
+    syncProbeText = 'Laddar...';
     try {
       const res = await fetch('/api/sync', {
         headers: { 'x-sync-token': token }
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      // Merge flows: cloud wins for same ID, keep local-only flows
-      const cloudFlows: Flow[] = data.flows || [];
+      const cloudWorkspace = workspaceDataFromSyncResponse(data, uid);
+      const localWorkspace = currentWorkspaceData();
+      if (!cloudWorkspace) throw new Error();
+      
+      if (isWorkspaceMeaningfullyEmpty(cloudWorkspace) && !isWorkspaceMeaningfullyEmpty(localWorkspace)) {
+        lastSyncedHash = JSON.stringify(localWorkspace);
+        appState.persist();
+        queueMicrotask(() => { void syncSave('auto-effect'); });
+        showSyncStatus('Molnet var tomt. Lokal data laddades upp ✓');
+        syncProbeState = 'ok';
+        syncProbeText = `Synkad ${probeTime()}`;
+        return;
+      }
+      
+      const cloudFlows: Flow[] = cloudWorkspace.flows || [];
       const cloudIds = new Set(cloudFlows.map((f: Flow) => f.id));
-      const localOnly = (s.flows || []).filter(f => !cloudIds.has(f.id));
-      s.flows = [...cloudFlows, ...localOnly];
-      // Restore agenda from cloud if it has content
-      if ('agendaText' in data) {
-        s.agendaText = data.agendaText;
-        s.agendaDate = data.agendaDate || '';
+      const localOnly = localWorkspace.flows.filter((flow) => !cloudIds.has(flow.id));
+      
+      applyWorkspaceDataToAppState(s, { ...cloudWorkspace, flows: [...cloudFlows, ...localOnly] });
+      s.currentRevision = cloudWorkspace.revision;
+      
+      let restoredDraft = false;
+      if (cloudWorkspace.drafts.now) {
+        restoredDraft = restoredDraft || s.activeSection === 'now';
       }
-      if ('agendaText2' in data) {
-        s.agendaText2 = data.agendaText2;
-        s.agendaDate2 = data.agendaDate2 || '';
+      if (cloudWorkspace.drafts.plan) {
+        restoredDraft = restoredDraft || s.activeSection === 'plan';
       }
-      if (data.agendaMeta && typeof data.agendaMeta === 'object') {
-        s.agendaMeta = data.agendaMeta;
-      }
-      if (Array.isArray(data.actualTimeLog)) {
-        s.actualTimeLog = data.actualTimeLog;
+      if (restoredDraft) {
+        restoreCurrentEditorFromDraft();
       }
       if (typeof data.userLevel === 'number') {
         s.userLevel = data.userLevel;
@@ -1148,26 +1232,58 @@
       sessionSource = { kind: 'unscheduled' };
       capturePanelBaseline('now');
       capturePanelBaseline('plan');
+      lastSyncedHash = JSON.stringify(currentWorkspaceData());
       appState.persist();
       showSyncStatus('Laddat från moln ✓');
-    } catch { showSyncStatus('Kunde inte ladda', true); }
+      syncProbeState = 'ok';
+      syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
+    } catch { 
+      showSyncStatus('Kunde inte ladda', true); 
+      syncProbeState = 'error';
+      syncProbeText = 'Laddningsfel';
+    }
+    finally { loadingFromCloud = false; }
   }
 
-  async function syncSave() {
+  async function syncSave(source: 'manual' | 'auto-panel' | 'auto-effect' = 'manual') {
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
+    syncActiveDraftFromEditor();
+    const workspace = currentWorkspaceData();
+    const workspaceHash = JSON.stringify(workspace);
+    const payloadStr = JSON.stringify({ workspace });
     try {
+      syncProbeState = 'saving';
+      syncProbeText = source === 'manual' ? 'Sparar...' : 'Autosparar...';
       const res = await fetch('/api/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-sync-token': token
         },
-        body: JSON.stringify(buildSyncPayload(s)),
+        body: payloadStr,
       });
+      
+      if (res.status === 409) {
+        const data = await res.json();
+        syncProbeState = 'conflict';
+        syncProbeText = 'Konflikt (nyare version finns)';
+        showSyncStatus('Kunde inte spara: nyare version finns i molnet', true);
+        return;
+      }
+      
       if (!res.ok) throw new Error();
-      showSyncStatus('Sparat till moln ✓');
-    } catch { showSyncStatus('Kunde inte spara', true); }
+      const data = await res.json();
+      s.currentRevision = data.revision;
+      lastSyncedHash = JSON.stringify(currentWorkspaceData());
+      syncProbeState = 'ok';
+      syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
+      showSyncStatus(source === 'manual' ? 'Sparat till moln ✓' : 'Autosparat ✓');
+    } catch {
+      syncProbeState = 'error';
+      syncProbeText = 'Kunde inte spara';
+      showSyncStatus('Kunde inte spara', true);
+    }
   }
 
   async function upgradeLevel(code: string) {
@@ -1240,6 +1356,8 @@
   }
 
   let lastPushedHash = '';
+  let lastSyncedHash = $state<string | null>(null);
+  let loadingFromCloud = $state(true);
 
   async function pushShareState() {
     const entry = shareEntries[ACTIVE_SHARE_KEY];
@@ -1367,7 +1485,7 @@
     sessionSource = { kind: 'unscheduled' };
     appState.persist();
 
-    if (loggedInUser) syncSave();
+    if (hasSyncSession()) syncSave();
 
     savedAgendaMsg = 'Sparat ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
@@ -1426,7 +1544,7 @@
     savedAgendaMsg = 'ICS importerad ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
     appState.persist();
-    if (loggedInUser) syncSave();
+    if (hasSyncSession()) syncSave();
   }
 
   async function readIcsFile(event: Event) {
@@ -1890,7 +2008,7 @@
     const savedToken = readSessionValue(SYNC_TOKEN_STORAGE) ?? localStorage.getItem(SYNC_TOKEN_STORAGE);
     const migrateLegacyToken = async () => {
       const sourceToken: string = savedToken || s.syncKey || '';
-      if (!sourceToken) return;
+      if (!sourceToken) { loadingFromCloud = false; return; }
       const existingHashedToken = validateSyncToken(sourceToken) ? sourceToken : null;
       if (existingHashedToken) {
         s.syncKey = existingHashedToken;
@@ -1911,7 +2029,8 @@
         }
       }
       // Trigger sync load once we have a valid key
-      if (s.syncKey) syncLoad();
+      if (s.syncKey) await syncLoad();
+      else loadingFromCloud = false;
     };
     void migrateLegacyToken();
     const savedUser = localStorage.getItem('timer-login-user');
@@ -1940,10 +2059,27 @@
     window.addEventListener('keydown', handleKeydown);
     window.addEventListener('resize', handleViewport);
 
+    const handleFocus = () => {
+      if (!document.hidden && s.syncKey && !loadingFromCloud) {
+        void syncLoad();
+      }
+    };
+    document.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('focus', handleFocus);
+    const syncPollId = setInterval(() => {
+      if (!document.hidden && s.syncKey && !loadingFromCloud && !syncProbeState.startsWith('saving')) {
+        void syncLoad();
+      }
+    }, 5 * 60 * 1000);
+
     return () => {
       clearInterval(id);
+      if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
       if (viewPollId) clearInterval(viewPollId);
+      if (syncPollId) clearInterval(syncPollId);
       if (viewVisibilityHandler) document.removeEventListener('visibilitychange', viewVisibilityHandler);
+      document.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('focus', handleFocus);
       resizeObservers.forEach(ro => ro.disconnect());
       document.removeEventListener('click', handleOutsideClick);
       window.removeEventListener('keydown', handleKeydown);
@@ -1997,6 +2133,15 @@
   });
 
   $effect(() => {
+    const _section = s.activeSection;
+    const _title = s.dayTitle;
+    const _extra = s.extraInfo;
+    const _start = s.startMin;
+    const _blocks = JSON.stringify(s.blocks);
+    syncActiveDraftFromEditor();
+  });
+
+  $effect(() => {
     const activeEntry = shareEntries[ACTIVE_SHARE_KEY];
     if (!activeEntry || activeEntry.mode !== 'active-session-live') return;
     let id: ReturnType<typeof setInterval> | null = null;
@@ -2026,6 +2171,22 @@
       s.showMin + s.showFive + s.showQuarter + s.showSegLabels + s.showCenterEnd + s.segMinutesMode + s.clockSpan +
       s.agendaText + s.agendaDate + s.agendaText2 + s.agendaDate2 + s.agendaView;
     agendaItems; // track agenda for 12h mode
+  });
+
+  $effect(() => {
+    const hash = JSON.stringify(currentWorkspaceData());
+    if (isViewMode || loadingFromCloud || !hasSyncSession() || hash === lastSyncedHash) {
+      return;
+    }
+    const timer = setTimeout(() => { void syncSave('auto-effect'); }, 2000);
+    return () => clearTimeout(timer);
+  });
+
+  $effect(() => {
+    if (agendaDraftDirty && !isViewMode && hasSyncSession()) {
+      const timer = setTimeout(() => { saveAgenda(); }, 3000);
+      return () => clearTimeout(timer);
+    }
   });
 
   function toggleCollapse() {
@@ -2345,6 +2506,14 @@
             </div>
           </div>
 
+          {#if hasSyncSession() && syncProbeText}
+            <span
+              style={`font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);margin-right:6px;white-space:nowrap;${syncProbeState === 'saving' ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : syncProbeState === 'ok' ? 'background:rgba(46,160,67,.14);border-color:rgba(46,160,67,.35);' : syncProbeState === 'error' ? 'background:rgba(220,38,38,.12);border-color:rgba(220,38,38,.35);' : 'opacity:.75;'}`}
+              title="Sync-probe"
+            >
+              {syncProbeText}
+            </span>
+          {/if}
           <span style="font-size:12px;opacity:.55;padding:0 6px;border-left:1px solid var(--border);cursor:default;" title={loggedInUser ? `Inloggad som ${loggedInUser}` : 'Inte inloggad'}>
             {loggedInUser ? '👤' : '👤︎'}
           </span>
@@ -2484,6 +2653,7 @@
                   partsDraftDirty = false;
                   notifyPanelMutation('plan');
                   appState.persist();
+                  if (hasSyncSession()) void syncSave();
                   return;
                 }
                 const d = new Date();
@@ -2495,6 +2665,7 @@
                 capturePanelBaseline('now');
                 partsDraftDirty = false;
                 notifyPanelMutation('now');
+                if (hasSyncSession()) void syncSave();
               }}
               onCreateNew={() => {
                 const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
@@ -2504,6 +2675,7 @@
                 partsDraftDirty = false;
                 notifyPanelMutation('plan');
                 appState.persist();
+                if (hasSyncSession()) void syncSave();
               }}
               onStartTimeInput={(value) => {
                 const [h, m] = value.split(':').map(Number);
@@ -2588,6 +2760,8 @@
 
               {syncStatusText}
               {syncStatusError}
+              {syncProbeText}
+              {syncProbeState}
               {loginName}
               {loginPass}
               aiProvider={aiConfig.provider}

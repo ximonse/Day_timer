@@ -30,6 +30,8 @@
     onSyncLoad,
     onSyncSave,
     onLogin,
+    syncProbeText,
+    syncProbeState,
     onLoginNameChange,
     onLoginPassChange,
     onToggleHelpHints,
@@ -68,6 +70,8 @@
     onSyncLoad: () => void;
     onSyncSave: () => void;
     onLogin: () => void;
+    syncProbeText: string;
+    syncProbeState: 'idle' | 'queued' | 'loading' | 'saving' | 'ok' | 'error' | 'conflict';
     onLoginNameChange: (value: string) => void;
     onLoginPassChange: (value: string) => void;
     onToggleHelpHints: () => void;
@@ -123,6 +127,17 @@
       <button class="quickstart sync-btn" onclick={onSyncLoad}>☁ Ladda</button>
       <button class="quickstart sync-btn" onclick={onSyncSave}>☁ Spara</button>
     </div>
+    {#if syncProbeText}
+      <div class="sync-probe" class:error={syncProbeState === 'error'} class:conflict={syncProbeState === 'conflict'}>
+        <span class="probe-dot" class:active={['loading', 'saving'].includes(syncProbeState)}></span>
+        {syncProbeText}
+      </div>
+    {/if}
+    {#if syncProbeState === 'conflict'}
+      <div class="section-copy" style="margin-top:4px; color:var(--accent); font-weight:600; font-size:11px;">
+        Välj "Ladda" för att hämta molnets version.
+      </div>
+    {/if}
   {:else}
     <div class="field-label">Synkronisering</div>
     <input type="text" class="sync-input"
@@ -236,4 +251,34 @@
     title="Unlock Level 2"
   />
 </div>
+
+<style>
+  .sync-probe {
+    font-size: 11px;
+    color: var(--menu-muted);
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: tabular-nums;
+  }
+  .sync-probe.error { color: #a12d21; }
+  .sync-probe.conflict { color: var(--accent); font-weight: 600; }
+  .probe-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--menu-muted);
+    opacity: 0.3;
+  }
+  .probe-dot.active {
+    background: var(--accent);
+    opacity: 1;
+    animation: pulse 1s infinite alternate;
+  }
+  @keyframes pulse {
+    from { opacity: 0.4; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1.1); }
+  }
+</style>
 

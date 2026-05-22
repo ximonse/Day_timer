@@ -64,14 +64,8 @@ export interface SelectedDayShareState extends SharedUiState {
 	agendaDate: string;
 }
 
-export interface SyncPayload {
-	flows: Flow[];
-	agendaText: string;
-	agendaDate: string;
-	agendaText2: string;
-	agendaDate2: string;
-	agendaMeta: AppState['agendaMeta'];
-	actualTimeLog: AppState['actualTimeLog'];
+function cloneBlocks(blocks: Block[]): Block[] {
+	return blocks.map(block => ({ ...block }));
 }
 
 export function sharedUiStateFromState(state: Pick<AppState, keyof SharedUiState>): SharedUiState {
@@ -96,7 +90,7 @@ export function buildLiveShareState(state: Pick<AppState, keyof SharedUiState | 
 	return {
 		shareType: 'active-session-live',
 		...sharedUiStateFromState(state),
-		blocks: state.blocks.map(block => ({ ...block })),
+		blocks: cloneBlocks(state.blocks),
 		dayTitle: state.dayTitle,
 		extraInfo: state.extraInfo,
 		startMin: state.startMin,
@@ -147,7 +141,7 @@ export function buildSelectedDaySnapshot(
 	return {
 		shareType: 'selected-day-snapshot',
 		...sharedUiStateFromState(state),
-		blocks: session ? session.blocks : state.blocks.map(block => ({ ...block })),
+		blocks: session ? session.blocks : cloneBlocks(state.blocks),
 		dayTitle: session?.dayTitle ?? first?.title ?? fmtAgendaDate(selectedDay.date),
 		extraInfo: session?.extraInfo ?? first?.extraInfo ?? '',
 		startMin: session?.startMin ?? firstStart,
@@ -155,18 +149,6 @@ export function buildSelectedDaySnapshot(
 		clockSpan: 720,
 		agendaText: serializeAgenda([{ date: selectedDay.date, flows }]),
 		agendaDate: selectedDay.date
-	};
-}
-
-export function buildSyncPayload(state: Pick<AppState, 'flows' | 'agendaText' | 'agendaDate' | 'agendaText2' | 'agendaDate2' | 'agendaMeta' | 'actualTimeLog'>): SyncPayload {
-	return {
-		flows: state.flows || [],
-		agendaText: state.agendaText || '',
-		agendaDate: state.agendaDate || '',
-		agendaText2: state.agendaText2 || '',
-		agendaDate2: state.agendaDate2 || '',
-		agendaMeta: state.agendaMeta || {},
-		actualTimeLog: state.actualTimeLog || []
 	};
 }
 
@@ -179,7 +161,7 @@ export function applySharedStatePayload(
 	payload: Partial<LiveShareState | SelectedSessionShareState | SelectedDayShareState> & { shareType?: ShareMode }
 ): ShareMode {
 	const shareMode = payload.shareType ?? 'active-session-live';
-	if (payload.blocks) state.blocks = payload.blocks.map(block => ({ ...block }));
+	if (payload.blocks) state.blocks = cloneBlocks(payload.blocks);
 	if (payload.dayTitle !== undefined) state.dayTitle = payload.dayTitle;
 	if (payload.extraInfo !== undefined) state.extraInfo = payload.extraInfo;
 	if (payload.startMin !== undefined) state.startMin = payload.startMin;
