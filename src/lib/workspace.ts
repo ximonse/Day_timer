@@ -37,12 +37,14 @@ export interface WorkspaceData {
 		actualTimeLog: ActualTimeEntry[];
 	};
 	preferences: WorkspacePreferences;
+	revision: number;
 }
 
 export interface WorkspaceEnvelope {
 	version: 1;
 	workspace: WorkspaceData;
 	updatedAt: string;
+	revision: number;
 }
 
 export interface LegacySyncPayload {
@@ -144,7 +146,7 @@ export const DEFAULT_WORKSPACE_PREFERENCES: WorkspacePreferences = {
 	segMinutesMode: 'planned'
 };
 
-export function workspaceDataFromAppState(state: SyncableAppState): WorkspaceData {
+export function workspaceDataFromAppState(state: SyncableAppState, revision: number = 0): WorkspaceData {
 	return {
 		flows: (state.flows || []).map(cloneFlow),
 		agenda: {
@@ -178,7 +180,8 @@ export function workspaceDataFromAppState(state: SyncableAppState): WorkspaceDat
 			showFive: state.showFive,
 			showQuarter: state.showQuarter,
 			segMinutesMode: state.segMinutesMode
-		}
+		},
+		revision
 	};
 }
 
@@ -260,13 +263,15 @@ export function workspaceEnvelopeFromData(workspace: WorkspaceData): WorkspaceEn
 	return {
 		version: 1,
 		workspace,
-		updatedAt: new Date().toISOString()
+		updatedAt: new Date().toISOString(),
+		revision: workspace.revision
 	};
 }
 
 export function workspaceDataFromSyncResponse(value: unknown, createId: () => string): WorkspaceData | null {
 	if (!isPlainRecord(value)) return null;
 	const raw = isPlainRecord(value.workspace) ? value.workspace : value;
+	const revision = typeof value.revision === 'number' ? value.revision : typeof raw.revision === 'number' ? raw.revision : 0;
 	const normalized = normalizePersistedState({
 		flows: Array.isArray(raw.flows) ? raw.flows as Flow[] : [],
 		agendaText: typeof raw.agendaText === 'string' ? raw.agendaText : typeof raw.schoolText === 'string' ? raw.schoolText : '',
@@ -275,8 +280,8 @@ export function workspaceDataFromSyncResponse(value: unknown, createId: () => st
 		agendaDate2: typeof raw.agendaDate2 === 'string' ? raw.agendaDate2 : typeof raw.privateDate === 'string' ? raw.privateDate : '',
 		agendaMeta: isPlainRecord(raw.agendaMeta) ? raw.agendaMeta as Record<string, AgendaFlowMeta> : isPlainRecord(raw.meta) ? raw.meta as Record<string, AgendaFlowMeta> : {},
 		actualTimeLog: Array.isArray(raw.actualTimeLog) ? raw.actualTimeLog as ActualTimeEntry[] : [],
-		nowDraft: isPlainRecord(raw.nowDraft) ? raw.nowDraft as EditorDraft : isPlainRecord(raw.drafts) && isPlainRecord(raw.drafts.now) ? raw.drafts.now as EditorDraft : defaultDraft(createId),
-		planDraft: isPlainRecord(raw.planDraft) ? raw.planDraft as EditorDraft : isPlainRecord(raw.drafts) && isPlainRecord(raw.drafts.plan) ? raw.drafts.plan as EditorDraft : defaultDraft(createId)
+		nowDraft: isPlainRecord(raw.nowDraft) ? raw.nowDraft as unknown as EditorDraft : isPlainRecord(raw.drafts) && isPlainRecord(raw.drafts.now) ? raw.drafts.now as unknown as EditorDraft : defaultDraft(createId),
+		planDraft: isPlainRecord(raw.planDraft) ? raw.planDraft as unknown as EditorDraft : isPlainRecord(raw.drafts) && isPlainRecord(raw.drafts.plan) ? raw.drafts.plan as unknown as EditorDraft : defaultDraft(createId)
 	}, createId);
 	const agenda = isPlainRecord(raw.agenda) ? raw.agenda : null;
 	const history = isPlainRecord(raw.history) ? raw.history : null;
@@ -324,5 +329,5 @@ export function workspaceDataFromSyncResponse(value: unknown, createId: () => st
 			: raw.segMinutesMode === 'off' || raw.segMinutesMode === 'planned' || raw.segMinutesMode === 'remaining'
 				? raw.segMinutesMode
 				: DEFAULT_WORKSPACE_PREFERENCES.segMinutesMode
-	});
+	}, revision);
 }

@@ -164,6 +164,8 @@
   let planTemplateSelection = $state('');
   let syncStatusText = $state('');
   let syncStatusError = $state(false);
+  let syncProbeText = $state('');
+  let syncProbeState = $state<'idle' | 'queued' | 'loading' | 'saving' | 'ok' | 'error' | 'conflict'>('idle');
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
 
   let aiConfig = $state<AiConfig>({ ...DEFAULT_AI_CONFIG });
@@ -569,11 +571,19 @@
       ...s,
       nowDraft: s.activeSection === 'now' ? activeDraft : s.nowDraft,
       planDraft: s.activeSection === 'plan' ? activeDraft : s.planDraft
-    });
+    }, s.currentRevision);
   }
 
   function hasSyncSession() {
     return validateSyncToken(s.syncKey || '');
+  }
+
+  function probeLabel(source: 'manual' | 'auto-panel' | 'auto-effect') {
+    return source === 'manual' ? 'manuell' : 'auto';
+  }
+
+  function probeTime() {
+    return new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
   function syncActiveDraftFromEditor() {
@@ -652,10 +662,12 @@
 
   function queueWorkspaceAutosave() {
     if (isViewMode || loadingFromCloud || !hasSyncSession()) return;
+    syncProbeState = 'queued';
+    syncProbeText = 'auto koead';
     if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
     workspaceAutosaveTimer = setTimeout(() => {
       workspaceAutosaveTimer = null;
-      void syncSave();
+      void syncSave('auto-panel');
     }, 1500);
   }
 
@@ -1174,6 +1186,8 @@
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); loadingFromCloud = false; return; }
     loadingFromCloud = true;
+    syncProbeState = 'loading';
+    syncProbeText = 'Laddar...';
     try {
       const res = await fetch('/api/sync', {
         headers: { 'x-sync-token': token }
@@ -1183,17 +1197,24 @@
       const cloudWorkspace = workspaceDataFromSyncResponse(data, uid);
       const localWorkspace = currentWorkspaceData();
       if (!cloudWorkspace) throw new Error();
+      
       if (isWorkspaceMeaningfullyEmpty(cloudWorkspace) && !isWorkspaceMeaningfullyEmpty(localWorkspace)) {
         lastSyncedHash = JSON.stringify(localWorkspace);
         appState.persist();
-        queueMicrotask(() => { void syncSave(); });
+        queueMicrotask(() => { void syncSave('auto-effect'); });
         showSyncStatus('Molnet var tomt. Lokal data laddades upp ✓');
+        syncProbeState = 'ok';
+        syncProbeText = `Synkad ${probeTime()}`;
         return;
       }
+      
       const cloudFlows: Flow[] = cloudWorkspace.flows || [];
       const cloudIds = new Set(cloudFlows.map((f: Flow) => f.id));
       const localOnly = localWorkspace.flows.filter((flow) => !cloudIds.has(flow.id));
+      
       applyWorkspaceDataToAppState(s, { ...cloudWorkspace, flows: [...cloudFlows, ...localOnly] });
+      s.currentRevision = cloudWorkspace.revision;
+      
       let restoredDraft = false;
       if (cloudWorkspace.drafts.now) {
         restoredDraft = restoredDraft || s.activeSection === 'now';
@@ -1214,11 +1235,17 @@
       lastSyncedHash = JSON.stringify(currentWorkspaceData());
       appState.persist();
       showSyncStatus('Laddat från moln ✓');
-    } catch { showSyncStatus('Kunde inte ladda', true); }
+      syncProbeState = 'ok';
+      syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
+    } catch { 
+      showSyncStatus('Kunde inte ladda', true); 
+      syncProbeState = 'error';
+      syncProbeText = 'Laddningsfel';
+    }
     finally { loadingFromCloud = false; }
   }
 
-  async function syncSave() {
+  async function syncSave(source: 'manual' | 'auto-panel' | 'auto-effect' = 'manual') {
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
     syncActiveDraftFromEditor();
@@ -1226,6 +1253,8 @@
     const workspaceHash = JSON.stringify(workspace);
     const payloadStr = JSON.stringify({ workspace });
     try {
+      syncProbeState = 'saving';
+      syncProbeText = source === 'manual' ? 'Sparar...' : 'Autosparar...';
       const res = await fetch('/api/sync', {
         method: 'POST',
         headers: {
@@ -1234,10 +1263,27 @@
         },
         body: payloadStr,
       });
+      
+      if (res.status === 409) {
+        const data = await res.json();
+        syncProbeState = 'conflict';
+        syncProbeText = 'Konflikt (nyare version finns)';
+        showSyncStatus('Kunde inte spara: nyare version finns i molnet', true);
+        return;
+      }
+      
       if (!res.ok) throw new Error();
+      const data = await res.json();
+      s.currentRevision = data.revision;
       lastSyncedHash = workspaceHash;
-      showSyncStatus('Sparat till moln ✓');
-    } catch { showSyncStatus('Kunde inte spara', true); }
+      syncProbeState = 'ok';
+      syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
+      showSyncStatus(source === 'manual' ? 'Sparat till moln ✓' : 'Autosparat ✓');
+    } catch {
+      syncProbeState = 'error';
+      syncProbeText = 'Kunde inte spara';
+      showSyncStatus('Kunde inte spara', true);
+    }
   }
 
   async function upgradeLevel(code: string) {
@@ -2013,11 +2059,19 @@
     window.addEventListener('keydown', handleKeydown);
     window.addEventListener('resize', handleViewport);
 
+    const handleFocus = () => {
+      if (!document.hidden && s.syncKey && !loadingFromCloud) {
+        void syncLoad();
+      }
+    };
+    document.addEventListener('visibilitychange', handleFocus);
+
     return () => {
       clearInterval(id);
       if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
       if (viewPollId) clearInterval(viewPollId);
       if (viewVisibilityHandler) document.removeEventListener('visibilitychange', viewVisibilityHandler);
+      document.removeEventListener('visibilitychange', handleFocus);
       resizeObservers.forEach(ro => ro.disconnect());
       document.removeEventListener('click', handleOutsideClick);
       window.removeEventListener('keydown', handleKeydown);
@@ -2117,7 +2171,7 @@
       || lastSyncedHash === null || hash === lastSyncedHash) {
       return;
     }
-    const timer = setTimeout(() => { void syncSave(); }, 4000);
+    const timer = setTimeout(() => { void syncSave('auto-effect'); }, 4000);
     return () => clearTimeout(timer);
   });
 
@@ -2438,6 +2492,14 @@
             </div>
           </div>
 
+          {#if hasSyncSession() && syncProbeText}
+            <span
+              style={`font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);margin-right:6px;white-space:nowrap;${syncProbeState === 'saving' ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : syncProbeState === 'ok' ? 'background:rgba(46,160,67,.14);border-color:rgba(46,160,67,.35);' : syncProbeState === 'error' ? 'background:rgba(220,38,38,.12);border-color:rgba(220,38,38,.35);' : 'opacity:.75;'}`}
+              title="Sync-probe"
+            >
+              {syncProbeText}
+            </span>
+          {/if}
           <span style="font-size:12px;opacity:.55;padding:0 6px;border-left:1px solid var(--border);cursor:default;" title={loggedInUser ? `Inloggad som ${loggedInUser}` : 'Inte inloggad'}>
             {loggedInUser ? '👤' : '👤︎'}
           </span>
@@ -2684,6 +2746,8 @@
 
               {syncStatusText}
               {syncStatusError}
+              {syncProbeText}
+              {syncProbeState}
               {loginName}
               {loginPass}
               aiProvider={aiConfig.provider}
