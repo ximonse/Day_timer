@@ -2577,7 +2577,7 @@
                   partsDraftDirty = false;
                   notifyPanelMutation('plan');
                   appState.persist();
-                  if (loggedInUser) void syncSave();
+                  if (hasSyncSession()) void syncSave();
                   return;
                 }
                 const d = new Date();
@@ -2589,7 +2589,7 @@
                 capturePanelBaseline('now');
                 partsDraftDirty = false;
                 notifyPanelMutation('now');
-                if (loggedInUser) void syncSave();
+                if (hasSyncSession()) void syncSave();
               }}
               onCreateNew={() => {
                 const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
@@ -2599,7 +2599,7 @@
                 partsDraftDirty = false;
                 notifyPanelMutation('plan');
                 appState.persist();
-                if (loggedInUser) void syncSave();
+                if (hasSyncSession()) void syncSave();
               }}
               onStartTimeInput={(value) => {
                 const [h, m] = value.split(':').map(Number);
