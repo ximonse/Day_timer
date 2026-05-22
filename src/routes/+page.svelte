@@ -1114,7 +1114,8 @@
 
   async function syncLoad() {
     const token = s.syncKey || '';
-    if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
+    if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); loadingFromCloud = false; return; }
+    loadingFromCloud = true;
     try {
       const res = await fetch('/api/sync', {
         headers: { 'x-sync-token': token }
@@ -1148,14 +1149,17 @@
       sessionSource = { kind: 'unscheduled' };
       capturePanelBaseline('now');
       capturePanelBaseline('plan');
+      lastSyncedHash = JSON.stringify(buildSyncPayload(s));
       appState.persist();
       showSyncStatus('Laddat från moln ✓');
     } catch { showSyncStatus('Kunde inte ladda', true); }
+    finally { loadingFromCloud = false; }
   }
 
   async function syncSave() {
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
+    const payloadStr = JSON.stringify(buildSyncPayload(s));
     try {
       const res = await fetch('/api/sync', {
         method: 'POST',
@@ -1163,9 +1167,10 @@
           'Content-Type': 'application/json',
           'x-sync-token': token
         },
-        body: JSON.stringify(buildSyncPayload(s)),
+        body: payloadStr,
       });
       if (!res.ok) throw new Error();
+      lastSyncedHash = payloadStr;
       showSyncStatus('Sparat till moln ✓');
     } catch { showSyncStatus('Kunde inte spara', true); }
   }
@@ -1240,6 +1245,8 @@
   }
 
   let lastPushedHash = '';
+  let lastSyncedHash: string | null = null;
+  let loadingFromCloud = $state(true);
 
   async function pushShareState() {
     const entry = shareEntries[ACTIVE_SHARE_KEY];
@@ -1890,7 +1897,7 @@
     const savedToken = readSessionValue(SYNC_TOKEN_STORAGE) ?? localStorage.getItem(SYNC_TOKEN_STORAGE);
     const migrateLegacyToken = async () => {
       const sourceToken: string = savedToken || s.syncKey || '';
-      if (!sourceToken) return;
+      if (!sourceToken) { loadingFromCloud = false; return; }
       const existingHashedToken = validateSyncToken(sourceToken) ? sourceToken : null;
       if (existingHashedToken) {
         s.syncKey = existingHashedToken;
@@ -1911,7 +1918,8 @@
         }
       }
       // Trigger sync load once we have a valid key
-      if (s.syncKey) syncLoad();
+      if (s.syncKey) await syncLoad();
+      else loadingFromCloud = false;
     };
     void migrateLegacyToken();
     const savedUser = localStorage.getItem('timer-login-user');
@@ -2026,6 +2034,16 @@
       s.showMin + s.showFive + s.showQuarter + s.showSegLabels + s.showCenterEnd + s.segMinutesMode + s.clockSpan +
       s.agendaText + s.agendaDate + s.agendaText2 + s.agendaDate2 + s.agendaView;
     agendaItems; // track agenda for 12h mode
+  });
+
+  $effect(() => {
+    const hash = JSON.stringify(buildSyncPayload(s));
+    if (isViewMode || loadingFromCloud || !loggedInUser || !s.syncKey
+      || lastSyncedHash === null || hash === lastSyncedHash) {
+      return;
+    }
+    const timer = setTimeout(() => { void syncSave(); }, 4000);
+    return () => clearTimeout(timer);
   });
 
   function toggleCollapse() {
