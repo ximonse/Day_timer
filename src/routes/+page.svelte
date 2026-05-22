@@ -562,6 +562,15 @@
     };
   }
 
+  function currentWorkspaceData() {
+    const activeDraft = currentEditorDraft();
+    return workspaceDataFromAppState({
+      ...s,
+      nowDraft: s.activeSection === 'now' ? activeDraft : s.nowDraft,
+      planDraft: s.activeSection === 'plan' ? activeDraft : s.planDraft
+    });
+  }
+
   function syncActiveDraftFromEditor() {
     if (s.activeSection === 'now') {
       s.nowDraft = currentEditorDraft();
@@ -1157,7 +1166,7 @@
       if (!res.ok) throw new Error();
       const data = await res.json();
       const cloudWorkspace = workspaceDataFromSyncResponse(data, uid);
-      const localWorkspace = workspaceDataFromAppState(s);
+      const localWorkspace = currentWorkspaceData();
       if (!cloudWorkspace) throw new Error();
       if (isWorkspaceMeaningfullyEmpty(cloudWorkspace) && !isWorkspaceMeaningfullyEmpty(localWorkspace)) {
         lastSyncedHash = JSON.stringify(localWorkspace);
@@ -1187,7 +1196,7 @@
       sessionSource = { kind: 'unscheduled' };
       capturePanelBaseline('now');
       capturePanelBaseline('plan');
-      lastSyncedHash = JSON.stringify(workspaceDataFromAppState(s));
+      lastSyncedHash = JSON.stringify(currentWorkspaceData());
       appState.persist();
       showSyncStatus('Laddat från moln ✓');
     } catch { showSyncStatus('Kunde inte ladda', true); }
@@ -1198,7 +1207,7 @@
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
     syncActiveDraftFromEditor();
-    const workspace = workspaceDataFromAppState(s);
+    const workspace = currentWorkspaceData();
     const workspaceHash = JSON.stringify(workspace);
     const payloadStr = JSON.stringify({ workspace });
     try {
@@ -2087,7 +2096,7 @@
   });
 
   $effect(() => {
-    const hash = JSON.stringify(workspaceDataFromAppState(s));
+    const hash = JSON.stringify(currentWorkspaceData());
     if (isViewMode || loadingFromCloud || !loggedInUser || !s.syncKey
       || lastSyncedHash === null || hash === lastSyncedHash) {
       return;
