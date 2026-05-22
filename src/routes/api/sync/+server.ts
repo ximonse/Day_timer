@@ -44,11 +44,26 @@ export async function GET({ request }: { request: Request }) {
 export async function POST({ request }: { request: Request }) {
   const token = readSyncToken(request);
   const body = await request.json();
-  const workspace = workspaceDataFromSyncResponse(body, createId);
-  if (!workspace) throw error(400, 'invalid body');
-  
-  const tasks: Promise<any>[] = [redis.set(redisKey(token), workspaceEnvelopeFromData(workspace))];
+  const incoming = workspaceDataFromSyncResponse(body, createId);
+  if (!incoming) throw error(400, 'invalid body');
 
-  await Promise.all(tasks);
-  return json({ ok: true });
+  const existingRaw: any = await redis.get(redisKey(token));
+  const existing = workspaceDataFromSyncResponse(existingRaw ?? {}, createId);
+  
+  const currentRevision = existing?.revision ?? 0;
+  const baseRevision = incoming.revision;
+
+  if (baseRevision < currentRevision) {
+    return json({
+      conflict: true,
+      currentRevision,
+      workspace: existing
+    }, { status: 409 });
+  }
+
+  incoming.revision = currentRevision + 1;
+  const envelope = workspaceEnvelopeFromData(incoming);
+  
+  await redis.set(redisKey(token), envelope);
+  return json({ ok: true, revision: incoming.revision });
 }

@@ -95,6 +95,7 @@ export interface AppState {
   onboardingStep: number;
   firstVisit: boolean;
   userLevel: number;
+  currentRevision: number;
 }
 
 export function uid() {
@@ -155,6 +156,7 @@ function defaultState(): AppState {
     onboardingStep: 0,
     firstVisit: false,
     userLevel: 1,
+    currentRevision: 0,
   };
 }
 
