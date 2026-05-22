@@ -572,6 +572,10 @@
     });
   }
 
+  function hasSyncSession() {
+    return validateSyncToken(s.syncKey || '');
+  }
+
   function syncActiveDraftFromEditor() {
     if (s.activeSection === 'now') {
       s.nowDraft = currentEditorDraft();
@@ -647,7 +651,7 @@
   }
 
   function queueWorkspaceAutosave() {
-    if (isViewMode || loadingFromCloud || !loggedInUser || !s.syncKey) return;
+    if (isViewMode || loadingFromCloud || !hasSyncSession()) return;
     if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
     workspaceAutosaveTimer = setTimeout(() => {
       workspaceAutosaveTimer = null;
@@ -1057,7 +1061,7 @@
     appState.persist();
     savedFlowMsg = 'Sparat ✓';
     setTimeout(() => { savedFlowMsg = ''; }, 2000);
-    if (loggedInUser) syncSave();
+    if (hasSyncSession()) syncSave();
   }
 
   function addFlowToAgendaDate(date: string, f: Flow, activate = false, meta: AgendaFlowMeta | null = null, startMinOverride?: number) {
@@ -1107,7 +1111,7 @@
     addFlowToAgendaDate(targetDate, f, false, { source: 'template', label: f.title }, suggestedStartMinForDate(agendaDays, targetDate, totalFlowMinutes(f)));
     savedFlowMsg = 'Tillagd i dagplan ✓';
     setTimeout(() => { savedFlowMsg = ''; }, 2000);
-    if (loggedInUser) syncSave();
+    if (hasSyncSession()) syncSave();
   }
 
   function deleteFlow(id: string) {
@@ -1435,7 +1439,7 @@
     sessionSource = { kind: 'unscheduled' };
     appState.persist();
 
-    if (loggedInUser) syncSave();
+    if (hasSyncSession()) syncSave();
 
     savedAgendaMsg = 'Sparat ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
@@ -1494,7 +1498,7 @@
     savedAgendaMsg = 'ICS importerad ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
     appState.persist();
-    if (loggedInUser) syncSave();
+    if (hasSyncSession()) syncSave();
   }
 
   async function readIcsFile(event: Event) {
@@ -2109,7 +2113,7 @@
 
   $effect(() => {
     const hash = JSON.stringify(currentWorkspaceData());
-    if (isViewMode || loadingFromCloud || !loggedInUser || !s.syncKey
+    if (isViewMode || loadingFromCloud || !hasSyncSession()
       || lastSyncedHash === null || hash === lastSyncedHash) {
       return;
     }
