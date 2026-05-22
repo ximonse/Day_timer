@@ -2,7 +2,7 @@ import type { AgendaDay } from './parse.js';
 import { serializeAgenda } from './parse.js';
 import { fmtAgendaDate } from './date.js';
 import { createSessionStateFromFlow } from './session.js';
-import type { AppState, Block, EditorDraft, Flow } from './state.svelte.js';
+import type { AppState, Block, Flow } from './state.svelte.js';
 
 export type ShareMode = 'active-session-live' | 'selected-session-snapshot' | 'selected-day-snapshot';
 
@@ -64,29 +64,8 @@ export interface SelectedDayShareState extends SharedUiState {
 	agendaDate: string;
 }
 
-export interface SyncPayload {
-	flows: Flow[];
-	agendaText: string;
-	agendaDate: string;
-	agendaText2: string;
-	agendaDate2: string;
-	agendaMeta: AppState['agendaMeta'];
-	actualTimeLog: AppState['actualTimeLog'];
-	nowDraft: EditorDraft;
-	planDraft: EditorDraft;
-}
-
 function cloneBlocks(blocks: Block[]): Block[] {
 	return blocks.map(block => ({ ...block }));
-}
-
-function cloneDraft(draft: EditorDraft): EditorDraft {
-	return {
-		dayTitle: draft.dayTitle,
-		blocks: cloneBlocks(draft.blocks),
-		extraInfo: draft.extraInfo,
-		startMin: draft.startMin
-	};
 }
 
 export function sharedUiStateFromState(state: Pick<AppState, keyof SharedUiState>): SharedUiState {
@@ -170,20 +149,6 @@ export function buildSelectedDaySnapshot(
 		clockSpan: 720,
 		agendaText: serializeAgenda([{ date: selectedDay.date, flows }]),
 		agendaDate: selectedDay.date
-	};
-}
-
-export function buildSyncPayload(state: Pick<AppState, 'flows' | 'agendaText' | 'agendaDate' | 'agendaText2' | 'agendaDate2' | 'agendaMeta' | 'actualTimeLog' | 'nowDraft' | 'planDraft'>): SyncPayload {
-	return {
-		flows: state.flows || [],
-		agendaText: state.agendaText || '',
-		agendaDate: state.agendaDate || '',
-		agendaText2: state.agendaText2 || '',
-		agendaDate2: state.agendaDate2 || '',
-		agendaMeta: state.agendaMeta || {},
-		actualTimeLog: state.actualTimeLog || [],
-		nowDraft: cloneDraft(state.nowDraft),
-		planDraft: cloneDraft(state.planDraft)
 	};
 }
 
