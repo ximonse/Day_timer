@@ -2409,6 +2409,8 @@
           <div in:fade={{ duration: 150 }}>
             <SessionEditorPanel
               userLevel={s.userLevel}
+              aiProvider={aiConfig.provider}
+              aiApiKey={aiConfig.apiKey}
               mode={s.activeSection}
 
               hasSelection={!!selectedAgendaDetails}
@@ -2545,10 +2547,17 @@
               onSaveFlow={saveFlow}
               onStartSessionShare={() => startSharing('selected-session-snapshot')}
               onStartDayShare={() => startSharing('selected-day-snapshot')}
+              {suggestedDuration}
+              onApplySuggestedDuration={(mins) => {
+                if (mins < s.blocks.length * 2) return;
+                scaleMinutesTo(mins);
+                updateTimeFeedback();
+                syncTimerToAgenda(); appState.persist();
+                notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+              }}
               actualHistoryOpen={actualHistoryOpen}
               onToggleActualHistory={() => actualHistoryOpen = !actualHistoryOpen}
               currentSubjectCategory={currentSubjectCategory}
-              suggestedDuration={suggestedDuration}
               pendingActualEntries={pendingActualEntries}
               onConfirmActualEntry={confirmActualEntryLocal}
               onDeleteActualEntry={deleteActualEntryLocal}

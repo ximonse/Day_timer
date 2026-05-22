@@ -5,6 +5,8 @@
 
   let {
     userLevel,
+    aiProvider,
+    aiApiKey,
     mode,
     hasSelection,
     savedFlowMsg,
@@ -80,9 +82,12 @@
     pendingActualEntries,
     onConfirmActualEntry,
     onDeleteActualEntry,
-    onExportActualHistory
+    onExportActualHistory,
+    onApplySuggestedDuration
   }: {
     userLevel: number;
+    aiProvider: string;
+    aiApiKey: string;
     mode: 'now' | 'plan';
     hasSelection: boolean;
     savedFlowMsg: string;
@@ -113,6 +118,7 @@
     sourceLabel: string;
     sourceHelp: string;
     showSourceHelp: boolean;
+    showPartsFeedback?: boolean;
     shareCopyText: string;
     activeShareUrl: string;
     sessionShareUrl: string;
@@ -159,6 +165,7 @@
     onConfirmActualEntry: (id: string) => void;
     onDeleteActualEntry: (id: string) => void;
     onExportActualHistory: () => void;
+    onApplySuggestedDuration: (mins: number) => void;
   } = $props();
 
 </script>
@@ -166,6 +173,10 @@
 {#if mode === 'now'}
   <div in:fade={{ duration: 150 }}>
     <NowEditorPanel
+      {userLevel}
+      {aiProvider}
+      {aiApiKey}
+      {hasAiKey}
       {titleValue}
       {partsValue}
       {partsFeedbackText}
@@ -192,6 +203,8 @@
   <div in:fade={{ duration: 150 }}>
     <PlanEditorPanel
       {userLevel}
+      {aiProvider}
+      {aiApiKey}
       {hasSelection}
       {targetDateLabel}
       {sourceLabel}
@@ -229,6 +242,7 @@
       {onConfirmActualEntry}
       {onDeleteActualEntry}
       {onExportActualHistory}
+      {onApplySuggestedDuration}
       {startTimeValue}
       {onStartTimeInput}
       {endTimeValue}
