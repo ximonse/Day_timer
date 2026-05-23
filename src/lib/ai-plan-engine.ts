@@ -134,7 +134,7 @@ function modeInstruction(mode: AiPlanningMode): string {
 	if (mode === 'anchored-day') {
 		return 'Dag med ankare: respektera fasta ankare som moten, deadlines och hamtning. Bygg realistiska arbetsblock runt dem med buffert och prioritering.';
 	}
-	return 'Fri dag: gor roran startbar med mjuk ordning, sma steg och paminnelser. Skapa mindre schema och mer stod.';
+	return 'Fri dag: gor roran startbar med mjuk ordning, sma steg och paminnelser. Skapa mindre schema och mer stod. Komprimera inte ritualer, vila eller saker anvandaren verkar vilja uppleva. Separera forberedelse fran sjalva stunden nar det gor planen mer mansklig, till exempel "Koka te 5m" och "Dricka te 15m".';
 }
 
 function outputInstruction(context?: AiWorkspaceContext): string {
@@ -177,6 +177,8 @@ Regler:
 - Skriv aldrig passaktiviteter som "895 Aktivitet", "09:05 Aktivitet" eller andra starttider.
 - Underpunkter borja med "-".
 - Kommentarer borja med "&".
+- Bevara anvandarens avsikt: om en aktivitet ar en ritual, vila, njutning eller aterhamtning ska den fa egen tid och inte bara bli en snabb forberedelse.
+- Skriv hellre "Gora te 5m" + "Dricka te 15m" an "Te 10m" nar anvandaren vill dricka te i lugn.
 - Om lage ar Fast pass ska total planerad tid halla ramen sa langt det gar.
 - Om lage ar Dag med ankare ska fasta tider respekteras.
 - Om lage ar Fri dag ska planen vara mild och startbar, inte overplanerad.`;

@@ -141,6 +141,8 @@ Te #2 & frukost 10m
 		expect(prompt).toContain('Fri dag');
 		expect(prompt).toContain('startbar');
 		expect(prompt).toContain('mindre schema');
+		expect(prompt).toContain('Komprimera inte ritualer');
+		expect(prompt).toContain('Dricka te');
 	});
 
 	test('returns compact metadata items in priority order', () => {
