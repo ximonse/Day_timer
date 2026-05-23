@@ -1,11 +1,13 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
+  import { AI_PLANNING_MODE_LABELS, aiPlanMetadataItems, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { fade } from 'svelte/transition';
 
   let textareaEl: HTMLTextAreaElement | null = $state(null);
   let aiTextareaEl: HTMLTextAreaElement | null = $state(null);
 
   const voice = createVoiceService();
+  const planningModeOptions = Object.entries(AI_PLANNING_MODE_LABELS) as [AiPlanningMode, string][];
   let isRecording = $state(false);
   let recordingTarget: 'parts' | 'ai' | null = $state(null);
 
@@ -43,6 +45,9 @@
     onToggleAiPanel,
     aiInput,
     onAiInputChange,
+    aiPlanningMode,
+    aiLastResponse,
+    onSetAiPlanningMode,
     aiPlanMode,
     onSetStrictMode,
     onSetHelpfulMode,
@@ -118,6 +123,9 @@
     onToggleAiPanel: () => void;
     aiInput: string;
     onAiInputChange: (value: string) => void;
+    aiPlanningMode: AiPlanningMode;
+    aiLastResponse: AiPlanResponse | null;
+    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
     aiPlanMode: 'strict' | 'helpful';
     onSetStrictMode: () => void;
     onSetHelpfulMode: () => void;
@@ -268,6 +276,11 @@
             </button>
           </div>
           <div class="ai-mode-row">
+            {#each planningModeOptions as [mode, label]}
+              <button class="ai-mode-btn" class:on={aiPlanningMode === mode} onclick={() => onSetAiPlanningMode(mode)}>{label}</button>
+            {/each}
+          </div>
+          <div class="ai-mode-row">
             <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
             <button class="ai-mode-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
             <span class="ai-mode-hint">
@@ -275,6 +288,13 @@
             </span>
           </div>
           {#if aiError}<div class="ai-error">{aiError}</div>{/if}
+          {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
+            <div class="ai-meta-list">
+              {#each aiPlanMetadataItems(aiLastResponse) as item}
+                <span class="ai-meta-chip">{item}</span>
+              {/each}
+            </div>
+          {/if}
           <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={aiLoading || !aiInput.trim()}>
             {aiLoading ? 'Tänker...' : 'Generera ▶'}
           </button>

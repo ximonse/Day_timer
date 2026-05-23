@@ -33,6 +33,7 @@
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, getAiPromptAgenda, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
+  import type { AiPlanResponse, AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -183,6 +184,10 @@
   let agendaAiLoading = $state(false);
   let agendaAiError = $state('');
   let agendaAiOpen = $state(false);
+  let sessionAiPlanningMode: AiPlanningMode = $state('fixed-session');
+  let agendaAiPlanningMode: AiPlanningMode = $state('anchored-day');
+  let sessionAiLastResponse: AiPlanResponse | null = $state(null);
+  let agendaAiLastResponse: AiPlanResponse | null = $state(null);
 
   let adminPassword = $state('');
   let inviteCodeResult = $state('');
@@ -1692,11 +1697,18 @@
     if (!aiInput.trim()) return;
     aiLoading = true; aiError = '';
     try {
-      const text = await requestAiPlan(aiConfig, aiInput, 'parts', { startMin: s.startMin });
-      handlePartsInput(text, true);
-      aiPanelOpen = false;
+      const text = await requestAiPlan(aiConfig, aiInput, 'parts', {
+        startMin: s.startMin,
+        totalMin: totalMin(),
+        currentPlan: serializeBlocks(s.blocks, undefined, s.extraInfo),
+        dayTitle: s.dayTitle,
+        extraInfo: s.extraInfo
+      }, sessionAiPlanningMode, 'create');
+      sessionAiLastResponse = text;
+      handlePartsInput(text.text, true);
       aiInput = '';
     } catch (e: any) { 
+      sessionAiLastResponse = null;
       aiError = e.message || 'Nätverksfel'; 
     } finally { 
       aiLoading = false; 
@@ -1708,9 +1720,13 @@
     agendaAiLoading = true; agendaAiError = '';
     try {
       const todayISO = localDateISO();
-      const text = await requestAiPlan(aiConfig, agendaAiInput, 'agenda', { date: todayISO });
-      setActiveAgendaText(text);
-      const aiDays = parseAgenda(text);
+      const text = await requestAiPlan(aiConfig, agendaAiInput, 'agenda', {
+        date: todayISO,
+        currentPlan: s.agendaText
+      }, agendaAiPlanningMode, 'create');
+      agendaAiLastResponse = text;
+      setActiveAgendaText(text.text);
+      const aiDays = parseAgenda(text.text);
       for (const day of aiDays) {
         const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
         for (const item of items) {
@@ -1720,9 +1736,9 @@
       activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
       appState.persist();
-      agendaAiOpen = false;
       agendaAiInput = '';
     } catch (e: any) { 
+      agendaAiLastResponse = null;
       agendaAiError = e.message || 'Nätverksfel'; 
     } finally { 
       agendaAiLoading = false; 
@@ -2716,6 +2732,8 @@
               {aiInput}
               {aiError}
               {aiLoading}
+              aiPlanningMode={sessionAiPlanningMode}
+              aiLastResponse={sessionAiLastResponse}
               aiPlanMode={aiConfig.planMode}
               startTimeValue={fmtHM(s.startMin)}
               endTimeValue={fmtHM(s.startMin + totalMin())}
@@ -2759,6 +2777,7 @@
               }}
               onToggleAiPanel={() => aiPanelOpen = !aiPanelOpen}
               onAiInputChange={(value) => aiInput = value}
+              onSetAiPlanningMode={(mode) => { sessionAiPlanningMode = mode; }}
               onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
               onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
               onRunAi={runAiParts}
@@ -2962,6 +2981,8 @@
     agendaDimPast={s.agendaDimPast}
     {aiApiKey}
     {aiConfig}
+    aiPlanningMode={agendaAiPlanningMode}
+    aiLastResponse={agendaAiLastResponse}
     {icsPreviewEvents}
     {activeAgendaDate}
     {saveAgenda}
@@ -2981,6 +3002,7 @@
     {startAgendaDrag}
     {schoolPrimary}
     {saveAiConfig}
+    onSetAiPlanningMode={(mode) => { agendaAiPlanningMode = mode; }}
     onSetActiveSection={setActiveSection}
     bind:agendaEl
     bind:timelineEl

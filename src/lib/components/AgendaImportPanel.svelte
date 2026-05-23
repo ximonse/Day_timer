@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { AI_PLANNING_MODE_LABELS, aiPlanMetadataItems, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+
+  const planningModeOptions = Object.entries(AI_PLANNING_MODE_LABELS) as [AiPlanningMode, string][];
+
   let {
     agendaInputOpen,
     agendaDraft,
@@ -15,6 +19,8 @@
     hasAiKey,
     agendaAiOpen,
     agendaAiInput,
+    aiPlanningMode,
+    aiLastResponse,
     aiPlanMode,
     agendaAiError,
     agendaAiLoading,
@@ -33,6 +39,7 @@
     onCopyPrompt,
     onToggleAi,
     onAgendaAiInputChange,
+    onSetAiPlanningMode,
     onSetStrictMode,
     onSetHelpfulMode,
     onRunAi,
@@ -54,6 +61,8 @@
     hasAiKey: boolean;
     agendaAiOpen: boolean;
     agendaAiInput: string;
+    aiPlanningMode: AiPlanningMode;
+    aiLastResponse: AiPlanResponse | null;
     aiPlanMode: 'strict' | 'helpful';
     agendaAiError: string;
     agendaAiLoading: boolean;
@@ -72,6 +81,7 @@
     onCopyPrompt: (type: 'plan' | 'calendar') => Promise<void>;
     onToggleAi: () => void;
     onAgendaAiInputChange: (value: string) => void;
+    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
     onSetStrictMode: () => void;
     onSetHelpfulMode: () => void;
     onRunAi: () => void;
@@ -151,6 +161,11 @@
             oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
         </div>
         <div class="ai-mode-row">
+          {#each planningModeOptions as [mode, label]}
+            <button class="ai-mode-btn" class:on={aiPlanningMode === mode} onclick={() => onSetAiPlanningMode(mode)}>{label}</button>
+          {/each}
+        </div>
+        <div class="ai-mode-row">
           <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
           <button class="ai-mode-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
           <span class="ai-mode-hint">
@@ -158,6 +173,13 @@
           </span>
         </div>
         {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
+        {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
+          <div class="ai-meta-list">
+            {#each aiPlanMetadataItems(aiLastResponse) as item}
+              <span class="ai-meta-chip">{item}</span>
+            {/each}
+          </div>
+        {/if}
         <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={agendaAiLoading || !agendaAiInput.trim()}>
           {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
         </button>

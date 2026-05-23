@@ -1,5 +1,6 @@
 import { type Flow } from './state.svelte.js';
 import { readSessionValue, writeSessionValue, removeSessionValue } from './storage.js';
+import type { AiPlanIntent, AiPlanningMode, AiPlanResponse } from './ai-plan-engine.js';
 
 export type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 export type AiPlanMode = 'strict' | 'helpful';
@@ -171,14 +172,29 @@ export function buildAiPayload(config: AiConfig, extra: Record<string, unknown>)
   };
 }
 
-export async function requestAiPlan(config: AiConfig, message: string, mode: 'parts' | 'agenda', context: Record<string, unknown>): Promise<string> {
+export async function requestAiPlan(
+  config: AiConfig,
+  message: string,
+  mode: 'parts' | 'agenda',
+  context: Record<string, unknown>,
+  planningMode: AiPlanningMode = mode === 'parts' ? 'fixed-session' : 'anchored-day',
+  intent: AiPlanIntent = 'create'
+): Promise<AiPlanResponse> {
   const res = await fetch('/api/plan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildAiPayload(config, { message, mode, context }))
+    body: JSON.stringify(buildAiPayload(config, { message, mode, context, planningMode, intent }))
   });
   
   const data = await res.json();
   if (data.error) throw new Error(data.error);
-  return data.text as string;
+  if (typeof data.text === 'string') {
+    return {
+      text: data.text,
+      assumptions: Array.isArray(data.assumptions) ? data.assumptions : [],
+      changes: Array.isArray(data.changes) ? data.changes : [],
+      warnings: Array.isArray(data.warnings) ? data.warnings : []
+    };
+  }
+  throw new Error('AI-tjänsten saknade plantext');
 }
