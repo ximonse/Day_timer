@@ -311,8 +311,8 @@
     left: 0;
     right: 37%;
     height: 0;
-    border-top: 2px solid var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+    border-top: 2px solid var(--muted);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--muted) 20%, transparent);
     pointer-events: none;
     z-index: 6;
   }
