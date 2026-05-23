@@ -1688,47 +1688,58 @@
     const source = items[flowIdx];
     if (!source) return null;
     const windowStart = Math.floor(items[0].startMin / 60) * 60;
+    const windowEnd = windowStart + 720;
     const dropMin = windowStart + Math.round((dropY / timelineEl.clientHeight) * 720 / 5) * 5;
+    const others = items.filter((_, i) => i !== flowIdx);
 
-    // Swap with downward neighbor if finger crossed its midpoint
+    // Build free intervals (positions where source could fit without overlapping others)
+    const sortedOthers = [...others].sort((a, b) => a.startMin - b.startMin);
+    const freeIntervals: { start: number; end: number }[] = [];
+    let cursor = windowStart;
+    for (const b of sortedOthers) {
+      if (b.startMin > cursor) freeIntervals.push({ start: cursor, end: b.startMin });
+      cursor = Math.max(cursor, b.startMin + b.totalMin);
+    }
+    if (cursor < windowEnd) freeIntervals.push({ start: cursor, end: windowEnd });
+
+    // Find closest valid placement to dropMin (across all gaps where source fits)
+    const validIntervals = freeIntervals.filter(iv => iv.end - iv.start >= source.totalMin);
+    let bestStart: number | null = null;
+    let bestDist = Infinity;
+    for (const iv of validIntervals) {
+      const clamped = Math.max(iv.start, Math.min(iv.end - source.totalMin, dropMin));
+      const dist = Math.abs(clamped - dropMin);
+      if (dist < bestDist) { bestDist = dist; bestStart = clamped; }
+    }
+
+    if (bestStart !== null) {
+      let targetIdx = others.findIndex(b => b.startMin > bestStart!);
+      if (targetIdx < 0) targetIdx = others.length;
+      return { items, source, targetIdx, previewStart: bestStart, previewValid: true, swap: null };
+    }
+
+    // No valid free placement (tight cluster). Fall back to swap with immediate neighbor.
     const nextItem = items[flowIdx + 1];
-    if (nextItem) {
-      const nextMid = nextItem.startMin + nextItem.totalMin / 2;
-      if (dropMin > nextMid) {
-        const newSourceStart = source.startMin + nextItem.totalMin;
-        return {
-          items, source,
-          targetIdx: flowIdx + 1,
-          previewStart: newSourceStart,
-          previewValid: true,
-          swap: { withIdx: flowIdx + 1, neighborNewStart: source.startMin }
-        };
-      }
+    if (nextItem && dropMin > nextItem.startMin + nextItem.totalMin / 2) {
+      return {
+        items, source,
+        targetIdx: flowIdx + 1,
+        previewStart: source.startMin + nextItem.totalMin,
+        previewValid: true,
+        swap: { withIdx: flowIdx + 1, neighborNewStart: source.startMin }
+      };
     }
-    // Swap with upward neighbor
     const prevItem = items[flowIdx - 1];
-    if (prevItem) {
-      const prevMid = prevItem.startMin + prevItem.totalMin / 2;
-      if (dropMin < prevMid) {
-        return {
-          items, source,
-          targetIdx: flowIdx - 1,
-          previewStart: prevItem.startMin,
-          previewValid: true,
-          swap: { withIdx: flowIdx - 1, neighborNewStart: prevItem.startMin + source.totalMin }
-        };
-      }
+    if (prevItem && dropMin < prevItem.startMin + prevItem.totalMin / 2) {
+      return {
+        items, source,
+        targetIdx: flowIdx - 1,
+        previewStart: prevItem.startMin,
+        previewValid: true,
+        swap: { withIdx: flowIdx - 1, neighborNewStart: prevItem.startMin + source.totalMin }
+      };
     }
-    // Free movement within own slot (between prev and next neighbors)
-    const duration = source.totalMin;
-    const minStart = prevItem ? prevItem.startMin + prevItem.totalMin + 5 : windowStart;
-    const maxStart = nextItem ? nextItem.startMin - duration - 5 : windowStart + 720 - duration;
-    const room = maxStart - minStart;
-    if (room < 0) {
-      return { items, source, targetIdx: flowIdx, previewStart: source.startMin, previewValid: true, swap: null };
-    }
-    const previewStart = Math.max(minStart, Math.min(maxStart, dropMin));
-    return { items, source, targetIdx: flowIdx, previewStart, previewValid: true, swap: null };
+    return { items, source, targetIdx: flowIdx, previewStart: source.startMin, previewValid: true, swap: null };
   }
 
   function startAgendaDrag(e: PointerEvent, i: number, edge: 'top' | 'bottom') {
@@ -2325,7 +2336,9 @@
         flows[fromIdx] = { ...neighbor, startMin: swap.neighborNewStart };
         flows[toIdx] = { ...dragged, startMin: previewStart };
       } else {
-        flows[move.flowIdx] = { ...flows[move.flowIdx], startMin: previewStart };
+        const [movedFlow] = flows.splice(move.flowIdx, 1);
+        const updated = { ...movedFlow, startMin: previewStart };
+        flows.splice(Math.min(preview.targetIdx, flows.length), 0, updated);
       }
       return { ...day, flows };
     });
