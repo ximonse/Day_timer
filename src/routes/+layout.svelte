@@ -370,28 +370,28 @@
     :global(.agenda-zone-left) {
       display: block;
       position: absolute; left: 0; top: 0;
-      width: 25%; height: 100%;
+      width: 20%; height: 100%;
       touch-action: pan-y;
       z-index: 2;
     }
     :global(.agenda-zone-resize-top) {
       display: block;
-      position: absolute; left: 25%; top: 0;
-      width: 50%; height: 14px;
+      position: absolute; left: 20%; top: 0;
+      width: 60%; height: 22px;
       touch-action: none;
       z-index: 3;
     }
     :global(.agenda-zone-resize-bottom) {
       display: block;
-      position: absolute; left: 25%; bottom: 0;
-      width: 50%; height: 14px;
+      position: absolute; left: 20%; bottom: 0;
+      width: 60%; height: 22px;
       touch-action: none;
       z-index: 3;
     }
     :global(.agenda-zone-right) {
       display: flex; align-items: center; justify-content: center;
       position: absolute; right: 0; top: 0;
-      width: 25%; height: 100%;
+      width: 20%; height: 100%;
       touch-action: none;
       z-index: 2;
       color: var(--muted); font-size: 14px; letter-spacing: -1px;
