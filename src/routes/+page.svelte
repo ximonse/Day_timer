@@ -98,7 +98,7 @@
   let copyAgendaPromptText = $state('AI-prompt');
   let workspaceAutosaveTimer: ReturnType<typeof setTimeout> | null = null;
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
-  let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean } | null>(null);
+  let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean; swap: { withIdx: number; neighborNewStart: number } | null } | null>(null);
   let planSelectionExplicit = $state(false);
   let partsDraft = $state('');
   let partsDraftDirty = $state(false);
@@ -1687,27 +1687,48 @@
     const items = buildAgendaItemsForDay(day, agendaDayStart);
     const source = items[flowIdx];
     if (!source) return null;
-    const remaining = items.filter((_, idx) => idx !== flowIdx);
     const windowStart = Math.floor(items[0].startMin / 60) * 60;
-    const targetPx = dropY;
-    let targetIdx = remaining.findIndex(item => {
-      const topPx = ((item.startMin - windowStart) / 720) * timelineEl.clientHeight;
-      const midPx = topPx + (item.totalMin / 720) * timelineEl.clientHeight / 2;
-      return targetPx < midPx;
-    });
-    if (targetIdx < 0) targetIdx = remaining.length;
-    const prev = targetIdx > 0 ? remaining[targetIdx - 1] : null;
-    const next = targetIdx < remaining.length ? remaining[targetIdx] : null;
+    const dropMin = windowStart + Math.round((dropY / timelineEl.clientHeight) * 720 / 5) * 5;
+
+    // Swap with downward neighbor if finger crossed its midpoint
+    const nextItem = items[flowIdx + 1];
+    if (nextItem) {
+      const nextMid = nextItem.startMin + nextItem.totalMin / 2;
+      if (dropMin > nextMid) {
+        const newSourceStart = source.startMin + nextItem.totalMin;
+        return {
+          items, source,
+          targetIdx: flowIdx + 1,
+          previewStart: newSourceStart,
+          previewValid: true,
+          swap: { withIdx: flowIdx + 1, neighborNewStart: source.startMin }
+        };
+      }
+    }
+    // Swap with upward neighbor
+    const prevItem = items[flowIdx - 1];
+    if (prevItem) {
+      const prevMid = prevItem.startMin + prevItem.totalMin / 2;
+      if (dropMin < prevMid) {
+        return {
+          items, source,
+          targetIdx: flowIdx - 1,
+          previewStart: prevItem.startMin,
+          previewValid: true,
+          swap: { withIdx: flowIdx - 1, neighborNewStart: prevItem.startMin + source.totalMin }
+        };
+      }
+    }
+    // Free movement within own slot (between prev and next neighbors)
     const duration = source.totalMin;
-    const minStart = prev ? prev.startMin + prev.totalMin + 5 : windowStart;
-    const maxStart = next ? next.startMin - duration - 5 : windowStart + 720 - duration;
+    const minStart = prevItem ? prevItem.startMin + prevItem.totalMin + 5 : windowStart;
+    const maxStart = nextItem ? nextItem.startMin - duration - 5 : windowStart + 720 - duration;
     const room = maxStart - minStart;
     if (room < 0) {
-      return { items, source, remaining, targetIdx, previewStart: null, previewValid: false };
+      return { items, source, targetIdx: flowIdx, previewStart: source.startMin, previewValid: true, swap: null };
     }
-    const desired = windowStart + Math.round((dropY / timelineEl.clientHeight) * 720);
-    const previewStart = Math.max(minStart, Math.min(maxStart, Math.round(desired / 5) * 5));
-    return { items, source, remaining, targetIdx, previewStart, previewValid: true };
+    const previewStart = Math.max(minStart, Math.min(maxStart, dropMin));
+    return { items, source, targetIdx: flowIdx, previewStart, previewValid: true, swap: null };
   }
 
   function startAgendaDrag(e: PointerEvent, i: number, edge: 'top' | 'bottom') {
@@ -2251,7 +2272,8 @@
       currentY: e.clientY,
       targetIdx: preview?.targetIdx ?? i,
       previewStart: preview?.previewStart ?? null,
-      previewValid: preview?.previewValid ?? false
+      previewValid: preview?.previewValid ?? false,
+      swap: preview?.swap ?? null
     };
     window.addEventListener('pointermove', onAgendaMove);
     window.addEventListener('pointerup', endAgendaMove);
@@ -2269,6 +2291,7 @@
       move.targetIdx = preview.targetIdx;
       move.previewStart = preview.previewStart;
       move.previewValid = preview.previewValid;
+      move.swap = preview.swap;
     }
   }
 
@@ -2288,13 +2311,22 @@
       return;
     }
     const previewStart = preview.previewStart;
+    const swap = move.swap;
 
     const newDays = agendaDays.map((day, di) => {
       if (di !== move.dayIdx) return day;
       const flows = [...day.flows];
-      const [movedFlow] = flows.splice(move.flowIdx, 1);
-      const updated = { ...movedFlow, startMin: previewStart };
-      flows.splice(Math.min(preview.targetIdx, flows.length), 0, updated);
+      if (swap) {
+        const fromIdx = move.flowIdx;
+        const toIdx = swap.withIdx;
+        const dragged = flows[fromIdx];
+        const neighbor = flows[toIdx];
+        if (!dragged || !neighbor) return day;
+        flows[fromIdx] = { ...neighbor, startMin: swap.neighborNewStart };
+        flows[toIdx] = { ...dragged, startMin: previewStart };
+      } else {
+        flows[move.flowIdx] = { ...flows[move.flowIdx], startMin: previewStart };
+      }
       return { ...day, flows };
     });
     setActiveAgendaText(serializeAgenda(newDays));
