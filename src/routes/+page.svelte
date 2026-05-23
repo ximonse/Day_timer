@@ -1706,7 +1706,6 @@
       }, sessionAiPlanningMode, 'create');
       sessionAiLastResponse = text;
       handlePartsInput(text.text, true);
-      aiPanelOpen = false;
       aiInput = '';
     } catch (e: any) { 
       sessionAiLastResponse = null;
@@ -1737,7 +1736,6 @@
       activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
       appState.persist();
-      agendaAiOpen = false;
       agendaAiInput = '';
     } catch (e: any) { 
       agendaAiLastResponse = null;

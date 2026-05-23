@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AI_PLANNING_MODE_LABELS, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { AI_PLANNING_MODE_LABELS, aiPlanMetadataItems, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
 
   const planningModeOptions = Object.entries(AI_PLANNING_MODE_LABELS) as [AiPlanningMode, string][];
 
@@ -173,9 +173,9 @@
           </span>
         </div>
         {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
-        {#if aiLastResponse && (aiLastResponse.assumptions.length || aiLastResponse.changes.length || aiLastResponse.warnings.length)}
+        {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
           <div class="ai-meta-list">
-            {#each [...aiLastResponse.changes, ...aiLastResponse.assumptions, ...aiLastResponse.warnings] as item}
+            {#each aiPlanMetadataItems(aiLastResponse) as item}
               <span class="ai-meta-chip">{item}</span>
             {/each}
           </div>

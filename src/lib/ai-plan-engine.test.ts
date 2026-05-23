@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
 	AI_PLANNING_MODE_LABELS,
+	aiPlanMetadataItems,
 	buildAiPlanSystemPrompt,
 	normalizeAiPlanResponse,
 	type AiPlanResponse
@@ -45,12 +46,14 @@ describe('ai-plan-engine', () => {
 			planningMode: 'fixed-session',
 			intent: 'create',
 			userInput: 'Ak 4 procent',
+			workspaceContext: { mode: 'plan' },
 			timeFrame: { totalMin: 60 }
 		});
 
 		expect(prompt).toContain('Fast pass');
 		expect(prompt).toContain('hall dig inom den givna ramen');
 		expect(prompt).toContain('60 minuter');
+		expect(prompt).toContain('utan sessionsrubriker');
 		expect(prompt).toContain('Returnera BARA JSON');
 	});
 
@@ -59,12 +62,14 @@ describe('ai-plan-engine', () => {
 			planningMode: 'anchored-day',
 			intent: 'create',
 			userInput: 'mote 10 och 14',
+			workspaceContext: { mode: 'agenda' },
 			timeFrame: { date: '2026-05-23' }
 		});
 
 		expect(prompt).toContain('Dag med ankare');
 		expect(prompt).toContain('fasta ankare');
 		expect(prompt).toContain('2026-05-23');
+		expect(prompt).toContain('@YYMMDD');
 	});
 
 	test('builds free day prompt with softer scheduling language', () => {
@@ -77,5 +82,21 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('Fri dag');
 		expect(prompt).toContain('startbar');
 		expect(prompt).toContain('mindre schema');
+	});
+
+	test('returns compact metadata items in priority order', () => {
+		const items = aiPlanMetadataItems({
+			text: 'Start 5m',
+			changes: ['Lade till start', 'Kortade titlar', 'Lade till paus'],
+			assumptions: ['Antog 60 min', 'Antog trott grupp'],
+			warnings: ['Planen ar tajt']
+		});
+
+		expect(items).toEqual([
+			'Lade till start',
+			'Kortade titlar',
+			'Lade till paus',
+			'Antog 60 min'
+		]);
 	});
 });

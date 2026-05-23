@@ -30,6 +30,8 @@ export interface AiPlanResponse {
 	warnings: string[];
 }
 
+export const AI_PLAN_METADATA_LIMIT = 4;
+
 export const AI_PLANNING_MODE_LABELS: Record<AiPlanningMode, string> = {
 	'fixed-session': 'Fast pass',
 	'anchored-day': 'Dag med ankare',
@@ -76,11 +78,19 @@ function modeInstruction(mode: AiPlanningMode): string {
 	return 'Fri dag: gor roran startbar med mjuk ordning, sma steg och paminnelser. Skapa mindre schema och mer stod.';
 }
 
+function outputInstruction(context?: AiWorkspaceContext): string {
+	if (context?.mode === 'agenda') {
+		return 'Output i "text": komplett dagplan med datumrad @YYMMDD, sessionsrubriker som #Rubrik HH:MM och aktiviteter med tid.';
+	}
+	return 'Output i "text": endast aktivitetsrader for valt pass, utan sessionsrubriker och utan datumrad.';
+}
+
 export function buildAiPlanSystemPrompt(request: Pick<AiPlanRequest, 'planningMode' | 'intent' | 'userInput' | 'timeFrame' | 'currentPlan' | 'workspaceContext'>): string {
 	const label = AI_PLANNING_MODE_LABELS[request.planningMode];
 	const frame = timeFrameText(request.timeFrame);
 	const currentPlan = request.currentPlan?.trim() ? request.currentPlan.trim() : 'Ingen befintlig plan.';
 	const context = request.workspaceContext ? JSON.stringify(request.workspaceContext) : '{}';
+	const output = outputInstruction(request.workspaceContext);
 
 	return `Du ar Day Timers AI Plan Engine.
 
@@ -91,6 +101,8 @@ Kontext: ${context}
 Befintlig plan: ${currentPlan}
 
 ${modeInstruction(request.planningMode)}
+
+${output}
 
 Returnera BARA JSON i detta format:
 {
@@ -130,4 +142,8 @@ export function normalizeAiPlanResponse(raw: string): AiPlanResponse {
 	} catch {
 		return fallback;
 	}
+}
+
+export function aiPlanMetadataItems(response: AiPlanResponse, limit = AI_PLAN_METADATA_LIMIT): string[] {
+	return [...response.changes, ...response.assumptions, ...response.warnings].slice(0, limit);
 }
