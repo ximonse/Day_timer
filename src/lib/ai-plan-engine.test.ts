@@ -54,6 +54,45 @@ describe('ai-plan-engine', () => {
 		});
 	});
 
+	test('converts bare leading time markers into duration rows', () => {
+		const parsed = normalizeAiPlanResponse(JSON.stringify({
+			text: `895 Te & morgonvatten
+- Koka kettle
+- Välj te
+& Njut i lugn
+
+905 Meditation
+- Sätt dig bekvämt
+- 10 min stillhet
+
+920 Toalettbesök & morgontvätt
+- Dusch eller tvätt
+
+930 Te #2 & frukost
+- Sätt dig ned
+
+940 Slut`,
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}));
+
+		expect(parsed.text).toBe(`Te & morgonvatten 10m
+- Koka kettle
+- Välj te
+& Njut i lugn
+
+Meditation 15m
+- Sätt dig bekvämt
+- 10 min stillhet
+
+Toalettbesök & morgontvätt 10m
+- Dusch eller tvätt
+
+Te #2 & frukost 10m
+- Sätt dig ned`);
+	});
+
 	test('keeps public Swedish labels stable', () => {
 		expect(AI_PLANNING_MODE_LABELS['fixed-session']).toBe('Fast pass');
 		expect(AI_PLANNING_MODE_LABELS['anchored-day']).toBe('Dag med ankare');
@@ -73,6 +112,7 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('hall dig inom den givna ramen');
 		expect(prompt).toContain('60 minuter');
 		expect(prompt).toContain('utan sessionsrubriker');
+		expect(prompt).toContain('utan startklockslag');
 		expect(prompt).toContain('Returnera BARA JSON');
 	});
 
