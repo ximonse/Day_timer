@@ -1375,7 +1375,7 @@
   }
 
   async function generateInvite(code: string, multi: boolean) {
-    if (!loggedInUser || !s.syncKey) { showSyncStatus('Inte inloggad', true); return; }
+    if (!adminPassword.trim()) { showToast('Ange adminlösenord'); return; }
     try {
       const res = await fetch('/api/admin/invites', {
         method: 'POST',
@@ -1386,6 +1386,7 @@
         body: JSON.stringify({ code, multi }),
       });
       if (!res.ok) throw new Error('Kunde inte skapa inbjudan');
+      localStorage.setItem('admin-password', adminPassword);
       inviteCodeResult = code.toUpperCase();
       showToast('Inbjudan skapad ✓');
     } catch (e: any) {
@@ -2974,6 +2975,11 @@
           <div in:fade={{ duration: 150 }}>
             <AdminPanel
               {adminPassword}
+              onAdminPasswordChange={(value) => {
+                adminPassword = value;
+                if (value.trim()) localStorage.setItem('admin-password', value);
+                else localStorage.removeItem('admin-password');
+              }}
               onGenerateInvite={generateInvite}
               {inviteCodeResult}
             />
