@@ -473,7 +473,12 @@
     margin: 2px 8px; pointer-events: none;
   }
   @media (hover: none) {
-    .seglist .row { touch-action: pan-y; }
+    .seglist .row {
+      touch-action: pan-y;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
     .seglist .row.armed { touch-action: none; }
   }
   .seglist .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 22px; }
