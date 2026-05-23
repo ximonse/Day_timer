@@ -23,6 +23,7 @@
     aiLoading,
     aiPlanningMode,
     aiLastResponse,
+    aiPreview,
     aiPlanMode,
     startTimeValue,
     endMode,
@@ -48,6 +49,8 @@
     onSetStrictMode,
     onSetHelpfulMode,
     onRunAi,
+    onApplyAiPreview,
+    onDiscardAiPreview,
     onAction,
     onCreateNew,
     onStartTimeInput,
@@ -107,6 +110,7 @@
     aiLoading: boolean;
     aiPlanningMode: AiPlanningMode;
     aiLastResponse: AiPlanResponse | null;
+    aiPreview: AiPlanResponse | null;
     aiPlanMode: 'strict' | 'helpful';
     startTimeValue: string;
     endTimeValue: string;
@@ -143,6 +147,8 @@
     onSetStrictMode: () => void;
     onSetHelpfulMode: () => void;
     onRunAi: () => void;
+    onApplyAiPreview: () => void;
+    onDiscardAiPreview: () => void;
     onAction: () => void;
     onCreateNew: () => void;
     onStartTimeInput: (value: string) => void;
@@ -237,12 +243,15 @@
       {onAiInputChange}
       {aiPlanningMode}
       {aiLastResponse}
+      {aiPreview}
       {onSetAiPlanningMode}
       {aiPlanMode}
       {onSetStrictMode}
       {onSetHelpfulMode}
       {aiError}
       {onRunAi}
+      {onApplyAiPreview}
+      {onDiscardAiPreview}
       {aiLoading}
       {actualHistoryOpen}
       {onToggleActualHistory}

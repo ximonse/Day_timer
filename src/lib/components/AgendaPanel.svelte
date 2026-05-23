@@ -34,6 +34,7 @@
     aiConfig,
     aiPlanningMode,
     aiLastResponse,
+    aiPreview,
     icsPreviewEvents,
     activeAgendaDate,
     saveAgenda,
@@ -55,6 +56,8 @@
     agendaDimPast,
     saveAiConfig,
     onSetAiPlanningMode,
+    onApplyAiPreview,
+    onDiscardAiPreview,
     onSetActiveSection,
     agendaEl = $bindable(),
     timelineEl = $bindable(),
@@ -94,6 +97,7 @@
     aiConfig: any;
     aiPlanningMode: AiPlanningMode;
     aiLastResponse: AiPlanResponse | null;
+    aiPreview: AiPlanResponse | null;
     icsPreviewEvents: any[];
     activeAgendaDate: () => string | null;
     saveAgenda: () => void;
@@ -115,6 +119,8 @@
     agendaDimPast: boolean;
     saveAiConfig: () => void;
     onSetAiPlanningMode: (mode: AiPlanningMode) => void;
+    onApplyAiPreview: () => void;
+    onDiscardAiPreview: () => void;
     onSetActiveSection: (s: any) => void;
     agendaEl: HTMLElement;
     timelineEl: HTMLElement;
@@ -230,6 +236,7 @@
         {agendaAiInput}
         {aiPlanningMode}
         {aiLastResponse}
+        {aiPreview}
         aiPlanMode={aiConfig.planMode}
         {agendaAiError}
         {agendaAiLoading}
@@ -252,6 +259,8 @@
         onToggleAi={() => agendaAiOpen = !agendaAiOpen}
         onAgendaAiInputChange={(value) => agendaAiInput = value}
         {onSetAiPlanningMode}
+        {onApplyAiPreview}
+        {onDiscardAiPreview}
         onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
         onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
         onRunAi={runAiAgenda}

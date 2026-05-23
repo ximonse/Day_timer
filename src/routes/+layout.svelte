@@ -526,6 +526,11 @@
   :global(.ai-mode-hint) { font-size: 11px; color: var(--menu-muted); opacity: .8; }
   :global(.ai-meta-list) { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0; }
   :global(.ai-meta-chip) { border: 1px solid var(--menu-border); border-radius: 999px; padding: 3px 7px; font-size: 11px; color: var(--menu-muted); background: var(--menu-surface); }
+  :global(.ai-preview-box) { border: 1px solid var(--menu-border); border-radius: 8px; background: var(--menu-surface); padding: 8px; display: flex; flex-direction: column; gap: 7px; }
+  :global(.ai-preview-head) { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--menu-fg); font-size: 12px; }
+  :global(.ai-preview-actions) { display: flex; gap: 6px; flex-wrap: wrap; }
+  :global(.ai-preview-box pre) { margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 180px; overflow: auto; font: inherit; font-size: 12px; line-height: 1.45; color: var(--menu-fg); }
+  :global(.quickstart.mini) { width: auto; padding: 5px 10px; font-size: 12px; }
   :global(.logged-in-row) { display: flex; align-items: center; gap: 8px; font-size: 13px; }
   :global(.logged-in-row .username) { flex: 1; font-weight: 600; color: var(--menu-fg); }
   :global(.logout-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }

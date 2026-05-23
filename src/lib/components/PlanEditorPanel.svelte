@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
-  import { AI_PLANNING_MODE_LABELS, aiPlanMetadataItems, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { AI_PLANNING_MODE_LABELS, aiPlanMetadataItems, hasAiPlanPreview, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { fade } from 'svelte/transition';
 
   let textareaEl: HTMLTextAreaElement | null = $state(null);
@@ -47,12 +47,15 @@
     onAiInputChange,
     aiPlanningMode,
     aiLastResponse,
+    aiPreview,
     onSetAiPlanningMode,
     aiPlanMode,
     onSetStrictMode,
     onSetHelpfulMode,
     aiError,
     onRunAi,
+    onApplyAiPreview,
+    onDiscardAiPreview,
     aiLoading,
     actualHistoryOpen,
     onToggleActualHistory,
@@ -125,12 +128,15 @@
     onAiInputChange: (value: string) => void;
     aiPlanningMode: AiPlanningMode;
     aiLastResponse: AiPlanResponse | null;
+    aiPreview: AiPlanResponse | null;
     onSetAiPlanningMode: (mode: AiPlanningMode) => void;
     aiPlanMode: 'strict' | 'helpful';
     onSetStrictMode: () => void;
     onSetHelpfulMode: () => void;
     aiError: string;
     onRunAi: () => void;
+    onApplyAiPreview: () => void;
+    onDiscardAiPreview: () => void;
     aiLoading: boolean;
     actualHistoryOpen: boolean;
     onToggleActualHistory: () => void;
@@ -293,6 +299,18 @@
               {#each aiPlanMetadataItems(aiLastResponse) as item}
                 <span class="ai-meta-chip">{item}</span>
               {/each}
+            </div>
+          {/if}
+          {#if hasAiPlanPreview(aiPreview)}
+            <div class="ai-preview-box">
+              <div class="ai-preview-head">
+                <strong>AI-förslag</strong>
+                <div class="ai-preview-actions">
+                  <button class="ai-key-btn" type="button" onclick={onDiscardAiPreview}>Kasta</button>
+                  <button class="quickstart mini" type="button" onclick={onApplyAiPreview}>Använd förslag</button>
+                </div>
+              </div>
+              <pre>{aiPreview.text}</pre>
             </div>
           {/if}
           <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={aiLoading || !aiInput.trim()}>

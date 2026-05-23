@@ -34,6 +34,7 @@
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, getAiPromptAgenda, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
   import type { AiPlanResponse, AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { effectiveUserLevel } from '$lib/access.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -188,6 +189,8 @@
   let agendaAiPlanningMode: AiPlanningMode = $state('anchored-day');
   let sessionAiLastResponse: AiPlanResponse | null = $state(null);
   let agendaAiLastResponse: AiPlanResponse | null = $state(null);
+  let sessionAiPreview: AiPlanResponse | null = $state(null);
+  let agendaAiPreview: AiPlanResponse | null = $state(null);
 
   let adminPassword = $state('');
   let inviteCodeResult = $state('');
@@ -249,6 +252,7 @@
 
   // derived shorthand used in templates
   const aiApiKey = $derived(aiConfig.apiKey);
+  const featureUserLevel = $derived(effectiveUserLevel(s.userLevel, loggedInUser, adminPassword));
 
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
@@ -1364,14 +1368,14 @@
       const data = await res.json();
       s.userLevel = data.level;
       appState.persist();
-      showToast('Nivå 2 upplåst! ✨');
+      showToast('Nivå 2 upplåst');
     } catch (e: any) {
       showToast(e.message);
     }
   }
 
   async function generateInvite(code: string, multi: boolean) {
-    if (!loggedInUser || !s.syncKey) { showSyncStatus('Inte inloggad', true); return; }
+    if (!adminPassword.trim()) { showToast('Ange adminlösenord'); return; }
     try {
       const res = await fetch('/api/admin/invites', {
         method: 'POST',
@@ -1381,8 +1385,10 @@
         },
         body: JSON.stringify({ code, multi }),
       });
-      if (!res.ok) throw new Error('Kunde inte skapa inbjudan');
-      inviteCodeResult = code.toUpperCase();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Kunde inte skapa inbjudan');
+      localStorage.setItem('admin-password', adminPassword);
+      inviteCodeResult = data.code || code.trim().toUpperCase();
       showToast('Inbjudan skapad ✓');
     } catch (e: any) {
       showToast(e.message);
@@ -1705,10 +1711,11 @@
         extraInfo: s.extraInfo
       }, sessionAiPlanningMode, 'create');
       sessionAiLastResponse = text;
-      handlePartsInput(text.text, true);
+      sessionAiPreview = text;
       aiInput = '';
     } catch (e: any) { 
       sessionAiLastResponse = null;
+      sessionAiPreview = null;
       aiError = e.message || 'Nätverksfel'; 
     } finally { 
       aiLoading = false; 
@@ -1725,24 +1732,45 @@
         currentPlan: s.agendaText
       }, agendaAiPlanningMode, 'create');
       agendaAiLastResponse = text;
-      setActiveAgendaText(text.text);
-      const aiDays = parseAgenda(text.text);
-      for (const day of aiDays) {
-        const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
-        for (const item of items) {
-          setAgendaMeta(makeAgendaMetaKeyForFlow(day.date ?? null, item.flow, item.startMin), { source: 'ai' });
-        }
-      }
-      activeAgendaFlowRef = null;
-      sessionSource = { kind: 'unscheduled' };
-      appState.persist();
+      agendaAiPreview = text;
       agendaAiInput = '';
     } catch (e: any) { 
       agendaAiLastResponse = null;
+      agendaAiPreview = null;
       agendaAiError = e.message || 'Nätverksfel'; 
     } finally { 
       agendaAiLoading = false; 
     }
+  }
+
+  function applyAiPartsPreview() {
+    if (!sessionAiPreview?.text.trim()) return;
+    handlePartsInput(sessionAiPreview.text, true);
+    sessionAiPreview = null;
+  }
+
+  function discardAiPartsPreview() {
+    sessionAiPreview = null;
+  }
+
+  function applyAiAgendaPreview() {
+    if (!agendaAiPreview?.text.trim()) return;
+    setActiveAgendaText(agendaAiPreview.text);
+    const aiDays = parseAgenda(agendaAiPreview.text);
+    for (const day of aiDays) {
+      const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
+      for (const item of items) {
+        setAgendaMeta(makeAgendaMetaKeyForFlow(day.date ?? null, item.flow, item.startMin), { source: 'ai' });
+      }
+    }
+    activeAgendaFlowRef = null;
+    sessionSource = { kind: 'unscheduled' };
+    appState.persist();
+    agendaAiPreview = null;
+  }
+
+  function discardAiAgendaPreview() {
+    agendaAiPreview = null;
   }
 
   function setFlowMinutes(flow: Flow, newTotal: number): Flow {
@@ -2160,8 +2188,8 @@
     const savedUser = localStorage.getItem('timer-login-user');
     if (savedUser) {
       loggedInUser = savedUser;
-      if (savedUser.toLowerCase() === 'admin') adminPassword = localStorage.getItem('admin-password') || '';
     }
+    adminPassword = localStorage.getItem('admin-password') || '';
     aiConfig = loadAiConfig();
     const today = localDateISO();
     if (!isViewMode) {
@@ -2715,7 +2743,7 @@
         {#if s.activeSection === 'now' || s.activeSection === 'plan'}
           <div in:fade={{ duration: 150 }}>
             <SessionEditorPanel
-              userLevel={s.userLevel}
+              userLevel={featureUserLevel}
               aiProvider={aiConfig.provider}
               aiApiKey={aiConfig.apiKey}
               mode={s.activeSection}
@@ -2734,6 +2762,7 @@
               {aiLoading}
               aiPlanningMode={sessionAiPlanningMode}
               aiLastResponse={sessionAiLastResponse}
+              aiPreview={sessionAiPreview}
               aiPlanMode={aiConfig.planMode}
               startTimeValue={fmtHM(s.startMin)}
               endTimeValue={fmtHM(s.startMin + totalMin())}
@@ -2781,6 +2810,8 @@
               onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
               onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
               onRunAi={runAiParts}
+              onApplyAiPreview={applyAiPartsPreview}
+              onDiscardAiPreview={discardAiPartsPreview}
               onAction={() => {
                 if (s.activeSection === 'plan') {
                   if (selectedAgendaDetails && planSelectionExplicit) {
@@ -2895,7 +2926,7 @@
         {:else if s.activeSection === 'workspace'}
           <div in:fade={{ duration: 150 }}>
             <WorkspacePanel
-              userLevel={s.userLevel}
+              userLevel={featureUserLevel}
               onUpgrade={upgradeLevel}
               {loggedInUser}
 
@@ -2945,6 +2976,11 @@
           <div in:fade={{ duration: 150 }}>
             <AdminPanel
               {adminPassword}
+              onAdminPasswordChange={(value) => {
+                adminPassword = value;
+                if (value.trim()) localStorage.setItem('admin-password', value);
+                else localStorage.removeItem('admin-password');
+              }}
               onGenerateInvite={generateInvite}
               {inviteCodeResult}
             />
@@ -2983,6 +3019,7 @@
     {aiConfig}
     aiPlanningMode={agendaAiPlanningMode}
     aiLastResponse={agendaAiLastResponse}
+    aiPreview={agendaAiPreview}
     {icsPreviewEvents}
     {activeAgendaDate}
     {saveAgenda}
@@ -3003,6 +3040,8 @@
     {schoolPrimary}
     {saveAiConfig}
     onSetAiPlanningMode={(mode) => { agendaAiPlanningMode = mode; }}
+    onApplyAiPreview={applyAiAgendaPreview}
+    onDiscardAiPreview={discardAiAgendaPreview}
     onSetActiveSection={setActiveSection}
     bind:agendaEl
     bind:timelineEl

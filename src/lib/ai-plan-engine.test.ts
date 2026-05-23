@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
 	AI_PLANNING_MODE_LABELS,
 	aiPlanMetadataItems,
+	hasAiPlanPreview,
 	buildAiPlanSystemPrompt,
 	normalizeAiPlanResponse,
 	type AiPlanResponse
@@ -35,6 +36,63 @@ describe('ai-plan-engine', () => {
 		});
 	});
 
+	test('normalizes structured output wrapped in markdown json fence', () => {
+		const parsed = normalizeAiPlanResponse(`\`\`\`json
+{
+  "text": "Start 5m\\nArbete 10m",
+  "assumptions": ["Antog lugn start"],
+  "changes": ["Lade till arbete"],
+  "warnings": []
+}
+\`\`\``);
+
+		expect(parsed).toEqual<AiPlanResponse>({
+			text: 'Start 5m\nArbete 10m',
+			assumptions: ['Antog lugn start'],
+			changes: ['Lade till arbete'],
+			warnings: []
+		});
+	});
+
+	test('converts bare leading time markers into duration rows', () => {
+		const parsed = normalizeAiPlanResponse(JSON.stringify({
+			text: `895 Te & morgonvatten
+- Koka kettle
+- Välj te
+& Njut i lugn
+
+905 Meditation
+- Sätt dig bekvämt
+- 10 min stillhet
+
+920 Toalettbesök & morgontvätt
+- Dusch eller tvätt
+
+930 Te #2 & frukost
+- Sätt dig ned
+
+940 Slut`,
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}));
+
+		expect(parsed.text).toBe(`Te & morgonvatten 10m
+- Koka kettle
+- Välj te
+& Njut i lugn
+
+Meditation 15m
+- Sätt dig bekvämt
+- 10 min stillhet
+
+Toalettbesök & morgontvätt 10m
+- Dusch eller tvätt
+
+Te #2 & frukost 10m
+- Sätt dig ned`);
+	});
+
 	test('keeps public Swedish labels stable', () => {
 		expect(AI_PLANNING_MODE_LABELS['fixed-session']).toBe('Fast pass');
 		expect(AI_PLANNING_MODE_LABELS['anchored-day']).toBe('Dag med ankare');
@@ -54,6 +112,7 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('hall dig inom den givna ramen');
 		expect(prompt).toContain('60 minuter');
 		expect(prompt).toContain('utan sessionsrubriker');
+		expect(prompt).toContain('utan startklockslag');
 		expect(prompt).toContain('Returnera BARA JSON');
 	});
 
@@ -82,6 +141,9 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('Fri dag');
 		expect(prompt).toContain('startbar');
 		expect(prompt).toContain('mindre schema');
+		expect(prompt).toContain('Komprimera inte ritualer');
+		expect(prompt).toContain('Samla naturligt sammanhangande moment');
+		expect(prompt).toContain('Frukost pa trappen');
 	});
 
 	test('returns compact metadata items in priority order', () => {
@@ -98,5 +160,11 @@ describe('ai-plan-engine', () => {
 			'Lade till paus',
 			'Antog 60 min'
 		]);
+	});
+
+	test('detects only non-empty preview text as previewable', () => {
+		expect(hasAiPlanPreview({ text: 'Start 5m', changes: [], assumptions: [], warnings: [] })).toBe(true);
+		expect(hasAiPlanPreview({ text: '   ', changes: ['Lade till start'], assumptions: [], warnings: [] })).toBe(false);
+		expect(hasAiPlanPreview(null)).toBe(false);
 	});
 });

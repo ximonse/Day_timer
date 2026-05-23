@@ -1,10 +1,12 @@
 <script lang="ts">
   let {
     adminPassword,
+    onAdminPasswordChange,
     onGenerateInvite,
     inviteCodeResult
   }: {
     adminPassword: string;
+    onAdminPasswordChange: (value: string) => void;
     onGenerateInvite: (code: string, multi: boolean) => void;
     inviteCodeResult: string;
   } = $props();
@@ -19,6 +21,7 @@
     <div class="feedback" style="margin-bottom: 4px;">Skapa en kod som låser upp Nivå 2 (AI-funktioner) för en användare.</div>
     
     <div class="admin-form">
+      <input type="password" class="admin-input" placeholder="Adminlösenord" value={adminPassword} oninput={(e) => onAdminPasswordChange((e.target as HTMLInputElement).value)} />
       <input type="text" class="admin-input" placeholder="Kod (t.ex. BETA-2024)" bind:value={newCode} />
       
       <label class="multi-use-label">
