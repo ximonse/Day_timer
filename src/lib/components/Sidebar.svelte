@@ -381,9 +381,10 @@
     {/if}
     <div class="row" class:active={isActive} class:past={isPast} class:armed={armedBlockId === b.id}
          use:bindRow={b.id}
-         onpointerdown={(e) => rowPointerDown(e, b.id)}
          onclickcapture={maybeSuppressClick}>
-      <span class="dot" style="background:{ct.colors[i % 8]}"></span>
+      <span class="dot drag-handle"
+            style="background:{ct.colors[i % 8]}"
+            onpointerdown={(e) => rowPointerDown(e, b.id)}></span>
       {#if editingBlockId === b.id && editingBlockField === 'name'}
         <input class="inline-edit name-inp" use:focusOnMount
           value={b.title}
@@ -474,12 +475,16 @@
   }
   @media (hover: none) {
     .seglist .row {
-      touch-action: pan-y;
       -webkit-user-select: none;
       user-select: none;
       -webkit-touch-callout: none;
     }
-    .seglist .row.armed { touch-action: none; }
+    .seglist .dot.drag-handle {
+      width: 28px; height: 28px; margin-top: 14px;
+      touch-action: none;
+      cursor: grab;
+    }
+    .seglist .row.armed .dot.drag-handle { cursor: grabbing; }
   }
   .seglist .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 22px; }
   .seglist .name {
