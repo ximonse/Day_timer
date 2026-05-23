@@ -37,6 +37,103 @@
   let editingBlockField = $state<'name' | 'min' | 'note' | 'extra' | null>(null);
   let revealedCheckId = $state<string | null>(null);
 
+  let armedBlockId = $state<string | null>(null);
+  let dragOverIdx = $state<number | null>(null);
+  let pressTimer: ReturnType<typeof setTimeout> | null = null;
+  let pressStartX = 0;
+  let pressStartY = 0;
+  let pressBlockId: string | null = null;
+  let suppressNextClick = false;
+  const rowRefs = new Map<string, HTMLElement>();
+
+  function bindRow(node: HTMLElement, id: string) {
+    rowRefs.set(id, node);
+    return {
+      destroy() { rowRefs.delete(id); }
+    };
+  }
+
+  function rowPointerDown(e: PointerEvent, id: string) {
+    if (e.pointerType === 'mouse') return;
+    if (isViewMode) return;
+    if (editingBlockId !== null) return;
+    pressStartX = e.clientX;
+    pressStartY = e.clientY;
+    pressBlockId = id;
+    window.addEventListener('pointermove', windowPointerMove);
+    window.addEventListener('pointerup', windowPointerUp);
+    window.addEventListener('pointercancel', windowPointerUp);
+    if (pressTimer) clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+      pressTimer = null;
+      if (pressBlockId === id) {
+        armedBlockId = id;
+        suppressNextClick = true;
+        dragOverIdx = blocks.findIndex(b => b.id === id);
+      }
+    }, 350);
+  }
+
+  function windowPointerMove(e: PointerEvent) {
+    if (pressBlockId === null) return;
+    if (armedBlockId === null) {
+      // Pre-arm: cancel timer if user moves (scrolling)
+      if (Math.hypot(e.clientX - pressStartX, e.clientY - pressStartY) > 8) {
+        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+        cleanupWindowListeners();
+        pressBlockId = null;
+      }
+      return;
+    }
+    // Armed — compute drop target based on finger Y
+    let bestIdx = blocks.length;
+    for (let i = 0; i < blocks.length; i++) {
+      const row = rowRefs.get(blocks[i].id);
+      if (!row) continue;
+      const rect = row.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) {
+        bestIdx = i;
+        break;
+      }
+    }
+    dragOverIdx = bestIdx;
+  }
+
+  function windowPointerUp() {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    if (armedBlockId !== null && dragOverIdx !== null) {
+      const fromIdx = blocks.findIndex(b => b.id === armedBlockId);
+      let toIdx = dragOverIdx;
+      if (fromIdx >= 0 && toIdx !== fromIdx && toIdx !== fromIdx + 1) {
+        const next = [...blocks];
+        const [moved] = next.splice(fromIdx, 1);
+        if (toIdx > fromIdx) toIdx -= 1;
+        next.splice(toIdx, 0, moved);
+        blocks = next;
+        onCommitEdit();
+      }
+    }
+    armedBlockId = null;
+    dragOverIdx = null;
+    pressBlockId = null;
+    cleanupWindowListeners();
+    // Reset suppress on next tick (after the click event fires)
+    setTimeout(() => { suppressNextClick = false; }, 0);
+  }
+
+  function cleanupWindowListeners() {
+    window.removeEventListener('pointermove', windowPointerMove);
+    window.removeEventListener('pointerup', windowPointerUp);
+    window.removeEventListener('pointercancel', windowPointerUp);
+  }
+
+  function maybeSuppressClick(e: MouseEvent) {
+    if (suppressNextClick) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }
+
   function focusOnMount(node: HTMLElement) {
     if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
       node.focus();
@@ -279,7 +376,13 @@
     {@const segEnd = cumMin + b.minutes}
     {@const isActive = elapsedMin >= cumMin && elapsedMin < segEnd}
     {@const isPast = elapsedMin >= segEnd}
-    <div class="row" class:active={isActive} class:past={isPast}>
+    {#if dragOverIdx === i && armedBlockId !== b.id}
+      <div class="drag-drop-line" aria-hidden="true"></div>
+    {/if}
+    <div class="row" class:active={isActive} class:past={isPast} class:armed={armedBlockId === b.id}
+         use:bindRow={b.id}
+         onpointerdown={(e) => rowPointerDown(e, b.id)}
+         onclickcapture={maybeSuppressClick}>
       <span class="dot" style="background:{ct.colors[i % 8]}"></span>
       {#if editingBlockId === b.id && editingBlockField === 'name'}
         <input class="inline-edit name-inp" use:focusOnMount
@@ -329,6 +432,9 @@
       {/if}
     {/if}
   {/each}
+  {#if armedBlockId !== null && dragOverIdx === blocks.length}
+    <div class="drag-drop-line" aria-hidden="true"></div>
+  {/if}
   {#if showExtraInfo}
     {#if editingBlockField === 'extra'}
       <textarea class="inline-edit infobox extra-inp" use:focusOnMount
@@ -351,6 +457,25 @@
   .seglist .row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 50px; font-weight: 400; line-height: 1.2; }
   .seglist .row.active { background: var(--pill); font-weight: 500; }
   .seglist .row.past { opacity: .45; }
+  .seglist .row.armed {
+    transform: scale(1.015);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+    background: color-mix(in srgb, var(--pill) 70%, white 30%);
+    z-index: 4; position: relative;
+    transition: transform .15s ease-out, box-shadow .15s ease-out;
+  }
+  :global(body.dark) .seglist .row.armed {
+    background: color-mix(in srgb, var(--pill) 60%, black 40%);
+  }
+  .drag-drop-line {
+    height: 0; border-top: 2px solid var(--muted);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--muted) 20%, transparent);
+    margin: 2px 8px; pointer-events: none;
+  }
+  @media (hover: none) {
+    .seglist .row { touch-action: pan-y; }
+    .seglist .row.armed { touch-action: none; }
+  }
   .seglist .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 22px; }
   .seglist .name {
     flex: 1; overflow: hidden; overflow-wrap: break-word; white-space: normal; cursor: text;
