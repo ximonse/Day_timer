@@ -322,8 +322,18 @@
 
   function parseAndCommitSidebarName(b: Block, rawValue: string, addNew: boolean) {
     let val = rawValue;
-    
-    // Handle & (Extra Info)
+
+    // Handle && (session-wide prominent comment) before single &
+    if (val.includes('&&')) {
+      const idx = val.indexOf('&&');
+      const before = val.slice(0, idx);
+      const after = val.slice(idx + 2).trim();
+      val = before.trim();
+      if (after) {
+        extraInfo = extraInfo ? extraInfo + '\n&&' + after : '&&' + after;
+      }
+    }
+    // Handle single & (regular session-wide extra info)
     if (val.includes('&')) {
       const parts = val.split('&');
       val = parts[0].trim();
@@ -443,7 +453,15 @@
         onkeydown={(e) => handleSidebarExtraKeydown(e)}
         onclick={(e) => e.stopPropagation()}>{extraInfo}</textarea>
     {:else if extraInfo}
-      <button class="infobox seg-inline-btn" type="button" onclick={startExtraEdit}>{@html parseMarkdownHtml(extraInfo)}</button>
+      <div class="infobox-list">
+        {#each extraInfo.split('\n') as line, i}
+          {#if line.trim().startsWith('&&')}
+            <button class="infobox prominent seg-inline-btn" type="button" onclick={startExtraEdit}>{@html parseMarkdownHtml(line.trim().slice(2).trim())}</button>
+          {:else if line.trim()}
+            <button class="infobox seg-inline-btn" type="button" onclick={startExtraEdit}>{@html parseMarkdownHtml(line)}</button>
+          {/if}
+        {/each}
+      </div>
     {/if}
   {/if}
   {#if !isViewMode}
@@ -533,6 +551,19 @@
 
   .seglist .infobox { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: #ffffff; color: #1a1410; border: 1px solid #b8b0a4; font-size: 26px; line-height: 1.35; white-space: pre-wrap; font-style: italic; }
   :global(.dark) .seglist .infobox { background: #ececec; color: #000000; border: none; }
+  .infobox-list { display: flex; flex-direction: column; gap: 6px; }
+  .infobox-list .infobox { margin-top: 0; }
+  .infobox-list .infobox:first-child { margin-top: 18px; }
+  .seglist .infobox.prominent {
+    background: color-mix(in srgb, var(--muted) 22%, #ffffff);
+    border-left: 5px solid var(--muted);
+    font-weight: 500;
+    font-style: normal;
+  }
+  :global(.dark) .seglist .infobox.prominent {
+    background: color-mix(in srgb, var(--muted) 28%, #ececec);
+    border-left: 5px solid var(--muted);
+  }
   
   /* Sänk överstrykningen och låt den sticka ut utanför orden */
   :global(del) {

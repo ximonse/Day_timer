@@ -306,6 +306,19 @@
     border-left-style: dashed;
     transform: translateX(4px) scale(.99);
   }
+  :global(.sync-emoji) {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    font-size: 14px; line-height: 1;
+    margin-left: 4px; cursor: help;
+    border: 1px solid var(--border);
+    transition: background .25s, border-color .25s, box-shadow .25s;
+  }
+  :global(.sync-emoji[data-sync="green"])    { background: rgba(46,160,67,.28); border-color: rgba(46,160,67,.5); }
+  :global(.sync-emoji[data-sync="halfgreen"]){ background: rgba(46,160,67,.13); border-color: rgba(46,160,67,.32); }
+  :global(.sync-emoji[data-sync="orange"])   { background: rgba(255,140,0,.32); border-color: rgba(255,140,0,.55); box-shadow: 0 0 0 2px rgba(255,140,0,.18); }
+  :global(.sync-emoji[data-sync="red"])      { background: rgba(220,38,38,.28); border-color: rgba(220,38,38,.55); }
+  :global(.sync-emoji[data-sync="grey"])     { background: rgba(150,150,150,.18); border-color: var(--border); opacity: .6; }
   :global(.agenda-drop-indicator) {
     position: absolute;
     left: 0;

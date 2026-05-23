@@ -2574,17 +2574,16 @@
             </div>
           </div>
 
-          {#if hasSyncSession() && syncProbeText}
-            <span
-              style={`font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);margin-right:6px;white-space:nowrap;${syncProbeState === 'saving' ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : syncProbeState === 'ok' ? 'background:rgba(46,160,67,.14);border-color:rgba(46,160,67,.35);' : syncProbeState === 'error' ? 'background:rgba(220,38,38,.12);border-color:rgba(220,38,38,.35);' : 'opacity:.75;'}`}
-              title="Sync-probe"
-            >
-              {syncProbeText}
-            </span>
-          {/if}
-          <span style="font-size:12px;opacity:.55;padding:0 6px;border-left:1px solid var(--border);cursor:default;" title={loggedInUser ? `Inloggad som ${loggedInUser}` : 'Inte inloggad'}>
-            {loggedInUser ? '👤' : '👤︎'}
-          </span>
+          <span class="sync-emoji"
+            data-sync={!hasSyncSession() ? 'grey'
+              : (syncProbeState === 'error' || syncProbeState === 'conflict') ? 'red'
+              : (syncProbeState === 'saving' || syncProbeState === 'loading') ? 'orange'
+              : syncProbeState === 'queued' ? 'halfgreen'
+              : 'green'}
+            title={!hasSyncSession()
+              ? 'Ej inloggad'
+              : (syncProbeText ? `${loggedInUser ? loggedInUser + ' · ' : ''}${syncProbeText}` : (loggedInUser ? `Inloggad som ${loggedInUser}` : ''))}
+          >👤</span>
         </div>
       </div> <!-- toolbar end -->
 
