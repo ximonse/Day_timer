@@ -147,3 +147,7 @@ export function normalizeAiPlanResponse(raw: string): AiPlanResponse {
 export function aiPlanMetadataItems(response: AiPlanResponse, limit = AI_PLAN_METADATA_LIMIT): string[] {
 	return [...response.changes, ...response.assumptions, ...response.warnings].slice(0, limit);
 }
+
+export function hasAiPlanPreview(response: AiPlanResponse | null): response is AiPlanResponse {
+	return !!response?.text.trim();
+}

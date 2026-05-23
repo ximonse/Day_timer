@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
 	AI_PLANNING_MODE_LABELS,
 	aiPlanMetadataItems,
+	hasAiPlanPreview,
 	buildAiPlanSystemPrompt,
 	normalizeAiPlanResponse,
 	type AiPlanResponse
@@ -98,5 +99,11 @@ describe('ai-plan-engine', () => {
 			'Lade till paus',
 			'Antog 60 min'
 		]);
+	});
+
+	test('detects only non-empty preview text as previewable', () => {
+		expect(hasAiPlanPreview({ text: 'Start 5m', changes: [], assumptions: [], warnings: [] })).toBe(true);
+		expect(hasAiPlanPreview({ text: '   ', changes: ['Lade till start'], assumptions: [], warnings: [] })).toBe(false);
+		expect(hasAiPlanPreview(null)).toBe(false);
 	});
 });

@@ -188,6 +188,8 @@
   let agendaAiPlanningMode: AiPlanningMode = $state('anchored-day');
   let sessionAiLastResponse: AiPlanResponse | null = $state(null);
   let agendaAiLastResponse: AiPlanResponse | null = $state(null);
+  let sessionAiPreview: AiPlanResponse | null = $state(null);
+  let agendaAiPreview: AiPlanResponse | null = $state(null);
 
   let adminPassword = $state('');
   let inviteCodeResult = $state('');
@@ -1705,10 +1707,11 @@
         extraInfo: s.extraInfo
       }, sessionAiPlanningMode, 'create');
       sessionAiLastResponse = text;
-      handlePartsInput(text.text, true);
+      sessionAiPreview = text;
       aiInput = '';
     } catch (e: any) { 
       sessionAiLastResponse = null;
+      sessionAiPreview = null;
       aiError = e.message || 'Nätverksfel'; 
     } finally { 
       aiLoading = false; 
@@ -1725,24 +1728,45 @@
         currentPlan: s.agendaText
       }, agendaAiPlanningMode, 'create');
       agendaAiLastResponse = text;
-      setActiveAgendaText(text.text);
-      const aiDays = parseAgenda(text.text);
-      for (const day of aiDays) {
-        const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
-        for (const item of items) {
-          setAgendaMeta(makeAgendaMetaKeyForFlow(day.date ?? null, item.flow, item.startMin), { source: 'ai' });
-        }
-      }
-      activeAgendaFlowRef = null;
-      sessionSource = { kind: 'unscheduled' };
-      appState.persist();
+      agendaAiPreview = text;
       agendaAiInput = '';
     } catch (e: any) { 
       agendaAiLastResponse = null;
+      agendaAiPreview = null;
       agendaAiError = e.message || 'Nätverksfel'; 
     } finally { 
       agendaAiLoading = false; 
     }
+  }
+
+  function applyAiPartsPreview() {
+    if (!sessionAiPreview?.text.trim()) return;
+    handlePartsInput(sessionAiPreview.text, true);
+    sessionAiPreview = null;
+  }
+
+  function discardAiPartsPreview() {
+    sessionAiPreview = null;
+  }
+
+  function applyAiAgendaPreview() {
+    if (!agendaAiPreview?.text.trim()) return;
+    setActiveAgendaText(agendaAiPreview.text);
+    const aiDays = parseAgenda(agendaAiPreview.text);
+    for (const day of aiDays) {
+      const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
+      for (const item of items) {
+        setAgendaMeta(makeAgendaMetaKeyForFlow(day.date ?? null, item.flow, item.startMin), { source: 'ai' });
+      }
+    }
+    activeAgendaFlowRef = null;
+    sessionSource = { kind: 'unscheduled' };
+    appState.persist();
+    agendaAiPreview = null;
+  }
+
+  function discardAiAgendaPreview() {
+    agendaAiPreview = null;
   }
 
   function setFlowMinutes(flow: Flow, newTotal: number): Flow {
@@ -2734,6 +2758,7 @@
               {aiLoading}
               aiPlanningMode={sessionAiPlanningMode}
               aiLastResponse={sessionAiLastResponse}
+              aiPreview={sessionAiPreview}
               aiPlanMode={aiConfig.planMode}
               startTimeValue={fmtHM(s.startMin)}
               endTimeValue={fmtHM(s.startMin + totalMin())}
@@ -2781,6 +2806,8 @@
               onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
               onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
               onRunAi={runAiParts}
+              onApplyAiPreview={applyAiPartsPreview}
+              onDiscardAiPreview={discardAiPartsPreview}
               onAction={() => {
                 if (s.activeSection === 'plan') {
                   if (selectedAgendaDetails && planSelectionExplicit) {
@@ -2983,6 +3010,7 @@
     {aiConfig}
     aiPlanningMode={agendaAiPlanningMode}
     aiLastResponse={agendaAiLastResponse}
+    aiPreview={agendaAiPreview}
     {icsPreviewEvents}
     {activeAgendaDate}
     {saveAgenda}
@@ -3003,6 +3031,8 @@
     {schoolPrimary}
     {saveAiConfig}
     onSetAiPlanningMode={(mode) => { agendaAiPlanningMode = mode; }}
+    onApplyAiPreview={applyAiAgendaPreview}
+    onDiscardAiPreview={discardAiAgendaPreview}
     onSetActiveSection={setActiveSection}
     bind:agendaEl
     bind:timelineEl

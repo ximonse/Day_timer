@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AI_PLANNING_MODE_LABELS, aiPlanMetadataItems, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { AI_PLANNING_MODE_LABELS, aiPlanMetadataItems, hasAiPlanPreview, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
 
   const planningModeOptions = Object.entries(AI_PLANNING_MODE_LABELS) as [AiPlanningMode, string][];
 
@@ -21,6 +21,7 @@
     agendaAiInput,
     aiPlanningMode,
     aiLastResponse,
+    aiPreview,
     aiPlanMode,
     agendaAiError,
     agendaAiLoading,
@@ -43,6 +44,8 @@
     onSetStrictMode,
     onSetHelpfulMode,
     onRunAi,
+    onApplyAiPreview,
+    onDiscardAiPreview,
     onToggleImportHelp,
     onToggleIcsHelp
   }: {
@@ -63,6 +66,7 @@
     agendaAiInput: string;
     aiPlanningMode: AiPlanningMode;
     aiLastResponse: AiPlanResponse | null;
+    aiPreview: AiPlanResponse | null;
     aiPlanMode: 'strict' | 'helpful';
     agendaAiError: string;
     agendaAiLoading: boolean;
@@ -85,6 +89,8 @@
     onSetStrictMode: () => void;
     onSetHelpfulMode: () => void;
     onRunAi: () => void;
+    onApplyAiPreview: () => void;
+    onDiscardAiPreview: () => void;
     onToggleImportHelp: () => void;
     onToggleIcsHelp: () => void;
   } = $props();
@@ -178,6 +184,18 @@
             {#each aiPlanMetadataItems(aiLastResponse) as item}
               <span class="ai-meta-chip">{item}</span>
             {/each}
+          </div>
+        {/if}
+        {#if hasAiPlanPreview(aiPreview)}
+          <div class="ai-preview-box">
+            <div class="ai-preview-head">
+              <strong>AI-förslag</strong>
+              <div class="ai-preview-actions">
+                <button class="ai-key-btn" type="button" onclick={onDiscardAiPreview}>Kasta</button>
+                <button class="quickstart mini" type="button" onclick={onApplyAiPreview}>Använd förslag</button>
+              </div>
+            </div>
+            <pre>{aiPreview.text}</pre>
           </div>
         {/if}
         <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={agendaAiLoading || !agendaAiInput.trim()}>
