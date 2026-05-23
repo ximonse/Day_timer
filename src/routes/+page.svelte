@@ -60,6 +60,7 @@
     workspaceDataFromAppState,
     workspaceDataFromSyncResponse
   } from '$lib/workspace.js';
+  import { normalizeSyncSaveSource, type SyncSaveSource } from '$lib/sync-source.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -1249,7 +1250,8 @@
     finally { loadingFromCloud = false; }
   }
 
-  async function syncSave(source: 'manual' | 'auto-panel' | 'auto-effect' = 'manual') {
+  async function syncSave(source: SyncSaveSource | Event = 'manual') {
+    const saveSource = normalizeSyncSaveSource(source);
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
     syncActiveDraftFromEditor();
@@ -1257,11 +1259,11 @@
     const workspaceHash = JSON.stringify(workspace);
     const payloadStr = JSON.stringify({
       workspace,
-      ...(source === 'manual' ? { snapshotReason: 'manual-save' } : {})
+      ...(saveSource === 'manual' ? { snapshotReason: 'manual-save' } : {})
     });
     try {
       syncProbeState = 'saving';
-      syncProbeText = source === 'manual' ? 'Sparar...' : 'Autosparar...';
+      syncProbeText = saveSource === 'manual' ? 'Sparar...' : 'Autosparar...';
       const res = await fetch('/api/sync', {
         method: 'POST',
         headers: {
@@ -1285,8 +1287,8 @@
       lastSyncedHash = JSON.stringify({ ...workspace, revision: data.revision });
       syncProbeState = 'ok';
       syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
-      showSyncStatus(source === 'manual' ? 'Sparat till moln ✓' : 'Autosparat ✓');
-      if (source === 'manual') void loadWorkspaceSnapshots();
+      showSyncStatus(saveSource === 'manual' ? 'Sparat till moln ✓' : 'Autosparat ✓');
+      if (saveSource === 'manual') void loadWorkspaceSnapshots();
     } catch {
       syncProbeState = 'error';
       syncProbeText = 'Kunde inte spara';

@@ -139,7 +139,7 @@
     </div>
     <div class="sync-row">
       <button class="quickstart sync-btn" onclick={onSyncLoad}>☁ Ladda</button>
-      <button class="quickstart sync-btn" onclick={onSyncSave}>☁ Spara</button>
+      <button class="quickstart sync-btn" onclick={() => onSyncSave()}>☁ Spara</button>
     </div>
     <div class="snapshot-panel">
       <button class="quickstart quickstart-subtle snapshot-load" onclick={onLoadSnapshots}>
