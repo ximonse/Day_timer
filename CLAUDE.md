@@ -16,6 +16,23 @@
 
 ---
 
+## Vision (läs detta innan du börjar bygga)
+
+Day Timer ska vara det mest intuitiva sättet att starta ett pass snabbt, planera en dag visuellt, återanvända fungerande upplägg och känna att data och synk är trygga. Användarperspektivet: lärare, ofta stressad, fingrar på iPad mellan barn.
+
+1. **Produktkänsla över teknik.** Trygg, snabb, vacker vinner över "tekniskt korrekt". Friktion är fienden.
+2. **Datatrygghet är en feature.** Synk tappar aldrig data, skriver aldrig över i tysthet, säger till vid konflikt. Gå aldrig runt revisions-/sync-modellen.
+3. **Enkel kod, tydlig datamodell.** Begreppen (session, mall, block, aktivitet, agenda, workspace, revision) måste vara skarpa. Hellre tråkig kod på rätt modell än smart kod på oklar modell. Begreppsguide: `memory/vocabulary.md`.
+4. **Bygg inte in dig i ett hörn.** Lagring (Upstash) och auth ska kunna bytas. Fråga: stänger detta dörrar?
+5. **Modulär monolit.** En app, ett backend, tydliga moduler. Inte mikrotjänster.
+6. **Polish kör, kärna fråga.** Små UX-vinster kör direkt. Stora omskrivningar av kärnan — motivera och fråga först.
+7. **Bygg för 10 → 1000 användare utan ombyggnad.** Inte enterprise från dag ett, men inga shortcuts som måste rivas senare.
+8. **Den enkla testen:** Gör det dagens utveckling enklare? Minskar buggrisk? Lämnar dörren öppen för imorgon? Funkar stressat i ett klassrum?
+
+För djupare läsning: `VISION_FRAMEWORK.md` (filosofi), `WORKSPACE_SYNC_ARCHITECTURE.md` (data), `AI_ROADMAP.md` (kommande AI-faser).
+
+---
+
 ## Nuläge (Klar maj 2026)
 
 ### Phase A — Grunden
