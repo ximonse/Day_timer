@@ -2,6 +2,7 @@ import { Redis } from '@upstash/redis';
 import { json, error } from '@sveltejs/kit';
 import { validateSyncToken } from '$lib/security.js';
 import { workspaceDataFromSyncResponse, workspaceEnvelopeFromData } from '$lib/workspace.js';
+import { maybeSaveWorkspaceSnapshot, snapshotReasonFromSyncBody, workspaceSnapshotsKey } from '$lib/workspace-snapshot-store.js';
 
 const redis = new Redis({
   url: process.env.daytimer_KV_REST_API_URL!,
@@ -49,6 +50,7 @@ export async function POST({ request }: { request: Request }) {
 
   const existingRaw: any = await redis.get(redisKey(token));
   const existing = workspaceDataFromSyncResponse(existingRaw ?? {}, createId);
+  const snapshotReason = snapshotReasonFromSyncBody(body);
   
   const currentRevision = existing?.revision ?? 0;
   const baseRevision = incoming.revision;
@@ -64,6 +66,9 @@ export async function POST({ request }: { request: Request }) {
   incoming.revision = currentRevision + 1;
   const envelope = workspaceEnvelopeFromData(incoming);
   
+  if (snapshotReason) {
+    await maybeSaveWorkspaceSnapshot(redis, workspaceSnapshotsKey(token), existing, snapshotReason, createId, () => new Date().toISOString());
+  }
   await redis.set(redisKey(token), envelope);
   return json({ ok: true, revision: incoming.revision });
 }

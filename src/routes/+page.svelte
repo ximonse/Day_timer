@@ -166,6 +166,9 @@
   let syncStatusError = $state(false);
   let syncProbeText = $state('');
   let syncProbeState = $state<'idle' | 'queued' | 'loading' | 'saving' | 'ok' | 'error' | 'conflict'>('idle');
+  type WorkspaceSnapshotSummary = { id: string; revision: number; createdAt: string; reason: 'manual-save' | 'restore' };
+  let workspaceSnapshots = $state<WorkspaceSnapshotSummary[]>([]);
+  let workspaceSnapshotsLoading = $state(false);
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');
 
   let aiConfig = $state<AiConfig>({ ...DEFAULT_AI_CONFIG });
@@ -1237,6 +1240,7 @@
       showSyncStatus('Laddat från moln ✓');
       syncProbeState = 'ok';
       syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
+      void loadWorkspaceSnapshots();
     } catch { 
       showSyncStatus('Kunde inte ladda', true); 
       syncProbeState = 'error';
@@ -1251,7 +1255,10 @@
     syncActiveDraftFromEditor();
     const workspace = currentWorkspaceData();
     const workspaceHash = JSON.stringify(workspace);
-    const payloadStr = JSON.stringify({ workspace });
+    const payloadStr = JSON.stringify({
+      workspace,
+      ...(source === 'manual' ? { snapshotReason: 'manual-save' } : {})
+    });
     try {
       syncProbeState = 'saving';
       syncProbeText = source === 'manual' ? 'Sparar...' : 'Autosparar...';
@@ -1279,10 +1286,54 @@
       syncProbeState = 'ok';
       syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
       showSyncStatus(source === 'manual' ? 'Sparat till moln ✓' : 'Autosparat ✓');
+      if (source === 'manual') void loadWorkspaceSnapshots();
     } catch {
       syncProbeState = 'error';
       syncProbeText = 'Kunde inte spara';
       showSyncStatus('Kunde inte spara', true);
+    }
+  }
+
+  async function loadWorkspaceSnapshots() {
+    const token = s.syncKey || '';
+    if (!validateSyncToken(token)) return;
+    workspaceSnapshotsLoading = true;
+    try {
+      const res = await fetch('/api/sync/snapshots', {
+        headers: { 'x-sync-token': token }
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      workspaceSnapshots = Array.isArray(data.snapshots) ? data.snapshots : [];
+    } catch {
+      showSyncStatus('Kunde inte ladda tidigare versioner', true);
+    } finally {
+      workspaceSnapshotsLoading = false;
+    }
+  }
+
+  async function restoreWorkspaceSnapshot(snapshotId: string) {
+    const token = s.syncKey || '';
+    if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
+    try {
+      syncProbeState = 'loading';
+      syncProbeText = 'Återställer...';
+      const res = await fetch('/api/sync/restore', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-sync-token': token
+        },
+        body: JSON.stringify({ snapshotId })
+      });
+      if (!res.ok) throw new Error();
+      showSyncStatus('Tidigare version återställd ✓');
+      await syncLoad();
+      await loadWorkspaceSnapshots();
+    } catch {
+      syncProbeState = 'error';
+      syncProbeText = 'Kunde inte återställa';
+      showSyncStatus('Kunde inte återställa tidigare version', true);
     }
   }
 
@@ -1349,6 +1400,7 @@
   function logout() {
     loggedInUser = '';
     s.syncKey = '';
+    workspaceSnapshots = [];
     removeSessionValue(SYNC_TOKEN_STORAGE);
     localStorage.removeItem(SYNC_TOKEN_STORAGE);
     localStorage.removeItem('timer-login-user');
@@ -2829,6 +2881,8 @@
               {syncStatusError}
               {syncProbeText}
               {syncProbeState}
+              {workspaceSnapshots}
+              {workspaceSnapshotsLoading}
               {loginName}
               {loginPass}
               aiProvider={aiConfig.provider}
@@ -2851,6 +2905,8 @@
               onLogout={logout}
               onSyncLoad={syncLoad}
               onSyncSave={syncSave}
+              onLoadSnapshots={loadWorkspaceSnapshots}
+              onRestoreSnapshot={restoreWorkspaceSnapshot}
               onLogin={login}
               onLoginNameChange={(value) => loginName = value}
               onLoginPassChange={(value) => loginPass = value}

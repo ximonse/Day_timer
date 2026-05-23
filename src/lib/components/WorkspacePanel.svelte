@@ -29,9 +29,13 @@
     onLogout,
     onSyncLoad,
     onSyncSave,
+    onLoadSnapshots,
+    onRestoreSnapshot,
     onLogin,
     syncProbeText,
     syncProbeState,
+    workspaceSnapshots,
+    workspaceSnapshotsLoading,
     onLoginNameChange,
     onLoginPassChange,
     onToggleHelpHints,
@@ -69,9 +73,13 @@
     onLogout: () => void;
     onSyncLoad: () => void;
     onSyncSave: () => void;
+    onLoadSnapshots: () => void;
+    onRestoreSnapshot: (snapshotId: string) => void;
     onLogin: () => void;
     syncProbeText: string;
     syncProbeState: 'idle' | 'queued' | 'loading' | 'saving' | 'ok' | 'error' | 'conflict';
+    workspaceSnapshots: { id: string; revision: number; createdAt: string; reason: 'manual-save' | 'restore' }[];
+    workspaceSnapshotsLoading: boolean;
     onLoginNameChange: (value: string) => void;
     onLoginPassChange: (value: string) => void;
     onToggleHelpHints: () => void;
@@ -85,6 +93,12 @@
 
   let aiConfigOpen = $state(false);
   let inviteCode = $state('');
+
+  function snapshotLabel(createdAt: string) {
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) return createdAt;
+    return date.toLocaleString('sv-SE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
 </script>
 
 <div class="ai-key-section" style="margin-bottom:24px;">
@@ -126,6 +140,24 @@
     <div class="sync-row">
       <button class="quickstart sync-btn" onclick={onSyncLoad}>☁ Ladda</button>
       <button class="quickstart sync-btn" onclick={onSyncSave}>☁ Spara</button>
+    </div>
+    <div class="snapshot-panel">
+      <button class="quickstart quickstart-subtle snapshot-load" onclick={onLoadSnapshots}>
+        {workspaceSnapshotsLoading ? 'Laddar...' : 'Tidigare versioner'}
+      </button>
+      {#if workspaceSnapshots.length > 0}
+        <div class="snapshot-list">
+          {#each workspaceSnapshots as snapshot}
+            <div class="snapshot-row">
+              <span>
+                {snapshotLabel(snapshot.createdAt)}
+                <small>rev {snapshot.revision}</small>
+              </span>
+              <button class="snapshot-restore" onclick={() => onRestoreSnapshot(snapshot.id)}>Återställ</button>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
     {#if syncProbeText}
       <div class="sync-probe" class:error={syncProbeState === 'error'} class:conflict={syncProbeState === 'conflict'}>
@@ -264,6 +296,44 @@
   }
   .sync-probe.error { color: #a12d21; }
   .sync-probe.conflict { color: var(--accent); font-weight: 600; }
+  .snapshot-panel {
+    margin-top: 8px;
+  }
+  .snapshot-load {
+    width: 100%;
+    justify-content: center;
+    font-size: 12px;
+  }
+  .snapshot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .snapshot-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--menu-text);
+  }
+  .snapshot-row small {
+    color: var(--menu-muted);
+    margin-left: 4px;
+  }
+  .snapshot-restore {
+    border: 1px solid var(--menu-line);
+    background: transparent;
+    color: var(--menu-text);
+    border-radius: 6px;
+    padding: 3px 7px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .snapshot-restore:hover {
+    border-color: var(--accent);
+  }
   .probe-dot {
     width: 6px;
     height: 6px;
