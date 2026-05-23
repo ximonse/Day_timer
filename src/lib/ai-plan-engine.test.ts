@@ -36,6 +36,24 @@ describe('ai-plan-engine', () => {
 		});
 	});
 
+	test('normalizes structured output wrapped in markdown json fence', () => {
+		const parsed = normalizeAiPlanResponse(`\`\`\`json
+{
+  "text": "Start 5m\\nArbete 10m",
+  "assumptions": ["Antog lugn start"],
+  "changes": ["Lade till arbete"],
+  "warnings": []
+}
+\`\`\``);
+
+		expect(parsed).toEqual<AiPlanResponse>({
+			text: 'Start 5m\nArbete 10m',
+			assumptions: ['Antog lugn start'],
+			changes: ['Lade till arbete'],
+			warnings: []
+		});
+	});
+
 	test('keeps public Swedish labels stable', () => {
 		expect(AI_PLANNING_MODE_LABELS['fixed-session']).toBe('Fast pass');
 		expect(AI_PLANNING_MODE_LABELS['anchored-day']).toBe('Dag med ankare');

@@ -58,6 +58,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function stripMarkdownJsonFence(raw: string): string {
+	const trimmed = raw.trim();
+	const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+	return match ? match[1].trim() : trimmed;
+}
+
 function timeFrameText(timeFrame?: AiTimeFrame): string {
 	if (!timeFrame) return 'Ingen exakt tidsram angiven.';
 	const parts: string[] = [];
@@ -123,15 +129,16 @@ Regler:
 }
 
 export function normalizeAiPlanResponse(raw: string): AiPlanResponse {
+	const normalizedRaw = stripMarkdownJsonFence(raw);
 	const fallback: AiPlanResponse = {
-		text: raw.trim(),
+		text: normalizedRaw,
 		assumptions: [],
 		changes: [],
 		warnings: []
 	};
 
 	try {
-		const parsed = JSON.parse(raw) as unknown;
+		const parsed = JSON.parse(normalizedRaw) as unknown;
 		if (!isRecord(parsed) || typeof parsed.text !== 'string') return fallback;
 		return {
 			text: parsed.text.trim(),
