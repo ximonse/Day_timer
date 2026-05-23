@@ -4,6 +4,7 @@
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
   import { getAiPromptAgenda, AI_PROMPT_CALENDAR_CONVERT } from '$lib/ai.js';
+  import type { AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { colorForTitle, stripColorDirective } from '$lib/title-color.js';
   import AgendaImportPanel from './AgendaImportPanel.svelte';
@@ -31,6 +32,7 @@
     calendarCells,
     aiApiKey,
     aiConfig,
+    aiPlanningMode,
     icsPreviewEvents,
     activeAgendaDate,
     saveAgenda,
@@ -51,6 +53,7 @@
     schoolPrimary,
     agendaDimPast,
     saveAiConfig,
+    onSetAiPlanningMode,
     onSetActiveSection,
     agendaEl = $bindable(),
     timelineEl = $bindable(),
@@ -88,6 +91,7 @@
     calendarCells: any[];
     aiApiKey: string;
     aiConfig: any;
+    aiPlanningMode: AiPlanningMode;
     icsPreviewEvents: any[];
     activeAgendaDate: () => string | null;
     saveAgenda: () => void;
@@ -108,6 +112,7 @@
     schoolPrimary: () => boolean;
     agendaDimPast: boolean;
     saveAiConfig: () => void;
+    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
     onSetActiveSection: (s: any) => void;
     agendaEl: HTMLElement;
     timelineEl: HTMLElement;
@@ -221,6 +226,7 @@
         hasAiKey={!!aiApiKey}
         {agendaAiOpen}
         {agendaAiInput}
+        {aiPlanningMode}
         aiPlanMode={aiConfig.planMode}
         {agendaAiError}
         {agendaAiLoading}
@@ -242,6 +248,7 @@
         }}
         onToggleAi={() => agendaAiOpen = !agendaAiOpen}
         onAgendaAiInputChange={(value) => agendaAiInput = value}
+        {onSetAiPlanningMode}
         onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
         onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
         onRunAi={runAiAgenda}

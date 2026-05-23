@@ -1,11 +1,13 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
+  import { AI_PLANNING_MODE_LABELS, type AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { fade } from 'svelte/transition';
 
   let textareaEl: HTMLTextAreaElement | null = $state(null);
   let aiTextareaEl: HTMLTextAreaElement | null = $state(null);
 
   const voice = createVoiceService();
+  const planningModeOptions = Object.entries(AI_PLANNING_MODE_LABELS) as [AiPlanningMode, string][];
   let isRecording = $state(false);
   let recordingTarget: 'parts' | 'ai' | null = $state(null);
 
@@ -43,6 +45,8 @@
     onToggleAiPanel,
     aiInput,
     onAiInputChange,
+    aiPlanningMode,
+    onSetAiPlanningMode,
     aiPlanMode,
     onSetStrictMode,
     onSetHelpfulMode,
@@ -118,6 +122,8 @@
     onToggleAiPanel: () => void;
     aiInput: string;
     onAiInputChange: (value: string) => void;
+    aiPlanningMode: AiPlanningMode;
+    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
     aiPlanMode: 'strict' | 'helpful';
     onSetStrictMode: () => void;
     onSetHelpfulMode: () => void;
@@ -266,6 +272,11 @@
             <button class="mic-overlay-btn" class:recording={isRecording && recordingTarget === 'ai'} onclick={() => startRecording('ai')} title="Prata in instruktion">
               🎤
             </button>
+          </div>
+          <div class="ai-mode-row">
+            {#each planningModeOptions as [mode, label]}
+              <button class="ai-mode-btn" class:on={aiPlanningMode === mode} onclick={() => onSetAiPlanningMode(mode)}>{label}</button>
+            {/each}
           </div>
           <div class="ai-mode-row">
             <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>

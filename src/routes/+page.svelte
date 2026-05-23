@@ -33,6 +33,7 @@
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, getAiPromptAgenda, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
+  import type { AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -183,6 +184,8 @@
   let agendaAiLoading = $state(false);
   let agendaAiError = $state('');
   let agendaAiOpen = $state(false);
+  let sessionAiPlanningMode: AiPlanningMode = $state('fixed-session');
+  let agendaAiPlanningMode: AiPlanningMode = $state('anchored-day');
 
   let adminPassword = $state('');
   let inviteCodeResult = $state('');
@@ -1692,7 +1695,13 @@
     if (!aiInput.trim()) return;
     aiLoading = true; aiError = '';
     try {
-      const text = await requestAiPlan(aiConfig, aiInput, 'parts', { startMin: s.startMin });
+      const text = await requestAiPlan(aiConfig, aiInput, 'parts', {
+        startMin: s.startMin,
+        totalMin: totalMin(),
+        currentPlan: serializeBlocks(s.blocks, undefined, s.extraInfo),
+        dayTitle: s.dayTitle,
+        extraInfo: s.extraInfo
+      }, sessionAiPlanningMode, 'create');
       handlePartsInput(text.text, true);
       aiPanelOpen = false;
       aiInput = '';
@@ -1708,7 +1717,10 @@
     agendaAiLoading = true; agendaAiError = '';
     try {
       const todayISO = localDateISO();
-      const text = await requestAiPlan(aiConfig, agendaAiInput, 'agenda', { date: todayISO });
+      const text = await requestAiPlan(aiConfig, agendaAiInput, 'agenda', {
+        date: todayISO,
+        currentPlan: s.agendaText
+      }, agendaAiPlanningMode, 'create');
       setActiveAgendaText(text.text);
       const aiDays = parseAgenda(text.text);
       for (const day of aiDays) {
@@ -2716,6 +2728,7 @@
               {aiInput}
               {aiError}
               {aiLoading}
+              aiPlanningMode={sessionAiPlanningMode}
               aiPlanMode={aiConfig.planMode}
               startTimeValue={fmtHM(s.startMin)}
               endTimeValue={fmtHM(s.startMin + totalMin())}
@@ -2759,6 +2772,7 @@
               }}
               onToggleAiPanel={() => aiPanelOpen = !aiPanelOpen}
               onAiInputChange={(value) => aiInput = value}
+              onSetAiPlanningMode={(mode) => { sessionAiPlanningMode = mode; }}
               onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
               onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
               onRunAi={runAiParts}
@@ -2962,6 +2976,7 @@
     agendaDimPast={s.agendaDimPast}
     {aiApiKey}
     {aiConfig}
+    aiPlanningMode={agendaAiPlanningMode}
     {icsPreviewEvents}
     {activeAgendaDate}
     {saveAgenda}
@@ -2981,6 +2996,7 @@
     {startAgendaDrag}
     {schoolPrimary}
     {saveAiConfig}
+    onSetAiPlanningMode={(mode) => { agendaAiPlanningMode = mode; }}
     onSetActiveSection={setActiveSection}
     bind:agendaEl
     bind:timelineEl

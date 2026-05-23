@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { AI_PLANNING_MODE_LABELS, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+
+  const planningModeOptions = Object.entries(AI_PLANNING_MODE_LABELS) as [AiPlanningMode, string][];
+
   let {
     agendaInputOpen,
     agendaDraft,
@@ -15,6 +19,7 @@
     hasAiKey,
     agendaAiOpen,
     agendaAiInput,
+    aiPlanningMode,
     aiPlanMode,
     agendaAiError,
     agendaAiLoading,
@@ -33,6 +38,7 @@
     onCopyPrompt,
     onToggleAi,
     onAgendaAiInputChange,
+    onSetAiPlanningMode,
     onSetStrictMode,
     onSetHelpfulMode,
     onRunAi,
@@ -54,6 +60,7 @@
     hasAiKey: boolean;
     agendaAiOpen: boolean;
     agendaAiInput: string;
+    aiPlanningMode: AiPlanningMode;
     aiPlanMode: 'strict' | 'helpful';
     agendaAiError: string;
     agendaAiLoading: boolean;
@@ -72,6 +79,7 @@
     onCopyPrompt: (type: 'plan' | 'calendar') => Promise<void>;
     onToggleAi: () => void;
     onAgendaAiInputChange: (value: string) => void;
+    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
     onSetStrictMode: () => void;
     onSetHelpfulMode: () => void;
     onRunAi: () => void;
@@ -149,6 +157,11 @@
           <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;"
             value={agendaAiInput}
             oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
+        </div>
+        <div class="ai-mode-row">
+          {#each planningModeOptions as [mode, label]}
+            <button class="ai-mode-btn" class:on={aiPlanningMode === mode} onclick={() => onSetAiPlanningMode(mode)}>{label}</button>
+          {/each}
         </div>
         <div class="ai-mode-row">
           <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>

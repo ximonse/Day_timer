@@ -2,6 +2,7 @@
   import { fade } from 'svelte/transition';
   import NowEditorPanel from './NowEditorPanel.svelte';
   import PlanEditorPanel from './PlanEditorPanel.svelte';
+  import type { AiPlanningMode } from '$lib/ai-plan-engine.js';
 
   let {
     userLevel,
@@ -20,6 +21,7 @@
     aiInput,
     aiError,
     aiLoading,
+    aiPlanningMode,
     aiPlanMode,
     startTimeValue,
     endMode,
@@ -41,6 +43,7 @@
     onCopyPrompt,
     onToggleAiPanel,
     onAiInputChange,
+    onSetAiPlanningMode,
     onSetStrictMode,
     onSetHelpfulMode,
     onRunAi,
@@ -101,6 +104,7 @@
     aiInput: string;
     aiError: string;
     aiLoading: boolean;
+    aiPlanningMode: AiPlanningMode;
     aiPlanMode: 'strict' | 'helpful';
     startTimeValue: string;
     endTimeValue: string;
@@ -133,6 +137,7 @@
     onCopyPrompt: () => void;
     onToggleAiPanel: () => void;
     onAiInputChange: (value: string) => void;
+    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
     onSetStrictMode: () => void;
     onSetHelpfulMode: () => void;
     onRunAi: () => void;
@@ -228,6 +233,8 @@
       {onToggleAiPanel}
       {aiInput}
       {onAiInputChange}
+      {aiPlanningMode}
+      {onSetAiPlanningMode}
       {aiPlanMode}
       {onSetStrictMode}
       {onSetHelpfulMode}
