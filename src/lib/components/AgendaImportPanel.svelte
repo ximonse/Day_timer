@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AI_PLANNING_MODE_LABELS, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { AI_PLANNING_MODE_LABELS, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
 
   const planningModeOptions = Object.entries(AI_PLANNING_MODE_LABELS) as [AiPlanningMode, string][];
 
@@ -20,6 +20,7 @@
     agendaAiOpen,
     agendaAiInput,
     aiPlanningMode,
+    aiLastResponse,
     aiPlanMode,
     agendaAiError,
     agendaAiLoading,
@@ -61,6 +62,7 @@
     agendaAiOpen: boolean;
     agendaAiInput: string;
     aiPlanningMode: AiPlanningMode;
+    aiLastResponse: AiPlanResponse | null;
     aiPlanMode: 'strict' | 'helpful';
     agendaAiError: string;
     agendaAiLoading: boolean;
@@ -171,6 +173,13 @@
           </span>
         </div>
         {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
+        {#if aiLastResponse && (aiLastResponse.assumptions.length || aiLastResponse.changes.length || aiLastResponse.warnings.length)}
+          <div class="ai-meta-list">
+            {#each [...aiLastResponse.changes, ...aiLastResponse.assumptions, ...aiLastResponse.warnings] as item}
+              <span class="ai-meta-chip">{item}</span>
+            {/each}
+          </div>
+        {/if}
         <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={agendaAiLoading || !agendaAiInput.trim()}>
           {agendaAiLoading ? 'Tänker...' : 'Generera dagplan ▶'}
         </button>

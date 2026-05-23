@@ -4,7 +4,7 @@
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
   import { getAiPromptAgenda, AI_PROMPT_CALENDAR_CONVERT } from '$lib/ai.js';
-  import type { AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import type { AiPlanResponse, AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { colorForTitle, stripColorDirective } from '$lib/title-color.js';
   import AgendaImportPanel from './AgendaImportPanel.svelte';
@@ -33,6 +33,7 @@
     aiApiKey,
     aiConfig,
     aiPlanningMode,
+    aiLastResponse,
     icsPreviewEvents,
     activeAgendaDate,
     saveAgenda,
@@ -92,6 +93,7 @@
     aiApiKey: string;
     aiConfig: any;
     aiPlanningMode: AiPlanningMode;
+    aiLastResponse: AiPlanResponse | null;
     icsPreviewEvents: any[];
     activeAgendaDate: () => string | null;
     saveAgenda: () => void;
@@ -227,6 +229,7 @@
         {agendaAiOpen}
         {agendaAiInput}
         {aiPlanningMode}
+        {aiLastResponse}
         aiPlanMode={aiConfig.planMode}
         {agendaAiError}
         {agendaAiLoading}

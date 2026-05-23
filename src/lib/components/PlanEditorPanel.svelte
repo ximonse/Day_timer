@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
-  import { AI_PLANNING_MODE_LABELS, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { AI_PLANNING_MODE_LABELS, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { fade } from 'svelte/transition';
 
   let textareaEl: HTMLTextAreaElement | null = $state(null);
@@ -46,6 +46,7 @@
     aiInput,
     onAiInputChange,
     aiPlanningMode,
+    aiLastResponse,
     onSetAiPlanningMode,
     aiPlanMode,
     onSetStrictMode,
@@ -123,6 +124,7 @@
     aiInput: string;
     onAiInputChange: (value: string) => void;
     aiPlanningMode: AiPlanningMode;
+    aiLastResponse: AiPlanResponse | null;
     onSetAiPlanningMode: (mode: AiPlanningMode) => void;
     aiPlanMode: 'strict' | 'helpful';
     onSetStrictMode: () => void;
@@ -286,6 +288,13 @@
             </span>
           </div>
           {#if aiError}<div class="ai-error">{aiError}</div>{/if}
+          {#if aiLastResponse && (aiLastResponse.assumptions.length || aiLastResponse.changes.length || aiLastResponse.warnings.length)}
+            <div class="ai-meta-list">
+              {#each [...aiLastResponse.changes, ...aiLastResponse.assumptions, ...aiLastResponse.warnings] as item}
+                <span class="ai-meta-chip">{item}</span>
+              {/each}
+            </div>
+          {/if}
           <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={aiLoading || !aiInput.trim()}>
             {aiLoading ? 'Tänker...' : 'Generera ▶'}
           </button>

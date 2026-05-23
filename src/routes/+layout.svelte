@@ -524,6 +524,8 @@
   :global(.ai-mode-btn) { font-size: 11px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--menu-border); background: transparent; color: var(--menu-muted); cursor: pointer; font-family: inherit; font-weight: 500; transition: background .12s; }
   :global(.ai-mode-btn.on) { background: var(--menu-pill-on, var(--pill-on)); color: var(--menu-pill-on-fg, var(--pill-on-fg)); border-color: transparent; }
   :global(.ai-mode-hint) { font-size: 11px; color: var(--menu-muted); opacity: .8; }
+  :global(.ai-meta-list) { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0; }
+  :global(.ai-meta-chip) { border: 1px solid var(--menu-border); border-radius: 999px; padding: 3px 7px; font-size: 11px; color: var(--menu-muted); background: var(--menu-surface); }
   :global(.logged-in-row) { display: flex; align-items: center; gap: 8px; font-size: 13px; }
   :global(.logged-in-row .username) { flex: 1; font-weight: 600; color: var(--menu-fg); }
   :global(.logout-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }

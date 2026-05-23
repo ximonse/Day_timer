@@ -33,7 +33,7 @@
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, getAiPromptAgenda, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
-  import type { AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import type { AiPlanResponse, AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -186,6 +186,8 @@
   let agendaAiOpen = $state(false);
   let sessionAiPlanningMode: AiPlanningMode = $state('fixed-session');
   let agendaAiPlanningMode: AiPlanningMode = $state('anchored-day');
+  let sessionAiLastResponse: AiPlanResponse | null = $state(null);
+  let agendaAiLastResponse: AiPlanResponse | null = $state(null);
 
   let adminPassword = $state('');
   let inviteCodeResult = $state('');
@@ -1702,10 +1704,12 @@
         dayTitle: s.dayTitle,
         extraInfo: s.extraInfo
       }, sessionAiPlanningMode, 'create');
+      sessionAiLastResponse = text;
       handlePartsInput(text.text, true);
       aiPanelOpen = false;
       aiInput = '';
     } catch (e: any) { 
+      sessionAiLastResponse = null;
       aiError = e.message || 'Nätverksfel'; 
     } finally { 
       aiLoading = false; 
@@ -1721,6 +1725,7 @@
         date: todayISO,
         currentPlan: s.agendaText
       }, agendaAiPlanningMode, 'create');
+      agendaAiLastResponse = text;
       setActiveAgendaText(text.text);
       const aiDays = parseAgenda(text.text);
       for (const day of aiDays) {
@@ -1735,6 +1740,7 @@
       agendaAiOpen = false;
       agendaAiInput = '';
     } catch (e: any) { 
+      agendaAiLastResponse = null;
       agendaAiError = e.message || 'Nätverksfel'; 
     } finally { 
       agendaAiLoading = false; 
@@ -2729,6 +2735,7 @@
               {aiError}
               {aiLoading}
               aiPlanningMode={sessionAiPlanningMode}
+              aiLastResponse={sessionAiLastResponse}
               aiPlanMode={aiConfig.planMode}
               startTimeValue={fmtHM(s.startMin)}
               endTimeValue={fmtHM(s.startMin + totalMin())}
@@ -2977,6 +2984,7 @@
     {aiApiKey}
     {aiConfig}
     aiPlanningMode={agendaAiPlanningMode}
+    aiLastResponse={agendaAiLastResponse}
     {icsPreviewEvents}
     {activeAgendaDate}
     {saveAgenda}
