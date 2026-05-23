@@ -1734,6 +1734,7 @@
     };
     window.addEventListener('pointermove', onAgendaDrag);
     window.addEventListener('pointerup', endAgendaDrag);
+    window.addEventListener('pointercancel', endAgendaDrag);
   }
 
   function onAgendaDrag(e: PointerEvent) {
@@ -1783,6 +1784,7 @@
     agendaDragState = null;
     window.removeEventListener('pointermove', onAgendaDrag);
     window.removeEventListener('pointerup', endAgendaDrag);
+    window.removeEventListener('pointercancel', endAgendaDrag);
     setTimeout(() => { agendaDragMoved = false; }, 0);
     appState.persist();
   }
@@ -2237,6 +2239,7 @@
     if (isViewMode || !agendaDays || !selectedDay || !timelineEl || s.activeSection === 'now') return;
     e.preventDefault();
     e.stopPropagation();
+    try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
     agendaDragMoved = false;
     const dayIdx = selectedDayIdx;
     if (dayIdx < 0) return;
@@ -2252,6 +2255,7 @@
     };
     window.addEventListener('pointermove', onAgendaMove);
     window.addEventListener('pointerup', endAgendaMove);
+    window.addEventListener('pointercancel', endAgendaMove);
   }
 
   function onAgendaMove(e: PointerEvent) {
@@ -2273,6 +2277,7 @@
     agendaMoveState = null;
     window.removeEventListener('pointermove', onAgendaMove);
     window.removeEventListener('pointerup', endAgendaMove);
+    window.removeEventListener('pointercancel', endAgendaMove);
     if (!move || !agendaDays || !selectedDay || !timelineEl || !agendaDragMoved) {
       setTimeout(() => { agendaDragMoved = false; }, 0);
       return;
