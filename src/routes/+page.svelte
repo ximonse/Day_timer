@@ -1275,7 +1275,7 @@
       if (!res.ok) throw new Error();
       const data = await res.json();
       s.currentRevision = data.revision;
-      lastSyncedHash = JSON.stringify(currentWorkspaceData());
+      lastSyncedHash = JSON.stringify({ ...workspace, revision: data.revision });
       syncProbeState = 'ok';
       syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
       showSyncStatus(source === 'manual' ? 'Sparat till moln ✓' : 'Autosparat ✓');
@@ -2066,11 +2066,17 @@
     };
     document.addEventListener('visibilitychange', handleFocus);
     window.addEventListener('focus', handleFocus);
-    const syncPollId = setInterval(() => {
-      if (!document.hidden && s.syncKey && !loadingFromCloud && !syncProbeState.startsWith('saving')) {
-        void syncLoad();
-      }
-    }, 5 * 60 * 1000);
+    const syncPollId = setInterval(async () => {
+      if (document.hidden || !s.syncKey || loadingFromCloud || syncProbeState.startsWith('saving')) return;
+      try {
+        const res = await fetch('/api/sync/rev', { headers: { 'x-sync-token': s.syncKey } });
+        if (!res.ok) return;
+        const { revision } = await res.json();
+        if (typeof revision === 'number' && revision > s.currentRevision) {
+          void syncLoad();
+        }
+      } catch { /* silent */ }
+    }, 30 * 1000);
 
     return () => {
       clearInterval(id);
@@ -2164,13 +2170,6 @@
       stopPush();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  });
-
-  $effect(() => {
-    const _ = JSON.stringify(s.blocks) + s.palette + s.dark + s.hollow + s.textOutside +
-      s.showMin + s.showFive + s.showQuarter + s.showSegLabels + s.showCenterEnd + s.segMinutesMode + s.clockSpan +
-      s.agendaText + s.agendaDate + s.agendaText2 + s.agendaDate2 + s.agendaView;
-    agendaItems; // track agenda for 12h mode
   });
 
   $effect(() => {
