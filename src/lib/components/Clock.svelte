@@ -3,6 +3,7 @@
   import { clockTheme, labelColorFor, type Palette } from '$lib/theme.js';
   import type { Block, Flow } from '$lib/state.svelte.js';
   import { parseMarkdownSvg } from '$lib/markdown.js';
+  import { colorForTitle, hasColorDirective, paletteIndexForTitle, stripColorDirective } from '$lib/title-color.js';
 
   interface Props {
     palette: Palette;
@@ -80,13 +81,16 @@
       
       if (a1 - a0 < 0.1) return null;
       
-      const baseColor = sectorColors[i % sectorColors.length];
+      const displayTitle = stripColorDirective(item.flow.title);
+      const baseColor = colorForTitle(item.flow.title, sectorColors);
+      const colorIndex = paletteIndexForTitle(item.flow.title, sectorColors);
+      const explicitColor = hasColorDirective(item.flow.title);
       const isPast = nowMin >= itemEnd;
       const isActive = nowMin >= item.startMin && nowMin < itemEnd;
       const midAngle = (a0 + a1) / 2;
       const [lx, ly] = textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R * 0.65);
 
-      const pureEmoji = isOnlyEmoji(item.flow.title);
+      const pureEmoji = isOnlyEmoji(displayTitle);
 
       return {
         id: `agenda-${i}`,
@@ -97,8 +101,8 @@
         isActive,
         lx, ly,
         splitAngle: ((nowMin - periodStart) / 720) * 360,
-        fillText: labelColorFor(baseColor, i, isPast, palette, dark),
-        label: pureEmoji ? item.flow.title : `${truncate(item.flow.title, 10)} ${fmtHM(item.startMin)}`,
+        fillText: explicitColor ? baseColor : labelColorFor(baseColor, colorIndex, isPast, palette, dark),
+        label: pureEmoji ? displayTitle : `${truncate(displayTitle, 10)} ${fmtHM(item.startMin)}`,
         fontSize: pureEmoji ? 24 : (textOutside ? 14 : 13),
         pureEmoji
       };
@@ -114,14 +118,17 @@
       const segEndMin = cumMin + b.minutes;
       const a0 = startAngle + (segStartMin / clockSpan) * 360;
       const a1 = startAngle + (segEndMin / clockSpan) * 360;
-      const baseColor = sectorColors[i % sectorColors.length];
+      const displayTitle = stripColorDirective(b.title);
+      const baseColor = colorForTitle(b.title, sectorColors);
+      const colorIndex = paletteIndexForTitle(b.title, sectorColors);
+      const explicitColor = hasColorDirective(b.title);
       const isPast = elapsed >= segEndMin;
       const isActive = elapsed >= segStartMin && elapsed < segEndMin;
       const midAngle = (a0 + a1) / 2;
       const [lx, ly] = textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R / 2);
       
-      const pureEmoji = isOnlyEmoji(b.title);
-      let labelText = pureEmoji ? b.title : truncate(b.title, 14);
+      const pureEmoji = isOnlyEmoji(displayTitle);
+      let labelText = pureEmoji ? displayTitle : truncate(displayTitle, 14);
 
       if (!pureEmoji) {
         if (segMinutesMode === 'planned') {
@@ -141,7 +148,7 @@
         isActive,
         lx, ly,
         splitAngle: startAngle + (elapsed / clockSpan) * 360,
-        fillText: labelColorFor(baseColor, i, isPast, palette, dark),
+        fillText: explicitColor ? baseColor : labelColorFor(baseColor, colorIndex, isPast, palette, dark),
         label: labelText,
         fontSize: pureEmoji ? 48 : (textOutside ? 14 : 13),
         pureEmoji

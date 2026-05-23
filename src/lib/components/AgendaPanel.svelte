@@ -5,6 +5,7 @@
   import { type AgendaDay } from '$lib/parse.js';
   import { getAiPromptAgenda, AI_PROMPT_CALENDAR_CONVERT } from '$lib/ai.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
+  import { colorForTitle, stripColorDirective } from '$lib/title-color.js';
   import AgendaImportPanel from './AgendaImportPanel.svelte';
 
   let {
@@ -306,7 +307,8 @@
           <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>
         {/if}
         {#each agendaItems as item, ai (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-${ai}`)}
-          {@const itemColor = sectorColors[ai % sectorColors.length]}
+          {@const itemTitle = stripColorDirective(item.flow.title || '(utan rubrik)')}
+          {@const itemColor = colorForTitle(item.flow.title || '(utan rubrik)', sectorColors)}
           {@const itemEnd = item.startMin + item.totalMin}
           {@const today = localDateISO()}
           {@const itemDate = selectedDay?.date || today}
@@ -337,9 +339,9 @@
             {/if}
             <span class="agenda-name">
               {#if isPast}
-                <del>{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</del>
+                <del>{@html parseMarkdownHtml(itemTitle)}</del>
               {:else}
-                {@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}
+                {@html parseMarkdownHtml(itemTitle)}
               {/if}
             </span>
             {#if item.flow.id === selectedFlowId}
@@ -380,6 +382,7 @@
           {@const visStart = Math.max(item.startMin, windowStart)}
           {@const visEnd = Math.min(itemEnd, windowStart + 720)}
           {#if visEnd > visStart}
+            {@const itemTitle = stripColorDirective(item.flow.title || '(utan rubrik)')}
             {@const topPct = ((visStart - windowStart) / 720 * 100).toFixed(3)}
             {@const heightPct = ((visEnd - visStart) / 720 * 100).toFixed(3)}
             <div class="agenda-block ghost"
@@ -388,9 +391,9 @@
               <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
               <span class="agenda-name">
                 {#if isPast}
-                  <del>{@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}</del>
+                  <del>{@html parseMarkdownHtml(itemTitle)}</del>
                 {:else}
-                  {@html parseMarkdownHtml(item.flow.title || '(utan rubrik)')}
+                  {@html parseMarkdownHtml(itemTitle)}
                 {/if}
               </span>
             </div>

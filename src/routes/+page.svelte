@@ -61,6 +61,7 @@
     workspaceDataFromSyncResponse
   } from '$lib/workspace.js';
   import { normalizeSyncSaveSource, type SyncSaveSource } from '$lib/sync-source.js';
+  import { stripColorDirective } from '$lib/title-color.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -2516,7 +2517,7 @@
       {#if !isViewMode && !locked}
         <input id="lesson-title-input" class="lesson-title lesson-title-editable hero-text"
           placeholder="Rubrik…"
-          value={titleDraftValue || s.dayTitle}
+          value={titleDraftValue || stripColorDirective(s.dayTitle)}
           onfocus={() => { titleDraftValue = s.dayTitle; }}
           oninput={(e) => { titleDraftValue = (e.target as HTMLInputElement).value; }}
           onblur={(e) => {
@@ -2527,7 +2528,7 @@
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
         />
       {:else if s.dayTitle}
-        <div class="lesson-title hero-text">{s.dayTitle}</div>
+        <div class="lesson-title hero-text">{stripColorDirective(s.dayTitle)}</div>
       {/if}
       <div class="top-time">
         <button class="now now-btn hero-text" type="button" onclick={goToTimerNow} title="Visa nuvarande tid">{nowText}</button>

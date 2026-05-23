@@ -1,7 +1,8 @@
 <script lang="ts">
   import { clockTheme, type Palette } from '$lib/theme.js';
   import { uid, type Block } from '$lib/state.svelte.js';
-  import { parseMarkdownHtml, toggleStrikethrough } from '$lib/markdown.js';
+  import { parseMarkdownHtml } from '$lib/markdown.js';
+  import { colorForTitle, stripColorDirective, toggleTitleStrikethrough } from '$lib/title-color.js';
 
   interface Props {
     blocks: Block[];
@@ -199,14 +200,14 @@
   function toggleCheck(b: Block, lineIdx: number) {
     if (isViewMode) return;
     const lines = b.note.split('\n');
-    lines[lineIdx] = toggleStrikethrough(lines[lineIdx]);
+    lines[lineIdx] = toggleTitleStrikethrough(lines[lineIdx]);
     b.note = lines.join('\n');
     commitEdit();
   }
 
   function toggleTitleCheck(b: Block) {
     if (isViewMode) return;
-    b.title = toggleStrikethrough(b.title);
+    b.title = toggleTitleStrikethrough(b.title);
     commitEdit();
   }
 
@@ -382,6 +383,8 @@
   {/if}
   {#each blocks as b, i (b.id)}
     {@const ct = clockTheme(palette, dark)}
+    {@const displayTitle = stripColorDirective(b.title)}
+    {@const blockColor = colorForTitle(b.title, ct.colors)}
     {@const cumMin = blocks.slice(0, i).reduce((a: number, x: Block) => a + x.minutes, 0)}
     {@const segEnd = cumMin + b.minutes}
     {@const isActive = elapsedMin >= cumMin && elapsedMin < segEnd}
@@ -393,7 +396,7 @@
          use:bindRow={b.id}
          onclickcapture={maybeSuppressClick}>
       <span class="dot drag-handle"
-            style="background:{ct.colors[i % 8]}"
+            style="background:{blockColor}"
             onpointerdown={(e) => rowPointerDown(e, b.id)}></span>
       {#if editingBlockId === b.id && editingBlockField === 'name'}
         <input class="inline-edit name-inp" use:focusOnMount
@@ -403,7 +406,7 @@
           onclick={(e) => e.stopPropagation()} />
       {:else}
         <button class="name seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'name')} oncontextmenu={(e) => { e.preventDefault(); revealedCheckId = `${b.id}-title`; }}>
-          {@html parseMarkdownHtml(b.title)}
+          {@html parseMarkdownHtml(displayTitle)}
         </button>
         <div class="title-check-btn" class:revealed={revealedCheckId === `${b.id}-title`} onclick={(e) => { e.stopPropagation(); toggleTitleCheck(b); revealedCheckId = null; }} title="Bocka av block">
           {#if b.title.includes('~~')}✓{/if}
@@ -432,7 +435,7 @@
           {#each b.note.split('\n') as line, lineIdx}
             {#if line.trim()}
               <div class="note-line" oncontextmenu={(e) => { e.preventDefault(); revealedCheckId = `${b.id}-${lineIdx}`; }}>
-                <span class="note-text">{@html parseMarkdownHtml(line)}</span>
+                <span class="note-text">{@html parseMarkdownHtml(stripColorDirective(line))}</span>
                 <div class="check-btn" class:revealed={revealedCheckId === `${b.id}-${lineIdx}`} onclick={(e) => { e.stopPropagation(); toggleCheck(b, lineIdx); revealedCheckId = null; }} title="Bocka av">
                   {#if line.includes('~~')}✓{/if}
                 </div>
