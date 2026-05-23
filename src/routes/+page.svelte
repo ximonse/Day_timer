@@ -1692,7 +1692,49 @@
     const dropMin = windowStart + Math.round((dropY / timelineEl.clientHeight) * 720 / 5) * 5;
     const others = items.filter((_, i) => i !== flowIdx);
 
-    // Build free intervals (positions where source could fit without overlapping others)
+    // 1. Finger on another block?
+    const hitBlock = others.find(b => dropMin >= b.startMin && dropMin < b.startMin + b.totalMin);
+    if (hitBlock) {
+      const hitIdx = items.indexOf(hitBlock);
+      // Adjacent grannblock → swap. Non-adjacent → fall through to free placement.
+      if (hitIdx === flowIdx + 1 || hitIdx === flowIdx - 1) {
+        const sStart = source.startMin, sLen = source.totalMin;
+        const nStart = hitBlock.startMin, nLen = hitBlock.totalMin;
+        const isDown = hitIdx > flowIdx;
+        let newSourceStart: number;
+        let newNeighborStart: number;
+        if (isDown) {
+          // Pure starttime swap works if neighbor at sStart fits before original nStart
+          const pureOk = sStart + nLen <= nStart;
+          if (pureOk) {
+            newSourceStart = nStart;
+            newNeighborStart = sStart;
+          } else {
+            newSourceStart = sStart + nLen;
+            newNeighborStart = sStart;
+          }
+        } else {
+          const pureOk = nStart + sLen <= sStart;
+          if (pureOk) {
+            newSourceStart = nStart;
+            newNeighborStart = sStart;
+          } else {
+            newSourceStart = nStart;
+            newNeighborStart = nStart + sLen;
+          }
+        }
+        return {
+          items, source,
+          targetIdx: hitIdx,
+          previewStart: newSourceStart,
+          previewValid: true,
+          swap: { withIdx: hitIdx, neighborNewStart: newNeighborStart }
+        };
+      }
+      // hit a non-adjacent block → don't swap, fall through to free placement
+    }
+
+    // 2. Free placement: find closest valid spot in any gap.
     const sortedOthers = [...others].sort((a, b) => a.startMin - b.startMin);
     const freeIntervals: { start: number; end: number }[] = [];
     let cursor = windowStart;
@@ -1702,7 +1744,6 @@
     }
     if (cursor < windowEnd) freeIntervals.push({ start: cursor, end: windowEnd });
 
-    // Find closest valid placement to dropMin (across all gaps where source fits)
     const validIntervals = freeIntervals.filter(iv => iv.end - iv.start >= source.totalMin);
     let bestStart: number | null = null;
     let bestDist = Infinity;
@@ -1711,34 +1752,12 @@
       const dist = Math.abs(clamped - dropMin);
       if (dist < bestDist) { bestDist = dist; bestStart = clamped; }
     }
-
     if (bestStart !== null) {
       let targetIdx = others.findIndex(b => b.startMin > bestStart!);
       if (targetIdx < 0) targetIdx = others.length;
       return { items, source, targetIdx, previewStart: bestStart, previewValid: true, swap: null };
     }
 
-    // No valid free placement (tight cluster). Fall back to swap with immediate neighbor.
-    const nextItem = items[flowIdx + 1];
-    if (nextItem && dropMin > nextItem.startMin + nextItem.totalMin / 2) {
-      return {
-        items, source,
-        targetIdx: flowIdx + 1,
-        previewStart: source.startMin + nextItem.totalMin,
-        previewValid: true,
-        swap: { withIdx: flowIdx + 1, neighborNewStart: source.startMin }
-      };
-    }
-    const prevItem = items[flowIdx - 1];
-    if (prevItem && dropMin < prevItem.startMin + prevItem.totalMin / 2) {
-      return {
-        items, source,
-        targetIdx: flowIdx - 1,
-        previewStart: prevItem.startMin,
-        previewValid: true,
-        swap: { withIdx: flowIdx - 1, neighborNewStart: prevItem.startMin + source.totalMin }
-      };
-    }
     return { items, source, targetIdx: flowIdx, previewStart: source.startMin, previewValid: true, swap: null };
   }
 
