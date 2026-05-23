@@ -152,6 +152,54 @@
   let agendaImportHelpOpen = $state<any>('inherit');
   let agendaIcsHelpOpen = $state<any>('inherit');
 
+  // Touch: long-press on right zone of agenda block to move
+  let pressTimer: ReturnType<typeof setTimeout> | null = null;
+  let pressStartX = 0;
+  let pressStartY = 0;
+  let pressEvent: PointerEvent | null = null;
+  let suppressNextClick = false;
+
+  function rightZonePointerDown(e: PointerEvent, i: number) {
+    if (e.pointerType === 'mouse') return;
+    if (s.activeSection === 'now' || isViewMode) return;
+    pressStartX = e.clientX;
+    pressStartY = e.clientY;
+    pressEvent = e;
+    if (pressTimer) clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+      pressTimer = null;
+      if (pressEvent) {
+        suppressNextClick = true;
+        startAgendaMove(pressEvent, i);
+      }
+    }, 350);
+  }
+
+  function rightZonePointerMove(e: PointerEvent) {
+    if (!pressTimer) return;
+    const dx = e.clientX - pressStartX;
+    const dy = e.clientY - pressStartY;
+    if (Math.hypot(dx, dy) > 8) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+      pressEvent = null;
+    }
+  }
+
+  function rightZonePointerUp() {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+    pressEvent = null;
+  }
+
+  function handleBlockClick(item: any, ai: number, e: MouseEvent) {
+    if (suppressNextClick) {
+      suppressNextClick = false;
+      e.preventDefault();
+      return;
+    }
+    if (agendaDragMoved) return;
+    item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id);
+  }
 </script>
 
 <aside id="agenda-panel" class="agenda" bind:this={agendaEl}>
@@ -274,7 +322,7 @@
                class:active={isActive}
                class:dragging={agendaMoveState?.dayIdx === selectedDayIdx && agendaMoveState?.flowIdx === ai}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
-              onclick={() => { if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id); }}
+              onclick={(e) => handleBlockClick(item, ai, e)}
                onkeydown={(e) => {
                  if (e.key === 'Enter' || e.key === ' ') {
                    e.preventDefault();
@@ -309,6 +357,18 @@
               <button class="agenda-del-btn" onclick={(e) => { e.stopPropagation(); deleteAgendaItem(ai); }} title="Ta bort block">🗑</button>
               <div class="agenda-drag-top" role="separator" aria-orientation="horizontal" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
               <div class="agenda-drag-bottom" role="separator" aria-orientation="horizontal" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
+              {#if s.activeSection !== 'now'}
+                <div class="agenda-zone-left" aria-hidden="true"></div>
+                <div class="agenda-zone-resize-top" aria-hidden="true"
+                     onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
+                <div class="agenda-zone-resize-bottom" aria-hidden="true"
+                     onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
+                <div class="agenda-zone-right"
+                     onpointerdown={(e) => rightZonePointerDown(e, ai)}
+                     onpointermove={rightZonePointerMove}
+                     onpointerup={rightZonePointerUp}
+                     onpointercancel={rightZonePointerUp}><span>⋮⋮</span></div>
+              {/if}
             {/if}
           </div>
         {/each}
