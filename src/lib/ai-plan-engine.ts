@@ -76,7 +76,7 @@ function modeInstruction(mode: AiPlanningMode): string {
 	return 'Fri dag: gor roran startbar med mjuk ordning, sma steg och paminnelser. Skapa mindre schema och mer stod.';
 }
 
-export function buildAiPlanSystemPrompt(request: Pick<AiPlanRequest, 'planningMode' | 'intent' | 'timeFrame' | 'currentPlan' | 'workspaceContext'>): string {
+export function buildAiPlanSystemPrompt(request: Pick<AiPlanRequest, 'planningMode' | 'intent' | 'userInput' | 'timeFrame' | 'currentPlan' | 'workspaceContext'>): string {
 	const label = AI_PLANNING_MODE_LABELS[request.planningMode];
 	const frame = timeFrameText(request.timeFrame);
 	const currentPlan = request.currentPlan?.trim() ? request.currentPlan.trim() : 'Ingen befintlig plan.';

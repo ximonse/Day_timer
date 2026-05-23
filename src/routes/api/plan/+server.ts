@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
+import { buildAiPlanSystemPrompt, normalizeAiPlanResponse, type AiPlanIntent, type AiPlanningMode } from '$lib/ai-plan-engine.js';
 
 type Provider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 type PlanMode = 'strict' | 'helpful';
@@ -203,28 +204,51 @@ function safeErrorMessage(err: unknown): string {
   return 'AI-tjänsten svarade med ett fel';
 }
 
+function planningModeFromInput(mode: 'parts' | 'agenda', value: AiPlanningMode | undefined): AiPlanningMode {
+  if (value === 'fixed-session' || value === 'anchored-day' || value === 'free-day') return value;
+  return mode === 'parts' ? 'fixed-session' : 'anchored-day';
+}
+
 export const POST: RequestHandler = async ({ request }) => {
-  const { provider = 'anthropic', apiKey, message, mode, planMode = 'helpful', context, baseUrl, customModel } = await request.json() as {
+  const { provider = 'anthropic', apiKey, message, mode, planMode = 'helpful', context, baseUrl, customModel, planningMode: bodyPlanningMode, intent: bodyIntent } = await request.json() as {
     provider?: Provider;
     apiKey?: string;
     message: string;
     mode: 'parts' | 'agenda';
     planMode?: PlanMode;
-    context?: { startMin?: number; date?: string };
+    context?: { startMin?: number; endMin?: number; totalMin?: number; date?: string; currentPlan?: string; dayTitle?: string; extraInfo?: string };
     baseUrl?: string;
     customModel?: string;
+    planningMode?: AiPlanningMode;
+    intent?: AiPlanIntent;
   };
 
   if (!apiKey?.trim()) return json({ error: 'Ingen API-nyckel angiven' }, { status: 400 });
   if (!message?.trim()) return json({ error: 'Inget meddelande' }, { status: 400 });
 
   const todayISO = context?.date ?? new Date().toISOString().slice(0, 10);
-  let systemPrompt: string;
-  if (mode === 'agenda') {
-    systemPrompt = planMode === 'strict' ? agendaStrictPrompt(todayISO) : agendaHelpfulPrompt(todayISO);
-  } else {
-    systemPrompt = planMode === 'strict' ? PARTS_STRICT : PARTS_HELPFUL;
-  }
+  const planningMode = planningModeFromInput(mode, bodyPlanningMode);
+  const intent = bodyIntent ?? 'create';
+  const planModeInstruction = planMode === 'strict'
+    ? '\n\nStrikt lage: aterge anvandarens innehall sa nara som mojligt. Lagg inte till egna aktiviteter, pauser eller rad om det inte kravs for att formatet ska fungera.'
+    : '\n\nHjalpsamt lage: gor planen mer genomforbar med rimliga tider, buffert, overgangar och korta rad nar det tydligt hjalper.';
+  const systemPrompt = buildAiPlanSystemPrompt({
+    planningMode,
+    intent,
+    userInput: message,
+    currentPlan: context?.currentPlan,
+    timeFrame: {
+      startMin: context?.startMin,
+      endMin: context?.endMin,
+      totalMin: context?.totalMin,
+      date: todayISO
+    },
+    workspaceContext: {
+      mode: mode === 'parts' ? 'plan' : 'agenda',
+      dayTitle: context?.dayTitle,
+      extraInfo: context?.extraInfo
+    }
+  }) + planModeInstruction;
 
   const key = apiKey.trim();
 
@@ -244,7 +268,8 @@ export const POST: RequestHandler = async ({ request }) => {
       if (isPrivateHost(parsedUrl.hostname)) return json({ error: 'Bas-URL pekar på ett otillåtet nätverk' }, { status: 400 });
       text = await callOpenAI(key, systemPrompt, message, parsedUrl.toString(), customModel?.trim() || undefined);
     }
-    return json({ text });
+    const normalized = normalizeAiPlanResponse(text);
+    return json(normalized);
   } catch (err: unknown) {
     console.error('[api/plan] AI call failed:', err instanceof Error ? err.message : err);
     return json({ error: safeErrorMessage(err) }, { status: 500 });

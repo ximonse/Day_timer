@@ -1693,7 +1693,7 @@
     aiLoading = true; aiError = '';
     try {
       const text = await requestAiPlan(aiConfig, aiInput, 'parts', { startMin: s.startMin });
-      handlePartsInput(text, true);
+      handlePartsInput(text.text, true);
       aiPanelOpen = false;
       aiInput = '';
     } catch (e: any) { 
@@ -1709,8 +1709,8 @@
     try {
       const todayISO = localDateISO();
       const text = await requestAiPlan(aiConfig, agendaAiInput, 'agenda', { date: todayISO });
-      setActiveAgendaText(text);
-      const aiDays = parseAgenda(text);
+      setActiveAgendaText(text.text);
+      const aiDays = parseAgenda(text.text);
       for (const day of aiDays) {
         const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
         for (const item of items) {
