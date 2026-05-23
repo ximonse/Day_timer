@@ -1368,7 +1368,7 @@
       const data = await res.json();
       s.userLevel = data.level;
       appState.persist();
-      showToast('Nivå 2 upplåst! ✨');
+      showToast('Nivå 2 upplåst');
     } catch (e: any) {
       showToast(e.message);
     }
@@ -1385,9 +1385,10 @@
         },
         body: JSON.stringify({ code, multi }),
       });
-      if (!res.ok) throw new Error('Kunde inte skapa inbjudan');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Kunde inte skapa inbjudan');
       localStorage.setItem('admin-password', adminPassword);
-      inviteCodeResult = code.toUpperCase();
+      inviteCodeResult = data.code || code.trim().toUpperCase();
       showToast('Inbjudan skapad ✓');
     } catch (e: any) {
       showToast(e.message);

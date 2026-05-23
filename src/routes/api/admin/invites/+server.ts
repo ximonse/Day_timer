@@ -1,6 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { json, error } from '@sveltejs/kit';
-import { validateSyncToken } from '$lib/security.js';
+import { inviteKey, normalizeInviteCode, type InviteRecord } from '$lib/invites.js';
 
 const redis = new Redis({
   url: process.env.daytimer_KV_REST_API_URL!,
@@ -12,10 +12,6 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'change-me-in-env';
 function isAdmin(request: Request): boolean {
   const auth = request.headers.get('x-admin-password');
   return auth === ADMIN_PASSWORD;
-}
-
-function inviteKey(code: string): string {
-  return `daytimer:invite:${code.trim().toUpperCase()}`;
 }
 
 export async function GET({ request }: { request: Request }) {
@@ -30,8 +26,13 @@ export async function POST({ request }: { request: Request }) {
   if (!isAdmin(request)) throw error(401, 'Unauthorized');
   
   const { code, multi } = await request.json();
-  if (!code) throw error(400, 'Code required');
+  const normalizedCode = typeof code === 'string' ? normalizeInviteCode(code) : '';
+  if (!normalizedCode) throw error(400, 'Code required');
   
-  await redis.set(inviteKey(code), { used: false, multi: !!multi });
-  return json({ ok: true });
+  const key = inviteKey(normalizedCode);
+  const invite: InviteRecord = { used: false, multi: !!multi };
+  await redis.set(key, invite);
+  const stored = await redis.get(key) as InviteRecord | null;
+  if (!stored) throw error(500, 'Invite code could not be verified');
+  return json({ ok: true, code: normalizedCode });
 }

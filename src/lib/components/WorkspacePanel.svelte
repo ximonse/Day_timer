@@ -273,16 +273,22 @@
   {/if}
 </div>
 
-<div style="margin-top: auto; padding-top: 40px; display: flex; justify-content: flex-end;">
-  <input 
-    type="text" 
-    bind:value={inviteCode}
-    onkeydown={(e) => { if (e.key === 'Enter') { onUpgrade(inviteCode); inviteCode = ''; } }}
-    style="opacity: 0.15; background: transparent; border: none; width: 80px; color: currentColor; font-size: 11px; cursor: default; transition: opacity 0.2s;"
-    class="secret-unlock-input"
-    title="Unlock Level 2"
-  />
-</div>
+{#if userLevel < 2}
+  <div class="ai-key-section" style="margin-top:16px;">
+    <div class="field-label">Lås upp nivå 2</div>
+    <div class="section-copy muted" style="margin:4px 0 8px;">Klistra in en inbjudningskod för AI-funktioner.</div>
+    <div class="unlock-row">
+      <input
+        type="text"
+        class="sync-input"
+        bind:value={inviteCode}
+        placeholder="Inbjudningskod"
+        onkeydown={(e) => { if (e.key === 'Enter') { onUpgrade(inviteCode); inviteCode = ''; } }}
+      />
+      <button class="ai-key-btn" onclick={() => { onUpgrade(inviteCode); inviteCode = ''; }} disabled={!inviteCode.trim()}>Aktivera</button>
+    </div>
+  </div>
+{/if}
 
 <style>
   .sync-probe {
@@ -333,6 +339,14 @@
   }
   .snapshot-restore:hover {
     border-color: var(--accent);
+  }
+  .unlock-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .unlock-row input {
+    flex: 1;
   }
   .probe-dot {
     width: 6px;

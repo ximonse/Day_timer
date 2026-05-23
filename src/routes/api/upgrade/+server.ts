@@ -1,6 +1,7 @@
 import { Redis } from '@upstash/redis';
 import { json, error } from '@sveltejs/kit';
 import { validateSyncToken } from '$lib/security.js';
+import { inviteKey, normalizeInviteCode, type InviteRecord } from '$lib/invites.js';
 
 const redis = new Redis({
   url: process.env.daytimer_KV_REST_API_URL!,
@@ -17,25 +18,23 @@ function userProfileKey(token: string): string {
   return `daytimer:user:${token}`;
 }
 
-function inviteKey(code: string): string {
-  return `daytimer:invite:${code.trim().toUpperCase()}`;
-}
-
 // POST /api/upgrade - Claim an invite code
 export async function POST({ request }: { request: Request }) {
   const token = readSyncToken(request);
   const { code } = await request.json();
+  const normalizedCode = typeof code === 'string' ? normalizeInviteCode(code) : '';
   
-  if (!code) throw error(400, 'Code is required');
+  if (!normalizedCode) throw error(400, 'Code is required');
   
-  const invite = await redis.get(inviteKey(code)) as { used?: boolean, multi?: boolean } | null;
+  const key = inviteKey(normalizedCode);
+  const invite = await redis.get(key) as InviteRecord | null;
   
-  if (!invite) throw error(404, 'Invalid invite code');
+  if (!invite) throw error(404, `Invite code ${normalizedCode} was not found`);
   if (invite.used && !invite.multi) throw error(403, 'Invite code already used');
   
   // Mark as used if not multi-use
   if (!invite.multi) {
-    await redis.set(inviteKey(code), { ...invite, used: true });
+    await redis.set(key, { ...invite, used: true });
   }
   
   // Upgrade user level
