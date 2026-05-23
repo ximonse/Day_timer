@@ -34,6 +34,7 @@
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, getAiPromptAgenda, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
   import type { AiPlanResponse, AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { effectiveUserLevel } from '$lib/access.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -251,6 +252,7 @@
 
   // derived shorthand used in templates
   const aiApiKey = $derived(aiConfig.apiKey);
+  const featureUserLevel = $derived(effectiveUserLevel(s.userLevel, loggedInUser, adminPassword));
 
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
@@ -2184,8 +2186,8 @@
     const savedUser = localStorage.getItem('timer-login-user');
     if (savedUser) {
       loggedInUser = savedUser;
-      if (savedUser.toLowerCase() === 'admin') adminPassword = localStorage.getItem('admin-password') || '';
     }
+    adminPassword = localStorage.getItem('admin-password') || '';
     aiConfig = loadAiConfig();
     const today = localDateISO();
     if (!isViewMode) {
@@ -2739,7 +2741,7 @@
         {#if s.activeSection === 'now' || s.activeSection === 'plan'}
           <div in:fade={{ duration: 150 }}>
             <SessionEditorPanel
-              userLevel={s.userLevel}
+              userLevel={featureUserLevel}
               aiProvider={aiConfig.provider}
               aiApiKey={aiConfig.apiKey}
               mode={s.activeSection}
@@ -2922,7 +2924,7 @@
         {:else if s.activeSection === 'workspace'}
           <div in:fade={{ duration: 150 }}>
             <WorkspacePanel
-              userLevel={s.userLevel}
+              userLevel={featureUserLevel}
               onUpgrade={upgradeLevel}
               {loggedInUser}
 
