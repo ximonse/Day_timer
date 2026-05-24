@@ -249,6 +249,7 @@
 
   // derived shorthand used in templates
   const aiApiKey = $derived(aiConfig.apiKey);
+  const effectiveUserLevel = $derived(loggedInUser.toLowerCase() === 'admin' ? Math.max(s.userLevel, 2) : s.userLevel);
 
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
@@ -2739,7 +2740,7 @@
         {#if s.activeSection === 'now' || s.activeSection === 'plan'}
           <div in:fade={{ duration: 150 }}>
             <SessionEditorPanel
-              userLevel={s.userLevel}
+              userLevel={effectiveUserLevel}
               aiProvider={aiConfig.provider}
               aiApiKey={aiConfig.apiKey}
               mode={s.activeSection}
@@ -2919,7 +2920,7 @@
         {:else if s.activeSection === 'workspace'}
           <div in:fade={{ duration: 150 }}>
             <WorkspacePanel
-              userLevel={s.userLevel}
+              userLevel={effectiveUserLevel}
               onUpgrade={upgradeLevel}
               {loggedInUser}
 
