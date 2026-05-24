@@ -24,7 +24,7 @@ function workspace(title: string, revision: number) {
 		'actualTimeLog' | 'nowDraft' | 'planDraft' | 'palette' | 'dark' | 'clockSpan' | 'endMode' |
 		'agendaView' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'showLeft' |
 		'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
-		'segMinutesMode'
+		'showFutureSegments' | 'segMinutesMode'
 	> = {
 		flows: [],
 		agendaText: '',
@@ -50,6 +50,7 @@ function workspace(title: string, revision: number) {
 		showMin: true,
 		showFive: true,
 		showQuarter: true,
+		showFutureSegments: true,
 		segMinutesMode: 'planned'
 	};
 	return workspaceDataFromAppState(state, revision);

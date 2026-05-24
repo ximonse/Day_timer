@@ -824,8 +824,8 @@
 
   // ── Drag ──
   type DragState =
-    | { type: 'between'; i: number; leftMin: number; rightMin: number }
-    | { type: 'end' }
+    | { type: 'between'; i: number; leftMin: number; rightMin: number; boundaryMin0: number }
+    | { type: 'end'; totalMin0: number }
     | { type: 'start'; startMin0: number; endMin0: number; pointerAng0: number };
   let drag: DragState | null = null;
 
@@ -843,14 +843,15 @@
   function startBoundaryDrag(pe: PointerEvent, i: number) {
     if (isViewMode || locked) return;
     pe.preventDefault();
-    drag = { type: 'between', i, leftMin: s.blocks[i].minutes, rightMin: s.blocks[i+1].minutes };
+    const boundaryMin0 = s.blocks.slice(0, i + 1).reduce((sum, b) => sum + b.minutes, 0);
+    drag = { type: 'between', i, leftMin: s.blocks[i].minutes, rightMin: s.blocks[i+1].minutes, boundaryMin0 };
     window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag);
   }
   function startEndDrag(pe: PointerEvent) {
     if (isViewMode || locked) return;
     pe.preventDefault();
-    drag = { type: 'end' };
+    drag = { type: 'end', totalMin0: totalMin() };
     window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag);
   }
@@ -885,11 +886,27 @@
     let rel = ang - sa;
     while (rel < 0) rel += 360;
 
+    function unwrappedMinuteNear(anchorMin: number) {
+      const base = (rel / 360) * s.clockSpan;
+      let best = base;
+      let bestDist = Math.abs(base - anchorMin);
+      const anchorCycle = Math.round(anchorMin / s.clockSpan);
+      for (let cycle = Math.max(0, anchorCycle - 2); cycle <= anchorCycle + 2; cycle++) {
+        const candidate = base + cycle * s.clockSpan;
+        const dist = Math.abs(candidate - anchorMin);
+        if (dist < bestDist) {
+          best = candidate;
+          bestDist = dist;
+        }
+      }
+      return best;
+    }
+
     if (drag.type === 'end') {
-      let newTotal = (rel / 360) * s.clockSpan;
+      let newTotal = unwrappedMinuteNear(drag.totalMin0);
       const minTotal = s.blocks.length * 2;
       if (newTotal < minTotal) newTotal = minTotal;
-      if (newTotal > s.clockSpan) newTotal = s.clockSpan;
+      if (newTotal > s.clockSpan * 3) newTotal = s.clockSpan * 3;
       scaleMinutesTo(Math.round(newTotal));
        return;
     }
@@ -902,13 +919,13 @@
       let newTotal = drag.endMin0 - newStart;
       const minTotal = s.blocks.length * 2;
       if (newTotal < minTotal) { newTotal = minTotal; newStart = drag.endMin0 - newTotal; }
-      if (newTotal > s.clockSpan) { newTotal = s.clockSpan; newStart = drag.endMin0 - newTotal; }
+      if (newTotal > s.clockSpan * 3) { newTotal = s.clockSpan * 3; newStart = drag.endMin0 - newTotal; }
       s.startMin = newStart;
       scaleMinutesTo(newTotal);
        return;
       }
 
-    const targetCumMin = (rel / 360) * s.clockSpan;
+    const targetCumMin = unwrappedMinuteNear(drag.boundaryMin0);
     let cumBefore = 0;
     for (let k = 0; k < drag.i; k++) cumBefore += s.blocks[k].minutes;
     let newLeft = targetCumMin - cumBefore;
@@ -2566,6 +2583,7 @@
         showMin={s.showMin}
         showFive={s.showFive}
         showQuarter={s.showQuarter}
+        showFutureSegments={s.showFutureSegments}
         showSegLabels={s.showSegLabels}
         segMinutesMode={s.segMinutesMode}
         nowMin={nowMinLive}

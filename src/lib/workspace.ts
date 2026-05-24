@@ -17,6 +17,7 @@ export interface WorkspacePreferences {
 	showMin: boolean;
 	showFive: boolean;
 	showQuarter: boolean;
+	showFutureSegments: boolean;
 	segMinutesMode: AppState['segMinutesMode'];
 }
 
@@ -72,6 +73,7 @@ export interface LegacySyncPayload {
 	showMin?: boolean;
 	showFive?: boolean;
 	showQuarter?: boolean;
+	showFutureSegments?: boolean;
 	segMinutesMode?: AppState['segMinutesMode'];
 }
 
@@ -80,7 +82,7 @@ type SyncableAppState = Pick<AppState,
 	'actualTimeLog' | 'nowDraft' | 'planDraft' | 'palette' | 'dark' | 'clockSpan' | 'endMode' |
 	'agendaView' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'showLeft' |
 	'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
-	'segMinutesMode'
+	'showFutureSegments' | 'segMinutesMode'
 >;
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
@@ -143,6 +145,7 @@ export const DEFAULT_WORKSPACE_PREFERENCES: WorkspacePreferences = {
 	showMin: true,
 	showFive: true,
 	showQuarter: true,
+	showFutureSegments: true,
 	segMinutesMode: 'planned'
 };
 
@@ -179,6 +182,7 @@ export function workspaceDataFromAppState(state: SyncableAppState, revision: num
 			showMin: state.showMin,
 			showFive: state.showFive,
 			showQuarter: state.showQuarter,
+			showFutureSegments: state.showFutureSegments,
 			segMinutesMode: state.segMinutesMode
 		},
 		revision
@@ -210,6 +214,7 @@ export function applyWorkspaceDataToAppState(state: SyncableAppState, workspace:
 	state.showMin = workspace.preferences.showMin;
 	state.showFive = workspace.preferences.showFive;
 	state.showQuarter = workspace.preferences.showQuarter;
+	state.showFutureSegments = workspace.preferences.showFutureSegments;
 	state.segMinutesMode = workspace.preferences.segMinutesMode;
 }
 
@@ -324,6 +329,7 @@ export function workspaceDataFromSyncResponse(value: unknown, createId: () => st
 		showMin: typeof preferences?.showMin === 'boolean' ? preferences.showMin : typeof raw.showMin === 'boolean' ? raw.showMin : DEFAULT_WORKSPACE_PREFERENCES.showMin,
 		showFive: typeof preferences?.showFive === 'boolean' ? preferences.showFive : typeof raw.showFive === 'boolean' ? raw.showFive : DEFAULT_WORKSPACE_PREFERENCES.showFive,
 		showQuarter: typeof preferences?.showQuarter === 'boolean' ? preferences.showQuarter : typeof raw.showQuarter === 'boolean' ? raw.showQuarter : DEFAULT_WORKSPACE_PREFERENCES.showQuarter,
+		showFutureSegments: typeof preferences?.showFutureSegments === 'boolean' ? preferences.showFutureSegments : typeof raw.showFutureSegments === 'boolean' ? raw.showFutureSegments : DEFAULT_WORKSPACE_PREFERENCES.showFutureSegments,
 		segMinutesMode: preferences?.segMinutesMode === 'off' || preferences?.segMinutesMode === 'planned' || preferences?.segMinutesMode === 'remaining'
 			? preferences.segMinutesMode
 			: raw.segMinutesMode === 'off' || raw.segMinutesMode === 'planned' || raw.segMinutesMode === 'remaining'

@@ -4,6 +4,7 @@
   import type { Block, Flow } from '$lib/state.svelte.js';
   import { parseMarkdownSvg } from '$lib/markdown.js';
   import { colorForTitle, hasColorDirective, paletteIndexForTitle, stripColorDirective } from '$lib/title-color.js';
+  import { buildBlockClockGeometry } from '$lib/clock-geometry.js';
 
   interface Props {
     palette: Palette;
@@ -17,6 +18,7 @@
     showMin: boolean;
     showFive: boolean;
     showQuarter: boolean;
+    showFutureSegments: boolean;
     showSegLabels: boolean;
     segMinutesMode: 'off' | 'planned' | 'remaining';
     nowMin: number;
@@ -42,6 +44,7 @@
     showMin,
     showFive,
     showQuarter,
+    showFutureSegments,
     showSegLabels,
     segMinutesMode,
     nowMin,
@@ -63,6 +66,10 @@
   const startAngle = $derived(((startMin % clockSpan) / clockSpan) * 360);
   const elapsed = $derived(nowMin - startMin);
   const ri = $derived(hollow ? Ri : 0);
+  const overflowInnerR = $derived(ri > 0 ? ri : R - 12);
+  const overflowOuterR = $derived(ri > 0 ? ri + 4 : R - 8);
+  const wrapHandleInnerR = R + 10;
+  const wrapHandleOuterR = R + 38;
 
   const use12hAgenda = $derived(clockSpan === 720 && agendaItems.length > 0);
 
@@ -109,54 +116,33 @@
     }).filter((s): s is NonNullable<typeof s> => s !== null);
   });
 
-  // 1h/2h Mode Data
-  const blockSectors = $derived.by(() => {
-    if (use12hAgenda) return [];
-    let cumMin = 0;
-    return blocks.map((b: Block, i: number) => {
-      const segStartMin = cumMin;
-      const segEndMin = cumMin + b.minutes;
-      const a0 = startAngle + (segStartMin / clockSpan) * 360;
-      const a1 = startAngle + (segEndMin / clockSpan) * 360;
-      const displayTitle = stripColorDirective(b.title);
-      const baseColor = colorForTitle(b.title, sectorColors);
-      const colorIndex = paletteIndexForTitle(b.title, sectorColors);
-      const explicitColor = hasColorDirective(b.title);
-      const isPast = elapsed >= segEndMin;
-      const isActive = elapsed >= segStartMin && elapsed < segEndMin;
-      const midAngle = (a0 + a1) / 2;
-      const [lx, ly] = textOutside ? polar(midAngle, R + 22) : polar(midAngle, ri > 0 ? (R + ri) / 2 : R / 2);
-      
-      const pureEmoji = isOnlyEmoji(displayTitle);
-      let labelText = pureEmoji ? displayTitle : truncate(displayTitle, 14);
-
-      if (!pureEmoji) {
-        if (segMinutesMode === 'planned') {
-          labelText += ` ${b.minutes}m`;
-        } else if (segMinutesMode === 'remaining') {
-          const mins = isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEndMin - elapsed)) : b.minutes;
-          labelText += ` ${mins}m kvar`;
-        }
-      }
-
-      const res = {
-        id: `block-${b.id}`,
-        b, i,
-        a0, a1,
-        baseColor,
-        isPast,
-        isActive,
-        lx, ly,
-        splitAngle: startAngle + (elapsed / clockSpan) * 360,
-        fillText: explicitColor ? baseColor : labelColorFor(baseColor, colorIndex, isPast, palette, dark),
-        label: labelText,
-        fontSize: pureEmoji ? 48 : (textOutside ? 14 : 13),
-        pureEmoji
+  const blockGeometry = $derived.by(() => {
+    if (use12hAgenda) {
+      return {
+        blockSectors: [],
+        overflowSectors: [],
+        wrappedBoundaryHandles: [],
+        wrappedEndHandle: null
       };
-      cumMin = segEndMin;
-      return res;
+    }
+    return buildBlockClockGeometry({
+      blocks,
+      startMin,
+      clockSpan,
+      elapsed,
+      totalMin,
+      innerR: ri,
+      textOutside,
+      sectorColors,
+      palette,
+      dark,
+      segMinutesMode
     });
   });
+  const blockSectors = $derived(blockGeometry.blockSectors);
+  const overflowSectors = $derived(blockGeometry.overflowSectors);
+  const wrappedBoundaryHandles = $derived(blockGeometry.wrappedBoundaryHandles);
+  const wrappedEndHandle = $derived(blockGeometry.wrappedEndHandle);
 
   // Marks
   const marks = $derived.by(() => {
@@ -187,7 +173,8 @@
     const halfW = baseWidth / 2;
     const bx1 = cxB + px * halfW, by1 = cyB + py * halfW;
     const bx2 = cxB - px * halfW, by2 = cyB - py * halfW;
-    const nowInView = nowMin >= startMin && nowMin < startMin + clockSpan;
+    const visibleDuration = Math.max(clockSpan, totalMin);
+    const nowInView = nowMin >= startMin && nowMin < startMin + visibleDuration;
     return {
       points: `${tx},${ty} ${bx1},${by1} ${bx2},${by2}`,
       opacity: nowInView ? 1 : 0.1
@@ -279,14 +266,14 @@
   {:else}
     {#each blockSectors as s (s.id)}
       {#if s.isActive}
-        <path d={arcPath(s.a0, s.splitAngle, R, ri)} fill={s.baseColor + dimSuffix} />
-        <path d={arcPath(s.splitAngle, s.a1, R, ri)} fill={s.baseColor} />
+        <path d={arcPath(s.a0, s.splitAngle, R, ri)} fill={s.baseColor + dimSuffix} opacity={s.opacity} />
+        <path d={arcPath(s.splitAngle, s.a1, R, ri)} fill={s.baseColor} opacity={s.opacity} />
       {:else}
-        <path d={arcPath(s.a0, s.a1, R, ri)} fill={s.isPast ? s.baseColor + dimSuffix : s.baseColor} />
+        <path d={arcPath(s.a0, s.a1, R, ri)} fill={s.isPast ? s.baseColor + dimSuffix : s.baseColor} opacity={s.opacity} />
       {/if}
       
       <!-- Boundary Drag Handle -->
-      {#if s.i > 0 && !isViewMode}
+      {#if s.showBoundaryHandle && !isViewMode}
         {@const [x0, y0] = polar(s.a0, ri || 0)}
         {@const [x1, y1] = polar(s.a0, R)}
         <line 
@@ -298,6 +285,24 @@
           stroke="transparent" stroke-width="32" pointer-events="stroke" style="cursor:grab;touch-action:none"
           onpointerdown={(e) => onStartBoundaryDrag?.(e, s.i - 1)} />
       {/if}
+    {/each}
+  {/if}
+
+  {#if !use12hAgenda && showFutureSegments}
+    {#each overflowSectors as s (s.id)}
+      <path
+        role={s.isEnd || s.boundaryIndex !== null ? 'slider' : undefined}
+        aria-label={s.isEnd ? 'Justera omlott sluttid' : s.boundaryIndex !== null ? 'Justera omlott blockgräns' : undefined}
+        aria-valuenow={s.a0}
+        d={arcPath(s.a0, s.a1, overflowOuterR, overflowInnerR)}
+        fill={s.baseColor}
+        opacity={s.opacity}
+        pointer-events={s.isEnd || s.boundaryIndex !== null ? 'visiblePainted' : 'none'}
+        style={s.isEnd || s.boundaryIndex !== null ? 'cursor:grab;touch-action:none' : undefined}
+        onpointerdown={(e) => {
+          if (s.isEnd) onStartEndDrag?.(e);
+          else if (s.boundaryIndex !== null) onStartBoundaryDrag?.(e, s.boundaryIndex);
+        }} />
     {/each}
   {/if}
 
@@ -341,6 +346,32 @@
         stroke="transparent" stroke-width="36" pointer-events="stroke" style="cursor:grab;touch-action:none"
         onpointerdown={(e) => onStartEndDrag?.(e)} />
     {/if}
+
+    {#each wrappedBoundaryHandles as h (h.id)}
+      {@const [wx0, wy0] = polar(h.ang, wrapHandleInnerR)}
+      {@const [wx1, wy1] = polar(h.ang, wrapHandleOuterR)}
+      <line
+        role="slider"
+        tabindex="0"
+        aria-label="Justera omlott blockgräns"
+        aria-valuenow={h.ang}
+        x1={wx0} y1={wy0} x2={wx1} y2={wy1}
+        stroke="transparent" stroke-width="38" pointer-events="stroke" style="cursor:grab;touch-action:none"
+        onpointerdown={(e) => onStartBoundaryDrag?.(e, h.i)} />
+    {/each}
+
+    {#if wrappedEndHandle}
+      {@const [we0x, we0y] = polar(wrappedEndHandle.ang, wrapHandleInnerR)}
+      {@const [we1x, we1y] = polar(wrappedEndHandle.ang, wrapHandleOuterR)}
+      <line
+        role="slider"
+        tabindex="0"
+        aria-label="Justera omlott sluttid"
+        aria-valuenow={wrappedEndHandle.ang}
+        x1={we0x} y1={we0y} x2={we1x} y2={we1y}
+        stroke="transparent" stroke-width="38" pointer-events="stroke" style="cursor:grab;touch-action:none"
+        onpointerdown={(e) => onStartEndDrag?.(e)} />
+    {/if}
   {/if}
 
   <!-- Marks -->
@@ -368,7 +399,7 @@
       {@const id = s.id}
       {@const rect = labelRects[id]}
       <g pointer-events="none">
-        {#if rect && !s.pureEmoji}
+        {#if (!('showLabel' in s) || s.showLabel) && rect && !s.pureEmoji}
           <rect 
             x={rect.x - 6} y={rect.y - 1.5} 
             width={rect.w + 12} height={rect.h + 3} 
@@ -378,20 +409,22 @@
             stroke-width="1"
             opacity="0.95" />
         {/if}
-        <text 
-          use:registerLabel={id}
-          x={s.lx} y={s.ly} 
-          text-anchor="middle" dominant-baseline="middle" 
-          font-size={s.fontSize} font-weight="600" fill={s.fillText}>
-          {#each parseMarkdownSvg(s.label) as seg}
-            <tspan 
-              font-weight={seg.bold ? '800' : 'inherit'}
-              font-style={seg.italic ? 'italic' : 'inherit'}
-              text-decoration={seg.strike && seg.under ? 'line-through underline' : seg.strike ? 'line-through' : seg.under ? 'underline' : 'inherit'}
-              baseline-shift={seg.sup ? 'super' : seg.sub ? 'sub' : 'inherit'}
-            >{seg.text}</tspan>
-          {/each}
-        </text>
+        {#if !('showLabel' in s) || s.showLabel}
+          <text 
+            use:registerLabel={id}
+            x={s.lx} y={s.ly} 
+            text-anchor="middle" dominant-baseline="middle" 
+            font-size={s.fontSize} font-weight="600" fill={s.fillText}>
+            {#each parseMarkdownSvg(s.label) as seg}
+              <tspan 
+                font-weight={seg.bold ? '800' : 'inherit'}
+                font-style={seg.italic ? 'italic' : 'inherit'}
+                text-decoration={seg.strike && seg.under ? 'line-through underline' : seg.strike ? 'line-through' : seg.under ? 'underline' : 'inherit'}
+                baseline-shift={seg.sup ? 'super' : seg.sub ? 'sub' : 'inherit'}
+              >{seg.text}</tspan>
+            {/each}
+          </text>
+        {/if}
       </g>
     {/each}
   {/if}

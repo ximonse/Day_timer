@@ -47,7 +47,7 @@ function syncableState(overrides: Partial<AppState> = {}): Pick<AppState,
 	'actualTimeLog' | 'nowDraft' | 'planDraft' | 'palette' | 'dark' | 'clockSpan' | 'endMode' |
 	'agendaView' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'showLeft' |
 	'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
-	'segMinutesMode'
+	'showFutureSegments' | 'segMinutesMode'
 > {
 	return {
 		flows: overrides.flows ?? [flow()],
@@ -74,6 +74,7 @@ function syncableState(overrides: Partial<AppState> = {}): Pick<AppState,
 		showMin: overrides.showMin ?? false,
 		showFive: overrides.showFive ?? false,
 		showQuarter: overrides.showQuarter ?? false,
+		showFutureSegments: overrides.showFutureSegments ?? true,
 		segMinutesMode: overrides.segMinutesMode ?? 'remaining'
 	};
 }
@@ -106,6 +107,7 @@ describe('workspace helpers', () => {
 			showMin: true,
 			showFive: true,
 			showQuarter: true,
+			showFutureSegments: false,
 			segMinutesMode: 'planned'
 		});
 
@@ -116,6 +118,7 @@ describe('workspace helpers', () => {
 		expect(workspace.flows[0].title).toBe('Flow');
 		expect(workspace.drafts.now.blocks[0].title).toBe('Lektion');
 		expect(target.agendaView).toBe('private');
+		expect(target.showFutureSegments).toBe(true);
 		expect(target.segMinutesMode).toBe('remaining');
 	});
 
@@ -144,6 +147,7 @@ describe('workspace helpers', () => {
 			showMin: DEFAULT_WORKSPACE_PREFERENCES.showMin,
 			showFive: DEFAULT_WORKSPACE_PREFERENCES.showFive,
 			showQuarter: DEFAULT_WORKSPACE_PREFERENCES.showQuarter,
+			showFutureSegments: DEFAULT_WORKSPACE_PREFERENCES.showFutureSegments,
 			segMinutesMode: DEFAULT_WORKSPACE_PREFERENCES.segMinutesMode
 		}));
 		const withPreferenceChange = workspaceDataFromAppState(syncableState({
@@ -170,7 +174,9 @@ describe('workspace helpers', () => {
 
 		expect(fromLegacy?.agenda.schoolText).toBe('@260522');
 		expect(fromLegacy?.preferences.palette).toBe('meadow');
+		expect(fromLegacy?.preferences.showFutureSegments).toBe(true);
 		expect(fromEnvelope?.drafts.plan.dayTitle).toBe('Plan');
 		expect(fromEnvelope?.preferences.clockSpan).toBe(720);
+		expect(fromEnvelope?.preferences.showFutureSegments).toBe(true);
 	});
 });

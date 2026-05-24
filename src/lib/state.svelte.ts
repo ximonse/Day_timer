@@ -71,6 +71,7 @@ export interface AppState {
   showMin: boolean;
   showFive: boolean;
   showQuarter: boolean;
+  showFutureSegments: boolean;
   segMinutesMode: 'off' | 'planned' | 'remaining';
   showSegNotes: boolean;
   showExtraInfo: boolean;
@@ -132,6 +133,7 @@ function defaultState(): AppState {
     showMin: true,
     showFive: true,
     showQuarter: true,
+    showFutureSegments: true,
     segMinutesMode: 'planned',
     showSegNotes: true,
     showExtraInfo: true,

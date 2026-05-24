@@ -33,7 +33,7 @@ function flow(patch: Partial<Flow> = {}): Flow {
 	};
 }
 
-function sharedState(): Pick<AppState, 'palette' | 'dark' | 'showLeft' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' | 'segMinutesMode' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels'> {
+function sharedState(): Pick<AppState, 'palette' | 'dark' | 'showLeft' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' | 'showFutureSegments' | 'segMinutesMode' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels'> {
 	return {
 		palette: 'sansad',
 		dark: false,
@@ -44,6 +44,7 @@ function sharedState(): Pick<AppState, 'palette' | 'dark' | 'showLeft' | 'showCe
 		showMin: true,
 		showFive: true,
 		showQuarter: true,
+		showFutureSegments: true,
 		segMinutesMode: 'planned',
 		showSegNotes: true,
 		showExtraInfo: true,
@@ -117,12 +118,14 @@ describe('share-state helpers', () => {
 			clockSpan: 720,
 			agendaText: 'x',
 			agendaDate: '2026-05-19',
-			showFive: false
+			showFive: false,
+			showFutureSegments: false
 		});
 
 		expect(mode).toBe('selected-day-snapshot');
 		expect(target.blocks[0].title).toBe('new');
 		expect(target.clockSpan).toBe(720);
 		expect(target.showFive).toBe(false);
+		expect(target.showFutureSegments).toBe(false);
 	});
 });

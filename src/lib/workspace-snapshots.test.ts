@@ -8,7 +8,7 @@ function state(title: string): Pick<AppState,
 	'actualTimeLog' | 'nowDraft' | 'planDraft' | 'palette' | 'dark' | 'clockSpan' | 'endMode' |
 	'agendaView' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'showLeft' |
 	'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
-	'segMinutesMode'
+	'showFutureSegments' | 'segMinutesMode'
 > {
 	const block = { id: 'block', title, minutes: 45, note: '', warning: true, pinned: false };
 	const draft = { dayTitle: title, blocks: [block], extraInfo: '', startMin: 8 * 60 };
@@ -37,6 +37,7 @@ function state(title: string): Pick<AppState,
 		showMin: true,
 		showFive: true,
 		showQuarter: true,
+		showFutureSegments: true,
 		segMinutesMode: 'planned'
 	};
 }

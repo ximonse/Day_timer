@@ -16,6 +16,7 @@ export interface SharedUiState {
 	showMin: boolean;
 	showFive: boolean;
 	showQuarter: boolean;
+	showFutureSegments: boolean;
 	segMinutesMode: AppState['segMinutesMode'];
 	showSegNotes: boolean;
 	showExtraInfo: boolean;
@@ -79,6 +80,7 @@ export function sharedUiStateFromState(state: Pick<AppState, keyof SharedUiState
 		showMin: state.showMin,
 		showFive: state.showFive,
 		showQuarter: state.showQuarter,
+		showFutureSegments: state.showFutureSegments,
 		segMinutesMode: state.segMinutesMode,
 		showSegNotes: state.showSegNotes,
 		showExtraInfo: state.showExtraInfo,
@@ -156,7 +158,7 @@ export function applySharedStatePayload(
 	state: Pick<AppState,
 		'blocks' | 'dayTitle' | 'extraInfo' | 'startMin' | 'endMode' | 'clockSpan' | 'palette' | 'dark' |
 		'showLeft' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
-		'segMinutesMode' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'agendaText' | 'agendaDate'
+		'showFutureSegments' | 'segMinutesMode' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'agendaText' | 'agendaDate'
 	>,
 	payload: Partial<LiveShareState | SelectedSessionShareState | SelectedDayShareState> & { shareType?: ShareMode }
 ): ShareMode {
@@ -176,6 +178,7 @@ export function applySharedStatePayload(
 	if (payload.showMin !== undefined) state.showMin = payload.showMin;
 	if (payload.showFive !== undefined) state.showFive = payload.showFive;
 	if (payload.showQuarter !== undefined) state.showQuarter = payload.showQuarter;
+	if (payload.showFutureSegments !== undefined) state.showFutureSegments = payload.showFutureSegments;
 	if (payload.segMinutesMode) state.segMinutesMode = payload.segMinutesMode;
 	if (payload.showSegNotes !== undefined) state.showSegNotes = payload.showSegNotes;
 	if (payload.showExtraInfo !== undefined) state.showExtraInfo = payload.showExtraInfo;

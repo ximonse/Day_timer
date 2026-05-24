@@ -70,6 +70,9 @@
       <button class="menu-row" type="button" class:on={s.showMin} onclick={() => { s.showMin = !s.showMin; appState.persist(); }}>
         <span>Minutmarkeringar</span><span class="menu-row-state">{s.showMin ? 'På' : 'Av'}</span>
       </button>
+      <button class="menu-row" type="button" class:on={s.showFutureSegments} onclick={() => { s.showFutureSegments = !s.showFutureSegments; appState.persist(); }}>
+        <span>Visa fortsättning</span><span class="menu-row-state">{s.showFutureSegments ? 'På' : 'Av'}</span>
+      </button>
     </div>
   </div>
 
