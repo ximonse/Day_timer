@@ -529,6 +529,7 @@
   :global(.ai-tone-btn.on) { background: var(--menu-surface); color: var(--menu-fg); }
   :global(.ai-meta-list) { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0; }
   :global(.ai-meta-chip) { border: 1px solid var(--menu-border); border-radius: 999px; padding: 3px 7px; font-size: 11px; color: var(--menu-muted); background: var(--menu-surface); }
+  :global(.ai-meta-chip--warning) { border-color: color-mix(in srgb, #d97706 35%, var(--menu-border)); color: #92400e; }
   :global(.logged-in-row) { display: flex; align-items: center; gap: 8px; font-size: 13px; }
   :global(.logged-in-row .username) { flex: 1; font-weight: 600; color: var(--menu-fg); }
   :global(.logout-btn) { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 4px 10px; font-size: 12px; color: var(--menu-muted); cursor: pointer; font-family: inherit; }

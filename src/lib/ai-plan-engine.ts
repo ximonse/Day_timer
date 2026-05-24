@@ -32,6 +32,13 @@ export interface AiPlanResponse {
 	warnings: string[];
 }
 
+export type AiPlanMetadataKind = 'change' | 'assumption' | 'warning';
+
+export interface AiPlanMetadataItem {
+	kind: AiPlanMetadataKind;
+	text: string;
+}
+
 export const AI_PLAN_METADATA_LIMIT = 4;
 
 export const AI_PLANNING_MODE_LABELS: Record<AiPlanningMode, string> = {
@@ -231,6 +238,10 @@ export function normalizeAiPlanResponse(raw: string): AiPlanResponse {
 	}
 }
 
-export function aiPlanMetadataItems(response: AiPlanResponse, limit = AI_PLAN_METADATA_LIMIT): string[] {
-	return [...response.changes, ...response.assumptions, ...response.warnings].slice(0, limit);
+export function aiPlanMetadataItems(response: AiPlanResponse, limit = AI_PLAN_METADATA_LIMIT): AiPlanMetadataItem[] {
+	return [
+		...response.warnings.map((text) => ({ kind: 'warning' as const, text })),
+		...response.changes.map((text) => ({ kind: 'change' as const, text })),
+		...response.assumptions.map((text) => ({ kind: 'assumption' as const, text }))
+	].slice(0, limit);
 }

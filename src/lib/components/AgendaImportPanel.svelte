@@ -174,7 +174,7 @@
         {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
           <div class="ai-meta-list">
             {#each aiPlanMetadataItems(aiLastResponse) as item}
-              <span class="ai-meta-chip">{item}</span>
+              <span class={`ai-meta-chip ai-meta-chip--${item.kind}`}>{item.text}</span>
             {/each}
           </div>
         {/if}

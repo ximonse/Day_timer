@@ -179,10 +179,10 @@ describe('ai-plan-engine', () => {
 		});
 
 		expect(items).toEqual([
-			'Lade till start',
-			'Kortade titlar',
-			'Lade till paus',
-			'Antog 60 min'
+			{ kind: 'warning', text: 'Planen ar tajt' },
+			{ kind: 'change', text: 'Lade till start' },
+			{ kind: 'change', text: 'Kortade titlar' },
+			{ kind: 'change', text: 'Lade till paus' }
 		]);
 	});
 });
