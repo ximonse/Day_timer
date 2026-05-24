@@ -19,12 +19,12 @@ async function callAnthropic(apiKey: string, systemPrompt: string, message: stri
   return res.content[0].type === 'text' ? res.content[0].text : '';
 }
 
-async function callOpenAI(apiKey: string, systemPrompt: string, message: string, baseUrl?: string, model?: string): Promise<string> {
+async function callOpenAI(apiKey: string, systemPrompt: string, message: string, baseUrl?: string, model?: string, jsonMode = false): Promise<string> {
   const client = new OpenAI({ apiKey, ...(baseUrl ? { baseURL: baseUrl } : {}) });
   const res = await client.chat.completions.create({
     model: model || 'gpt-4o-mini',
     max_tokens: 1024,
-    response_format: { type: 'json_object' },
+    ...(jsonMode ? { response_format: { type: 'json_object' as const } } : {}),
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: message }
@@ -126,7 +126,7 @@ export const POST: RequestHandler = async ({ request }) => {
     if (provider === 'anthropic') {
       text = await callAnthropic(key, systemPrompt, message);
     } else if (provider === 'openai') {
-      text = await callOpenAI(key, systemPrompt, message);
+      text = await callOpenAI(key, systemPrompt, message, undefined, undefined, true);
     } else if (provider === 'gemini') {
       text = await callGemini(key, systemPrompt, message);
     } else {
