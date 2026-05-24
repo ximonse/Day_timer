@@ -249,6 +249,22 @@ describe('ai-plan-engine', () => {
 		expect(reviewed.warnings).toContain('Det här låter som flera pass. Testa Dagplan/Agenda-AI för bättre uppdelning.');
 	});
 
+	test('reviews agenda output format', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: 'Mjuk start 30m\nHandla 30m',
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}, {
+			planningMode: 'free-day',
+			contextMode: 'agenda',
+			userInput: 'Planera en mjuk dag.'
+		});
+
+		expect(reviewed.warnings).toContain('Dagplanen saknar datumrad som @YYMMDD.');
+		expect(reviewed.warnings).toContain('Dagplanen behöver minst en #session med starttid.');
+	});
+
 	test('reviews free day with too many main blocks', () => {
 		const reviewed = reviewAiPlanResponse({
 			text: 'A 5m\nB 5m\nC 5m\nD 5m\nE 5m\nF 5m\nG 5m',

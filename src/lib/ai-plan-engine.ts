@@ -315,6 +315,14 @@ function hasActivityStartTime(text: string): boolean {
 	return text.split('\n').some((line) => /^\s*(?:[01]?\d|2[0-3])[:.][0-5]\d\s+\S/.test(line));
 }
 
+function hasAgendaDateLine(text: string): boolean {
+	return text.split('\n').some((line) => /^\s*@\d{6}\s*$/.test(line));
+}
+
+function hasAgendaSessionLine(text: string): boolean {
+	return text.split('\n').some((line) => /^\s*#\S.*\s(?:[01]?\d|2[0-3])[:.][0-5]\d\s*$/.test(line));
+}
+
 function isRitualOrRecovery(title: string): boolean {
 	return /\b(te|frukost|meditation|andning|vila|återhämtning|aterhamtning)\b/i.test(title);
 }
@@ -355,6 +363,10 @@ export function reviewAiPlanResponse(response: AiPlanResponse, context: AiPlanRe
 	}
 	if (context.contextMode === 'plan' && context.userInput && looksLikeMultiSessionInput(context.userInput)) {
 		addWarning(warnings, 'Det här låter som flera pass. Testa Dagplan/Agenda-AI för bättre uppdelning.');
+	}
+	if (context.contextMode === 'agenda' && text) {
+		if (!hasAgendaDateLine(text)) addWarning(warnings, 'Dagplanen saknar datumrad som @YYMMDD.');
+		if (!hasAgendaSessionLine(text)) addWarning(warnings, 'Dagplanen behöver minst en #session med starttid.');
 	}
 
 	if (context.planningMode === 'free-day') {
