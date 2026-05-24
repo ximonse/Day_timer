@@ -24,6 +24,24 @@ describe('ai-plan-engine', () => {
 		});
 	});
 
+	test('normalizes json wrapped in a markdown code fence', () => {
+		const parsed = normalizeAiPlanResponse('```json\n{"text":"Start 5m","assumptions":["Antog kort pass"],"changes":["Kortade namn"],"warnings":[]}\n```');
+
+		expect(parsed).toEqual<AiPlanResponse>({
+			text: 'Start 5m',
+			assumptions: ['Antog kort pass'],
+			changes: ['Kortade namn'],
+			warnings: []
+		});
+	});
+
+	test('does not expose malformed json as plan text', () => {
+		const parsed = normalizeAiPlanResponse('```json\n{"text":"Start 5m", "warnings": [}\n```');
+
+		expect(parsed.text).toBe('');
+		expect(parsed.warnings).toContain('AI-svaret kunde inte läsas som plan.');
+	});
+
 	test('falls back to plain text when model output is not json', () => {
 		const parsed = normalizeAiPlanResponse('Start 5m\nGenomgang 10m');
 
