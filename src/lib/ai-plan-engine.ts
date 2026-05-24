@@ -98,6 +98,11 @@ function behaviorInstruction(planMode: AiBehaviorMode): string {
 	return 'Hjälpsamt läge: gör planen mer genomförbar med rimliga tider, buffert, övergångar och korta råd när det tydligt hjälper.';
 }
 
+function intentInstruction(intent: AiPlanIntent): string {
+	if (intent === 'create') return 'Intent: Skapa en ny plan från användarens text.';
+	return 'Intent: Skapa en ny plan från användarens text.';
+}
+
 function outputInstruction(context?: AiWorkspaceContext): string {
 	if (context?.mode === 'agenda') {
 		return 'Output i "text": komplett dagplan med datumrad @YYMMDD, sessionsrubriker som #Rubrik HH:MM och aktiviteter med tid.';
@@ -163,7 +168,7 @@ export function buildAiPlanSystemPrompt(request: Pick<AiPlanRequest, 'planningMo
 	return `Du ar Day Timers AI Plan Engine.
 
 Lage: ${label}
-Intent: ${request.intent}
+${intentInstruction(request.intent)}
 Tidsram: ${frame}
 Kontext: ${context}
 Befintlig plan: ${currentPlan}
