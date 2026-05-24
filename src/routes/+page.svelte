@@ -33,7 +33,7 @@
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, getAiPromptAgenda, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
-  import type { AiPlanResponse, AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { isValidPlanningModeForContext, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -1714,13 +1714,16 @@
     if (!aiInput.trim()) return;
     aiLoading = true; aiError = '';
     try {
+      const planningMode = isValidPlanningModeForContext('plan', sessionAiPlanningMode)
+        ? sessionAiPlanningMode
+        : 'fixed-session';
       const text = await requestAiPlan(aiConfig, aiInput, 'parts', {
         startMin: s.startMin,
         totalMin: totalMin(),
         currentPlan: serializeBlocks(s.blocks, undefined, s.extraInfo),
         dayTitle: s.dayTitle,
         extraInfo: s.extraInfo
-      }, sessionAiPlanningMode, 'create');
+      }, planningMode, 'create');
       sessionAiLastResponse = text;
       handlePartsInput(text.text, true);
       aiInput = '';
@@ -1737,10 +1740,13 @@
     agendaAiLoading = true; agendaAiError = '';
     try {
       const todayISO = localDateISO();
+      const planningMode = isValidPlanningModeForContext('agenda', agendaAiPlanningMode)
+        ? agendaAiPlanningMode
+        : 'anchored-day';
       const text = await requestAiPlan(aiConfig, agendaAiInput, 'agenda', {
         date: todayISO,
         currentPlan: s.agendaText
-      }, agendaAiPlanningMode, 'create');
+      }, planningMode, 'create');
       agendaAiLastResponse = text;
       setActiveAgendaText(text.text);
       const aiDays = parseAgenda(text.text);

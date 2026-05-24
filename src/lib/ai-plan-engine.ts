@@ -1,5 +1,6 @@
 export type AiPlanningMode = 'fixed-session' | 'anchored-day' | 'free-day';
-export type AiPlanIntent = 'create' | 'calm' | 'compress' | 'expand' | 'add-transitions' | 'make-teachable' | 'reduce-switching' | 'prioritize';
+export type AiPlanIntent = 'create';
+export type AiBehaviorMode = 'strict' | 'helpful';
 
 export interface AiTimeFrame {
 	startMin?: number;
@@ -17,6 +18,7 @@ export interface AiWorkspaceContext {
 export interface AiPlanRequest {
 	planningMode: AiPlanningMode;
 	intent: AiPlanIntent;
+	planMode?: AiBehaviorMode;
 	userInput: string;
 	currentPlan?: string;
 	timeFrame?: AiTimeFrame;
@@ -30,6 +32,13 @@ export interface AiPlanResponse {
 	warnings: string[];
 }
 
+export type AiPlanMetadataKind = 'change' | 'assumption' | 'warning';
+
+export interface AiPlanMetadataItem {
+	kind: AiPlanMetadataKind;
+	text: string;
+}
+
 export const AI_PLAN_METADATA_LIMIT = 4;
 
 export const AI_PLANNING_MODE_LABELS: Record<AiPlanningMode, string> = {
@@ -38,15 +47,11 @@ export const AI_PLANNING_MODE_LABELS: Record<AiPlanningMode, string> = {
 	'free-day': 'Fri dag'
 };
 
+export const AI_SESSION_PLANNING_MODES: AiPlanningMode[] = ['fixed-session', 'free-day'];
+export const AI_AGENDA_PLANNING_MODES: AiPlanningMode[] = ['anchored-day', 'free-day'];
+
 export const AI_PLAN_INTENT_LABELS: Record<AiPlanIntent, string> = {
-	create: 'Skapa plan',
-	calm: 'Gor lugnare',
-	compress: 'Korta',
-	expand: 'Mer detaljerad',
-	'add-transitions': 'Lagg till overgangar',
-	'make-teachable': 'Mer pedagogisk',
-	'reduce-switching': 'Farre vaxlingar',
-	prioritize: 'Prioritera'
+	create: 'Skapa plan'
 };
 
 function stringArray(value: unknown): string[] {
@@ -56,6 +61,22 @@ function stringArray(value: unknown): string[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function isValidPlanningModeForContext(context: 'plan' | 'agenda', mode: AiPlanningMode): boolean {
+	const options = context === 'agenda' ? AI_AGENDA_PLANNING_MODES : AI_SESSION_PLANNING_MODES;
+	return options.includes(mode);
+}
+
+function stripMarkdownJsonFence(raw: string): string {
+	const trimmed = raw.trim();
+	const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+	return match ? match[1].trim() : trimmed;
+}
+
+function looksLikeStructuredJson(raw: string): boolean {
+	const text = stripMarkdownJsonFence(raw);
+	return text.startsWith('{') || text.startsWith('[');
 }
 
 function timeFrameText(timeFrame?: AiTimeFrame): string {
@@ -78,6 +99,17 @@ function modeInstruction(mode: AiPlanningMode): string {
 	return 'Fri dag: gor roran startbar med mjuk ordning, sma steg och paminnelser. Skapa mindre schema och mer stod.';
 }
 
+function behaviorInstruction(planMode: AiBehaviorMode): string {
+	if (planMode === 'strict') {
+		return 'Strikt läge: återge användarens innehåll så nära som möjligt. Lägg inte till aktiviteter, pauser eller råd om det inte krävs för att formatet ska fungera.';
+	}
+	return 'Hjälpsamt läge: gör planen mer genomförbar med rimliga tider, buffert, övergångar och korta råd när det tydligt hjälper.';
+}
+
+function intentInstruction(): string {
+	return 'Intent: Skapa en ny plan från användarens text.';
+}
+
 function outputInstruction(context?: AiWorkspaceContext): string {
 	if (context?.mode === 'agenda') {
 		return 'Output i "text": komplett dagplan med datumrad @YYMMDD, sessionsrubriker som #Rubrik HH:MM och aktiviteter med tid.';
@@ -85,24 +117,76 @@ function outputInstruction(context?: AiWorkspaceContext): string {
 	return 'Output i "text": endast aktivitetsrader for valt pass, utan sessionsrubriker och utan datumrad.';
 }
 
-export function buildAiPlanSystemPrompt(request: Pick<AiPlanRequest, 'planningMode' | 'intent' | 'userInput' | 'timeFrame' | 'currentPlan' | 'workspaceContext'>): string {
+function planExample(planMode: AiBehaviorMode): string {
+	if (planMode === 'strict') {
+		return `Exempel för pass:
+Frukost 20m
+
+Promenad 30m
+- ta med nycklar
+
+& Kom ihåg: möte kl 9.`;
+	}
+	return `Exempel för pass:
+Vakna 5m
+
+Toa 5m
+- ta med telefonen
+
+Medicin 2m
+
+Frukost 20m
+- kolla inte skärm
+
+& Om du vill hinna i tid kan det vara bra att lägga in 5 min buffert efter frukost.`;
+}
+
+function agendaExample(date?: string): string {
+	const compactDate = (date ?? new Date().toISOString().slice(0, 10)).replace(/-/g, '').slice(2);
+	return `Exempel för dag:
+@${compactDate}
+#Morgonrutin 07:00
+Vakna 5m
+Toa 5m
+Frukost 20m
+- kolla inte skärm
+Förberedelse 10m
+
+#Arbetspass 09:00
+Planering 10m
+Epost 20m
+Djuparbete 60m
+- stäng av notiser
+Paus 10m
+Uppföljning 15m
+
+& Det här upplägget ser hållbart ut, men lägg gärna in en kort paus efter första arbetspasset om dagen blir lång.`;
+}
+
+export function buildAiPlanSystemPrompt(request: Pick<AiPlanRequest, 'planningMode' | 'intent' | 'planMode' | 'userInput' | 'timeFrame' | 'currentPlan' | 'workspaceContext'>): string {
 	const label = AI_PLANNING_MODE_LABELS[request.planningMode];
 	const frame = timeFrameText(request.timeFrame);
 	const currentPlan = request.currentPlan?.trim() ? request.currentPlan.trim() : 'Ingen befintlig plan.';
 	const context = request.workspaceContext ? JSON.stringify(request.workspaceContext) : '{}';
 	const output = outputInstruction(request.workspaceContext);
+	const planMode = request.planMode ?? 'helpful';
+	const example = request.workspaceContext?.mode === 'agenda' ? agendaExample(request.timeFrame?.date) : planExample(planMode);
 
 	return `Du ar Day Timers AI Plan Engine.
 
 Lage: ${label}
-Intent: ${request.intent}
+${intentInstruction()}
 Tidsram: ${frame}
 Kontext: ${context}
 Befintlig plan: ${currentPlan}
 
 ${modeInstruction(request.planningMode)}
 
+${behaviorInstruction(planMode)}
+
 ${output}
+
+${example}
 
 Returnera BARA JSON i detta format:
 {
@@ -115,6 +199,7 @@ Returnera BARA JSON i detta format:
 Regler:
 - Texten i "text" ska vara strikt Day Timer-format.
 - Aktiviteter ska ha korta svenska namn.
+- För pass: inga rubriker, ingen inledning, ingen avslutning.
 - Underpunkter borja med "-".
 - Kommentarer borja med "&".
 - Om lage ar Fast pass ska total planerad tid halla ramen sa langt det gar.
@@ -123,15 +208,16 @@ Regler:
 }
 
 export function normalizeAiPlanResponse(raw: string): AiPlanResponse {
+	const normalizedRaw = stripMarkdownJsonFence(raw);
 	const fallback: AiPlanResponse = {
-		text: raw.trim(),
+		text: looksLikeStructuredJson(raw) ? '' : normalizedRaw,
 		assumptions: [],
 		changes: [],
-		warnings: []
+		warnings: looksLikeStructuredJson(raw) ? ['AI-svaret kunde inte läsas som plan.'] : []
 	};
 
 	try {
-		const parsed = JSON.parse(raw) as unknown;
+		const parsed = JSON.parse(normalizedRaw) as unknown;
 		if (!isRecord(parsed) || typeof parsed.text !== 'string') return fallback;
 		return {
 			text: parsed.text.trim(),
@@ -144,6 +230,10 @@ export function normalizeAiPlanResponse(raw: string): AiPlanResponse {
 	}
 }
 
-export function aiPlanMetadataItems(response: AiPlanResponse, limit = AI_PLAN_METADATA_LIMIT): string[] {
-	return [...response.changes, ...response.assumptions, ...response.warnings].slice(0, limit);
+export function aiPlanMetadataItems(response: AiPlanResponse, limit = AI_PLAN_METADATA_LIMIT): AiPlanMetadataItem[] {
+	return [
+		...response.warnings.map((text) => ({ kind: 'warning' as const, text })),
+		...response.changes.map((text) => ({ kind: 'change' as const, text })),
+		...response.assumptions.map((text) => ({ kind: 'assumption' as const, text }))
+	].slice(0, limit);
 }

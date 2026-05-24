@@ -1,13 +1,13 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
-  import { AI_PLANNING_MODE_LABELS, aiPlanMetadataItems, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { AI_PLANNING_MODE_LABELS, AI_SESSION_PLANNING_MODES, aiPlanMetadataItems, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { fade } from 'svelte/transition';
 
   let textareaEl: HTMLTextAreaElement | null = $state(null);
   let aiTextareaEl: HTMLTextAreaElement | null = $state(null);
 
   const voice = createVoiceService();
-  const planningModeOptions = Object.entries(AI_PLANNING_MODE_LABELS) as [AiPlanningMode, string][];
+  const planningModeOptions = AI_SESSION_PLANNING_MODES.map((mode) => [mode, AI_PLANNING_MODE_LABELS[mode]] as [AiPlanningMode, string]);
   let isRecording = $state(false);
   let recordingTarget: 'parts' | 'ai' | null = $state(null);
 
@@ -280,18 +280,16 @@
               <button class="ai-mode-btn" class:on={aiPlanningMode === mode} onclick={() => onSetAiPlanningMode(mode)}>{label}</button>
             {/each}
           </div>
-          <div class="ai-mode-row">
-            <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
-            <button class="ai-mode-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
-            <span class="ai-mode-hint">
-              {aiPlanMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
-            </span>
+          <div class="ai-tone-row">
+            <span class="ai-tone-label">Ton</span>
+            <button class="ai-tone-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode} title="Bara det du skriver, inga tillägg">Strikt</button>
+            <button class="ai-tone-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode} title="Lägger till marginaler, ställtid och pauser">Hjälpsam</button>
           </div>
           {#if aiError}<div class="ai-error">{aiError}</div>{/if}
           {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
             <div class="ai-meta-list">
               {#each aiPlanMetadataItems(aiLastResponse) as item}
-                <span class="ai-meta-chip">{item}</span>
+                <span class={`ai-meta-chip ai-meta-chip--${item.kind}`}>{item.text}</span>
               {/each}
             </div>
           {/if}
