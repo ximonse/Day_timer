@@ -63,6 +63,7 @@ describe('ai-plan-engine', () => {
 		const prompt = buildAiPlanSystemPrompt({
 			planningMode: 'fixed-session',
 			intent: 'create',
+			planMode: 'helpful',
 			userInput: 'Ak 4 procent',
 			workspaceContext: { mode: 'plan' },
 			timeFrame: { totalMin: 60 }
@@ -75,10 +76,27 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('Returnera BARA JSON');
 	});
 
+	test('fixed session prompt includes concrete activity format examples', () => {
+		const prompt = buildAiPlanSystemPrompt({
+			planningMode: 'fixed-session',
+			intent: 'create',
+			planMode: 'helpful',
+			userInput: 'ak 4 procent',
+			workspaceContext: { mode: 'plan' },
+			timeFrame: { totalMin: 60 }
+		});
+
+		expect(prompt).toContain('Frukost 20m');
+		expect(prompt).toContain('- kolla inte skärm');
+		expect(prompt).toContain('& Om');
+		expect(prompt).toContain('inga rubriker');
+	});
+
 	test('builds anchored day prompt around fixed anchors', () => {
 		const prompt = buildAiPlanSystemPrompt({
 			planningMode: 'anchored-day',
 			intent: 'create',
+			planMode: 'helpful',
 			userInput: 'mote 10 och 14',
 			workspaceContext: { mode: 'agenda' },
 			timeFrame: { date: '2026-05-23' }
@@ -90,10 +108,27 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('@YYMMDD');
 	});
 
+	test('agenda prompt includes concrete day plan example', () => {
+		const prompt = buildAiPlanSystemPrompt({
+			planningMode: 'anchored-day',
+			intent: 'create',
+			planMode: 'helpful',
+			userInput: 'möte kl 10 och 14',
+			workspaceContext: { mode: 'agenda' },
+			timeFrame: { date: '2026-05-24' }
+		});
+
+		expect(prompt).toContain('@260524');
+		expect(prompt).toContain('#Morgonrutin 07:00');
+		expect(prompt).toContain('Djuparbete 60m');
+		expect(prompt).toContain('#Rubrik HH:MM');
+	});
+
 	test('builds free day prompt with softer scheduling language', () => {
 		const prompt = buildAiPlanSystemPrompt({
 			planningMode: 'free-day',
 			intent: 'create',
+			planMode: 'helpful',
 			userInput: 'tvatta och handla'
 		});
 
