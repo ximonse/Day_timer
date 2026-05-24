@@ -39,6 +39,11 @@ export interface AiPlanMetadataItem {
 	text: string;
 }
 
+export interface AiPlanReviewContext {
+	planningMode: AiPlanningMode;
+	contextMode?: AiWorkspaceContext['mode'];
+}
+
 export const AI_PLAN_METADATA_LIMIT = 4;
 
 export const AI_PLANNING_MODE_LABELS: Record<AiPlanningMode, string> = {
@@ -236,4 +241,68 @@ export function aiPlanMetadataItems(response: AiPlanResponse, limit = AI_PLAN_ME
 		...response.changes.map((text) => ({ kind: 'change' as const, text })),
 		...response.assumptions.map((text) => ({ kind: 'assumption' as const, text }))
 	].slice(0, limit);
+}
+
+interface PlanRow {
+	title: string;
+	duration: number | null;
+	subpoints: number;
+}
+
+function planRows(text: string): PlanRow[] {
+	const rows: PlanRow[] = [];
+	for (const line of text.split('\n')) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith('&') || trimmed.startsWith('#') || trimmed.startsWith('@')) continue;
+		if (trimmed.startsWith('-')) {
+			const last = rows.at(-1);
+			if (last) last.subpoints += 1;
+			continue;
+		}
+		const durationMatch = trimmed.match(/\b(\d+)\s*m\b/i);
+		rows.push({
+			title: trimmed.replace(/\s+\d+\s*m\b/i, '').trim(),
+			duration: durationMatch ? Number(durationMatch[1]) : null,
+			subpoints: 0
+		});
+	}
+	return rows;
+}
+
+function hasActivityStartTime(text: string): boolean {
+	return text.split('\n').some((line) => /^\s*(?:[01]?\d|2[0-3])[:.][0-5]\d\s+\S/.test(line));
+}
+
+function isRitualOrRecovery(title: string): boolean {
+	return /\b(te|frukost|meditation|andning|vila|återhämtning|aterhamtning)\b/i.test(title);
+}
+
+function addWarning(warnings: string[], warning: string) {
+	if (!warnings.includes(warning)) warnings.push(warning);
+}
+
+export function reviewAiPlanResponse(response: AiPlanResponse, context: AiPlanReviewContext): AiPlanResponse {
+	const warnings = [...response.warnings];
+	const text = response.text.trim();
+	const rows = planRows(text);
+
+	if (!text) addWarning(warnings, 'AI-svaret saknar användbar plantext.');
+
+	if (context.contextMode === 'plan' && hasActivityStartTime(text)) {
+		addWarning(warnings, 'Pass ska använda minuter, inte starttider på aktivitetsrader.');
+	}
+
+	if (context.planningMode === 'free-day') {
+		if (rows.length > 7) {
+			addWarning(warnings, 'Fri dag kan vara för uppsplittrad. Klustra hellre till färre lugna block.');
+		}
+		if (rows.some((row) => row.subpoints >= 3 && row.duration !== null && row.duration < 10)) {
+			addWarning(warnings, 'Minst ett block verkar för kort för sina underpunkter.');
+		}
+		if (rows.some((row) => isRitualOrRecovery(row.title) && row.duration !== null && row.duration < 15)) {
+			addWarning(warnings, 'Te, frukost, meditation eller vila kan behöva mer tid än planen ger.');
+		}
+	}
+
+	return { ...response, warnings };
 }

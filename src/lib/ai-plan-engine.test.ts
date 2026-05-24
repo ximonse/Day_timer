@@ -5,6 +5,7 @@ import {
 	buildAiPlanSystemPrompt,
 	isValidPlanningModeForContext,
 	normalizeAiPlanResponse,
+	reviewAiPlanResponse,
 	type AiPlanResponse
 } from './ai-plan-engine.js';
 
@@ -171,5 +172,61 @@ describe('ai-plan-engine', () => {
 			{ kind: 'change', text: 'Kortade titlar' },
 			{ kind: 'change', text: 'Lade till paus' }
 		]);
+	});
+
+	test('reviews empty ai plan text', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: '',
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}, { planningMode: 'free-day', contextMode: 'plan' });
+
+		expect(reviewed.warnings).toContain('AI-svaret saknar användbar plantext.');
+	});
+
+	test('reviews start times in pass output', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: '09:05 Meditation\nFrukost 20m',
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}, { planningMode: 'fixed-session', contextMode: 'plan' });
+
+		expect(reviewed.warnings).toContain('Pass ska använda minuter, inte starttider på aktivitetsrader.');
+	});
+
+	test('reviews free day with too many main blocks', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: 'A 5m\nB 5m\nC 5m\nD 5m\nE 5m\nF 5m\nG 5m\nH 5m',
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}, { planningMode: 'free-day', contextMode: 'plan' });
+
+		expect(reviewed.warnings).toContain('Fri dag kan vara för uppsplittrad. Klustra hellre till färre lugna block.');
+	});
+
+	test('reviews short free day block with many subpoints', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: 'Frukost på trappen 8m\n- koka vatten\n- välja te\n- ta med frukost\n- sitta ute',
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}, { planningMode: 'free-day', contextMode: 'plan' });
+
+		expect(reviewed.warnings).toContain('Minst ett block verkar för kort för sina underpunkter.');
+		expect(reviewed.warnings).toContain('Te, frukost, meditation eller vila kan behöva mer tid än planen ger.');
+	});
+
+	test('does not duplicate review warnings', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: '',
+			assumptions: [],
+			changes: [],
+			warnings: ['AI-svaret saknar användbar plantext.']
+		}, { planningMode: 'free-day', contextMode: 'plan' });
+
+		expect(reviewed.warnings.filter((warning) => warning === 'AI-svaret saknar användbar plantext.')).toHaveLength(1);
 	});
 });
