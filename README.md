@@ -85,6 +85,7 @@ src/
     theme.ts          — clockTheme(), SECTOR_COLORS, labelColorFor()
     state.svelte.ts   — AppState, alla ~20 flaggor, Svelte 5 $state
     clock.ts          — polar(), arcPath(), fmtHM(), nowMinutes(), truncate()
+    clock-geometry.ts — wrap-segment, framtidsring och draggeometri för 1h/2h-klockan
     parse.ts          — parseParts(), serializeBlocks(), parseAgenda(), serializeAgenda()
   routes/
     +layout.svelte    — global CSS
@@ -93,6 +94,8 @@ src/
     api/share/        — GET/POST/DELETE för live-delning (Redis, 48h TTL)
     api/plan/         — AI-planering proxy
 ```
+
+Teknisk notis för segment som går över första varvet: [`docs/FUTURE_SEGMENTS.md`](docs/FUTURE_SEGMENTS.md).
 
 ## Inmatningsformat
 
