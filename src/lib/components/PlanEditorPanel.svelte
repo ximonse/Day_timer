@@ -207,6 +207,11 @@
     suggestedDuration && 
     Math.abs(suggestedDuration.minutes - totalMinutesValue) >= 2
   );
+  const aiInputPlaceholder = $derived(
+    aiPlanningMode === 'free-day'
+      ? 'Beskriv ett sammanhållet pass, t.ex. mjuk morgonstart med te, hygien och skrivstund...'
+      : 'Beskriv vad som ska rymmas i passet...'
+  );
 
 </script>
 
@@ -267,7 +272,7 @@
             Används på egen risk. Din API-nyckel används enbart för att skicka instruktioner direkt till AI-leverantör.
           </div>
           <div style="position:relative;">
-            <textarea class="ai-input" placeholder="Beskriv vad du vill planera..."
+            <textarea class="ai-input" placeholder={aiInputPlaceholder}
               bind:this={aiTextareaEl}
               value={aiInput}
               oninput={(e) => onAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>

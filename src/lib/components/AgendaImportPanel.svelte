@@ -94,6 +94,11 @@
   
   let copyPlanStatus = $state('Från anteckningar');
   let copyCalendarStatus = $state('Från kalender');
+  const agendaAiPlaceholder = $derived(
+    aiPlanningMode === 'free-day'
+      ? 'Beskriv dagen fritt, t.ex. låg energi, tvätta, röja köket, handla, ringa mamma och enkel middag...'
+      : 'Beskriv dagens ankare, t.ex. jobbar hemifrån, möte kl 10 och 14, träning på lunch...'
+  );
 
   async function handleCopy(type: 'plan' | 'calendar') {
     await onCopyPrompt(type);
@@ -156,7 +161,7 @@
     {#if agendaAiOpen && hasAiKey}
       <div class="agenda-ai-panel">
         <div class="agenda-input-wrapper">
-          <textarea class="ai-input" placeholder="Beskriv din dag... t.ex. &quot;Jobbar hemifrån, möte kl 10 och 14, träning på lunch&quot;"
+          <textarea class="ai-input" placeholder={agendaAiPlaceholder}
             value={agendaAiInput}
             oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
         </div>

@@ -24,6 +24,7 @@ async function callOpenAI(apiKey: string, systemPrompt: string, message: string,
   const res = await client.chat.completions.create({
     model: model || 'gpt-4o-mini',
     max_tokens: 1024,
+    response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: message }
@@ -36,7 +37,7 @@ async function callGemini(apiKey: string, systemPrompt: string, message: string)
   const ai = new GoogleGenAI({ apiKey });
   const res = await ai.models.generateContent({
     model: 'gemini-2.0-flash-lite',
-    config: { systemInstruction: systemPrompt },
+    config: { systemInstruction: systemPrompt, responseMimeType: 'application/json' },
     contents: message
   });
   return res.text ?? '';

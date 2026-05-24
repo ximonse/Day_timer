@@ -234,6 +234,21 @@ describe('ai-plan-engine', () => {
 		expect(reviewed.warnings).toContain('Det här låter som flera pass. Testa Dagplan/Agenda-AI för bättre uppdelning.');
 	});
 
+	test('reviews errands and phone call as multi-session input', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: 'Tvätta 25m\nHandla 30m\nRinga mamma 10m',
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}, {
+			planningMode: 'free-day',
+			contextMode: 'plan',
+			userInput: 'Behöver tvätta, handla och ringa mamma.'
+		});
+
+		expect(reviewed.warnings).toContain('Det här låter som flera pass. Testa Dagplan/Agenda-AI för bättre uppdelning.');
+	});
+
 	test('reviews free day with too many main blocks', () => {
 		const reviewed = reviewAiPlanResponse({
 			text: 'A 5m\nB 5m\nC 5m\nD 5m\nE 5m\nF 5m\nG 5m',

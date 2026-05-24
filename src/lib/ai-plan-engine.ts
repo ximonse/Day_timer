@@ -330,7 +330,7 @@ function looksLikeMultiSessionInput(text: string): boolean {
 		/\btvätta\b/,
 		/\bhandla\b/,
 		/\bröja\b|\broja\b/,
-		/\bringa\b/,
+		/\bringa\b|\bringer\b/,
 		/\bmamma\b/,
 		/\blaga\b/,
 		/\bmiddag\b/,
