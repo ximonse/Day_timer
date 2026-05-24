@@ -323,6 +323,10 @@ function hasAgendaSessionLine(text: string): boolean {
 	return text.split('\n').some((line) => /^\s*#\S.*\s(?:[01]?\d|2[0-3])[:.][0-5]\d\s*$/.test(line));
 }
 
+function agendaSessionCount(text: string): number {
+	return text.split('\n').filter((line) => /^\s*#\S.*\s(?:[01]?\d|2[0-3])[:.][0-5]\d\s*$/.test(line)).length;
+}
+
 function isRitualOrRecovery(title: string): boolean {
 	return /\b(te|frukost|meditation|andning|vila|återhämtning|aterhamtning)\b/i.test(title);
 }
@@ -367,6 +371,9 @@ export function reviewAiPlanResponse(response: AiPlanResponse, context: AiPlanRe
 	if (context.contextMode === 'agenda' && text) {
 		if (!hasAgendaDateLine(text)) addWarning(warnings, 'Dagplanen saknar datumrad som @YYMMDD.');
 		if (!hasAgendaSessionLine(text)) addWarning(warnings, 'Dagplanen behöver minst en #session med starttid.');
+		if (context.userInput && looksLikeMultiSessionInput(context.userInput) && agendaSessionCount(text) < 2) {
+			addWarning(warnings, 'Dagen låter som flera delar. Dela gärna upp i fler #sessioner.');
+		}
 	}
 
 	if (context.planningMode === 'free-day') {

@@ -265,6 +265,21 @@ describe('ai-plan-engine', () => {
 		expect(reviewed.warnings).toContain('Dagplanen behöver minst en #session med starttid.');
 	});
 
+	test('reviews multi-session agenda input collapsed into one session', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: '@260525\n#Hemmadag 09:00\nTvätta 25m\nHandla 30m\nRinga mamma 10m',
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}, {
+			planningMode: 'free-day',
+			contextMode: 'agenda',
+			userInput: 'Behöver tvätta, handla och ringa mamma.'
+		});
+
+		expect(reviewed.warnings).toContain('Dagen låter som flera delar. Dela gärna upp i fler #sessioner.');
+	});
+
 	test('reviews free day with too many main blocks', () => {
 		const reviewed = reviewAiPlanResponse({
 			text: 'A 5m\nB 5m\nC 5m\nD 5m\nE 5m\nF 5m\nG 5m',
