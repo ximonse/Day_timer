@@ -280,12 +280,10 @@
               <button class="ai-mode-btn" class:on={aiPlanningMode === mode} onclick={() => onSetAiPlanningMode(mode)}>{label}</button>
             {/each}
           </div>
-          <div class="ai-mode-row">
-            <button class="ai-mode-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
-            <button class="ai-mode-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
-            <span class="ai-mode-hint">
-              {aiPlanMode === 'strict' ? 'Bara det du skriver, inga tillägg' : 'Lägger till marginaler, ställtid och pauser'}
-            </span>
+          <div class="ai-tone-row">
+            <span class="ai-tone-label">Ton</span>
+            <button class="ai-tone-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
+            <button class="ai-tone-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
           </div>
           {#if aiError}<div class="ai-error">{aiError}</div>{/if}
           {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
