@@ -40,6 +40,9 @@ export const AI_PLANNING_MODE_LABELS: Record<AiPlanningMode, string> = {
 	'free-day': 'Fri dag'
 };
 
+export const AI_SESSION_PLANNING_MODES: AiPlanningMode[] = ['fixed-session', 'free-day'];
+export const AI_AGENDA_PLANNING_MODES: AiPlanningMode[] = ['anchored-day', 'free-day'];
+
 export const AI_PLAN_INTENT_LABELS: Record<AiPlanIntent, string> = {
 	create: 'Skapa plan',
 	calm: 'Gor lugnare',
@@ -58,6 +61,11 @@ function stringArray(value: unknown): string[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function isValidPlanningModeForContext(context: 'plan' | 'agenda', mode: AiPlanningMode): boolean {
+	const options = context === 'agenda' ? AI_AGENDA_PLANNING_MODES : AI_SESSION_PLANNING_MODES;
+	return options.includes(mode);
 }
 
 function stripMarkdownJsonFence(raw: string): string {

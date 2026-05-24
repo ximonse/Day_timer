@@ -3,6 +3,7 @@ import {
 	AI_PLANNING_MODE_LABELS,
 	aiPlanMetadataItems,
 	buildAiPlanSystemPrompt,
+	isValidPlanningModeForContext,
 	normalizeAiPlanResponse,
 	type AiPlanResponse
 } from './ai-plan-engine.js';
@@ -57,6 +58,13 @@ describe('ai-plan-engine', () => {
 		expect(AI_PLANNING_MODE_LABELS['fixed-session']).toBe('Fast pass');
 		expect(AI_PLANNING_MODE_LABELS['anchored-day']).toBe('Dag med ankare');
 		expect(AI_PLANNING_MODE_LABELS['free-day']).toBe('Fri dag');
+	});
+
+	test('limits planning modes by ui context', () => {
+		expect(isValidPlanningModeForContext('plan', 'fixed-session')).toBe(true);
+		expect(isValidPlanningModeForContext('plan', 'anchored-day')).toBe(false);
+		expect(isValidPlanningModeForContext('agenda', 'anchored-day')).toBe(true);
+		expect(isValidPlanningModeForContext('agenda', 'fixed-session')).toBe(false);
 	});
 
 	test('builds fixed session prompt with hard time-frame language', () => {
