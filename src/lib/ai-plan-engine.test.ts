@@ -198,7 +198,7 @@ describe('ai-plan-engine', () => {
 
 	test('reviews free day with too many main blocks', () => {
 		const reviewed = reviewAiPlanResponse({
-			text: 'A 5m\nB 5m\nC 5m\nD 5m\nE 5m\nF 5m\nG 5m\nH 5m',
+			text: 'A 5m\nB 5m\nC 5m\nD 5m\nE 5m\nF 5m\nG 5m',
 			assumptions: [],
 			changes: [],
 			warnings: []
@@ -217,6 +217,18 @@ describe('ai-plan-engine', () => {
 
 		expect(reviewed.warnings).toContain('Minst ett block verkar för kort för sina underpunkter.');
 		expect(reviewed.warnings).toContain('Te, frukost, meditation eller vila kan behöva mer tid än planen ger.');
+	});
+
+	test('reviews exact-fit language in free day plans', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: 'Te 10m\n- i lugn takt\n\n& Planen tar exakt 97 minuter och är perfekt passform.',
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}, { planningMode: 'free-day', contextMode: 'plan' });
+
+		expect(reviewed.warnings).toContain('Te, frukost, meditation eller vila kan behöva mer tid än planen ger.');
+		expect(reviewed.warnings).toContain('Fri dag bör lämna buffert, inte beskrivas som perfekt optimerad.');
 	});
 
 	test('does not duplicate review warnings', () => {

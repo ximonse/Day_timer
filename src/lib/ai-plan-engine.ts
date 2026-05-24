@@ -101,7 +101,7 @@ function modeInstruction(mode: AiPlanningMode): string {
 	if (mode === 'anchored-day') {
 		return 'Dag med ankare: respektera fasta ankare som moten, deadlines och hamtning. Bygg realistiska arbetsblock runt dem med buffert och prioritering.';
 	}
-	return 'Fri dag: gor roran startbar med mjuk ordning, sma steg och paminnelser. Skapa mindre schema och mer stod.';
+	return 'Fri dag: gor roran startbar med mjuk ordning, sma steg och paminnelser. Skapa mindre schema och mer stod. Optimera inte exakt mot hela tidsramen; lamna hellre buffert och mjukhet. Klustra sma logistikmoment som medicin i hygien eller frukost nar det passar. Undvik formuleringar som perfekt passform.';
 }
 
 function behaviorInstruction(planMode: AiBehaviorMode): string {
@@ -209,7 +209,8 @@ Regler:
 - Kommentarer borja med "&".
 - Om lage ar Fast pass ska total planerad tid halla ramen sa langt det gar.
 - Om lage ar Dag med ankare ska fasta tider respekteras.
-- Om lage ar Fri dag ska planen vara mild och startbar, inte overplanerad.`;
+- Om lage ar Fri dag ska planen vara mild och startbar, inte overplanerad.
+- Om lage ar Fri dag ska du inte skriva att planen passar perfekt, fyller exakt tid eller optimerar totalramen.`;
 }
 
 export function normalizeAiPlanResponse(raw: string): AiPlanResponse {
@@ -277,6 +278,10 @@ function isRitualOrRecovery(title: string): boolean {
 	return /\b(te|frukost|meditation|andning|vila|återhämtning|aterhamtning)\b/i.test(title);
 }
 
+function hasExactFitLanguage(text: string): boolean {
+	return /\b(perfekt passform|tar exakt|exakt\s+\d+\s*min|fyller exakt|passar perfekt)\b/i.test(text);
+}
+
 function addWarning(warnings: string[], warning: string) {
 	if (!warnings.includes(warning)) warnings.push(warning);
 }
@@ -293,14 +298,17 @@ export function reviewAiPlanResponse(response: AiPlanResponse, context: AiPlanRe
 	}
 
 	if (context.planningMode === 'free-day') {
-		if (rows.length > 7) {
+		if (rows.length > 6) {
 			addWarning(warnings, 'Fri dag kan vara för uppsplittrad. Klustra hellre till färre lugna block.');
 		}
 		if (rows.some((row) => row.subpoints >= 3 && row.duration !== null && row.duration < 10)) {
 			addWarning(warnings, 'Minst ett block verkar för kort för sina underpunkter.');
 		}
-		if (rows.some((row) => isRitualOrRecovery(row.title) && row.duration !== null && row.duration < 15)) {
+		if (rows.some((row) => isRitualOrRecovery(row.title) && row.duration !== null && row.duration < 20)) {
 			addWarning(warnings, 'Te, frukost, meditation eller vila kan behöva mer tid än planen ger.');
+		}
+		if (hasExactFitLanguage(text)) {
+			addWarning(warnings, 'Fri dag bör lämna buffert, inte beskrivas som perfekt optimerad.');
 		}
 	}
 
