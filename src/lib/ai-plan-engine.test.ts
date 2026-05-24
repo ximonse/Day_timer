@@ -145,6 +145,23 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('#Rubrik HH:MM');
 	});
 
+	test('agenda free day prompt encourages multiple soft sessions', () => {
+		const prompt = buildAiPlanSystemPrompt({
+			planningMode: 'free-day',
+			intent: 'create',
+			planMode: 'helpful',
+			userInput: 'låg energi, handla, middag och röja köket',
+			workspaceContext: { mode: 'agenda' },
+			timeFrame: { date: '2026-05-25' }
+		});
+
+		expect(prompt).toContain('flera mjuka #sessioner');
+		expect(prompt).toContain('#Mjuk start');
+		expect(prompt).toContain('#Hemmaplock');
+		expect(prompt).toContain('#Arenden');
+		expect(prompt).toContain('Pressa inte in en hel dag som ett enda pass');
+	});
+
 	test('builds free day prompt with softer scheduling language', () => {
 		const prompt = buildAiPlanSystemPrompt({
 			planningMode: 'free-day',
@@ -200,6 +217,21 @@ describe('ai-plan-engine', () => {
 		}, { planningMode: 'fixed-session', contextMode: 'plan' });
 
 		expect(reviewed.warnings).toContain('Pass ska använda minuter, inte starttider på aktivitetsrader.');
+	});
+
+	test('reviews whole-day input sent to pass planning', () => {
+		const reviewed = reviewAiPlanResponse({
+			text: 'Tvätta 25m\nHandla 30m\nMiddag 25m',
+			assumptions: [],
+			changes: [],
+			warnings: []
+		}, {
+			planningMode: 'free-day',
+			contextMode: 'plan',
+			userInput: 'Jag har låg energi men behöver tvätta, handla, röja köket, ringa mamma och laga enkel middag.'
+		});
+
+		expect(reviewed.warnings).toContain('Det här låter som flera pass. Testa Dagplan/Agenda-AI för bättre uppdelning.');
 	});
 
 	test('reviews free day with too many main blocks', () => {

@@ -139,7 +139,8 @@ export const POST: RequestHandler = async ({ request }) => {
     const normalized = normalizeAiPlanResponse(text);
     const reviewed = reviewAiPlanResponse(normalized, {
       planningMode,
-      contextMode: mode === 'parts' ? 'plan' : 'agenda'
+      contextMode: mode === 'parts' ? 'plan' : 'agenda',
+      userInput: message
     });
     return json(reviewed);
   } catch (err: unknown) {

@@ -42,6 +42,7 @@ export interface AiPlanMetadataItem {
 export interface AiPlanReviewContext {
 	planningMode: AiPlanningMode;
 	contextMode?: AiWorkspaceContext['mode'];
+	userInput?: string;
 }
 
 export const AI_PLAN_METADATA_LIMIT = 4;
@@ -94,7 +95,7 @@ function timeFrameText(timeFrame?: AiTimeFrame): string {
 	return parts.length ? parts.join(', ') : 'Ingen exakt tidsram angiven.';
 }
 
-function modeInstruction(mode: AiPlanningMode): string {
+function modeInstruction(mode: AiPlanningMode, context?: AiWorkspaceContext): string {
 	if (mode === 'fixed-session') {
 		return 'Fast pass: start och slut ar normalt givna. Optimera insidan, hall dig inom den givna ramen, skapa progression, overgangar, variation och ett tydligt avslut.';
 	}
@@ -132,6 +133,14 @@ Undvik separata 10-minutersblock for ritualer, njutning eller aterhamtning. Ge d
 Klustra sma logistikmoment som medicin i hygien eller frukost nar det passar.
 
 Undvik formuleringar som "perfekt passform", "tar exakt" eller att planen fyller hela tidsramen.`;
+}
+
+function agendaPlanningInstruction(mode: AiPlanningMode, context?: AiWorkspaceContext): string {
+	if (context?.mode !== 'agenda' || mode !== 'free-day') return '';
+	return `Nar Fri dag anvands i agenda ska du dela upp dagen i flera mjuka #sessioner om aktiviteterna hor hemma i olika delar av dagen.
+Anvand 2-5 sessioner som till exempel #Mjuk start, #Hemmaplock, #Arenden och #Kväll.
+Ge varje #session en rimlig starttid om anvandaren ger ankare, annars gor forsiktiga antaganden.
+Pressa inte in en hel dag som ett enda pass.`;
 }
 
 function behaviorInstruction(planMode: AiBehaviorMode): string {
@@ -215,7 +224,9 @@ Tidsram: ${frame}
 Kontext: ${context}
 Befintlig plan: ${currentPlan}
 
-${modeInstruction(request.planningMode)}
+${modeInstruction(request.planningMode, request.workspaceContext)}
+
+${agendaPlanningInstruction(request.planningMode, request.workspaceContext)}
 
 ${behaviorInstruction(planMode)}
 
@@ -312,6 +323,22 @@ function hasExactFitLanguage(text: string): boolean {
 	return /\b(perfekt passform|tar exakt|exakt\s+\d+\s*min|fyller exakt|passar perfekt)\b/i.test(text);
 }
 
+function looksLikeMultiSessionInput(text: string): boolean {
+	const normalized = text.toLowerCase();
+	if (/\b(hela dagen|dagplan|flera pass|flera delar|senare|ikväll|i kväll|efter lunch|middag)\b/.test(normalized)) return true;
+	const signals = [
+		/\btvätta\b/,
+		/\bhandla\b/,
+		/\bröja\b|\broja\b/,
+		/\bringa\b/,
+		/\bmamma\b/,
+		/\blaga\b/,
+		/\bmiddag\b/,
+		/\bköket\b|\bkoket\b/
+	];
+	return signals.filter((signal) => signal.test(normalized)).length >= 3;
+}
+
 function addWarning(warnings: string[], warning: string) {
 	if (!warnings.includes(warning)) warnings.push(warning);
 }
@@ -325,6 +352,9 @@ export function reviewAiPlanResponse(response: AiPlanResponse, context: AiPlanRe
 
 	if (context.contextMode === 'plan' && hasActivityStartTime(text)) {
 		addWarning(warnings, 'Pass ska använda minuter, inte starttider på aktivitetsrader.');
+	}
+	if (context.contextMode === 'plan' && context.userInput && looksLikeMultiSessionInput(context.userInput)) {
+		addWarning(warnings, 'Det här låter som flera pass. Testa Dagplan/Agenda-AI för bättre uppdelning.');
 	}
 
 	if (context.planningMode === 'free-day') {
