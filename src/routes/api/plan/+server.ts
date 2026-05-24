@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
-import { buildAiPlanSystemPrompt, normalizeAiPlanResponse, type AiPlanIntent, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+import { buildAiPlanSystemPrompt, normalizeAiPlanResponse, reviewAiPlanResponse, type AiPlanIntent, type AiPlanningMode } from '$lib/ai-plan-engine.js';
 
 type Provider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 type PlanMode = 'strict' | 'helpful';
@@ -137,7 +137,11 @@ export const POST: RequestHandler = async ({ request }) => {
       text = await callOpenAI(key, systemPrompt, message, parsedUrl.toString(), customModel?.trim() || undefined);
     }
     const normalized = normalizeAiPlanResponse(text);
-    return json(normalized);
+    const reviewed = reviewAiPlanResponse(normalized, {
+      planningMode,
+      contextMode: mode === 'parts' ? 'plan' : 'agenda'
+    });
+    return json(reviewed);
   } catch (err: unknown) {
     console.error('[api/plan] AI call failed:', err instanceof Error ? err.message : err);
     return json({ error: safeErrorMessage(err) }, { status: 500 });
