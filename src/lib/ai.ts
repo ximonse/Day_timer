@@ -114,7 +114,7 @@ Returnera BARA en dagplan i detta format:
 - inga förklaringar eller extra text utanför formatet
 
 Exempel:
-@\${todayISO.replace(/-/g, '').slice(2)}
+@${todayISO.replace(/-/g, '').slice(2)}
 #Morgonrutin 07:00
 Vakna 5m
 Toa 5m
