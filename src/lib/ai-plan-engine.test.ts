@@ -157,6 +157,8 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('startbar');
 		expect(prompt).toContain('mindre schema');
 		expect(prompt).toContain('Sikta pa 4-6 lugna huvudblock');
+		expect(prompt).toContain('Vakna lugnt 10m');
+		expect(prompt).toContain('Kombinera inte vakna lugnt med te eller frukost');
 		expect(prompt).toContain('Frukost & te pa trappen 35m');
 		expect(prompt).toContain('Meditation & andning 15m');
 		expect(prompt).toContain('Optimera inte exakt mot hela tidsramen');

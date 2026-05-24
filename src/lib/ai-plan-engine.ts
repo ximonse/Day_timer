@@ -107,6 +107,13 @@ Sikta pa 4-6 lugna huvudblock, inte manga smablock. Korta logistiska saker ska h
 
 Optimera inte exakt mot hela tidsramen; lamna hellre buffert och mjukhet.
 
+Om anvandaren namner vakna lugnt, lugn start, ligga kvar eller landa i sangen ska det normalt vara ett eget kort startblock, till exempel:
+"Vakna lugnt 10m"
+- ligga kvar
+- ta tiden pa dig
+
+Kombinera inte vakna lugnt med te eller frukost nar anvandaren verkar mena tid i sangen innan hen gar upp.
+
 Om anvandaren namner bade te och frukost ska de normalt kombineras till ett block, till exempel:
 "Frukost & te pa trappen 35m"
 - koka vatten
