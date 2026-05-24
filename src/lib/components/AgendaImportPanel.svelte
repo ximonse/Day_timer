@@ -167,8 +167,8 @@
         </div>
         <div class="ai-tone-row">
           <span class="ai-tone-label">Ton</span>
-          <button class="ai-tone-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode}>Strikt</button>
-          <button class="ai-tone-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode}>Hjälpsam</button>
+          <button class="ai-tone-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode} title="Bara det du skriver, inga tillägg">Strikt</button>
+          <button class="ai-tone-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode} title="Lägger till marginaler, ställtid och pauser">Hjälpsam</button>
         </div>
         {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
         {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}

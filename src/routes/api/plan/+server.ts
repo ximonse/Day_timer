@@ -75,6 +75,10 @@ function planningModeFromInput(mode: 'parts' | 'agenda', value: AiPlanningMode |
   return mode === 'parts' ? 'fixed-session' : 'anchored-day';
 }
 
+function intentFromInput(value: string | undefined): AiPlanIntent {
+  return value === 'create' ? value : 'create';
+}
+
 export const POST: RequestHandler = async ({ request }) => {
   const { provider = 'anthropic', apiKey, message, mode, planMode = 'helpful', context, baseUrl, customModel, planningMode: bodyPlanningMode, intent: bodyIntent } = await request.json() as {
     provider?: Provider;
@@ -86,7 +90,7 @@ export const POST: RequestHandler = async ({ request }) => {
     baseUrl?: string;
     customModel?: string;
     planningMode?: AiPlanningMode;
-    intent?: AiPlanIntent;
+    intent?: string;
   };
 
   if (!apiKey?.trim()) return json({ error: 'Ingen API-nyckel angiven' }, { status: 400 });
@@ -94,7 +98,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const todayISO = context?.date ?? new Date().toISOString().slice(0, 10);
   const planningMode = planningModeFromInput(mode, bodyPlanningMode);
-  const intent = bodyIntent ?? 'create';
+  const intent = intentFromInput(bodyIntent);
   const systemPrompt = buildAiPlanSystemPrompt({
     planningMode,
     intent,

@@ -96,19 +96,6 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('Intent: Skapa en ny plan');
 	});
 
-	test('future intents are not exposed as bare unexplained tokens', () => {
-		const prompt = buildAiPlanSystemPrompt({
-			planningMode: 'fixed-session',
-			intent: 'compress',
-			planMode: 'helpful',
-			userInput: 'lektion',
-			workspaceContext: { mode: 'plan' }
-		});
-
-		expect(prompt).toContain('Intent: Skapa en ny plan');
-		expect(prompt).not.toContain('Intent: compress');
-	});
-
 	test('fixed session prompt includes concrete activity format examples', () => {
 		const prompt = buildAiPlanSystemPrompt({
 			planningMode: 'fixed-session',

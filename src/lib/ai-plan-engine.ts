@@ -1,5 +1,5 @@
 export type AiPlanningMode = 'fixed-session' | 'anchored-day' | 'free-day';
-export type AiPlanIntent = 'create' | 'calm' | 'compress' | 'expand' | 'add-transitions' | 'make-teachable' | 'reduce-switching' | 'prioritize';
+export type AiPlanIntent = 'create';
 export type AiBehaviorMode = 'strict' | 'helpful';
 
 export interface AiTimeFrame {
@@ -51,14 +51,7 @@ export const AI_SESSION_PLANNING_MODES: AiPlanningMode[] = ['fixed-session', 'fr
 export const AI_AGENDA_PLANNING_MODES: AiPlanningMode[] = ['anchored-day', 'free-day'];
 
 export const AI_PLAN_INTENT_LABELS: Record<AiPlanIntent, string> = {
-	create: 'Skapa plan',
-	calm: 'Gor lugnare',
-	compress: 'Korta',
-	expand: 'Mer detaljerad',
-	'add-transitions': 'Lagg till overgangar',
-	'make-teachable': 'Mer pedagogisk',
-	'reduce-switching': 'Farre vaxlingar',
-	prioritize: 'Prioritera'
+	create: 'Skapa plan'
 };
 
 function stringArray(value: unknown): string[] {
@@ -113,8 +106,7 @@ function behaviorInstruction(planMode: AiBehaviorMode): string {
 	return 'Hjälpsamt läge: gör planen mer genomförbar med rimliga tider, buffert, övergångar och korta råd när det tydligt hjälper.';
 }
 
-function intentInstruction(intent: AiPlanIntent): string {
-	if (intent === 'create') return 'Intent: Skapa en ny plan från användarens text.';
+function intentInstruction(): string {
 	return 'Intent: Skapa en ny plan från användarens text.';
 }
 
@@ -183,7 +175,7 @@ export function buildAiPlanSystemPrompt(request: Pick<AiPlanRequest, 'planningMo
 	return `Du ar Day Timers AI Plan Engine.
 
 Lage: ${label}
-${intentInstruction(request.intent)}
+${intentInstruction()}
 Tidsram: ${frame}
 Kontext: ${context}
 Befintlig plan: ${currentPlan}
