@@ -101,7 +101,30 @@ function modeInstruction(mode: AiPlanningMode): string {
 	if (mode === 'anchored-day') {
 		return 'Dag med ankare: respektera fasta ankare som moten, deadlines och hamtning. Bygg realistiska arbetsblock runt dem med buffert och prioritering.';
 	}
-	return 'Fri dag: gor roran startbar med mjuk ordning, sma steg och paminnelser. Skapa mindre schema och mer stod. Optimera inte exakt mot hela tidsramen; lamna hellre buffert och mjukhet. Klustra sma logistikmoment som medicin i hygien eller frukost nar det passar. Undvik formuleringar som perfekt passform.';
+	return `Fri dag: gor roran startbar med mjuk ordning, sma steg och paminnelser. Skapa mindre schema och mer stod.
+
+Sikta pa 4-6 lugna huvudblock, inte manga smablock. Korta logistiska saker ska helst bli underpunkter i ett storre block.
+
+Optimera inte exakt mot hela tidsramen; lamna hellre buffert och mjukhet.
+
+Om anvandaren namner bade te och frukost ska de normalt kombineras till ett block, till exempel:
+"Frukost & te pa trappen 35m"
+- koka vatten
+- valj te
+- fixa frukost
+- sitt ute i lugn
+
+Om anvandaren namner meditation och andning ska blocket normalt heta:
+"Meditation & andning 15m"
+- hitta en lugn plats
+- sitt bekvamt
+- folj andningen
+
+Undvik separata 10-minutersblock for ritualer, njutning eller aterhamtning. Ge dem hellre mer tid eller gor dem till del av ett storre block.
+
+Klustra sma logistikmoment som medicin i hygien eller frukost nar det passar.
+
+Undvik formuleringar som "perfekt passform", "tar exakt" eller att planen fyller hela tidsramen.`;
 }
 
 function behaviorInstruction(planMode: AiBehaviorMode): string {

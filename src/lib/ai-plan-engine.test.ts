@@ -156,6 +156,10 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('Fri dag');
 		expect(prompt).toContain('startbar');
 		expect(prompt).toContain('mindre schema');
+		expect(prompt).toContain('Sikta pa 4-6 lugna huvudblock');
+		expect(prompt).toContain('Frukost & te pa trappen 35m');
+		expect(prompt).toContain('Meditation & andning 15m');
+		expect(prompt).toContain('Optimera inte exakt mot hela tidsramen');
 	});
 
 	test('returns compact metadata items in priority order', () => {
