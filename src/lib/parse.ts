@@ -81,6 +81,7 @@ export interface AgendaDay {
 interface RawSection {
   title: string;
   startMin?: number;
+  availableMin?: number;
   items: { title: string; minutes: number | null; note: string }[];
   extraInfo: string;
   id?: string;
@@ -91,6 +92,59 @@ function parseTimeStr(s: string): number | undefined {
   if (!m) return undefined;
   const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
   return isNaN(h) || isNaN(min) ? undefined : h * 60 + min;
+}
+
+function parseDurationStr(s: string): number | undefined {
+  const trimmed = s.trim();
+  const minuteMatch = trimmed.match(/^(\d+)\s*m(?:in)?$/i);
+  if (minuteMatch) return Math.max(1, parseInt(minuteMatch[1], 10));
+  const hourMatch = trimmed.match(/^(\d+)\s*h(?:\s*(\d+)\s*m(?:in)?)?$/i);
+  if (!hourMatch) return undefined;
+  const hours = parseInt(hourMatch[1], 10);
+  const minutes = hourMatch[2] ? parseInt(hourMatch[2], 10) : 0;
+  if (isNaN(hours) || isNaN(minutes)) return undefined;
+  return Math.max(1, hours * 60 + minutes);
+}
+
+function durationBetween(startMin: number, endMin: number): number {
+  return endMin > startMin ? endMin - startMin : endMin + 1440 - startMin;
+}
+
+function parseSessionHeader(titleContent: string): { title: string; startMin?: number; availableMin?: number } {
+  let title = titleContent;
+  let startMin: number | undefined;
+  let availableMin: number | undefined;
+  const rangeMatch = titleContent.match(/^(.*?)\s+(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})\s*$/);
+  if (rangeMatch) {
+    const parsedStart = parseTimeStr(rangeMatch[2]);
+    const parsedEnd = parseTimeStr(rangeMatch[3]);
+    if (parsedStart !== undefined && parsedEnd !== undefined) {
+      title = rangeMatch[1].trim() || 'Session';
+      startMin = parsedStart;
+      availableMin = durationBetween(parsedStart, parsedEnd);
+      return { title, startMin, availableMin };
+    }
+  }
+  const lengthMatch = titleContent.match(/^(.*?)\s+(\d{1,2}:\d{2})\s+(\d+\s*m(?:in)?|\d+\s*h(?:\s*\d+\s*m(?:in)?)?)\s*$/i);
+  if (lengthMatch) {
+    const parsedStart = parseTimeStr(lengthMatch[2]);
+    const parsedDuration = parseDurationStr(lengthMatch[3]);
+    if (parsedStart !== undefined && parsedDuration !== undefined) {
+      title = lengthMatch[1].trim() || 'Session';
+      startMin = parsedStart;
+      availableMin = parsedDuration;
+      return { title, startMin, availableMin };
+    }
+  }
+  const timeMatch = titleContent.match(/^(.*?)\s+(\d{1,2}:\d{2})\s*$/);
+  if (timeMatch) {
+    const parsed = parseTimeStr(timeMatch[2]);
+    if (parsed !== undefined) {
+      title = timeMatch[1].trim() || 'Session';
+      startMin = parsed;
+    }
+  }
+  return { title: title || 'Session', startMin, availableMin };
 }
 
 // @YYMMDD, @YYYYMMDD or @YYYY-MM-DD → ISO string or null
@@ -107,21 +161,27 @@ function parseDateMarker(raw: string): string | null {
 function sectionsToFlows(sections: RawSection[]): Flow[] {
   return sections.map((sec, i) => {
     const next = sections[i + 1];
-    let available = 60;
-    if (sec.startMin !== undefined && next?.startMin !== undefined && next.startMin > sec.startMin) {
+    let available = sec.availableMin ?? 60;
+    if (sec.availableMin === undefined && sec.startMin !== undefined && next?.startMin !== undefined && next.startMin > sec.startMin) {
       available = next.startMin - sec.startMin;
     }
     const pinnedSum = sec.items.reduce((a, b) => a + (b.minutes ?? 0), 0);
     const unpinnedCount = sec.items.filter(b => b.minutes === null).length;
-    const perUnpinned = unpinnedCount > 0
-      ? Math.max(1, Math.round(Math.max(unpinnedCount, available - pinnedSum) / unpinnedCount))
-      : 0;
+    const unpinnedTotal = Math.max(unpinnedCount, available - pinnedSum);
+    const unpinnedBase = unpinnedCount > 0 ? Math.floor(unpinnedTotal / unpinnedCount) : 0;
+    let unpinnedRemainder = unpinnedCount > 0 ? unpinnedTotal - unpinnedBase * unpinnedCount : 0;
+    const minutes = sec.items.map(b => {
+      if (b.minutes !== null) return b.minutes;
+      const extra = unpinnedRemainder > 0 ? 1 : 0;
+      if (unpinnedRemainder > 0) unpinnedRemainder -= 1;
+      return unpinnedBase + extra;
+    });
     return {
       id: sec.id ?? uid(),
       title: sec.title,
       startMin: sec.startMin,
       parts: sec.items.map(b => b.title),
-      minutes: sec.items.map(b => b.minutes !== null ? b.minutes : perUnpinned),
+      minutes,
       warnings: sec.items.map(() => true),
       notes: sec.items.map(b => b.note),
       extraInfo: sec.extraInfo,
@@ -200,7 +260,6 @@ export function parseAgenda(text: string): AgendaDay[] {
       }
     }
 
-    // Session header: #Titel or #Titel 08:00
     if (t.startsWith('#')) {
       if (cur) sections.push(cur);
       const content = t.slice(1).trim();
@@ -214,14 +273,8 @@ export function parseAgenda(text: string): AgendaDay[] {
         titleContent = content.replace(idMatch[0], '').trim();
       }
 
-      const timeMatch = titleContent.match(/^(.*?)\s+(\d{1,2}:\d{2})\s*$/);
-      let title = titleContent;
-      let startMin: number | undefined;
-      if (timeMatch) {
-        const parsed = parseTimeStr(timeMatch[2]);
-        if (parsed !== undefined) { title = timeMatch[1].trim() || 'Session'; startMin = parsed; }
-      }
-      cur = { title: title || 'Session', startMin, items: [], extraInfo: '', id: extractedId };
+      const parsedHeader = parseSessionHeader(titleContent);
+      cur = { ...parsedHeader, items: [], extraInfo: '', id: extractedId };
       continue;
     }
 

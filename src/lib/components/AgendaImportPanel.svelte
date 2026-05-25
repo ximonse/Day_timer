@@ -133,7 +133,7 @@
     <div class="agenda-input-wrapper">
       <textarea
         class="agenda-input"
-        placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
+        placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00-08:45&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
         value={agendaDraft}
         oninput={(e) => onDraftChange((e.target as HTMLTextAreaElement).value)}
         onpaste={(e) => onDraftPaste(e)}

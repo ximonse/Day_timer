@@ -110,13 +110,17 @@ Eget arbete           → block utan tid (auto-fördelas)
 Dagplan (agendapanelen):
 ```
 @260510
-#Lektion 1 08:00
+#Lektion 1 08:00-08:50
 Genomgång 15m
 Eget arbete 30m
 Avslut 5m
 
-#Rast 08:50
+#Lektion 2 09:00 45m
+Läsning
+Skrivuppgift
 ```
+
+Sessionsrubriker kan ange bara starttid (`#Lektion 08:00`), start-slut (`#Lektion 08:00-08:50`) eller start + längd (`#Lektion 09:00 45m`, `#Lektion 09:00 1h15m`).
 
 ## Gränssnitt i korthet
 

@@ -171,6 +171,38 @@ describe('parseAgenda — sessioner', () => {
     expect(flow.startMin).toBe(8 * 60 + 30);
   });
 
+  it('parsar sessionrubrik med start- och sluttid som passlängd', () => {
+    const days = parseAgenda('#Lektion 10:00-11:55\nGenomgång\nEget arbete');
+    const flow = days[0].flows[0];
+    expect(flow.title).toBe('Lektion');
+    expect(flow.startMin).toBe(10 * 60);
+    expect(flow.minutes).toEqual([58, 57]);
+  });
+
+  it('parsar sessionrubrik med starttid och minutlängd', () => {
+    const days = parseAgenda('#Lektion 10:00 115m\nGenomgång\nEget arbete');
+    const flow = days[0].flows[0];
+    expect(flow.title).toBe('Lektion');
+    expect(flow.startMin).toBe(10 * 60);
+    expect(flow.minutes).toEqual([58, 57]);
+  });
+
+  it('parsar sessionrubrik med starttid och timlängd', () => {
+    const days = parseAgenda('#Lektion 10:00 1h55m\nGenomgång\nEget arbete');
+    expect(days[0].flows[0].minutes).toEqual([58, 57]);
+  });
+
+  it('prioriterar explicit rubrikslängd framför nästa sessions starttid', () => {
+    const days = parseAgenda('#Förmiddag 10:00-11:55\nGenomgång\nEget arbete\n#Eftermiddag 12:30\nLäsning 20m');
+    expect(days[0].flows[0].minutes).toEqual([58, 57]);
+    expect(days[0].flows[1].startMin).toBe(12 * 60 + 30);
+  });
+
+  it('använder rubrikslängd som återstående tid efter fasta aktiviteter', () => {
+    const days = parseAgenda('#Lektion 10:00-11:00\nStart 10m\nEget arbete');
+    expect(days[0].flows[0].minutes).toEqual([10, 50]);
+  });
+
   it('parsar aktiviteter med tid', () => {
     const days = parseAgenda('#Session\nMatematik 45m\nRast 10m');
     const flow = days[0].flows[0];
