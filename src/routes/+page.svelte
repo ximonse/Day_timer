@@ -2143,6 +2143,13 @@
     if (vt) {
       isViewMode = true;
       viewToken = vt;
+      locked = true;
+      miniMenuOpen = false;
+      s.agendaOpen = true;
+      s.sbCollapsed = false;
+      s.showControls = false;
+      agendaInputOpen = false;
+      agendaCalendarOpen = false;
       document.body.classList.add('view-mode');
       loadSharedState(vt);
       viewPollId = setInterval(() => loadSharedState(vt), 30000);

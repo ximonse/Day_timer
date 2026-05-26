@@ -668,6 +668,9 @@
   :global(body.run-mode .title-check-btn),
   :global(body.run-mode .check-btn) { pointer-events: auto !important; }
   :global(body.run-mode .agenda-block) { pointer-events: auto !important; }
+  :global(body.page-locked.run-mode .agenda-calendar button) { pointer-events: auto !important; }
+  :global(svg.clock *:focus),
+  :global(svg.clock *:focus-visible),
   :global(body.run-mode svg.clock [role="button"]:focus),
   :global(body.run-mode svg.clock [role="button"]:focus-visible),
   :global(body.run-mode .agenda-block:focus),
