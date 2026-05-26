@@ -667,6 +667,11 @@
   :global(body.run-mode .resize-handle-ag) { pointer-events: none !important; }
   :global(body.run-mode .title-check-btn),
   :global(body.run-mode .check-btn) { pointer-events: auto !important; }
+  :global(body.run-mode .agenda-block) { pointer-events: auto !important; }
+  :global(body.run-mode svg.clock [role="button"]:focus),
+  :global(body.run-mode svg.clock [role="button"]:focus-visible),
+  :global(body.run-mode .agenda-block:focus),
+  :global(body.run-mode .agenda-block:focus-visible) { outline: 0 !important; }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
   :global(.flash.on) { opacity: .35; }

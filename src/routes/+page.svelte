@@ -564,7 +564,8 @@
       return;
     }
     closeTransientMenus();
-    if (miniMenuSnapshot && s.activeSection !== miniMenuSnapshot.section) {
+    const keepInspectedAgendaBlock = sessionSource.kind === 'agenda' && s.activeSection === 'plan';
+    if (miniMenuSnapshot && !keepInspectedAgendaBlock && s.activeSection !== miniMenuSnapshot.section) {
       setActiveSection(miniMenuSnapshot.section);
     }
     if (miniMenuSnapshot) {
@@ -576,6 +577,12 @@
     }
     miniMenuOpen = true;
     s.showControls = true;
+    if (keepInspectedAgendaBlock) {
+      locked = false;
+      s.agendaOpen = true;
+      agendaInputOpen = true;
+      planSelectionExplicit = true;
+    }
     appState.persist();
   }
 
