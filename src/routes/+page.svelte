@@ -548,6 +548,7 @@
   }
 
   function toggleMiniMenu() {
+    if (isViewMode) return;
     if (miniMenuOpen) {
       miniMenuSnapshot = {
         section: s.activeSection,
