@@ -236,6 +236,7 @@
   const SHARE_OWNER_STORAGE = 'daytimer_share_owner_token';
   const SHARE_MODE_STORAGE = 'daytimer_share_mode';
   const SHARE_ENTRIES_STORAGE = 'daytimer_share_entries';
+  const RUN_MODE_STORAGE = 'daytimer_run_mode';
 
   const ACTIVE_SHARE_KEY = 'active';
   function sessionShareKey(flowId: string): string { return `session:${flowId}`; }
@@ -547,6 +548,24 @@
     agendaCalendarOpen = false;
   }
 
+  function persistRunModePreference(active: boolean) {
+    try {
+      localStorage.setItem(RUN_MODE_STORAGE, active ? '1' : '0');
+    } catch {}
+  }
+
+  function restoreRunModePreference() {
+    let active = false;
+    try {
+      active = localStorage.getItem(RUN_MODE_STORAGE) === '1';
+    } catch {}
+    if (!active) return;
+    collapseActiveWorkMenus();
+    locked = true;
+    miniMenuOpen = false;
+    s.showControls = false;
+  }
+
   function toggleMiniMenu() {
     if (isViewMode) return;
     if (miniMenuOpen) {
@@ -561,6 +580,7 @@
       locked = true;
       miniMenuOpen = false;
       s.showControls = false;
+      persistRunModePreference(true);
       appState.persist();
       return;
     }
@@ -578,6 +598,7 @@
     }
     miniMenuOpen = true;
     s.showControls = true;
+    persistRunModePreference(false);
     if (keepInspectedAgendaBlock) {
       locked = false;
       s.agendaOpen = true;
@@ -2192,6 +2213,7 @@
       }
       appState.persist();
     }
+    if (!isViewMode) restoreRunModePreference();
     syncBodyClasses();
     scrollMobileViewportTop();
     const resizeObservers: ResizeObserver[] = [];
