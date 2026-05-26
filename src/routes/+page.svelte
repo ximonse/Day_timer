@@ -1781,19 +1781,24 @@
       const planningMode = isValidPlanningModeForContext('agenda', agendaAiPlanningMode)
         ? agendaAiPlanningMode
         : 'anchored-day';
+      const targetDate = selectedDay?.date ?? activeAgendaDate() ?? todayISO;
       const text = await requestAiPlan(aiConfig, agendaAiInput, 'agenda', {
         date: todayISO,
-        currentPlan: s.agendaText
+        currentPlan: activeAgendaText()
       }, planningMode, 'create');
       agendaAiLastResponse = text;
-      setActiveAgendaText(text.text);
-      const aiDays = parseAgenda(text.text);
+      const aiDays = parseAgenda(text.text).map(day => day.date === null ? { ...day, date: targetDate } : day);
+      const mergedDays = mergeAgendaDayData(activeAgendaText(), aiDays);
+      setActiveAgendaText(serializeAgenda(mergedDays));
       for (const day of aiDays) {
         const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
         for (const item of items) {
           setAgendaMeta(makeAgendaMetaKeyForFlow(day.date ?? null, item.flow, item.startMin), { source: 'ai' });
         }
       }
+      agendaDraft = serializeSelectedAgendaDay(targetDate, mergedDays);
+      agendaDraftDate = targetDate;
+      agendaDraftDirty = false;
       activeAgendaFlowRef = null;
       sessionSource = { kind: 'unscheduled' };
       appState.persist();

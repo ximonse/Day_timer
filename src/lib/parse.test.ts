@@ -9,7 +9,7 @@ vi.mock('./state.svelte.js', () => {
   };
 });
 
-import { parseParts, serializeBlocks, parseAgenda, serializeAgenda } from './parse.js';
+import { mergeAgendaDayData, parseParts, serializeBlocks, parseAgenda, serializeAgenda } from './parse.js';
 import type { AgendaDay } from './parse.js';
 
 // ── parseParts ────────────────────────────────────────────────────────────────
@@ -230,6 +230,26 @@ describe('parseAgenda — sessioner', () => {
   it('tom text ger inga dagar', () => {
     expect(parseAgenda('')).toHaveLength(0);
     expect(parseAgenda('   \n\n')).toHaveLength(0);
+  });
+});
+
+describe('mergeAgendaDayData', () => {
+  it('bevarar befintliga pass när AI bara lägger till senare pass samma dag', () => {
+    const existing = '@260526\n#Morgon 08:00\nFrukost 20m\n#Jobb 10:00\nFokus 60m';
+    const incoming = parseAgenda('@260526\n#Kväll 18:00\nMiddag 45m\nVila 30m');
+    const merged = mergeAgendaDayData(existing, incoming);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].flows.map(flow => flow.title)).toEqual(['Morgon', 'Jobb', 'Kväll']);
+  });
+
+  it('ersätter matchande pass men tar inte bort andra pass', () => {
+    const existing = '@260526\n#Morgon 08:00\nFrukost 20m\n#Kväll 18:00\nMiddag 30m';
+    const incoming = parseAgenda('@260526\n#Kväll 18:00\nMiddag 45m');
+    const merged = mergeAgendaDayData(existing, incoming);
+
+    expect(merged[0].flows.map(flow => flow.title)).toEqual(['Morgon', 'Kväll']);
+    expect(merged[0].flows[1].minutes).toEqual([45]);
   });
 });
 
