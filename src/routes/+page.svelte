@@ -541,13 +541,10 @@
 
   function collapseActiveWorkMenus() {
     closeTransientMenus();
-    if (s.activeSection === 'plan') {
-      s.agendaOpen = true;
-      agendaInputOpen = false;
-      agendaCalendarOpen = false;
-    } else if (s.activeSection === 'now') {
-      s.agendaOpen = false;
-    }
+    s.agendaOpen = true;
+    s.sbCollapsed = false;
+    agendaInputOpen = false;
+    agendaCalendarOpen = false;
   }
 
   function toggleMiniMenu() {
@@ -562,6 +559,7 @@
       collapseActiveWorkMenus();
       locked = true;
       miniMenuOpen = false;
+      s.showControls = false;
       appState.persist();
       return;
     }
@@ -853,13 +851,14 @@
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
-    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-now', 'm-plan', 'm-library', 'm-workspace', 'page-locked');
+    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-now', 'm-plan', 'm-library', 'm-workspace', 'page-locked', 'run-mode');
     if (s.palette) document.body.classList.add(s.palette);
     if (s.dark && s.palette !== 'psychedelic') document.body.classList.add('dark');
     if (s.sbCollapsed) document.body.classList.add('sb-collapsed');
     if (s.agendaOpen) document.body.classList.add('ag-open');
     document.body.classList.add('m-' + mobileTab);
     if (locked) document.body.classList.add('page-locked');
+    if (locked && !miniMenuOpen) document.body.classList.add('run-mode');
   }
 
   // ── Drag ──
@@ -2285,7 +2284,7 @@
   });
 
   $effect(() => {
-    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab + locked;
+    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab + locked + miniMenuOpen;
     if (typeof document !== 'undefined') syncBodyClasses();
   });
 
@@ -2676,9 +2675,9 @@
               class:open={miniMenuOpen}
               type="button"
               onclick={(e) => { e.stopPropagation(); toggleMiniMenu(); }}
-              title={miniMenuOpen ? 'Dölj meny' : 'Visa meny'}
+              title={miniMenuOpen ? 'Starta kör-läge' : 'Öppna meny'}
             >
-              <span>▾</span>
+              <span>{miniMenuOpen ? '▶' : '☰'}</span>
             </button>
           </div>
         {/if}
@@ -3029,6 +3028,7 @@
     selectedFlowId={(s.activeSection === 'plan' && planSelectionExplicit && selectedAgendaDetails) ? selectedAgendaDetails.flow.id : null}
     {sectorColors}
     {isViewMode}
+    runMode={locked && !miniMenuOpen}
     {agendaDraftStatus}
     {savedAgendaMsg}
     {icsPreviewSummary}
