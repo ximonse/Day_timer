@@ -2076,7 +2076,8 @@
         setActiveSection('now');
       } else if (key === 'p') {
         e.preventDefault();
-        setActiveSection('plan');
+        if (isNoMod && !isViewMode) toggleMiniMenu();
+        else setActiveSection('plan');
       } else if (key === 'b') {
         e.preventDefault();
         setActiveSection('library');
