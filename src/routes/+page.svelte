@@ -1579,12 +1579,17 @@
       ?? (parsedDraft[0] ? { ...parsedDraft[0], date: targetDate } : { date: targetDate, flows: [] });
     const baseDays = activeAgendaText().trim() ? parseAgenda(activeAgendaText()) : [];
     const previousDay = baseDays.find(day => day.date === targetDate) ?? null;
-    const preservedDays = baseDays
-      .filter(day => day.date !== targetDate)
-      .map(day => cloneAgendaDay(day));
-    const nextDays = draftDay.flows.length > 0
-      ? [...preservedDays, cloneAgendaDay(draftDay)].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-      : preservedDays.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    const savingAiDraft = agendaDraftSource === 'ai';
+    const nextDays = savingAiDraft
+      ? mergeAgendaDayData(activeAgendaText(), draftDay.flows.length > 0 ? [draftDay] : [])
+      : (() => {
+        const preservedDays = baseDays
+          .filter(day => day.date !== targetDate)
+          .map(day => cloneAgendaDay(day));
+        return draftDay.flows.length > 0
+          ? [...preservedDays, cloneAgendaDay(draftDay)].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+          : preservedDays.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+      })();
     const savedText = serializeAgenda(nextDays);
     setActiveAgendaText(savedText);
     agendaDraft = serializeSelectedAgendaDay(targetDate, nextDays);
@@ -1597,7 +1602,7 @@
       previousDay,
       nextDays.find(day => day.date === targetDate) ?? null,
       agendaDayStart,
-      { defaultMeta: { source: 'manual' } }
+      { defaultMeta: { source: savingAiDraft ? 'ai' : 'manual' } }
     );
     activeAgendaFlowRef = null;
     sessionSource = { kind: 'unscheduled' };
@@ -1605,7 +1610,7 @@
 
     if (hasSyncSession()) syncSave();
 
-    savedAgendaMsg = 'Sparat ✓';
+    savedAgendaMsg = savingAiDraft ? 'AI-förslag godkänt ✓' : 'Sparat ✓';
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
 
@@ -3073,6 +3078,7 @@
     bind:agendaCalendarOpen
     bind:calendarMonthCursor
     bind:agendaDraft
+    {agendaDraftSource}
     bind:agendaDraftDirty
     bind:agendaDraftDate
     bind:icsDraft

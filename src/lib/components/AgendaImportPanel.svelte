@@ -6,6 +6,7 @@
   let {
     agendaInputOpen,
     agendaDraft,
+    agendaDraftSource,
     draftStatus,
     selectedDateLabel,
     savedAgendaMsg,
@@ -48,6 +49,7 @@
   }: {
     agendaInputOpen: boolean;
     agendaDraft: string;
+    agendaDraftSource: 'manual' | 'ai';
     draftStatus: string;
     selectedDateLabel: string;
     savedAgendaMsg: string;
@@ -142,7 +144,7 @@
     <div class="agenda-save-row">
       <button class="agenda-save-btn" onclick={onSave}
         title="Sparar dagtexten och synkar till molnet om du är inloggad. Mallbiblioteket påverkas inte.">
-        {savedAgendaMsg || '📅 Spara i dagplan'}
+        {savedAgendaMsg || (agendaDraftSource === 'ai' ? '✓ Godkänn AI-förslag' : '📅 Spara i dagplan')}
       </button>
       {#if hasAiKey}
         <button class="agenda-save-btn agenda-ai-btn" onclick={onToggleAi}>
@@ -160,6 +162,11 @@
     {/if}
     {#if agendaAiOpen && hasAiKey}
       <div class="agenda-ai-panel">
+        {#if agendaDraftSource === 'ai'}
+          <div class="feedback" style="margin-bottom:8px;">
+            AI-förslaget ligger i dagtexten ovan. Läs, ändra vid behov och godkänn först när det ser rätt ut.
+          </div>
+        {/if}
         <div class="agenda-input-wrapper">
           <textarea class="ai-input" placeholder={agendaAiPlaceholder}
             value={agendaAiInput}

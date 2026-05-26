@@ -62,6 +62,7 @@
     agendaCalendarOpen = $bindable(),
     calendarMonthCursor = $bindable(),
     agendaDraft = $bindable(),
+    agendaDraftSource = 'manual',
     agendaDraftDirty = $bindable(),
     agendaDraftDate = $bindable(),
     icsDraft = $bindable(),
@@ -122,6 +123,7 @@
     agendaCalendarOpen: boolean;
     calendarMonthCursor: string;
     agendaDraft: string;
+    agendaDraftSource: 'manual' | 'ai';
     agendaDraftDirty: boolean;
     agendaDraftDate: string | null;
     icsDraft: string;
@@ -215,6 +217,7 @@
       <AgendaImportPanel
         {agendaInputOpen}
         {agendaDraft}
+        agendaDraftSource={agendaDraftDirty ? agendaDraftSource : 'manual'}
         draftStatus={agendaDraftStatus}
         selectedDateLabel={selectedDay?.date ? fmtAgendaDate(selectedDay.date) : 'Odaterad dag'}
         {savedAgendaMsg}
