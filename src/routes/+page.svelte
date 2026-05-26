@@ -560,7 +560,9 @@
       active = localStorage.getItem(RUN_MODE_STORAGE) === '1';
     } catch {}
     if (!active) return;
-    collapseActiveWorkMenus();
+    closeTransientMenus();
+    agendaInputOpen = false;
+    agendaCalendarOpen = false;
     locked = true;
     miniMenuOpen = false;
     s.showControls = false;

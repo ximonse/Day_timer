@@ -637,12 +637,15 @@
   :global(body.view-mode .agenda-drag-top) { display: none; }
   :global(body.view-mode .agenda-drag-bottom) { display: none; }
   :global(body.view-mode .agenda-move-btn) { display: none; }
+  @media (min-width: 801px) {
+    :global(body.view-mode.run-mode .collapse-btn) { display: flex; }
+  }
 
   /* ── Lås-läge ── */
   :global(.lock-btn) { opacity: .18; font-size: 14px !important; }
   :global(.lock-btn:hover) { opacity: .5; }
   :global(.lock-btn.locked) { opacity: .55; }
-  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle)) { pointer-events: none !important; }
+  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle):not(.collapse-btn):not(.agenda-toggle-btn)) { pointer-events: none !important; }
   :global(body.page-locked input) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked textarea) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked .resize-handle-sb) { pointer-events: none !important; }
@@ -662,9 +665,10 @@
   :global(body.page-locked .lesson-title) { pointer-events: none !important; cursor: default; }
   :global(body.run-mode .mobile-tabs) { display: none; }
   :global(body.run-mode .controls) { display: none; }
-  :global(body.run-mode .collapse-btn) { display: none; }
   :global(body.run-mode .resize-handle-sb),
   :global(body.run-mode .resize-handle-ag) { pointer-events: none !important; }
+  :global(body.page-locked.run-mode .collapse-btn),
+  :global(body.page-locked.run-mode .agenda-toggle-btn) { pointer-events: auto !important; }
   :global(body.run-mode .title-check-btn),
   :global(body.run-mode .check-btn) { pointer-events: auto !important; }
   :global(body.run-mode .agenda-block) { pointer-events: auto !important; }
