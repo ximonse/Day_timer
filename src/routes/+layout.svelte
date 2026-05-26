@@ -141,9 +141,9 @@
   :global(.top-time .now) { background: transparent; border: 0; color: inherit; padding: 0; cursor: pointer; }
   :global(.top-time .left) { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); font-size: 20px; color: var(--muted); margin-top: 0; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
   :global(.clock-wrap) { position: relative; margin-top: 34px; }
-  :global(.mini-menu-shell) { width: min(348px, 100%); display: flex; flex-direction: column; align-items: center; gap: 7px; }  :global(.mini-menu-toggle) { width: 34px; height: 24px; border-radius: 999px; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: color .16s, opacity .16s, transform .16s; }
-  :global(.mini-menu-toggle:hover) { color: var(--fg); opacity: .9; }
-  :global(.mini-menu-toggle span) { display: inline-block; line-height: 1; font-size: 26px; font-weight: 700; transform: rotate(0deg); transition: transform .2s ease; }
+  :global(.mini-menu-shell) { width: min(348px, 100%); display: flex; flex-direction: column; align-items: center; gap: 7px; }  :global(.mini-menu-toggle) { width: 26px; height: 20px; border-radius: 999px; border: 0; background: transparent; color: color-mix(in srgb, var(--muted) 58%, transparent); opacity: .42; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: color .16s, opacity .16s, transform .16s; }
+  :global(.mini-menu-toggle:hover), :global(.mini-menu-toggle:focus-visible) { color: var(--fg); opacity: .95; }
+  :global(.mini-menu-toggle span) { display: inline-block; line-height: 1; font-size: 18px; font-weight: 700; transform: rotate(0deg); transition: transform .2s ease; }
   :global(.mini-menu-toggle.open span) { transform: none; }
   :global(.mini-menu-details) { width: 100%; display: flex; flex-direction: column; align-items: center; overflow: hidden; max-height: 0; opacity: 0; transform: translateY(-6px); pointer-events: none; transition: max-height .28s ease, opacity .18s ease, transform .18s ease; }
   :global(.mini-menu-details.open) { max-height: 5000px; opacity: 1; transform: translateY(0); pointer-events: auto; overflow: visible; }
@@ -577,7 +577,7 @@
     :global(body.run-mode .main) { order: 1; }
     :global(body.run-mode .sidebar) { display: block !important; order: 2; border-top: 1px solid var(--border); }
     :global(body.run-mode .agenda) { display: flex !important; order: 3; border-top: 1px solid var(--border); }
-    :global(body.run-mode .agenda-calendar) { display: none; }
+    :global(body.run-mode .agenda-calendar) { display: none !important; }
     :global(body.run-mode .mobile-tabs) { display: none !important; }
     /* Temaväljare som dropdown på mobil */
     :global(.theme-dots) { z-index: 200; }
@@ -665,6 +665,8 @@
   :global(body.run-mode .collapse-btn) { display: none; }
   :global(body.run-mode .resize-handle-sb),
   :global(body.run-mode .resize-handle-ag) { pointer-events: none !important; }
+  :global(body.run-mode .title-check-btn),
+  :global(body.run-mode .check-btn) { pointer-events: auto !important; }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
   :global(.flash.on) { opacity: .35; }
