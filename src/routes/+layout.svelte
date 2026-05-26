@@ -141,10 +141,10 @@
   :global(.top-time .now) { background: transparent; border: 0; color: inherit; padding: 0; cursor: pointer; }
   :global(.top-time .left) { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); font-size: 20px; color: var(--muted); margin-top: 0; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
   :global(.clock-wrap) { position: relative; margin-top: 34px; }
-  :global(.mini-menu-shell) { width: min(348px, 100%); display: flex; flex-direction: column; align-items: center; gap: 7px; }  :global(.mini-menu-toggle) { width: 34px; height: 24px; border-radius: 999px; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: color .16s, opacity .16s, transform .16s; }
-  :global(.mini-menu-toggle:hover) { color: var(--fg); opacity: .9; }
-  :global(.mini-menu-toggle span) { display: inline-block; line-height: 1; font-size: 26px; font-weight: 700; transform: rotate(0deg); transition: transform .2s ease; }
-  :global(.mini-menu-toggle.open span) { transform: rotate(180deg); }
+  :global(.mini-menu-shell) { width: min(348px, 100%); display: flex; flex-direction: column; align-items: center; gap: 7px; }  :global(.mini-menu-toggle) { width: 26px; height: 20px; border-radius: 999px; border: 0; background: transparent; color: color-mix(in srgb, var(--muted) 84%, var(--fg) 16%); opacity: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: color .16s, opacity .16s, transform .16s; }
+  :global(.mini-menu-toggle:hover), :global(.mini-menu-toggle:focus-visible) { color: var(--fg); opacity: 1; }
+  :global(.mini-menu-toggle span) { display: inline-block; line-height: 1; font-size: 18px; font-weight: 700; transform: rotate(0deg); transition: transform .2s ease; }
+  :global(.mini-menu-toggle.open span) { transform: none; }
   :global(.mini-menu-details) { width: 100%; display: flex; flex-direction: column; align-items: center; overflow: hidden; max-height: 0; opacity: 0; transform: translateY(-6px); pointer-events: none; transition: max-height .28s ease, opacity .18s ease, transform .18s ease; }
   :global(.mini-menu-details.open) { max-height: 5000px; opacity: 1; transform: translateY(0); pointer-events: auto; overflow: visible; }
   :global(.toolbar) { width: 100%; max-width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 6px; background: color-mix(in srgb, var(--panel) 18%, transparent); border: 1px solid color-mix(in srgb, var(--border) 68%, transparent); border-radius: 999px; padding: 3px 7px; position: relative; opacity: 0.68; transition: opacity .2s, border-color .15s; box-shadow: 0 1px 0 rgba(255,255,255,.18) inset; overflow: visible; }
@@ -478,6 +478,10 @@
   :global(.agenda-input-label) { flex: 1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--sidebar-subheading); }
   :global(.agenda-input-toggle) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 7px; border-radius: 5px; font-family: inherit; }
   :global(.agenda-input-toggle:hover) { background: var(--pill); color: var(--fg); }
+  :global(body.run-mode .agenda-calendar.collapsed) { margin-bottom: 4px; }
+  :global(body.run-mode .agenda-calendar .agenda-input-header) { gap: 4px; margin-bottom: 4px !important; }
+  :global(body.run-mode .agenda-calendar .agenda-input-label) { font-size: 10px; font-weight: 600; letter-spacing: .35px; color: color-mix(in srgb, var(--muted) 78%, var(--fg) 22%); }
+  :global(body.run-mode .agenda-calendar .agenda-input-toggle) { font-size: 11px; padding: 1px 5px; color: color-mix(in srgb, var(--muted) 82%, var(--fg) 18%); }
   :global(.agenda-section-note) { margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--pill); color: var(--fg); font-size: 12px; line-height: 1.45; }
   :global(.agenda-save-btn) { flex: 1; padding: 7px; background: color-mix(in srgb, var(--pill) 55%, transparent); border: 1px solid color-mix(in srgb, var(--border) 72%, transparent); border-radius: 8px; color: var(--fg); font-size: 13px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; font-family: inherit; transition: background .12s, border-color .12s, color .12s; }
   :global(.agenda-save-btn:hover) { background: color-mix(in srgb, var(--pill-on) 16%, transparent); color: var(--fg); border-color: var(--border); }
@@ -573,6 +577,11 @@
     :global(body.m-plan .sidebar), :global(body.m-library .sidebar), :global(body.m-workspace .sidebar) { display: none; }
     :global(body.m-now .resize-handle-sb), :global(body.m-plan .resize-handle-sb), :global(body.m-library .resize-handle-sb), :global(body.m-workspace .resize-handle-sb) { display: none; }
     :global(body.m-plan .agenda) { display: flex !important; }
+    :global(body.run-mode .app) { padding-bottom: 0; }
+    :global(body.run-mode .main) { order: 1; }
+    :global(body.run-mode .sidebar) { display: block !important; order: 2; border-top: 1px solid var(--border); }
+    :global(body.run-mode .agenda) { display: flex !important; order: 3; border-top: 1px solid var(--border); }
+    :global(body.run-mode .mobile-tabs) { display: none !important; }
     /* Temaväljare som dropdown på mobil */
     :global(.theme-dots) { z-index: 200; }
     :global(.theme-dots.open .theme-panel) { top: 22px; }
@@ -631,12 +640,15 @@
   :global(body.view-mode .agenda-drag-top) { display: none; }
   :global(body.view-mode .agenda-drag-bottom) { display: none; }
   :global(body.view-mode .agenda-move-btn) { display: none; }
+  @media (min-width: 801px) {
+    :global(body.view-mode.run-mode .collapse-btn) { display: flex; }
+  }
 
   /* ── Lås-läge ── */
   :global(.lock-btn) { opacity: .18; font-size: 14px !important; }
   :global(.lock-btn:hover) { opacity: .5; }
   :global(.lock-btn.locked) { opacity: .55; }
-  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle)) { pointer-events: none !important; }
+  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle):not(.collapse-btn):not(.agenda-toggle-btn):not(.agenda-input-toggle):not(.agenda-nav-btn):not(.agenda-calendar-day)) { pointer-events: none !important; }
   :global(body.page-locked input) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked textarea) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked .resize-handle-sb) { pointer-events: none !important; }
@@ -654,6 +666,22 @@
   :global(body.page-locked .agenda-move-btn) { pointer-events: none !important; }
   :global(body.page-locked svg.clock) { pointer-events: none !important; }
   :global(body.page-locked .lesson-title) { pointer-events: none !important; cursor: default; }
+  :global(body.run-mode .mobile-tabs) { display: none; }
+  :global(body.run-mode .controls) { display: none; }
+  :global(body.run-mode .resize-handle-sb),
+  :global(body.run-mode .resize-handle-ag) { pointer-events: none !important; }
+  :global(body.page-locked.run-mode .collapse-btn),
+  :global(body.page-locked.run-mode .agenda-toggle-btn) { pointer-events: auto !important; }
+  :global(body.run-mode .title-check-btn),
+  :global(body.run-mode .check-btn) { pointer-events: auto !important; }
+  :global(body.run-mode .agenda-block) { pointer-events: auto !important; }
+  :global(body.page-locked.run-mode .agenda-calendar button) { pointer-events: auto !important; }
+  :global(svg.clock *:focus),
+  :global(svg.clock *:focus-visible),
+  :global(body.run-mode svg.clock [role="button"]:focus),
+  :global(body.run-mode svg.clock [role="button"]:focus-visible),
+  :global(body.run-mode .agenda-block:focus),
+  :global(body.run-mode .agenda-block:focus-visible) { outline: 0 !important; }
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
   :global(.flash.on) { opacity: .35; }

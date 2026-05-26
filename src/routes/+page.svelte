@@ -236,6 +236,7 @@
   const SHARE_OWNER_STORAGE = 'daytimer_share_owner_token';
   const SHARE_MODE_STORAGE = 'daytimer_share_mode';
   const SHARE_ENTRIES_STORAGE = 'daytimer_share_entries';
+  const RUN_MODE_STORAGE = 'daytimer_run_mode';
 
   const ACTIVE_SHARE_KEY = 'active';
   function sessionShareKey(flowId: string): string { return `session:${flowId}`; }
@@ -541,16 +542,34 @@
 
   function collapseActiveWorkMenus() {
     closeTransientMenus();
-    if (s.activeSection === 'plan') {
-      s.agendaOpen = true;
-      agendaInputOpen = false;
-      agendaCalendarOpen = false;
-    } else if (s.activeSection === 'now') {
-      s.agendaOpen = false;
-    }
+    s.agendaOpen = true;
+    s.sbCollapsed = false;
+    agendaInputOpen = false;
+    agendaCalendarOpen = false;
+  }
+
+  function persistRunModePreference(active: boolean) {
+    try {
+      localStorage.setItem(RUN_MODE_STORAGE, active ? '1' : '0');
+    } catch {}
+  }
+
+  function restoreRunModePreference() {
+    let active = false;
+    try {
+      active = localStorage.getItem(RUN_MODE_STORAGE) === '1';
+    } catch {}
+    if (!active) return;
+    closeTransientMenus();
+    agendaInputOpen = false;
+    agendaCalendarOpen = false;
+    locked = true;
+    miniMenuOpen = false;
+    s.showControls = false;
   }
 
   function toggleMiniMenu() {
+    if (isViewMode) return;
     if (miniMenuOpen) {
       miniMenuSnapshot = {
         section: s.activeSection,
@@ -562,11 +581,14 @@
       collapseActiveWorkMenus();
       locked = true;
       miniMenuOpen = false;
+      s.showControls = false;
+      persistRunModePreference(true);
       appState.persist();
       return;
     }
     closeTransientMenus();
-    if (miniMenuSnapshot && s.activeSection !== miniMenuSnapshot.section) {
+    const keepInspectedAgendaBlock = sessionSource.kind === 'agenda' && s.activeSection === 'plan';
+    if (miniMenuSnapshot && !keepInspectedAgendaBlock && s.activeSection !== miniMenuSnapshot.section) {
       setActiveSection(miniMenuSnapshot.section);
     }
     if (miniMenuSnapshot) {
@@ -576,8 +598,16 @@
       agendaCalendarOpen = miniMenuSnapshot.agendaCalendarOpen;
       miniMenuSnapshot = null;
     }
+    locked = false;
     miniMenuOpen = true;
     s.showControls = true;
+    persistRunModePreference(false);
+    if (keepInspectedAgendaBlock) {
+      locked = false;
+      s.agendaOpen = true;
+      agendaInputOpen = true;
+      planSelectionExplicit = true;
+    }
     appState.persist();
   }
 
@@ -853,13 +883,14 @@
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
-    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-now', 'm-plan', 'm-library', 'm-workspace', 'page-locked');
+    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-now', 'm-plan', 'm-library', 'm-workspace', 'page-locked', 'run-mode');
     if (s.palette) document.body.classList.add(s.palette);
     if (s.dark && s.palette !== 'psychedelic') document.body.classList.add('dark');
     if (s.sbCollapsed) document.body.classList.add('sb-collapsed');
     if (s.agendaOpen) document.body.classList.add('ag-open');
     document.body.classList.add('m-' + mobileTab);
     if (locked) document.body.classList.add('page-locked');
+    if (locked && !miniMenuOpen) document.body.classList.add('run-mode');
   }
 
   // ── Drag ──
@@ -2077,7 +2108,8 @@
         setActiveSection('now');
       } else if (key === 'p') {
         e.preventDefault();
-        setActiveSection('plan');
+        if (isNoMod && !isViewMode) toggleMiniMenu();
+        else setActiveSection('plan');
       } else if (key === 'b') {
         e.preventDefault();
         setActiveSection('library');
@@ -2136,6 +2168,13 @@
     if (vt) {
       isViewMode = true;
       viewToken = vt;
+      locked = true;
+      miniMenuOpen = false;
+      s.agendaOpen = true;
+      s.sbCollapsed = false;
+      s.showControls = false;
+      agendaInputOpen = false;
+      agendaCalendarOpen = false;
       document.body.classList.add('view-mode');
       loadSharedState(vt);
       viewPollId = setInterval(() => loadSharedState(vt), 30000);
@@ -2177,6 +2216,7 @@
       }
       appState.persist();
     }
+    if (!isViewMode) restoreRunModePreference();
     syncBodyClasses();
     scrollMobileViewportTop();
     const resizeObservers: ResizeObserver[] = [];
@@ -2285,7 +2325,7 @@
   });
 
   $effect(() => {
-    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab + locked;
+    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab + locked + miniMenuOpen;
     if (typeof document !== 'undefined') syncBodyClasses();
   });
 
@@ -2676,9 +2716,9 @@
               class:open={miniMenuOpen}
               type="button"
               onclick={(e) => { e.stopPropagation(); toggleMiniMenu(); }}
-              title={miniMenuOpen ? 'Dölj meny' : 'Visa meny'}
+              title={miniMenuOpen ? 'Starta kör-läge' : 'Öppna meny'}
             >
-              <span>▾</span>
+              <span>{miniMenuOpen ? '▶' : '☰'}</span>
             </button>
           </div>
         {/if}
@@ -3029,6 +3069,7 @@
     selectedFlowId={(s.activeSection === 'plan' && planSelectionExplicit && selectedAgendaDetails) ? selectedAgendaDetails.flow.id : null}
     {sectorColors}
     {isViewMode}
+    runMode={locked && !miniMenuOpen}
     {agendaDraftStatus}
     {savedAgendaMsg}
     {icsPreviewSummary}

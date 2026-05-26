@@ -110,7 +110,6 @@ export function buildSelectedSessionSnapshot(
 ): SelectedSessionShareState {
 	const session = createSessionStateFromFlow(details.flow, createId, {
 		pinned: true,
-		warning: true,
 		startMin: details.startMin,
 		clockSpan: 60
 	});
@@ -139,7 +138,7 @@ export function buildSelectedDaySnapshot(
 	const flows = selectedDay.flows.map(flow => ({ ...flow }));
 	const first = selectedAgendaDetails?.flow ?? selectedDay.flows[0] ?? null;
 	const firstStart = selectedAgendaDetails?.startMin ?? selectedDay.flows[0]?.startMin ?? agendaDayStart;
-	const session = first ? createSessionStateFromFlow(first, createId, { pinned: true, warning: true, startMin: firstStart, clockSpan: 720 }) : null;
+	const session = first ? createSessionStateFromFlow(first, createId, { pinned: true, startMin: firstStart, clockSpan: 720 }) : null;
 	return {
 		shareType: 'selected-day-snapshot',
 		...sharedUiStateFromState(state),

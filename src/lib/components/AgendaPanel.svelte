@@ -13,6 +13,7 @@
     selectedFlowId,
     sectorColors,
     isViewMode,
+    runMode,
     agendaDraftStatus,
     savedAgendaMsg,
     icsPreviewSummary,
@@ -74,6 +75,7 @@
     selectedFlowId: string | null;
     sectorColors: string[];
     isViewMode: boolean;
+    runMode: boolean;
     agendaDraftStatus: string;
     savedAgendaMsg: string;
     icsPreviewSummary: string;
@@ -213,7 +215,7 @@
 </script>
 
 <aside id="agenda-panel" class="agenda" bind:this={agendaEl}>
-    {#if !isViewMode && s.activeSection === 'plan'}
+    {#if !isViewMode && !runMode && s.activeSection === 'plan'}
       <AgendaImportPanel
         {agendaInputOpen}
         {agendaDraft}
@@ -360,7 +362,7 @@
             {#if item.flow.id === selectedFlowId}
               <span class="agenda-editing-badge" title="Redigeras i panelen">✎</span>
             {/if}
-            {#if item.fromText && !isViewMode}
+            {#if item.fromText && !isViewMode && !runMode}
               {#if s.activeSection !== 'now'}
                 <button
                   class="agenda-move-btn"

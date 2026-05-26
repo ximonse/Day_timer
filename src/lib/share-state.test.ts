@@ -77,22 +77,24 @@ describe('share-state helpers', () => {
 	});
 
 	test('builds selected session snapshot from agenda details', () => {
-		const day: AgendaDay = { date: '2026-05-19', flows: [flow({ title: 'Pass', startMin: 9 * 60, parts: ['A', 'B'], minutes: [10, 20] })] };
+		const day: AgendaDay = { date: '2026-05-19', flows: [flow({ title: 'Pass', startMin: 9 * 60, parts: ['A', 'B'], minutes: [10, 20], warnings: [false, true] })] };
 		const snapshot = buildSelectedSessionSnapshot({ day, flow: day.flows[0], startMin: 9 * 60 }, sharedState(), () => 'id');
 
 		expect(snapshot.shareType).toBe('selected-session-snapshot');
 		expect(snapshot.blocks).toHaveLength(2);
+		expect(snapshot.blocks.map(block => block.warning)).toEqual([false, true]);
 		expect(snapshot.agendaText).toContain('@260519');
 		expect(snapshot.dayTitle).toBe('Pass');
 	});
 
 	test('builds selected day snapshot and falls back to current blocks when no flow is selected', () => {
-		const selectedDay: AgendaDay = { date: '2026-05-19', flows: [flow({ title: 'Pass', startMin: 9 * 60 })] };
+		const selectedDay: AgendaDay = { date: '2026-05-19', flows: [flow({ title: 'Pass', startMin: 9 * 60, warnings: [false] })] };
 		const snapshot = buildSelectedDaySnapshot(selectedDay, null, 8 * 60, { ...sharedState(), blocks: [block({ title: 'Fallback' })] }, () => 'id');
 
 		expect(snapshot?.shareType).toBe('selected-day-snapshot');
 		expect(snapshot?.dayTitle).toBe('Pass');
 		expect(snapshot?.blocks[0].title).toBe('A');
+		expect(snapshot?.blocks[0].warning).toBe(false);
 		expect(snapshot?.clockSpan).toBe(720);
 	});
 
