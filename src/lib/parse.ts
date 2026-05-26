@@ -173,12 +173,13 @@ function sectionsToFlows(sections: RawSection[]): Flow[] {
     if (sec.availableMin === undefined && sec.startMin !== undefined && next?.startMin !== undefined && next.startMin > sec.startMin) {
       available = next.startMin - sec.startMin;
     }
-    const pinnedSum = sec.items.reduce((a, b) => a + (b.minutes ?? 0), 0);
-    const unpinnedCount = sec.items.filter(b => b.minutes === null).length;
+    const sectionItems = sec.items.length > 0 ? sec.items : [{ title: sec.title, minutes: available, note: '' }];
+    const pinnedSum = sectionItems.reduce((a, b) => a + (b.minutes ?? 0), 0);
+    const unpinnedCount = sectionItems.filter(b => b.minutes === null).length;
     const unpinnedTotal = Math.max(unpinnedCount, available - pinnedSum);
     const unpinnedBase = unpinnedCount > 0 ? Math.floor(unpinnedTotal / unpinnedCount) : 0;
     let unpinnedRemainder = unpinnedCount > 0 ? unpinnedTotal - unpinnedBase * unpinnedCount : 0;
-    const minutes = sec.items.map(b => {
+    const minutes = sectionItems.map(b => {
       if (b.minutes !== null) return b.minutes;
       const extra = unpinnedRemainder > 0 ? 1 : 0;
       if (unpinnedRemainder > 0) unpinnedRemainder -= 1;
@@ -188,10 +189,10 @@ function sectionsToFlows(sections: RawSection[]): Flow[] {
       id: sec.id ?? uid(),
       title: sec.title,
       startMin: sec.startMin,
-      parts: sec.items.map(b => b.title),
+      parts: sectionItems.map(b => b.title),
       minutes,
-      warnings: sec.items.map(() => true),
-      notes: sec.items.map(b => b.note),
+      warnings: sectionItems.map(() => true),
+      notes: sectionItems.map(b => b.note),
       extraInfo: sec.extraInfo,
     } satisfies Flow;
   });

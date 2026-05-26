@@ -179,6 +179,24 @@ describe('parseAgenda — sessioner', () => {
     expect(flow.startMin).toBe(8 * 60 + 30);
   });
 
+  it('gör tom sessionrubrik till synligt pass', () => {
+    const days = parseAgenda('#Hemresa 20:00 <!--id:2v5c0mv-->');
+    const flow = days[0].flows[0];
+
+    expect(flow.id).toBe('2v5c0mv');
+    expect(flow.title).toBe('Hemresa');
+    expect(flow.startMin).toBe(20 * 60);
+    expect(flow.parts).toEqual(['Hemresa']);
+    expect(flow.minutes).toEqual([60]);
+  });
+
+  it('gör tom sessionrubrik fram till nästa starttid', () => {
+    const days = parseAgenda('#Hemresa 20:00\n#Kväll 20:30\nTe 10m');
+
+    expect(days[0].flows[0].parts).toEqual(['Hemresa']);
+    expect(days[0].flows[0].minutes).toEqual([30]);
+  });
+
   it('parsar sessionrubrik med start- och sluttid som passlängd', () => {
     const days = parseAgenda('#Lektion 10:00-11:55\nGenomgång\nEget arbete');
     const flow = days[0].flows[0];
