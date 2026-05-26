@@ -598,6 +598,7 @@
       agendaCalendarOpen = miniMenuSnapshot.agendaCalendarOpen;
       miniMenuSnapshot = null;
     }
+    locked = false;
     miniMenuOpen = true;
     s.showControls = true;
     persistRunModePreference(false);
