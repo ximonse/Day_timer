@@ -392,7 +392,7 @@
   const agendaDraftStatus = $derived.by(() => {
     if (savedAgendaMsg) return savedAgendaMsg;
     if (agendaDraftSource === 'ai' && agendaDraftDirty) return 'AI-förslag – granska och spara';
-    return agendaDraftDirty ? 'Ej sparat ännu' : 'Synkat med vald dag';
+    return agendaDraftDirty ? 'Ej sparat. Klicka Spara dagplan när du vill uppdatera.' : 'Synkat med vald dag';
   });
 
   const sectionCopy = $derived.by(() => {
@@ -2410,13 +2410,6 @@
     }
     const timer = setTimeout(() => { void syncSave('auto-effect'); }, 2000);
     return () => clearTimeout(timer);
-  });
-
-  $effect(() => {
-    if (agendaDraftDirty && agendaDraftSource !== 'ai' && !isViewMode && hasSyncSession()) {
-      const timer = setTimeout(() => { saveAgenda(); }, 3000);
-      return () => clearTimeout(timer);
-    }
   });
 
   function toggleCollapse() {
