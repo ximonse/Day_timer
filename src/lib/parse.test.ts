@@ -161,6 +161,14 @@ describe('parseAgenda — datummarkörer', () => {
     expect(days[0].date).toBe('2026-05-09');
     expect(days[1].date).toBe('2026-05-10');
   });
+
+  it('tål AI-text där datum och session har tappat radbrytning', () => {
+    const days = parseAgenda('@260526#Kväll 18:00\nMiddag 45m');
+
+    expect(days[0].date).toBe('2026-05-26');
+    expect(days[0].flows[0].title).toBe('Kväll');
+    expect(days[0].flows[0].startMin).toBe(18 * 60);
+  });
 });
 
 describe('parseAgenda — sessioner', () => {
@@ -225,6 +233,27 @@ describe('parseAgenda — sessioner', () => {
   it('agendaimport sätter varningar på som standard', () => {
     const days = parseAgenda('#Session\nLektion 45m\nRast 10m');
     expect(days[0].flows[0].warnings).toEqual([true, true]);
+  });
+
+  it('tål kollapsad session med id och aktivitet direkt efter rubriken', () => {
+    const days = parseAgenda('@260526#Väckning 07:00 <!--id:f0vrjot-->Väckning och ihoppackning 60m');
+    const flow = days[0].flows[0];
+
+    expect(days[0].date).toBe('2026-05-26');
+    expect(flow.id).toBe('f0vrjot');
+    expect(flow.title).toBe('Väckning');
+    expect(flow.parts).toEqual(['Väckning och ihoppackning']);
+    expect(flow.minutes).toEqual([60]);
+  });
+
+  it('tål kollapsad session med id och lös minutartefakt efter rubriken', () => {
+    const days = parseAgenda('@260526#Väckning 07:00 <!--id:f0vrjot-->- 1mVäckning och ihoppackning 60m');
+    const flow = days[0].flows[0];
+
+    expect(days[0].date).toBe('2026-05-26');
+    expect(flow.id).toBe('f0vrjot');
+    expect(flow.parts).toEqual(['Väckning och ihoppackning']);
+    expect(flow.minutes).toEqual([60]);
   });
 
   it('tom text ger inga dagar', () => {

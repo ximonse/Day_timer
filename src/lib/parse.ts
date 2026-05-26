@@ -158,6 +158,14 @@ function parseDateMarker(raw: string): string | null {
   return null;
 }
 
+function normalizeAgendaText(raw: string): string {
+  return raw
+    .replace(/(@(?:\d{6}|\d{8}|\d{4}-\d{2}-\d{2}))(?=#)/g, '$1\n')
+    .replace(/(-->\s*)-\s+\d+\s*m(?:in)?(?=[A-ZÅÄÖ])/g, '$1\n')
+    .replace(/(-->\s*)(?=\S)/g, '$1\n')
+    .replace(/(\d+\s*m(?:in)?)(?=[A-ZÅÄÖ])/g, '$1\n');
+}
+
 function sectionsToFlows(sections: RawSection[]): Flow[] {
   return sections.map((sec, i) => {
     const next = sections[i + 1];
@@ -225,7 +233,7 @@ export function mergeAgendaDayData(existing: string, incoming: AgendaDay[]): Age
 }
 
 export function parseAgenda(text: string): AgendaDay[] {
-  const lines = text.split('\n').map(l => l.replace(/\s+$/, ''));
+  const lines = normalizeAgendaText(text).split('\n').map(l => l.replace(/\s+$/, ''));
   const days: AgendaDay[] = [];
   let curDate: string | null = null;
   let sections: RawSection[] = [];
