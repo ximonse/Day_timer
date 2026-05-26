@@ -117,6 +117,7 @@
   let agendaDraft = $state('');
   let agendaDraftDate = $state<string | null>(null);
   let agendaDraftDirty = $state(false);
+  let agendaDraftSource = $state<'manual' | 'ai'>('manual');
   let icsDraft = $state('');
   let icsImportOpen = $state(false);
   let icsPreviewEvents = $state<IcsEvent[]>([]);
@@ -389,6 +390,7 @@
   });
   const agendaDraftStatus = $derived.by(() => {
     if (savedAgendaMsg) return savedAgendaMsg;
+    if (agendaDraftSource === 'ai' && agendaDraftDirty) return 'AI-förslag – granska och spara';
     return agendaDraftDirty ? 'Ej sparat ännu' : 'Synkat med vald dag';
   });
 
@@ -1588,6 +1590,7 @@
     agendaDraft = serializeSelectedAgendaDay(targetDate, nextDays);
     agendaDraftDate = targetDate;
     agendaDraftDirty = false;
+    agendaDraftSource = 'manual';
     s.agendaMeta = rebuildAgendaMetaForDay(
       s.agendaMeta,
       targetDate,
@@ -1789,19 +1792,11 @@
       agendaAiLastResponse = text;
       const aiDays = parseAgenda(text.text).map(day => day.date === null ? { ...day, date: targetDate } : day);
       const mergedDays = mergeAgendaDayData(activeAgendaText(), aiDays);
-      setActiveAgendaText(serializeAgenda(mergedDays));
-      for (const day of aiDays) {
-        const items = buildAgendaItemsForDay(day, day.flows[0]?.startMin ?? s.startMin);
-        for (const item of items) {
-          setAgendaMeta(makeAgendaMetaKeyForFlow(day.date ?? null, item.flow, item.startMin), { source: 'ai' });
-        }
-      }
       agendaDraft = serializeSelectedAgendaDay(targetDate, mergedDays);
       agendaDraftDate = targetDate;
-      agendaDraftDirty = false;
-      activeAgendaFlowRef = null;
-      sessionSource = { kind: 'unscheduled' };
-      appState.persist();
+      agendaDraftDirty = true;
+      agendaDraftSource = 'ai';
+      agendaInputOpen = true;
       agendaAiInput = '';
     } catch (e: any) { 
       agendaAiLastResponse = null;
@@ -2000,6 +1995,7 @@
       agendaDraft = source;
       agendaDraftDate = currentDate;
       agendaDraftDirty = false;
+      agendaDraftSource = 'manual';
     }
   }
 
@@ -2372,7 +2368,7 @@
   });
 
   $effect(() => {
-    if (agendaDraftDirty && !isViewMode && hasSyncSession()) {
+    if (agendaDraftDirty && agendaDraftSource !== 'ai' && !isViewMode && hasSyncSession()) {
       const timer = setTimeout(() => { saveAgenda(); }, 3000);
       return () => clearTimeout(timer);
     }
