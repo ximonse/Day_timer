@@ -530,10 +530,22 @@
     flowsOpen = false;
   }
 
+  function collapseActiveWorkMenus() {
+    closeTransientMenus();
+    if (s.activeSection === 'plan') {
+      s.agendaOpen = true;
+      agendaInputOpen = false;
+      agendaCalendarOpen = false;
+    } else if (s.activeSection === 'now') {
+      s.agendaOpen = false;
+    }
+  }
+
   function toggleMiniMenu() {
     if (miniMenuOpen) {
-      closeTransientMenus();
+      collapseActiveWorkMenus();
       miniMenuOpen = false;
+      appState.persist();
       return;
     }
     closeTransientMenus();
