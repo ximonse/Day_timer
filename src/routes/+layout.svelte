@@ -478,6 +478,10 @@
   :global(.agenda-input-label) { flex: 1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--sidebar-subheading); }
   :global(.agenda-input-toggle) { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 7px; border-radius: 5px; font-family: inherit; }
   :global(.agenda-input-toggle:hover) { background: var(--pill); color: var(--fg); }
+  :global(body.run-mode .agenda-calendar.collapsed) { margin-bottom: 4px; }
+  :global(body.run-mode .agenda-calendar .agenda-input-header) { gap: 4px; margin-bottom: 4px !important; }
+  :global(body.run-mode .agenda-calendar .agenda-input-label) { font-size: 10px; font-weight: 600; letter-spacing: .35px; color: color-mix(in srgb, var(--muted) 78%, var(--fg) 22%); }
+  :global(body.run-mode .agenda-calendar .agenda-input-toggle) { font-size: 11px; padding: 1px 5px; color: color-mix(in srgb, var(--muted) 82%, var(--fg) 18%); }
   :global(.agenda-section-note) { margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--pill); color: var(--fg); font-size: 12px; line-height: 1.45; }
   :global(.agenda-save-btn) { flex: 1; padding: 7px; background: color-mix(in srgb, var(--pill) 55%, transparent); border: 1px solid color-mix(in srgb, var(--border) 72%, transparent); border-radius: 8px; color: var(--fg); font-size: 13px; cursor: pointer; margin-top: 4px; margin-bottom: 12px; font-family: inherit; transition: background .12s, border-color .12s, color .12s; }
   :global(.agenda-save-btn:hover) { background: color-mix(in srgb, var(--pill-on) 16%, transparent); color: var(--fg); border-color: var(--border); }
@@ -577,7 +581,6 @@
     :global(body.run-mode .main) { order: 1; }
     :global(body.run-mode .sidebar) { display: block !important; order: 2; border-top: 1px solid var(--border); }
     :global(body.run-mode .agenda) { display: flex !important; order: 3; border-top: 1px solid var(--border); }
-    :global(body.run-mode .agenda-calendar) { display: none !important; }
     :global(body.run-mode .mobile-tabs) { display: none !important; }
     /* Temaväljare som dropdown på mobil */
     :global(.theme-dots) { z-index: 200; }
@@ -645,7 +648,7 @@
   :global(.lock-btn) { opacity: .18; font-size: 14px !important; }
   :global(.lock-btn:hover) { opacity: .5; }
   :global(.lock-btn.locked) { opacity: .55; }
-  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle):not(.collapse-btn):not(.agenda-toggle-btn)) { pointer-events: none !important; }
+  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle):not(.collapse-btn):not(.agenda-toggle-btn):not(.agenda-input-toggle):not(.agenda-nav-btn):not(.agenda-calendar-day)) { pointer-events: none !important; }
   :global(body.page-locked input) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked textarea) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked .resize-handle-sb) { pointer-events: none !important; }
