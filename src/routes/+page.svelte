@@ -151,6 +151,13 @@
   let leftText = $state('');
   let flowsOpen = $state(false);
   let miniMenuOpen = $state(true);
+  let miniMenuSnapshot = $state<{
+    section: AppSection;
+    locked: boolean;
+    agendaOpen: boolean;
+    agendaInputOpen: boolean;
+    agendaCalendarOpen: boolean;
+  } | null>(null);
   let themePickerOpen = $state(false);
   let optionsMenuOpen = $state(false);
   let helpOpen = $state(false);
@@ -543,15 +550,33 @@
 
   function toggleMiniMenu() {
     if (miniMenuOpen) {
+      miniMenuSnapshot = {
+        section: s.activeSection,
+        locked,
+        agendaOpen: s.agendaOpen,
+        agendaInputOpen,
+        agendaCalendarOpen
+      };
       collapseActiveWorkMenus();
+      locked = true;
       miniMenuOpen = false;
       appState.persist();
       return;
     }
     closeTransientMenus();
+    if (miniMenuSnapshot && s.activeSection !== miniMenuSnapshot.section) {
+      setActiveSection(miniMenuSnapshot.section);
+    }
+    if (miniMenuSnapshot) {
+      locked = miniMenuSnapshot.locked;
+      s.agendaOpen = miniMenuSnapshot.agendaOpen;
+      agendaInputOpen = miniMenuSnapshot.agendaInputOpen;
+      agendaCalendarOpen = miniMenuSnapshot.agendaCalendarOpen;
+      miniMenuSnapshot = null;
+    }
     miniMenuOpen = true;
     s.showControls = true;
-    setActiveSection('now');
+    appState.persist();
   }
 
   function loadNowTemplate(id: string) {
@@ -1869,7 +1894,7 @@
   }
 
   function startAgendaDrag(e: PointerEvent, i: number, edge: 'top' | 'bottom') {
-    if (isViewMode || !agendaDays || !selectedDay || !timelineEl) return;
+    if (isViewMode || locked || !agendaDays || !selectedDay || !timelineEl) return;
     e.preventDefault();
     e.stopPropagation();
     agendaDragMoved = false;
@@ -2394,7 +2419,7 @@
   }
 
   function startAgendaMove(e: PointerEvent, i: number) {
-    if (isViewMode || !agendaDays || !selectedDay || !timelineEl || s.activeSection === 'now') return;
+    if (isViewMode || locked || !agendaDays || !selectedDay || !timelineEl || s.activeSection === 'now') return;
     e.preventDefault();
     e.stopPropagation();
     try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}

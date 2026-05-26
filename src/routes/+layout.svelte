@@ -636,13 +636,21 @@
   :global(.lock-btn) { opacity: .18; font-size: 14px !important; }
   :global(.lock-btn:hover) { opacity: .5; }
   :global(.lock-btn.locked) { opacity: .55; }
-  :global(body.page-locked button:not(.lock-btn)) { pointer-events: none !important; }
+  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle)) { pointer-events: none !important; }
   :global(body.page-locked input) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked textarea) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked .resize-handle-sb) { pointer-events: none !important; }
   :global(body.page-locked .resize-handle-ag) { pointer-events: none !important; }
   :global(body.page-locked .agenda-drag-top) { pointer-events: none !important; }
   :global(body.page-locked .agenda-drag-bottom) { pointer-events: none !important; }
+  :global(body.page-locked .agenda-zone-right),
+  :global(body.page-locked .agenda-zone-resize-top),
+  :global(body.page-locked .agenda-zone-resize-bottom),
+  :global(body.page-locked .drag-handle),
+  :global(body.page-locked .title-check-btn),
+  :global(body.page-locked .check-btn),
+  :global(body.page-locked .note-line),
+  :global(body.page-locked .agenda-block) { pointer-events: none !important; }
   :global(body.page-locked .agenda-move-btn) { pointer-events: none !important; }
   :global(body.page-locked svg.clock) { pointer-events: none !important; }
   :global(body.page-locked .lesson-title) { pointer-events: none !important; cursor: default; }
