@@ -122,7 +122,7 @@
 </script>
 
 <div class="agenda-input-header">
-  <span class="agenda-input-label">Redigera dagtext</span>
+  <span class="agenda-input-label">Dagtext, import & AI</span>
   <button class="info-btn" onclick={onToggleImportHelp}>i</button>
   <button class="agenda-input-toggle" onclick={onToggleOpen}>
     {agendaInputOpen ? '△' : '▽'}

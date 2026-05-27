@@ -95,7 +95,7 @@
   let isViewMode = $state(false);
   let viewToken = $state('');
   let viewShareMode = $state<ShareMode | null>(null);
-  let agendaInputOpen = $state(true);
+  let agendaInputOpen = $state(false);
   let agendaCalendarOpen = $state(true);
   let savedAgendaMsg = $state('');
   let savedFlowMsg = $state('');
@@ -521,9 +521,10 @@
         activeAgendaFlowRef = null;
         sessionSource = { kind: 'unscheduled' };
       }
+      preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
-      agendaInputOpen = true;
+      agendaInputOpen = shouldOpenAgendaInputInPlan();
     }
 
     s.showControls = true;
@@ -666,6 +667,40 @@
     };
   }
 
+  function draftMatchesTemplate(draft: EditorDraft) {
+    return s.flows.some(flow => draft.dayTitle === flow.title
+      && draft.extraInfo === (flow.extraInfo || '')
+      && draft.blocks.length === flow.parts.length
+      && draft.blocks.every((block, index) => block.title === flow.parts[index]
+        && block.minutes === (flow.minutes[index] ?? 45)
+        && block.note === (flow.notes?.[index] ?? '')
+        && block.warning === (flow.warnings?.[index] ?? false)
+        && block.pinned === true));
+  }
+
+  function createEmptyPlanDraft(): EditorDraft {
+    const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+    return {
+      dayTitle: '',
+      blocks: [],
+      extraInfo: '',
+      startMin: suggestedStartMinForDate(agendaDays, targetDate, 45)
+    };
+  }
+
+  function preparePlanDraftForEntry() {
+    if (sessionSource.kind === 'template') return;
+    if (planSelectionExplicit) return;
+    if (!draftMatchesTemplate(s.planDraft)) return;
+    s.planDraft = createEmptyPlanDraft();
+  }
+
+  function shouldOpenAgendaInputInPlan() {
+    if (agendaDraftDirty) return true;
+    const day = selectedDay;
+    return !day || day.flows.length === 0;
+  }
+
   function currentEditorDraft(): EditorDraft {
     return {
       dayTitle: s.dayTitle,
@@ -717,9 +752,10 @@
     if (s.activeSection === 'now') {
       applyEditorDraft(s.nowDraft);
     } else if (s.activeSection === 'plan') {
+      preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
-      agendaInputOpen = true;
+      agendaInputOpen = shouldOpenAgendaInputInPlan();
     }
     partsDraftDirty = false;
     syncPartsDraftFromState(true);
@@ -1265,6 +1301,9 @@
     const f = s.flows.find(x => x.id === id);
     if (!f) return;
     f.lastUsed = Date.now();
+    if (s.activeSection !== targetSection) {
+      setActiveSection(targetSection);
+    }
     applySessionStateFromFlow(f, { pinned: true });
     if (targetSection === 'plan') {
       const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
@@ -1274,9 +1313,8 @@
     activeAgendaFlowRef = null;
     planSelectionExplicit = false;
     sessionSource = { kind: 'template', templateId: f.id, title: f.title };
-    setActiveSection(targetSection);
-    capturePanelBaseline('now');
-    capturePanelBaseline('plan');
+    syncActiveDraftFromEditor();
+    capturePanelBaseline(targetSection === 'plan' ? 'plan' : 'now');
     syncPartsDraftFromState(true);
     appState.persist();
   }
