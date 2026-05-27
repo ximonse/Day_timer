@@ -504,6 +504,7 @@
   function setActiveSection(section: AppSection) {
     const oldSection = s.activeSection;
     if (oldSection === section) return;
+    const clearImplicitAgendaSelection = oldSection === 'now' && section === 'plan' && !planSelectionExplicit;
 
     if (oldSection === 'now') {
       s.nowDraft = currentEditorDraft();
@@ -516,6 +517,10 @@
     if (section === 'now') {
       applyEditorDraft(s.nowDraft);
     } else if (section === 'plan') {
+      if (clearImplicitAgendaSelection) {
+        activeAgendaFlowRef = null;
+        sessionSource = { kind: 'unscheduled' };
+      }
       applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
       agendaInputOpen = true;
@@ -592,7 +597,17 @@
         agendaInputOpen,
         agendaCalendarOpen
       };
-      goToTimerNow();
+      const hasRunnableSession = goToTimerNow();
+      if (!hasRunnableSession) {
+        miniMenuSnapshot = null;
+        locked = false;
+        miniMenuOpen = true;
+        s.showControls = true;
+        mobileTab = 'now';
+        persistRunModePreference(false);
+        appState.persist();
+        return;
+      }
       collapseActiveWorkMenus();
       locked = true;
       miniMenuOpen = false;
@@ -2335,7 +2350,14 @@
     if (!isViewMode) {
       setActiveAgendaDate(today);
       // Automatically find and jump to the current session from the agenda if possible
-      untrack(() => goToTimerNow());
+      const hasRunnableSession = untrack(() => goToTimerNow());
+      if (!hasRunnableSession && locked && !miniMenuOpen) {
+        locked = false;
+        miniMenuOpen = true;
+        s.showControls = true;
+        persistRunModePreference(false);
+        appState.persist();
+      }
     }
 
     
@@ -2630,7 +2652,7 @@
     updateTimeFeedback();  appState.persist();
   }
 
-  function goToTimerNow() {
+  function goToTimerNow(): boolean {
     const now = nowMinutes();
     const today = localDateISO();
 
@@ -2641,14 +2663,14 @@
 
     if (activeItem) {
       loadAgendaFlow(activeItem.flow, activeItem.startMin, 'now', false);
-      return;
+      return true;
     }
 
     const nextItem = findNextAgendaItemAfterTime(days, today, now, agendaDayStart);
 
     if (nextItem) {
       loadAgendaFlow(nextItem.flow, nextItem.startMin, 'now', false);
-      return;
+      return true;
     }
 
     const fallback = createCurrentFallbackSession(now, uid);
@@ -2660,6 +2682,7 @@
 
     lastAutoLoadKey = '';
     activeAgendaFlowRef = null;
+    planSelectionExplicit = false;
     sessionSource = { kind: 'unscheduled' };
     
     capturePanelBaseline('now');
@@ -2667,6 +2690,7 @@
     syncPartsDraftFromState(true);
     updateTimeFeedback();
     appState.persist();
+    return false;
   }
 </script>
 
