@@ -11,6 +11,7 @@ import {
 	buildAgendaMetaLookup,
 	cloneAgendaDays,
 	findAgendaItemForTime,
+	findNextAgendaItemAfterTime,
 	insertFlowIntoAgendaDate,
 	makeAgendaFlowRef,
 	makeAgendaMetaKeyForFlow,
@@ -111,6 +112,24 @@ describe('agenda helpers', () => {
 
 		expect(item?.flow.title).toBe('Implicit');
 		expect(item?.startMin).toBe(8 * 60 + 40);
+	});
+
+	test('finds the next agenda item after a specific time on a date', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [
+				flow({ title: 'Avslutad', startMin: 8 * 60, minutes: [30] }),
+				flow({ title: 'Snart', startMin: 9 * 60 + 7, minutes: [45] }),
+				flow({ title: 'Senare', startMin: 11 * 60, minutes: [30] })
+			]
+		}];
+
+		const item = findNextAgendaItemAfterTime(days, '2026-05-18', 9 * 60, 7 * 60);
+
+		expect(item?.flow.title).toBe('Snart');
+		expect(item?.startMin).toBe(9 * 60 + 7);
+		expect(findNextAgendaItemAfterTime(days, '2026-05-18', 12 * 60, 7 * 60)).toBeNull();
+		expect(findNextAgendaItemAfterTime(days, '2026-05-19', 9 * 60, 7 * 60)).toBeNull();
 	});
 
 	test('builds stable agenda meta keys and labels', () => {

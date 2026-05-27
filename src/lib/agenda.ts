@@ -207,6 +207,12 @@ export function findAgendaItemForTime(days: AgendaDay[] | null | undefined, date
 	) ?? null;
 }
 
+export function findNextAgendaItemAfterTime(days: AgendaDay[] | null | undefined, date: string, minute: number, fallbackStart: number): AgendaItem | null {
+	const day = days?.find(entry => entry.date === date) ?? null;
+	if (!day) return null;
+	return buildAgendaItemsForDay(day, fallbackStart).find(item => item.startMin > minute) ?? null;
+}
+
 export function makeAgendaFlowRef(date: string | null, flow: Flow, startMin: number): AgendaFlowRef {
 	return {
 		date,

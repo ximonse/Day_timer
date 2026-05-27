@@ -19,6 +19,7 @@
     computeAgendaDensity,
     insertFlowIntoAgendaDate,
     findAgendaItemForTime,
+    findNextAgendaItemAfterTime,
     makeAgendaFlowRef,
     makeAgendaMetaKeyForFlow,
     makeAgendaMetaKeyForRef,
@@ -2126,7 +2127,7 @@
     if ((isAltOnly || (isNoMod && !isInputFocused()))) {
       if (key === 'n') {
         e.preventDefault();
-        setActiveSection('now');
+        goToTimerNow();
       } else if (key === 'p') {
         e.preventDefault();
         if (isNoMod && !isViewMode) toggleMiniMenu();
@@ -2604,6 +2605,13 @@
       return;
     }
 
+    const nextItem = findNextAgendaItemAfterTime(days, today, now, agendaDayStart);
+
+    if (nextItem) {
+      loadAgendaFlow(nextItem.flow, nextItem.startMin, 'now', false);
+      return;
+    }
+
     const fallback = createCurrentFallbackSession(now, uid);
     setActiveSection('now');
     s.dayTitle = fallback.dayTitle;
@@ -2795,7 +2803,7 @@
       <div class="mini-menu-details" class:open={miniMenuOpen}>
       {#if s.showControls}
         <div class="controls">
-        <SectionNav activeSection={s.activeSection} labels={SECTION_LABELS} onSelect={setActiveSection} />
+        <SectionNav activeSection={s.activeSection} labels={SECTION_LABELS} onSelect={(section) => section === 'now' ? goToTimerNow() : setActiveSection(section)} />
 
         {#if s.activeSection === 'now'}
           <div class="section-hero section-hero--split section-hero--compact">
@@ -3151,7 +3159,7 @@
   </button>
 
   <nav class="mobile-tabs">
-    <button class:active={s.activeSection === 'now' && mobileTab === 'now'} onclick={() => setActiveSection('now')}>
+    <button class:active={s.activeSection === 'now' && mobileTab === 'now'} onclick={goToTimerNow}>
       <span>◷</span> Nu
     </button>
     <button class:active={s.activeSection === 'plan' && mobileTab === 'plan'} onclick={() => setActiveSection('plan')}>
