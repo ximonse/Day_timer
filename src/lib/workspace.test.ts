@@ -46,7 +46,7 @@ function syncableState(overrides: Partial<AppState> = {}): Pick<AppState,
 	'flows' | 'agendaText' | 'agendaDate' | 'agendaText2' | 'agendaDate2' | 'agendaMeta' |
 	'actualTimeLog' | 'nowDraft' | 'planDraft' | 'palette' | 'dark' | 'clockSpan' | 'endMode' |
 	'agendaView' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'showLeft' |
-	'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
+	'showNextSession' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
 	'showFutureSegments' | 'segMinutesMode'
 > {
 	return {
@@ -68,6 +68,7 @@ function syncableState(overrides: Partial<AppState> = {}): Pick<AppState,
 		showExtraInfo: overrides.showExtraInfo ?? false,
 		showSegLabels: overrides.showSegLabels ?? false,
 		showLeft: overrides.showLeft ?? false,
+		showNextSession: overrides.showNextSession ?? true,
 		showCenterEnd: overrides.showCenterEnd ?? false,
 		hollow: overrides.hollow ?? false,
 		textOutside: overrides.textOutside ?? true,
@@ -101,6 +102,7 @@ describe('workspace helpers', () => {
 			showExtraInfo: true,
 			showSegLabels: true,
 			showLeft: true,
+			showNextSession: false,
 			showCenterEnd: true,
 			hollow: true,
 			textOutside: false,
@@ -141,6 +143,7 @@ describe('workspace helpers', () => {
 			showExtraInfo: DEFAULT_WORKSPACE_PREFERENCES.showExtraInfo,
 			showSegLabels: DEFAULT_WORKSPACE_PREFERENCES.showSegLabels,
 			showLeft: DEFAULT_WORKSPACE_PREFERENCES.showLeft,
+			showNextSession: DEFAULT_WORKSPACE_PREFERENCES.showNextSession,
 			showCenterEnd: DEFAULT_WORKSPACE_PREFERENCES.showCenterEnd,
 			hollow: DEFAULT_WORKSPACE_PREFERENCES.hollow,
 			textOutside: DEFAULT_WORKSPACE_PREFERENCES.textOutside,

@@ -65,6 +65,7 @@ export interface AppState {
   syncKey: string;
   clockSpan: 60 | 120 | 720;
   showLeft: boolean;
+  showNextSession: boolean;
   showCenterEnd: boolean;
   hollow: boolean;
   textOutside: boolean;
@@ -127,6 +128,7 @@ function defaultState(): AppState {
     syncKey: '',
     clockSpan: 60,
     showLeft: true,
+    showNextSession: false,
     showCenterEnd: true,
     hollow: true,
     textOutside: false,

@@ -37,6 +37,9 @@
       <button class="menu-row" type="button" class:on={s.showLeft} onclick={() => { s.showLeft = !s.showLeft; appState.persist(); }}>
         <span>Tid kvar</span><span class="menu-row-state">{s.showLeft ? 'På' : 'Av'}</span>
       </button>
+      <button class="menu-row" type="button" class:on={s.showNextSession} onclick={() => { s.showNextSession = !s.showNextSession; appState.persist(); }}>
+        <span>Nästa pass</span><span class="menu-row-state">{s.showNextSession ? 'På' : 'Av'}</span>
+      </button>
       <button class="menu-row" type="button" class:on={s.showCenterEnd} onclick={() => { s.showCenterEnd = !s.showCenterEnd; appState.persist(); }}>
         <span>Sluttid i mitten</span><span class="menu-row-state">{s.showCenterEnd ? 'På' : 'Av'}</span>
       </button>

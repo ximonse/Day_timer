@@ -448,6 +448,15 @@
     return timeline.map(({ flow, startMin, totalMin }) => ({ flow, startMin, totalMin, fromText }));
   });
 
+  const nextVisibleSessionTitle = $derived.by(() => {
+    if (!s.showNextSession || !agendaItems.length) return '';
+    const nowMin = nowMinLive;
+    const next = agendaItems.find(item => item.startMin > nowMin)
+      ?? agendaItems.find(item => item.startMin + item.totalMin > nowMin && item.startMin > s.startMin)
+      ?? null;
+    return next ? stripColorDirective(next.flow.title || 'Nästa pass') : '';
+  });
+
   const overlayItems = $derived.by(() => {
    if (!showAgendaOverlay) return [];
    if (!overlayDays) return [];
@@ -2650,6 +2659,9 @@
         <button class="now now-btn hero-text" type="button" onclick={goToTimerNow} title="Visa nuvarande tid">{nowText}</button>
         {#if s.showLeft}<div class="left">{leftText}</div>{/if}
       </div>
+      {#if nextVisibleSessionTitle}
+        <div class="next-session hero-text" title="Nästa pass">{nextVisibleSessionTitle}</div>
+      {/if}
     </div>
 
     <div id="clock-wrap" class="clock-wrap">

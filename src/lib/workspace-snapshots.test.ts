@@ -7,7 +7,7 @@ function state(title: string): Pick<AppState,
 	'flows' | 'agendaText' | 'agendaDate' | 'agendaText2' | 'agendaDate2' | 'agendaMeta' |
 	'actualTimeLog' | 'nowDraft' | 'planDraft' | 'palette' | 'dark' | 'clockSpan' | 'endMode' |
 	'agendaView' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'showLeft' |
-	'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
+	'showNextSession' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
 	'showFutureSegments' | 'segMinutesMode'
 > {
 	const block = { id: 'block', title, minutes: 45, note: '', warning: true, pinned: false };
@@ -31,6 +31,7 @@ function state(title: string): Pick<AppState,
 		showExtraInfo: true,
 		showSegLabels: true,
 		showLeft: true,
+		showNextSession: false,
 		showCenterEnd: true,
 		hollow: true,
 		textOutside: false,

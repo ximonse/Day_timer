@@ -10,6 +10,7 @@ export interface SharedUiState {
 	palette: AppState['palette'];
 	dark: boolean;
 	showLeft: boolean;
+	showNextSession: boolean;
 	showCenterEnd: boolean;
 	hollow: boolean;
 	textOutside: boolean;
@@ -74,6 +75,7 @@ export function sharedUiStateFromState(state: Pick<AppState, keyof SharedUiState
 		palette: state.palette,
 		dark: state.dark,
 		showLeft: state.showLeft,
+		showNextSession: state.showNextSession,
 		showCenterEnd: state.showCenterEnd,
 		hollow: state.hollow,
 		textOutside: state.textOutside,
@@ -156,7 +158,7 @@ export function buildSelectedDaySnapshot(
 export function applySharedStatePayload(
 	state: Pick<AppState,
 		'blocks' | 'dayTitle' | 'extraInfo' | 'startMin' | 'endMode' | 'clockSpan' | 'palette' | 'dark' |
-		'showLeft' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
+		'showLeft' | 'showNextSession' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
 		'showFutureSegments' | 'segMinutesMode' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'agendaText' | 'agendaDate'
 	>,
 	payload: Partial<LiveShareState | SelectedSessionShareState | SelectedDayShareState> & { shareType?: ShareMode }
@@ -171,6 +173,7 @@ export function applySharedStatePayload(
 	if (payload.palette) state.palette = payload.palette;
 	if (payload.dark !== undefined) state.dark = payload.dark;
 	if (payload.showLeft !== undefined) state.showLeft = payload.showLeft;
+	if (payload.showNextSession !== undefined) state.showNextSession = payload.showNextSession;
 	if (payload.showCenterEnd !== undefined) state.showCenterEnd = payload.showCenterEnd;
 	if (payload.hollow !== undefined) state.hollow = payload.hollow;
 	if (payload.textOutside !== undefined) state.textOutside = payload.textOutside;

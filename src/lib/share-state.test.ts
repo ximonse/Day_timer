@@ -33,11 +33,12 @@ function flow(patch: Partial<Flow> = {}): Flow {
 	};
 }
 
-function sharedState(): Pick<AppState, 'palette' | 'dark' | 'showLeft' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' | 'showFutureSegments' | 'segMinutesMode' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels'> {
+function sharedState(): Pick<AppState, 'palette' | 'dark' | 'showLeft' | 'showNextSession' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' | 'showFutureSegments' | 'segMinutesMode' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels'> {
 	return {
 		palette: 'sansad',
 		dark: false,
 		showLeft: true,
+		showNextSession: false,
 		showCenterEnd: true,
 		hollow: true,
 		textOutside: false,

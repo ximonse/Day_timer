@@ -23,7 +23,7 @@ function workspace(title: string, revision: number) {
 		'flows' | 'agendaText' | 'agendaDate' | 'agendaText2' | 'agendaDate2' | 'agendaMeta' |
 		'actualTimeLog' | 'nowDraft' | 'planDraft' | 'palette' | 'dark' | 'clockSpan' | 'endMode' |
 		'agendaView' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'showLeft' |
-		'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
+		'showNextSession' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
 		'showFutureSegments' | 'segMinutesMode'
 	> = {
 		flows: [],
@@ -44,6 +44,7 @@ function workspace(title: string, revision: number) {
 		showExtraInfo: true,
 		showSegLabels: true,
 		showLeft: true,
+		showNextSession: false,
 		showCenterEnd: true,
 		hollow: true,
 		textOutside: false,

@@ -134,6 +134,7 @@
   :global(.main-header) { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; column-gap: 16px; min-height: clamp(44px, 8.5cqi, 92px); }
   :global(.hero-text) { font-family: inherit; font-size: clamp(42px, 8.5cqi, 92px); line-height: 1.1; letter-spacing: -0.03em; color: var(--fg); -webkit-appearance: none; appearance: none; font-variant-numeric: tabular-nums; display: block; }
   :global(.lesson-title) { grid-column: 1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :global(.next-session) { grid-column: 3; justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; opacity: .82; }
   :global(.lesson-title-editable) { background: transparent; border: none; outline: none; font-family: inherit; padding: 0; cursor: text; width: 100%; justify-self: start; }
   :global(.lesson-title-editable:focus) { border-bottom: 2px solid var(--accent); }
   :global(.lesson-title-editable::placeholder) { color: var(--muted); opacity: .35; }

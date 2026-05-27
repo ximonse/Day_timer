@@ -11,6 +11,7 @@ export interface WorkspacePreferences {
 	showExtraInfo: boolean;
 	showSegLabels: boolean;
 	showLeft: boolean;
+	showNextSession: boolean;
 	showCenterEnd: boolean;
 	hollow: boolean;
 	textOutside: boolean;
@@ -67,6 +68,7 @@ export interface LegacySyncPayload {
 	showExtraInfo?: boolean;
 	showSegLabels?: boolean;
 	showLeft?: boolean;
+	showNextSession?: boolean;
 	showCenterEnd?: boolean;
 	hollow?: boolean;
 	textOutside?: boolean;
@@ -81,7 +83,7 @@ type SyncableAppState = Pick<AppState,
 	'flows' | 'agendaText' | 'agendaDate' | 'agendaText2' | 'agendaDate2' | 'agendaMeta' |
 	'actualTimeLog' | 'nowDraft' | 'planDraft' | 'palette' | 'dark' | 'clockSpan' | 'endMode' |
 	'agendaView' | 'showSegNotes' | 'showExtraInfo' | 'showSegLabels' | 'showLeft' |
-	'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
+	'showNextSession' | 'showCenterEnd' | 'hollow' | 'textOutside' | 'showMin' | 'showFive' | 'showQuarter' |
 	'showFutureSegments' | 'segMinutesMode'
 >;
 
@@ -139,6 +141,7 @@ export const DEFAULT_WORKSPACE_PREFERENCES: WorkspacePreferences = {
 	showExtraInfo: true,
 	showSegLabels: true,
 	showLeft: true,
+	showNextSession: false,
 	showCenterEnd: true,
 	hollow: true,
 	textOutside: false,
@@ -176,6 +179,7 @@ export function workspaceDataFromAppState(state: SyncableAppState, revision: num
 			showExtraInfo: state.showExtraInfo,
 			showSegLabels: state.showSegLabels,
 			showLeft: state.showLeft,
+			showNextSession: state.showNextSession,
 			showCenterEnd: state.showCenterEnd,
 			hollow: state.hollow,
 			textOutside: state.textOutside,
@@ -208,6 +212,7 @@ export function applyWorkspaceDataToAppState(state: SyncableAppState, workspace:
 	state.showExtraInfo = workspace.preferences.showExtraInfo;
 	state.showSegLabels = workspace.preferences.showSegLabels;
 	state.showLeft = workspace.preferences.showLeft;
+	state.showNextSession = workspace.preferences.showNextSession;
 	state.showCenterEnd = workspace.preferences.showCenterEnd;
 	state.hollow = workspace.preferences.hollow;
 	state.textOutside = workspace.preferences.textOutside;
@@ -323,6 +328,7 @@ export function workspaceDataFromSyncResponse(value: unknown, createId: () => st
 		showExtraInfo: typeof preferences?.showExtraInfo === 'boolean' ? preferences.showExtraInfo : typeof raw.showExtraInfo === 'boolean' ? raw.showExtraInfo : DEFAULT_WORKSPACE_PREFERENCES.showExtraInfo,
 		showSegLabels: typeof preferences?.showSegLabels === 'boolean' ? preferences.showSegLabels : typeof raw.showSegLabels === 'boolean' ? raw.showSegLabels : DEFAULT_WORKSPACE_PREFERENCES.showSegLabels,
 		showLeft: typeof preferences?.showLeft === 'boolean' ? preferences.showLeft : typeof raw.showLeft === 'boolean' ? raw.showLeft : DEFAULT_WORKSPACE_PREFERENCES.showLeft,
+		showNextSession: typeof preferences?.showNextSession === 'boolean' ? preferences.showNextSession : typeof raw.showNextSession === 'boolean' ? raw.showNextSession : DEFAULT_WORKSPACE_PREFERENCES.showNextSession,
 		showCenterEnd: typeof preferences?.showCenterEnd === 'boolean' ? preferences.showCenterEnd : typeof raw.showCenterEnd === 'boolean' ? raw.showCenterEnd : DEFAULT_WORKSPACE_PREFERENCES.showCenterEnd,
 		hollow: typeof preferences?.hollow === 'boolean' ? preferences.hollow : typeof raw.hollow === 'boolean' ? raw.hollow : DEFAULT_WORKSPACE_PREFERENCES.hollow,
 		textOutside: typeof preferences?.textOutside === 'boolean' ? preferences.textOutside : typeof raw.textOutside === 'boolean' ? raw.textOutside : DEFAULT_WORKSPACE_PREFERENCES.textOutside,
