@@ -1289,7 +1289,16 @@
     return session;
   }
 
-  async function syncLoad() {
+  function hasUnsavedAgendaDraft() {
+    return s.activeSection === 'plan' && agendaDraftDirty;
+  }
+
+  async function syncLoad(source: 'manual' | 'auto' = 'manual') {
+    if (source === 'auto' && hasUnsavedAgendaDraft()) {
+      syncProbeState = 'idle';
+      syncProbeText = 'Dagtext osparad – molnladdning pausad';
+      return;
+    }
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); loadingFromCloud = false; return; }
     loadingFromCloud = true;
@@ -2301,7 +2310,7 @@
 
     const handleFocus = () => {
       if (!document.hidden && s.syncKey && !loadingFromCloud) {
-        void syncLoad();
+        void syncLoad('auto');
       }
     };
     document.addEventListener('visibilitychange', handleFocus);
@@ -2313,7 +2322,7 @@
         if (!res.ok) return;
         const { revision } = await res.json();
         if (typeof revision === 'number' && revision > s.currentRevision) {
-          void syncLoad();
+          void syncLoad('auto');
         }
       } catch { /* silent */ }
     }, 30 * 1000);
