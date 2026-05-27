@@ -153,6 +153,8 @@
   let leftText = $state('');
   let flowsOpen = $state(false);
   let miniMenuOpen = $state(true);
+  let quickStartTitle = $state('');
+  let quickStartText = $state('');
   let miniMenuSnapshot = $state<{
     section: AppSection;
     locked: boolean;
@@ -1166,6 +1168,43 @@
       replaceTextareaSelection(node, next, start + insert.length);
       return;
     }
+  }
+
+  function startQuickNowSession() {
+    const raw = quickStartText.trim();
+    if (!raw) {
+      showToast('Skriv minst en aktivitet först');
+      return;
+    }
+    const result = parseParts(raw, []);
+    if (!result.blocks.length) {
+      showToast('Skriv minst en aktivitet först');
+      return;
+    }
+    const d = new Date();
+    s.dayTitle = quickStartTitle.trim() || result.dayTitle || 'Session';
+    s.blocks = result.blocks;
+    s.extraInfo = result.extraInfo;
+    s.startMin = d.getHours() * 60 + d.getMinutes();
+    warnedSet.clear();
+    updateTimeFeedback();
+    const f = flowFromCurrentSession();
+    addFlowToAgendaToday(f, true, sessionAgendaMeta());
+    lastAutoLoadKey = `${f.startMin}-${totalFlowMinutes(f)}-${f.title}-${f.parts.length}`;
+    quickStartTitle = '';
+    quickStartText = '';
+    capturePanelBaseline('now');
+    partsDraftDirty = false;
+    syncPartsDraftFromState(true);
+    notifyPanelMutation('now');
+    appState.persist();
+    if (hasSyncSession()) void syncSave();
+    collapseActiveWorkMenus();
+    locked = true;
+    miniMenuOpen = false;
+    s.showControls = false;
+    persistRunModePreference(true);
+    appState.persist();
   }
 
   function saveFlow() {
@@ -2991,6 +3030,11 @@
               onTogglePartsHelp={() => sessionPartsHelpOpen = toggleHelpOverride(sessionPartsHelpOpen)}
               onToggleTimeHelp={() => sessionTimeHelpOpen = toggleHelpOverride(sessionTimeHelpOpen)}
               onToggleSourceHelp={() => planSourceHelpOpen = toggleHelpOverride(planSourceHelpOpen)}
+              {quickStartTitle}
+              {quickStartText}
+              onQuickStartTitleInput={(value) => { quickStartTitle = value; }}
+              onQuickStartTextInput={(value) => { quickStartText = value; }}
+              onQuickStart={startQuickNowSession}
               onCopyActiveShare={() => copyShareLinkForKey(ACTIVE_SHARE_KEY)}
               onCopySessionShare={() => currentSessionShareKey && copyShareLinkForKey(currentSessionShareKey)}
               onCopyDayShare={() => currentDayShareKey && copyShareLinkForKey(currentDayShareKey)}

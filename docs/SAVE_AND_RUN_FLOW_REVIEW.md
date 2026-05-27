@@ -74,3 +74,15 @@ It should not manufacture a real `Lektion 45m`.
   - `Synkat till konto`
 - Move the state transitions behind small named functions instead of inline button handlers.
 - Treat run mode as a read-only projection over agenda/session state.
+
+## Revised product direction
+
+The clean run-mode presentation is likely what `Nu` should have been from the start:
+
+- `Nu` is the place to live the day.
+- `Planera` is the place to build and edit the day.
+- The play/Kör button remains valuable because it collapses the chrome and makes the view calm.
+
+When something is active or starts soon, `Nu` should show it immediately using the clean run-mode presentation. When nothing exists, `Nu` should offer a hyper-fast creation path: type a title/activity, start now, and then collapse into the same clean presentation.
+
+`Planera` should keep session creation and editing, with whole-day text/import/AI tucked under an expandable day-text area.

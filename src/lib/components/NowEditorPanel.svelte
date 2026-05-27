@@ -35,6 +35,11 @@
     savedFlowMsg,
     showTitleHelp,
     showPartsHelp,
+    quickStartTitle,
+    quickStartText,
+    onQuickStartTitleInput,
+    onQuickStartTextInput,
+    onQuickStart,
     onToggleTitleHelp,
     onTogglePartsHelp
   }: {
@@ -60,6 +65,11 @@
     savedFlowMsg: string;
     showTitleHelp: boolean;
     showPartsHelp: boolean;
+    quickStartTitle: string;
+    quickStartText: string;
+    onQuickStartTitleInput: (value: string) => void;
+    onQuickStartTextInput: (value: string) => void;
+    onQuickStart: () => void;
     onToggleTitleHelp: () => void;
     onTogglePartsHelp: () => void;
   } = $props();
@@ -86,6 +96,22 @@
     });
   }
 </script>
+
+{#if titleValue === 'Inget pass just nu' && !partsValue.trim()}
+  <div class="quick-now-panel">
+    <div>
+      <div class="quick-now-title">Starta något nu</div>
+      <div class="quick-now-copy">Skriv en snabb session och kör direkt.</div>
+    </div>
+    <input type="text" placeholder="Rubrik, t.ex. Röja köket"
+      value={quickStartTitle}
+      oninput={(e) => onQuickStartTitleInput((e.target as HTMLInputElement).value)} />
+    <textarea class="quick-now-text" placeholder="Aktivitet 15m&#10;- valfri underpunkt"
+      value={quickStartText}
+      oninput={(e) => onQuickStartTextInput((e.target as HTMLTextAreaElement).value)}></textarea>
+    <button class="quickstart" style="width:100%" onclick={onQuickStart}>Starta nu</button>
+  </div>
+{/if}
 
 <div class="step-section">
   <div class="step-num">1</div>
@@ -167,4 +193,17 @@
     50% { opacity: 0.7; }
     100% { opacity: 1; }
   }
+  .quick-now-panel {
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    margin-bottom:12px;
+    background: color-mix(in srgb, var(--paper) 82%, var(--pill) 18%);
+  }
+  .quick-now-title { font-weight:800; color:var(--text); }
+  .quick-now-copy { color:var(--muted); font-size:13px; line-height:1.35; }
+  .quick-now-text { min-height:76px; }
 </style>
