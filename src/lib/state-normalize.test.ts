@@ -29,12 +29,10 @@ describe('normalizePersistedState', () => {
 		expect(result.blocks).toEqual([block({ id: 'keep', minutes: 20 })]);
 	});
 
-	test('replaces empty or non-renderable persisted blocks', () => {
+	test('keeps non-renderable persisted blocks empty', () => {
 		const result = normalizePersistedState({ blocks: [block({ minutes: 0 })] }, () => 'fallback');
 
-		expect(result.blocks).toEqual([
-			{ id: 'fallback', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }
-		]);
+		expect(result.blocks).toEqual([]);
 	});
 
 	test('normalizes now and plan drafts independently', () => {
@@ -43,12 +41,8 @@ describe('normalizePersistedState', () => {
 			planDraft: draft({ blocks: [block({ minutes: Number.NaN })] })
 		}, () => 'draft-id');
 
-		expect(result.nowDraft?.blocks).toEqual([
-			{ id: 'draft-id', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }
-		]);
-		expect(result.planDraft?.blocks).toEqual([
-			{ id: 'draft-id', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }
-		]);
+		expect(result.nowDraft?.blocks).toEqual([]);
+		expect(result.planDraft?.blocks).toEqual([]);
 	});
 
 	test('drops invalid agenda metadata containers', () => {

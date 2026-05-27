@@ -2915,6 +2915,10 @@
               onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
               onRunAi={runAiParts}
               onAction={() => {
+                if (s.blocks.length === 0 || totalMin() <= 0) {
+                  showToast('Lägg till minst en aktivitet först');
+                  return;
+                }
                 if (s.activeSection === 'plan') {
                   if (selectedAgendaDetails && planSelectionExplicit) {
                     syncTimerToAgenda(true);
@@ -2942,6 +2946,10 @@
                 if (hasSyncSession()) void syncSave();
               }}
               onCreateNew={() => {
+                if (s.blocks.length === 0 || totalMin() <= 0) {
+                  showToast('Lägg till minst en aktivitet först');
+                  return;
+                }
                 const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
                 addFlowToAgendaDate(targetDate, flowFromCurrentSession(), true, sessionAgendaMeta());
                 planSelectionExplicit = true;

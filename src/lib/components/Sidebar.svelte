@@ -381,6 +381,12 @@
       <span class="agenda-mode-badge">Eget</span>
     </div>
   {/if}
+  {#if blocks.length === 0}
+    <div class="empty-session">
+      <strong>Inget pass just nu</strong>
+      <span>Välj ett pass i agendan eller lägg till en aktivitet.</span>
+    </div>
+  {/if}
   {#each blocks as b, i (b.id)}
     {@const ct = clockTheme(palette, dark)}
     {@const displayTitle = stripColorDirective(b.title)}
@@ -476,6 +482,8 @@
 
 <style>
   .seglist { display: flex; flex-direction: column; gap: 4px; }
+  .empty-session { display:flex; flex-direction:column; gap:6px; padding:14px 12px; border:1px dashed var(--line); border-radius:8px; color:var(--muted); font-size:14px; line-height:1.35; }
+  .empty-session strong { color:var(--text); font-size:15px; }
   .seglist .row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 50px; font-weight: 400; line-height: 1.2; }
   .seglist .row.active { background: var(--pill); font-weight: 500; }
   .seglist .row.past { opacity: .45; }

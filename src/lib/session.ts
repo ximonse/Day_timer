@@ -2,7 +2,7 @@ import type { Block, Flow } from './state.svelte.js';
 
 export function ensureRenderableBlocks(blocks: Block[], createId: () => string): Block[] {
 	if (blocks.some(block => Number.isFinite(block.minutes) && block.minutes > 0)) return blocks;
-	return [{ id: createId(), title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }];
+	return [];
 }
 
 export interface FlowBlockOptions {
@@ -70,7 +70,7 @@ export function makeFlowFromSession(
 
 export function createCurrentFallbackSession(nowMinutes: number, createId: () => string) {
 	return {
-		dayTitle: '',
+		dayTitle: 'Inget pass just nu',
 		extraInfo: '',
 		startMin: Math.round(nowMinutes / 5) * 5,
 		blocks: ensureRenderableBlocks([], createId),

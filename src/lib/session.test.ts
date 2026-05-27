@@ -33,19 +33,15 @@ describe('session helpers', () => {
 		expect(ensureRenderableBlocks(existing, () => 'new')).toBe(existing);
 	});
 
-	test('creates a default block when a session has no blocks', () => {
-		expect(ensureRenderableBlocks([], () => 'new-id')).toEqual([
-			{ id: 'new-id', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }
-		]);
+	test('keeps empty sessions empty', () => {
+		expect(ensureRenderableBlocks([], () => 'new-id')).toEqual([]);
 	});
 
-	test('creates a default block when all stored blocks have invalid duration', () => {
+	test('drops invalid-duration sessions to empty', () => {
 		expect(ensureRenderableBlocks([
 			block({ minutes: 0 }),
 			block({ id: 'bad', minutes: Number.NaN })
-		], () => 'fallback')).toEqual([
-			{ id: 'fallback', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }
-		]);
+		], () => 'fallback')).toEqual([]);
 	});
 
 	test('maps a flow to blocks', () => {
@@ -109,10 +105,10 @@ describe('session helpers', () => {
 
 	test('creates a fallback session at the nearest 5-minute mark', () => {
 		expect(createCurrentFallbackSession(483, () => 'fallback')).toEqual({
-			dayTitle: '',
+			dayTitle: 'Inget pass just nu',
 			extraInfo: '',
 			startMin: 485,
-			blocks: [{ id: 'fallback', title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }]
+			blocks: []
 		});
 	});
 });

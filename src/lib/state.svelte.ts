@@ -107,7 +107,7 @@ export function uid() {
 function defaultDraft(startHour = 8): EditorDraft {
   return {
     dayTitle: '',
-    blocks: [{ id: uid(), title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }],
+    blocks: [],
     extraInfo: '',
     startMin: startHour * 60,
   };
@@ -120,7 +120,7 @@ function defaultState(): AppState {
   return {
     palette: 'sansad',
     dark: false,
-    blocks: [{ id: uid(), title: 'Lektion', minutes: 45, note: '', warning: true, pinned: false }],
+    blocks: [],
     dayTitle: '',
     extraInfo: '',
     startMin: 8 * 60,
