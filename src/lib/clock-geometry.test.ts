@@ -67,6 +67,19 @@ describe('clock geometry', () => {
 		expect(result.overflowSectors).toEqual([]);
 	});
 
+	test('does not advance wrapped sectors before the session has started', () => {
+		const result = geometry(-40);
+
+		expect(result.blockSectors.map(sector => sector.id)).toEqual([
+			'block-a-0-0',
+			'block-b-0-20'
+		]);
+		expect(result.overflowSectors.map(sector => [sector.id, sector.a0, sector.a1])).toEqual([
+			['overflow-b-1', 0, 60],
+			['overflow-c-1', 60, 180]
+		]);
+	});
+
 	test('uses segment order so repeated titles do not merge into one color', () => {
 		const result = buildBlockClockGeometry({
 			blocks: [

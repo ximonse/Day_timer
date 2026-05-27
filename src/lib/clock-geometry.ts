@@ -68,7 +68,7 @@ export interface BuildBlockClockGeometryOptions {
 export function buildBlockClockGeometry(options: BuildBlockClockGeometryOptions): BlockClockGeometry {
 	const startAngle = ((options.startMin % options.clockSpan) / options.clockSpan) * 360;
 	const currentCycle = options.elapsed > 0 ? Math.floor(options.elapsed / options.clockSpan) : 0;
-	const currentLocalMin = ((options.elapsed % options.clockSpan) + options.clockSpan) % options.clockSpan;
+	const currentLocalMin = options.elapsed > 0 ? ((options.elapsed % options.clockSpan) + options.clockSpan) % options.clockSpan : 0;
 	return {
 		blockSectors: buildBlockSectors(options, startAngle, currentCycle, currentLocalMin),
 		overflowSectors: buildOverflowSectors(options, startAngle, currentCycle, currentLocalMin),
