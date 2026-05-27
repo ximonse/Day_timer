@@ -250,6 +250,11 @@
   :global(.quickstart:disabled), :global(.ai-key-btn:disabled) { opacity: .45; cursor: default; }
   :global(#quickStartBtn) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); border-color: var(--menu-pill-on); font-weight: 600; padding: 11px 15px; font-size: 15px; }
   :global(#quickStartBtn:hover) { background: #26221d; border-color: #26221d; }
+  :global(.now-live-panel) { display:flex; flex-direction:column; gap:12px; padding:12px; border:1px solid var(--menu-border); border-radius:12px; background: color-mix(in srgb, var(--menu-surface) 90%, white 10%); }
+  :global(.now-live-title) { font-size:14px; font-weight:800; color:var(--menu-fg); }
+  :global(.now-live-copy) { margin-top:3px; font-size:12px; line-height:1.45; color:var(--menu-muted); }
+  :global(.now-live-actions) { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  @media (max-width: 430px) { :global(.now-live-actions) { grid-template-columns:1fr; } }
   :global(.flows) { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
   :global(.flows-toggle) { background: transparent; border: 0; color: var(--menu-muted); cursor: pointer; font-size: 13px; font-weight: 600; padding: 4px 0; text-align: left; font-family: inherit; }
   :global(.flows-toggle:hover) { color: var(--menu-fg); }

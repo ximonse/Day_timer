@@ -2908,7 +2908,18 @@
           <SectionHero title={SECTION_LABELS[s.activeSection]} copy={sectionCopy} />
         {/if}
 
-        {#if s.activeSection === 'now' || s.activeSection === 'plan'}
+        {#if s.activeSection === 'now' && s.blocks.length > 0}
+          <div class="now-live-panel" in:fade={{ duration: 150 }}>
+            <div>
+              <div class="now-live-title">Nu är live</div>
+              <div class="now-live-copy">Justera direkt i rubriken, vänsterpanelen eller genom att dra i klockan. Använd Planera för större ändringar.</div>
+            </div>
+            <div class="now-live-actions">
+              <button class="quickstart quickstart-subtle" type="button" onclick={() => setActiveSection('plan')}>Redigera i Planera</button>
+              <button class="quickstart quickstart-subtle" type="button" onclick={saveFlow}>{savedFlowMsg || 'Spara som mall'}</button>
+            </div>
+          </div>
+        {:else if s.activeSection === 'now' || s.activeSection === 'plan'}
           <div in:fade={{ duration: 150 }}>
             <SessionEditorPanel
               userLevel={effectiveUserLevel}

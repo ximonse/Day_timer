@@ -86,3 +86,23 @@ The clean run-mode presentation is likely what `Nu` should have been from the st
 When something is active or starts soon, `Nu` should show it immediately using the clean run-mode presentation. When nothing exists, `Nu` should offer a hyper-fast creation path: type a title/activity, start now, and then collapse into the same clean presentation.
 
 `Planera` should keep session creation and editing, with whole-day text/import/AI tucked under an expandable day-text area.
+
+## Nu vs Planera decision
+
+`Nu` should not be a form-heavy planning surface. When a session exists, edits should happen directly in the live presentation:
+
+- main title near the clock,
+- left-panel activities,
+- clock segment dragging,
+- check-off controls.
+
+The play/Kör button then simply locks and minimizes this live view.
+
+`Planera` owns structured creation:
+
+- create a single session,
+- edit a selected agenda block,
+- add a new block to the day,
+- use day text for whole-day planning/import/AI.
+
+When `Nu` is empty, it may show a compact quick-start form, because that is a fast path into a real running session rather than a planning workflow.
