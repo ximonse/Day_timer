@@ -570,6 +570,8 @@
     } catch {}
     if (!active) return;
     closeTransientMenus();
+    s.activeSection = 'now';
+    mobileTab = 'now';
     agendaInputOpen = false;
     agendaCalendarOpen = false;
     locked = true;
@@ -587,6 +589,7 @@
         agendaInputOpen,
         agendaCalendarOpen
       };
+      goToTimerNow();
       collapseActiveWorkMenus();
       locked = true;
       miniMenuOpen = false;
