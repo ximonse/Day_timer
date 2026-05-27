@@ -60,6 +60,19 @@ export function colorForTitle(title: string, palette: string[]): string {
 	return palette[paletteIndexForTitle(title, palette)];
 }
 
+export function colorForSegment(title: string, palette: string[], index: number): string {
+	const explicit = explicitColor(title);
+	if (explicit) return explicit;
+	if (palette.length === 0) return '#999999';
+	return palette[((index % palette.length) + palette.length) % palette.length];
+}
+
+export function paletteIndexForSegment(title: string, palette: string[], index: number): number {
+	if (palette.length === 0) return 0;
+	if (explicitColor(title)) return paletteIndexForTitle(title, palette);
+	return ((index % palette.length) + palette.length) % palette.length;
+}
+
 export function paletteIndexForTitle(title: string, palette: string[]): number {
 	if (palette.length === 0) return 0;
 	const normalized = normalizeTitle(title);

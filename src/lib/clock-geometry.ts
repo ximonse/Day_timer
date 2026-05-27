@@ -1,6 +1,6 @@
 import { R, polar, truncate, isOnlyEmoji } from './clock.js';
 import { labelColorFor, type Palette } from './theme.js';
-import { colorForTitle, hasColorDirective, paletteIndexForTitle, stripColorDirective } from './title-color.js';
+import { colorForSegment, hasColorDirective, paletteIndexForSegment, stripColorDirective } from './title-color.js';
 import type { Block } from './state.svelte.js';
 
 export interface BlockClockSector {
@@ -88,8 +88,8 @@ function buildBlockSectors(
 		const segStartMin = cumMin;
 		const segEndMin = cumMin + b.minutes;
 		const displayTitle = stripColorDirective(b.title);
-		const baseColor = colorForTitle(b.title, options.sectorColors);
-		const colorIndex = paletteIndexForTitle(b.title, options.sectorColors);
+		const baseColor = colorForSegment(b.title, options.sectorColors, i);
+		const colorIndex = paletteIndexForSegment(b.title, options.sectorColors, i);
 		const explicitColor = hasColorDirective(b.title);
 		const pureEmoji = isOnlyEmoji(displayTitle);
 		const labelText = pureEmoji ? displayTitle : truncate(displayTitle, 14);
@@ -172,7 +172,7 @@ function buildOverflowSectors(
 	return options.blocks.flatMap((b, i) => {
 		const segStartMin = cumMin;
 		const segEndMin = cumMin + b.minutes;
-		const baseColor = colorForTitle(b.title, options.sectorColors);
+		const baseColor = colorForSegment(b.title, options.sectorColors, i);
 		cumMin = segEndMin;
 		const sectors: OverflowClockSector[] = [];
 		for (

@@ -3,7 +3,7 @@
   import { clockTheme, labelColorFor, type Palette } from '$lib/theme.js';
   import type { Block, Flow } from '$lib/state.svelte.js';
   import { parseMarkdownSvg } from '$lib/markdown.js';
-  import { colorForTitle, hasColorDirective, paletteIndexForTitle, stripColorDirective } from '$lib/title-color.js';
+  import { colorForSegment, hasColorDirective, paletteIndexForSegment, stripColorDirective } from '$lib/title-color.js';
   import { buildBlockClockGeometry } from '$lib/clock-geometry.js';
 
   interface Props {
@@ -89,8 +89,8 @@
       if (a1 - a0 < 0.1) return null;
       
       const displayTitle = stripColorDirective(item.flow.title);
-      const baseColor = colorForTitle(item.flow.title, sectorColors);
-      const colorIndex = paletteIndexForTitle(item.flow.title, sectorColors);
+      const baseColor = colorForSegment(item.flow.title, sectorColors, i);
+      const colorIndex = paletteIndexForSegment(item.flow.title, sectorColors, i);
       const explicitColor = hasColorDirective(item.flow.title);
       const isPast = nowMin >= itemEnd;
       const isActive = nowMin >= item.startMin && nowMin < itemEnd;

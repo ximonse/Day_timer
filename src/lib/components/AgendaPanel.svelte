@@ -6,7 +6,7 @@
   import { getAiPromptAgenda, AI_PROMPT_CALENDAR_CONVERT } from '$lib/ai.js';
   import type { AiPlanResponse, AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
-  import { colorForTitle, stripColorDirective } from '$lib/title-color.js';
+  import { colorForSegment, stripColorDirective } from '$lib/title-color.js';
   import AgendaImportPanel from './AgendaImportPanel.svelte';
 
   let {
@@ -323,7 +323,7 @@
         {/if}
         {#each agendaItems as item, ai (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-${ai}`)}
           {@const itemTitle = stripColorDirective(item.flow.title || '(utan rubrik)')}
-          {@const itemColor = colorForTitle(item.flow.title || '(utan rubrik)', sectorColors)}
+          {@const itemColor = colorForSegment(item.flow.title || '(utan rubrik)', sectorColors, ai)}
           {@const itemEnd = item.startMin + item.totalMin}
           {@const today = localDateISO()}
           {@const itemDate = selectedDay?.date || today}

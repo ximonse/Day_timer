@@ -66,4 +66,26 @@ describe('clock geometry', () => {
 
 		expect(result.overflowSectors).toEqual([]);
 	});
+
+	test('uses segment order so repeated titles do not merge into one color', () => {
+		const result = buildBlockClockGeometry({
+			blocks: [
+				block('a', 'Samma', 10),
+				block('b', 'Samma', 10),
+				block('c', 'Samma', 10)
+			],
+			startMin: 12 * 60,
+			clockSpan: 60,
+			elapsed: 0,
+			totalMin: 30,
+			innerR: Ri,
+			textOutside: false,
+			sectorColors: ['#111111', '#222222', '#333333'],
+			palette: 'sansad',
+			dark: false,
+			segMinutesMode: 'planned'
+		});
+
+		expect(result.blockSectors.map(sector => sector.baseColor)).toEqual(['#111111', '#222222', '#333333']);
+	});
 });

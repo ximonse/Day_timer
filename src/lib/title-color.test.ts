@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { colorForTitle, hasColorDirective, paletteIndexForTitle, stripColorDirective, toggleTitleStrikethrough } from './title-color.js';
+import { colorForSegment, colorForTitle, hasColorDirective, paletteIndexForSegment, paletteIndexForTitle, stripColorDirective, toggleTitleStrikethrough } from './title-color.js';
 
 const palette = ['#111111', '#222222', '#333333', '#444444'];
 
@@ -20,6 +20,17 @@ describe('title colors', () => {
 		expect(colorForTitle('Rast !#00ff88', palette)).toBe('#00ff88');
 		expect(hasColorDirective('Rast !#00ff88')).toBe(true);
 		expect(hasColorDirective('Rast')).toBe(false);
+	});
+
+	test('uses segment order for default segment colors', () => {
+		expect(colorForSegment('Matematik', palette, 0)).toBe('#111111');
+		expect(colorForSegment('Matematik', palette, 1)).toBe('#222222');
+		expect(colorForSegment('Matematik', palette, 4)).toBe('#111111');
+		expect(paletteIndexForSegment('Matematik', palette, 2)).toBe(2);
+	});
+
+	test('keeps explicit colors when segment colors use order', () => {
+		expect(colorForSegment('Matematik !blue', palette, 2)).toBe('blue');
 	});
 
 	test('accepts css hex colors with alpha channels', () => {

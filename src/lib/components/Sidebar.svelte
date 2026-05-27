@@ -2,7 +2,7 @@
   import { clockTheme, type Palette } from '$lib/theme.js';
   import { uid, type Block } from '$lib/state.svelte.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
-  import { colorForTitle, stripColorDirective, toggleTitleStrikethrough } from '$lib/title-color.js';
+  import { colorForSegment, stripColorDirective, toggleTitleStrikethrough } from '$lib/title-color.js';
 
   interface Props {
     blocks: Block[];
@@ -384,7 +384,7 @@
   {#each blocks as b, i (b.id)}
     {@const ct = clockTheme(palette, dark)}
     {@const displayTitle = stripColorDirective(b.title)}
-    {@const blockColor = colorForTitle(b.title, ct.colors)}
+    {@const blockColor = colorForSegment(b.title, ct.colors, i)}
     {@const cumMin = blocks.slice(0, i).reduce((a: number, x: Block) => a + x.minutes, 0)}
     {@const segEnd = cumMin + b.minutes}
     {@const isActive = elapsedMin >= cumMin && elapsedMin < segEnd}
