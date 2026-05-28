@@ -18,6 +18,12 @@
     timeFeedbackText,
     hasAiKey,
     aiPanelOpen,
+    planMainOpen,
+    planTimeOpen,
+    planShareOpen,
+    nowMainOpen,
+    nowQuickStartOpen,
+    nowShareOpen,
     aiInput,
     aiError,
     aiQuestionText,
@@ -43,6 +49,12 @@
     onPartsKeyDown,
     onCopyPrompt,
     onToggleAiPanel,
+    onTogglePlanMain,
+    onTogglePlanTime,
+    onTogglePlanShare,
+    onToggleNowMain,
+    onToggleNowQuickStart,
+    onToggleNowShare,
     onAiInputChange,
     onSetAiPromptMode,
     onRunAi,
@@ -105,6 +117,12 @@
     timeFeedbackText: string;
     hasAiKey: boolean;
     aiPanelOpen: boolean;
+    planMainOpen: boolean;
+    planTimeOpen: boolean;
+    planShareOpen: boolean;
+    nowMainOpen: boolean;
+    nowQuickStartOpen: boolean;
+    nowShareOpen: boolean;
     aiInput: string;
     aiError: string;
     aiQuestionText: string;
@@ -141,6 +159,12 @@
     onPartsKeyDown: (e: KeyboardEvent) => void;
     onCopyPrompt: () => void;
     onToggleAiPanel: () => void;
+    onTogglePlanMain: () => void;
+    onTogglePlanTime: () => void;
+    onTogglePlanShare: () => void;
+    onToggleNowMain: () => void;
+    onToggleNowQuickStart: () => void;
+    onToggleNowShare: () => void;
     onAiInputChange: (value: string) => void;
     onSetAiPromptMode: (mode: AiAgendaPromptMode) => void;
     onRunAi: () => void;
@@ -193,6 +217,9 @@
       {titleValue}
       {partsValue}
       {partsFeedbackText}
+      {nowMainOpen}
+      {nowQuickStartOpen}
+      {nowShareOpen}
       {onTitleInput}
       {onPartsInput}
       {onPartsKeyDown}
@@ -213,6 +240,9 @@
       {onQuickStartTitleInput}
       {onQuickStartTextInput}
       {onQuickStart}
+      {onToggleNowMain}
+      {onToggleNowQuickStart}
+      {onToggleNowShare}
       {onToggleTitleHelp}
       {onTogglePartsHelp}
     />
@@ -243,7 +273,13 @@
       {onTogglePartsHelp}
       {hasAiKey}
       {aiPanelOpen}
+      {planMainOpen}
+      {planTimeOpen}
+      {planShareOpen}
       {onToggleAiPanel}
+      {onTogglePlanMain}
+      {onTogglePlanTime}
+      {onTogglePlanShare}
       {aiInput}
       {onAiInputChange}
       {aiPromptMode}

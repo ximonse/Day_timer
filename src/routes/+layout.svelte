@@ -539,6 +539,10 @@
   }
   :global(.plan-editor) { display: flex; flex-direction: column; gap: 12px; }
   :global(.plan-editor-bottom) { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; border-top: 1px solid var(--menu-border); }
+  :global(.write-section-toggle) { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: transparent; border: 0; border-top: 1px solid color-mix(in srgb, var(--menu-border) 88%, transparent); padding: 8px 2px 5px; color: var(--menu-muted); cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: .35px; text-transform: uppercase; }
+  :global(.write-section-toggle:first-child) { border-top: 0; padding-top: 2px; }
+  :global(.write-section-toggle:hover) { color: var(--menu-fg); }
+  :global(.write-section-body) { display: flex; flex-direction: column; gap: 10px; }
   :global(.ai-panel) { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
   :global(.ai-panel-toggle) { background: transparent; border: 0; padding: 2px 0; font-size: 12px; color: var(--menu-muted); cursor: pointer; text-align: left; font-family: inherit; font-weight: 500; }
   :global(.ai-panel-toggle:hover) { color: var(--menu-fg); }

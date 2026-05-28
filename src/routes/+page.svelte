@@ -241,6 +241,20 @@
   const SHARE_MODE_STORAGE = 'daytimer_share_mode';
   const SHARE_ENTRIES_STORAGE = 'daytimer_share_entries';
   const RUN_MODE_STORAGE = 'daytimer_run_mode';
+  const WRITE_MENU_STORAGE = 'daytimer_write_menu_sections_v1';
+  type WriteMenuSection = 'agenda' | 'planMain' | 'planTime' | 'planShare' | 'nowMain' | 'nowQuickStart' | 'nowShare' | 'sessionAi' | 'actualHistory';
+  const DEFAULT_WRITE_MENU_SECTIONS: Record<WriteMenuSection, boolean> = {
+    agenda: true,
+    planMain: true,
+    planTime: true,
+    planShare: true,
+    nowMain: true,
+    nowQuickStart: true,
+    nowShare: true,
+    sessionAi: false,
+    actualHistory: false
+  };
+  let writeMenuSections = $state<Record<WriteMenuSection, boolean>>({ ...DEFAULT_WRITE_MENU_SECTIONS });
 
   const ACTIVE_SHARE_KEY = 'active';
   function sessionShareKey(flowId: string): string { return `session:${flowId}`; }
@@ -301,6 +315,33 @@
     syncAgendaDraftFromState(true);
   }
   function hasOverlay() { return false; }
+
+  function loadWriteMenuSections() {
+    try {
+      const raw = localStorage.getItem(WRITE_MENU_STORAGE);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<Record<WriteMenuSection, boolean>>;
+        writeMenuSections = { ...DEFAULT_WRITE_MENU_SECTIONS, ...parsed };
+      }
+    } catch {}
+    agendaInputOpen = writeMenuSections.agenda || shouldOpenAgendaInputInPlan();
+    aiPanelOpen = writeMenuSections.sessionAi;
+    actualHistoryOpen = writeMenuSections.actualHistory;
+  }
+
+  function persistWriteMenuSections() {
+    try {
+      localStorage.setItem(WRITE_MENU_STORAGE, JSON.stringify(writeMenuSections));
+    } catch {}
+  }
+
+  function setWriteMenuSection(section: WriteMenuSection, open: boolean) {
+    writeMenuSections = { ...writeMenuSections, [section]: open };
+    if (section === 'agenda') agendaInputOpen = open;
+    if (section === 'sessionAi') aiPanelOpen = open;
+    if (section === 'actualHistory') actualHistoryOpen = open;
+    persistWriteMenuSections();
+  }
 
   const agendaDays = $derived.by<AgendaDay[] | null>(() => {
     const stored = activeAgendaText();
@@ -530,7 +571,7 @@
       preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
-      agendaInputOpen = shouldOpenAgendaInputInPlan();
+      agendaInputOpen = writeMenuSections.agenda || shouldOpenAgendaInputInPlan();
     }
 
     s.showControls = true;
@@ -558,7 +599,6 @@
   function closeTransientMenus() {
     optionsMenuOpen = false;
     themePickerOpen = false;
-    aiPanelOpen = false;
     agendaAiOpen = false;
     icsImportOpen = false;
     flowsOpen = false;
@@ -779,7 +819,7 @@
       preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
-      agendaInputOpen = shouldOpenAgendaInputInPlan();
+      agendaInputOpen = writeMenuSections.agenda || shouldOpenAgendaInputInPlan();
     }
     partsDraftDirty = false;
     syncPartsDraftFromState(true);
@@ -2387,6 +2427,7 @@
 
   onMount(() => {
     pageOrigin = window.location.origin;
+    loadWriteMenuSections();
     const handleViewport = () => {
       showAgendaOverlay = window.innerWidth > 980;
     };
@@ -3089,7 +3130,7 @@
               showHelpHints={s.showHelpHints}
               showImportHelp={helpVisible(agendaImportHelpOpen)}
               showIcsHelp={helpVisible(agendaIcsHelpOpen)}
-              onToggleOpen={() => agendaInputOpen = !agendaInputOpen}
+              onToggleOpen={() => setWriteMenuSection('agenda', !agendaInputOpen)}
               onDraftChange={(value) => { agendaDraft = value; agendaDraftDirty = true; agendaDraftDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO(); }}
               onDraftPaste={() => {}}
               onSave={saveAgenda}
@@ -3140,6 +3181,12 @@
               {timeFeedbackText}
               hasAiKey={!!aiApiKey}
               {aiPanelOpen}
+              planMainOpen={writeMenuSections.planMain}
+              planTimeOpen={writeMenuSections.planTime}
+              planShareOpen={writeMenuSections.planShare}
+              nowMainOpen={writeMenuSections.nowMain}
+              nowQuickStartOpen={writeMenuSections.nowQuickStart}
+              nowShareOpen={writeMenuSections.nowShare}
               {aiInput}
               {aiError}
               {aiQuestionText}
@@ -3186,7 +3233,7 @@
                   setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
                 });
               }}
-              onToggleAiPanel={() => aiPanelOpen = !aiPanelOpen}
+              onToggleAiPanel={() => setWriteMenuSection('sessionAi', !aiPanelOpen)}
               onAiInputChange={(value) => aiInput = value}
               onSetAiPromptMode={(mode) => { sessionAiPromptMode = mode; aiQuestionText = ''; aiError = ''; }}
               onRunAi={runAiParts}
@@ -3291,7 +3338,13 @@
                 notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
               }}
               actualHistoryOpen={actualHistoryOpen}
-              onToggleActualHistory={() => actualHistoryOpen = !actualHistoryOpen}
+              onToggleActualHistory={() => setWriteMenuSection('actualHistory', !actualHistoryOpen)}
+              onTogglePlanMain={() => setWriteMenuSection('planMain', !writeMenuSections.planMain)}
+              onTogglePlanTime={() => setWriteMenuSection('planTime', !writeMenuSections.planTime)}
+              onTogglePlanShare={() => setWriteMenuSection('planShare', !writeMenuSections.planShare)}
+              onToggleNowMain={() => setWriteMenuSection('nowMain', !writeMenuSections.nowMain)}
+              onToggleNowQuickStart={() => setWriteMenuSection('nowQuickStart', !writeMenuSections.nowQuickStart)}
+              onToggleNowShare={() => setWriteMenuSection('nowShare', !writeMenuSections.nowShare)}
               currentSubjectCategory={currentSubjectCategory}
               pendingActualEntries={pendingActualEntries}
               onConfirmActualEntry={confirmActualEntryLocal}

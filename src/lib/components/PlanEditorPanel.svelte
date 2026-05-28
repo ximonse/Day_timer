@@ -42,7 +42,13 @@
     onTogglePartsHelp,
     hasAiKey,
     aiPanelOpen,
+    planMainOpen,
+    planTimeOpen,
+    planShareOpen,
     onToggleAiPanel,
+    onTogglePlanMain,
+    onTogglePlanTime,
+    onTogglePlanShare,
     aiInput,
     onAiInputChange,
     aiPromptMode,
@@ -118,7 +124,13 @@
     onTogglePartsHelp: () => void;
     hasAiKey: boolean;
     aiPanelOpen: boolean;
+    planMainOpen: boolean;
+    planTimeOpen: boolean;
+    planShareOpen: boolean;
     onToggleAiPanel: () => void;
+    onTogglePlanMain: () => void;
+    onTogglePlanTime: () => void;
+    onTogglePlanShare: () => void;
     aiInput: string;
     onAiInputChange: (value: string) => void;
     aiPromptMode: AiAgendaPromptMode;
@@ -228,7 +240,12 @@
     </div>
   {/if}
 
-  <div>
+  <button class="write-section-toggle" type="button" onclick={onTogglePlanMain}>
+    <span>Rubrik & innehåll</span>
+    <span>{planMainOpen ? '▲' : '▼'}</span>
+  </button>
+  {#if planMainOpen}
+  <div class="write-section-body">
     <div class="field-head">
       <div class="field-label">Rubrik</div>
       <button class="info-btn" type="button" onclick={onToggleTitleHelp}>i</button>
@@ -344,43 +361,52 @@
       </div>
     {/if}
   </div>
+  {/if}
 
-  <div id="plan-time-row" class="row2">
-    <div>
-      <div class="field-head">
-        <div class="field-label">Starttid</div>
-        <button class="info-btn" type="button" onclick={onToggleTimeHelp}>i</button>
+  <button class="write-section-toggle" type="button" onclick={onTogglePlanTime}>
+    <span>Tid</span>
+    <span>{planTimeOpen ? '▲' : '▼'}</span>
+  </button>
+  {#if planTimeOpen}
+    <div class="write-section-body">
+      <div id="plan-time-row" class="row2">
+        <div>
+          <div class="field-head">
+            <div class="field-label">Starttid</div>
+            <button class="info-btn" type="button" onclick={onToggleTimeHelp}>i</button>
+          </div>
+          <input type="time" value={startTimeValue}
+            oninput={(e) => onStartTimeInput((e.target as HTMLInputElement).value)} />
+        </div>
+        <div>
+          <div class="field-label">{endMode === 'end' ? 'Sluttid' : 'Längd (min)'}</div>
+          {#if endMode === 'end'}
+            <input type="time" value={endTimeValue}
+              oninput={(e) => onEndTimeInput((e.target as HTMLInputElement).value)} />
+          {:else}
+            <input type="number" min={minTotalMinutes} value={totalMinutesValue}
+              oninput={(e) => onTotalMinutesInput(Number((e.target as HTMLInputElement).value))} />
+          {/if}
+        </div>
       </div>
-      <input type="time" value={startTimeValue}
-        oninput={(e) => onStartTimeInput((e.target as HTMLInputElement).value)} />
-    </div>
-    <div>
-      <div class="field-label">{endMode === 'end' ? 'Sluttid' : 'Längd (min)'}</div>
-      {#if endMode === 'end'}
-        <input type="time" value={endTimeValue}
-          oninput={(e) => onEndTimeInput((e.target as HTMLInputElement).value)} />
-      {:else}
-        <input type="number" min={minTotalMinutes} value={totalMinutesValue}
-          oninput={(e) => onTotalMinutesInput(Number((e.target as HTMLInputElement).value))} />
+      <div class="mode-toggle">
+        <button class:on={endMode === 'end'} onclick={() => onEndModeChange('end')}>Sluttid</button>
+        <button class:on={endMode === 'len'} onclick={() => onEndModeChange('len')}>Längd</button>
+      </div>
+
+      {#if showRecSuggestion}
+        <div class="rec-suggestion" transition:fade>
+          <span class="ico">✨</span> Tidigare har {titleValue || 'detta'} tagit <strong>{suggestedDuration?.minutes} min</strong>.
+          <button class="rec-apply-btn" onclick={() => onApplySuggestedDuration(suggestedDuration!.minutes)}>Använd</button>
+        </div>
       {/if}
-    </div>
-  </div>
-  <div class="mode-toggle">
-    <button class:on={endMode === 'end'} onclick={() => onEndModeChange('end')}>Sluttid</button>
-    <button class:on={endMode === 'len'} onclick={() => onEndModeChange('len')}>Längd</button>
-  </div>
 
-  {#if showRecSuggestion}
-    <div class="rec-suggestion" transition:fade>
-      <span class="ico">✨</span> Tidigare har {titleValue || 'detta'} tagit <strong>{suggestedDuration?.minutes} min</strong>.
-      <button class="rec-apply-btn" onclick={() => onApplySuggestedDuration(suggestedDuration!.minutes)}>Använd</button>
+      {#if showTimeHelp}
+        <div class="feedback">Tiden sparas på vald dag. Välj en annan dag i kalendern först om blocket ska hamna där.</div>
+      {/if}
+      <div class="feedback">{timeFeedbackText}</div>
     </div>
   {/if}
-
-  {#if showTimeHelp}
-    <div class="feedback">Tiden sparas på vald dag. Välj en annan dag i kalendern först om blocket ska hamna där.</div>
-  {/if}
-  <div class="feedback">{timeFeedbackText}</div>
 
   <div class="plan-editor-bottom">
     <div style="display:flex; gap:6px;">
@@ -397,37 +423,45 @@
       <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
     </button>
 
-    <div class="share-section">
-      <div class="field-label">Dela vald session</div>
-      {#if sessionShareUrl}
-        <div class="share-link-box">
-          <span class="share-link-text">{sessionShareUrl}</span>
-          <div class="share-link-actions">
-            <span class="section-chip">Pass</span>
-            <button class="ai-key-btn" onclick={onCopySessionShare}>{isCopyingSession ? shareCopyText : 'Kopiera länk'}</button>
-          </div>
+    <button class="write-section-toggle" type="button" onclick={onTogglePlanShare}>
+      <span>Delning</span>
+      <span>{planShareOpen ? '▲' : '▼'}</span>
+    </button>
+    {#if planShareOpen}
+      <div class="write-section-body">
+        <div class="share-section">
+          <div class="field-label">Dela vald session</div>
+          {#if sessionShareUrl}
+            <div class="share-link-box">
+              <span class="share-link-text">{sessionShareUrl}</span>
+              <div class="share-link-actions">
+                <span class="section-chip">Pass</span>
+                <button class="ai-key-btn" onclick={onCopySessionShare}>{isCopyingSession ? shareCopyText : 'Kopiera länk'}</button>
+              </div>
+            </div>
+            <button class="quickstart" onclick={onStopSessionShare}>Sluta dela passet</button>
+          {:else}
+            <button id="plan-share-session-btn" class="quickstart" onclick={onStartSessionShare} disabled={sessionShareDisabled} style="width:100%;">Dela vald session</button>
+          {/if}
         </div>
-        <button class="quickstart" onclick={onStopSessionShare}>Sluta dela passet</button>
-      {:else}
-        <button id="plan-share-session-btn" class="quickstart" onclick={onStartSessionShare} disabled={sessionShareDisabled} style="width:100%;">Dela vald session</button>
-      {/if}
-    </div>
 
-    <div class="share-section" style="margin-top:8px;">
-      <div class="field-label">Dela hela dagen</div>
-      {#if dayShareUrl}
-        <div class="share-link-box">
-          <span class="share-link-text">{dayShareUrl}</span>
-          <div class="share-link-actions">
-            <span class="section-chip">Dag</span>
-            <button class="ai-key-btn" onclick={onCopyDayShare}>{isCopyingDay ? shareCopyText : 'Kopiera länk'}</button>
-          </div>
+        <div class="share-section" style="margin-top:8px;">
+          <div class="field-label">Dela hela dagen</div>
+          {#if dayShareUrl}
+            <div class="share-link-box">
+              <span class="share-link-text">{dayShareUrl}</span>
+              <div class="share-link-actions">
+                <span class="section-chip">Dag</span>
+                <button class="ai-key-btn" onclick={onCopyDayShare}>{isCopyingDay ? shareCopyText : 'Kopiera länk'}</button>
+              </div>
+            </div>
+            <button class="quickstart" onclick={onStopDayShare}>Sluta dela dagen</button>
+          {:else}
+            <button id="plan-share-day-btn" class="quickstart" onclick={onStartDayShare} style="width:100%;">Dela hela dagen</button>
+          {/if}
         </div>
-        <button class="quickstart" onclick={onStopDayShare}>Sluta dela dagen</button>
-      {:else}
-        <button id="plan-share-day-btn" class="quickstart" onclick={onStartDayShare} style="width:100%;">Dela hela dagen</button>
-      {/if}
-    </div>
+      </div>
+    {/if}
   </div>
 </div>
 
