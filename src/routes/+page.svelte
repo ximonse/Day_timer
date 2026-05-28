@@ -3449,7 +3449,8 @@
           <code>Genomgång 10m</code> — Låser tiden till 10 min.<br/>
           <code>Eget arbete</code> — Tar upp resterande tid.<br/>
           <code>- instruktion</code> — Skapar en underpunkt (instruktionstext) som syns i sidopanelen.<br/>
-          <code>&amp; kommentar</code> — Skapar en stor inforuta i slutet av passet.
+          <code>&amp; kommentar</code> — Lägger kommentaren under senaste aktiviteten.<br/>
+          <code>&amp;&amp; kommentar</code> — Skapar en stor inforuta längst ner i passet.
         </div>
 
         <h3>⌨️ Genvägar</h3>

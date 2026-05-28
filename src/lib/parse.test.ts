@@ -36,8 +36,14 @@ describe('parseParts — grundformat', () => {
     expect(dayTitle).toBe('Måndag');
   });
 
-  it('parsar &-rad som extraInfo', () => {
-    const { extraInfo } = parseParts('Lektion 30m\n& Kom ihåg möte', []);
+  it('parsar &-rad som kommentar på senaste aktivitet', () => {
+    const { blocks, extraInfo } = parseParts('Lektion 30m\n& Kom ihåg möte', []);
+    expect(blocks[0].note).toBe('Kom ihåg möte');
+    expect(extraInfo).toBe('');
+  });
+
+  it('parsar &&-rad som extraInfo', () => {
+    const { extraInfo } = parseParts('Lektion 30m\n&& Kom ihåg möte', []);
     expect(extraInfo).toBe('Kom ihåg möte');
   });
 
@@ -114,6 +120,11 @@ describe('serializeBlocks', () => {
   it('noteringar serialiseras som -rader', () => {
     const result = serializeBlocks([{ id: '1', title: 'Mat', minutes: 20, note: 'ta tallrik', warning: false, pinned: true }]);
     expect(result).toBe('Mat 20m\n- ta tallrik');
+  });
+
+  it('extraInfo serialiseras som &&-rader', () => {
+    const result = serializeBlocks([{ id: '1', title: 'Mat', minutes: 20, note: '', warning: false, pinned: true }], undefined, 'övergripande');
+    expect(result).toBe('Mat 20m\n&& övergripande');
   });
 
   it('roundtrip: serialisera → parsa ger samma titlar och tider', () => {
@@ -242,8 +253,15 @@ describe('parseAgenda — sessioner', () => {
     expect(flow.notes[0]).toBe('ta med kaffe');
   });
 
-  it('parsar &-rader som extraInfo', () => {
+  it('parsar &-rader som kommentar på senaste aktivitet', () => {
     const days = parseAgenda('#Session\nLektion 45m\n& Kom ihåg läxor');
+    const flow = days[0].flows[0];
+    expect(flow.notes[0]).toBe('Kom ihåg läxor');
+    expect(flow.extraInfo).toBe('');
+  });
+
+  it('parsar &&-rader som extraInfo', () => {
+    const days = parseAgenda('#Session\nLektion 45m\n&& Kom ihåg läxor');
     const flow = days[0].flows[0];
     expect(flow.extraInfo).toBe('Kom ihåg läxor');
   });
@@ -335,5 +353,13 @@ describe('serializeAgenda — roundtrip', () => {
     const text = serializeAgenda(days);
     const days2 = parseAgenda(text);
     expect(days2[0].flows[0].minutes).toEqual([45, 10]);
+  });
+
+  it('extraInfo bevaras som && via roundtrip', () => {
+    const days = parseAgenda('#Session\nLektion 45m\n&& Nederst');
+    const text = serializeAgenda(days);
+    expect(text).toContain('&& Nederst');
+    const days2 = parseAgenda(text);
+    expect(days2[0].flows[0].extraInfo).toBe('Nederst');
   });
 });

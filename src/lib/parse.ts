@@ -20,8 +20,19 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
       dayTitle = t.slice(1).trim();
       continue;
     }
+    if (t.startsWith('&&')) {
+      infoLines.push(t.slice(2).trim());
+      continue;
+    }
     if (t.startsWith('&')) {
-      infoLines.push(t.slice(1).trim());
+      const comment = t.slice(1).trim();
+      if (parts.length > 0) {
+        notes[parts.length - 1] = notes[parts.length - 1]
+          ? notes[parts.length - 1] + '\n' + comment
+          : comment;
+      } else {
+        infoLines.push(comment);
+      }
       continue;
     }
     if (t.startsWith('-') && parts.length > 0) {
@@ -289,7 +300,22 @@ export function parseAgenda(text: string): AgendaDay[] {
 
     if (!cur) cur = { title: 'Session', startMin: undefined, items: [], extraInfo: '', id: undefined };
 
-    if (t.startsWith('& ') || t === '&') { cur.extraInfo = t.slice(1).trim(); continue; }
+    if (t.startsWith('&&')) {
+      const info = t.slice(2).trim();
+      cur.extraInfo = cur.extraInfo ? cur.extraInfo + '\n' + info : info;
+      continue;
+    }
+
+    if (t.startsWith('&')) {
+      const comment = t.slice(1).trim();
+      if (cur.items.length > 0) {
+        const last = cur.items[cur.items.length - 1];
+        last.note = last.note ? last.note + '\n' + comment : comment;
+      } else {
+        cur.extraInfo = cur.extraInfo ? cur.extraInfo + '\n' + comment : comment;
+      }
+      continue;
+    }
 
     if (t.startsWith('-') && cur.items.length > 0) {
       const note = t.replace(/^-\s*/, '');
@@ -327,7 +353,7 @@ export function serializeBlocks(blocks: Block[], dayTitle?: string, extraInfo?: 
   }
   if (extraInfo) {
     for (const line of extraInfo.split('\n')) {
-      if (line.trim()) out.push('& ' + line);
+      if (line.trim()) out.push('&& ' + line);
     }
   }
   return out.join('\n');
@@ -366,7 +392,11 @@ export function serializeAgenda(days: AgendaDay[]): string {
           }
         }
       }
-      if (flow.extraInfo) lines.push(`& ${flow.extraInfo}`);
+      if (flow.extraInfo) {
+        for (const info of flow.extraInfo.split('\n')) {
+          if (info.trim()) lines.push(`&& ${info}`);
+        }
+      }
     }
   }
   return lines.join('\n');

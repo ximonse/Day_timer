@@ -144,7 +144,7 @@
       <textarea
         class="agenda-input"
         bind:this={agendaTextarea}
-        placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00-08:45&#10;Vakna 5m&#10;Frukost 20m&#10;Promenad&#10;- ta med vatten&#10;&amp; Möte kl 9"
+        placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00-08:45&#10;Vakna 5m&#10;Frukost 20m&#10;&amp; ät på trappen&#10;Promenad&#10;- ta med vatten&#10;&amp;&amp; Möte kl 9"
         oninput={(e) => onDraftChange((e.target as HTMLTextAreaElement).value)}
         onpaste={(e) => onDraftPaste(e)}
       ></textarea>
