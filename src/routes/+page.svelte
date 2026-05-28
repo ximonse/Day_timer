@@ -2820,16 +2820,19 @@
   }
 
   function loadAgendaFlow(flow: Flow, computedStart: number, targetSection: AppSection = 'plan', markExplicitSelection = true) {
-    applySessionStateFromFlow(flow, { startMin: flow.startMin ?? computedStart, pinned: minutes => minutes > 0, clockSpan: 60 });
+    if (s.activeSection !== targetSection) {
+      setActiveSection(targetSection);
+    }
+
+    const session = applySessionStateFromFlow(flow, { startMin: flow.startMin ?? computedStart, pinned: minutes => minutes > 0, clockSpan: 60 });
     activeAgendaFlowRef = selectedDay
-      ? makeAgendaFlowRef(selectedDay.date ?? null, flow, s.startMin)
+      ? makeAgendaFlowRef(selectedDay.date ?? null, flow, session.startMin)
       : null;
     planSelectionExplicit = markExplicitSelection && targetSection === 'plan';
     sessionSource = activeAgendaFlowRef
-      ? { kind: 'agenda', date: selectedDay?.date ?? null, title: flow.title, startMin: s.startMin }
+      ? { kind: 'agenda', date: selectedDay?.date ?? null, title: flow.title, startMin: session.startMin }
       : { kind: 'unscheduled' };
     planLastSavedAt = Date.now();
-    setActiveSection(targetSection);
     capturePanelBaseline('plan');
     capturePanelBaseline('now');
     syncPartsDraftFromState(true);
