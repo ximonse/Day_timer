@@ -1,6 +1,6 @@
 import { type Flow } from './state.svelte.js';
 import { readSessionValue, writeSessionValue, removeSessionValue } from './storage.js';
-import type { AiPlanIntent, AiPlanningMode, AiPlanResponse } from './ai-plan-engine.js';
+import type { AiAgendaPromptMode, AiPlanIntent, AiPlanningMode, AiPlanResponse } from './ai-plan-engine.js';
 
 export type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 export type AiPlanMode = 'strict' | 'helpful';
@@ -162,6 +162,55 @@ Data / Anteckningar:
 ---
 `;
 
+export const getAiPromptStrictFormat = (todayISO: string) => `Du är en strikt formatterare för Day Timer-formatet.
+
+Dagens datum är ${todayISO}.
+
+Din uppgift är bara att skriva om användarens text så att den går att klistra in i appen.
+Du ska inte hitta på aktiviteter, pauser, råd, energi-tolkningar eller extra steg.
+
+Returnera BARA dagplan i detta format:
+- datumrad med @YYMMDD
+- sessionsrubriker som #Rubrik HH:MM om starttid finns
+- aktiviteter på egna rader, gärna med tid om användaren angivit tid
+- underpunkter börjar med -
+- kommentarer börjar med &
+- ingen inledning och ingen avslutning
+
+Om information saknas, behåll den enkel. Gissa inte mer än vad som krävs för läsbart format.
+
+---
+
+[Klistra in texten här]`;
+
+export const getAiPromptHelpfulQuestions = (todayISO: string) => `Du är en hjälpsam planeringsassistent för Day Timer.
+
+Dagens datum är ${todayISO}.
+
+Först ska du avgöra om underlaget räcker för en användbar dagplan.
+Om något viktigt saknas och svaret skulle påverka planen tydligt, ställ 1-3 korta klargörande frågor först.
+Om underlaget räcker, skapa direkt en realistisk och snäll dagplan.
+
+När du skapar plan: returnera BARA Day Timer-format:
+- datumrad med @YYMMDD
+- sessionsrubriker som #Rubrik HH:MM
+- aktiviteter på egna rader med tid
+- underpunkter börjar med -
+- dagskommentarer börjar med &
+
+När du ställer frågor: returnera BARA frågorna, en per rad, och börja varje rad med "? ".
+
+---
+
+[Beskriv dagen här]`;
+
+export function getAiAgendaPrompt(mode: AiAgendaPromptMode, todayISO: string): string {
+  if (mode === 'calendar') return AI_PROMPT_CALENDAR_CONVERT;
+  if (mode === 'strict-format') return getAiPromptStrictFormat(todayISO);
+  if (mode === 'helpful-questions') return getAiPromptHelpfulQuestions(todayISO);
+  return getAiPromptAgenda(todayISO);
+}
+
 export function buildAiPayload(config: AiConfig, extra: Record<string, unknown>) {
   return {
     provider: config.provider,
@@ -178,12 +227,13 @@ export async function requestAiPlan(
   mode: 'parts' | 'agenda',
   context: Record<string, unknown>,
   planningMode: AiPlanningMode = mode === 'parts' ? 'fixed-session' : 'anchored-day',
-  intent: AiPlanIntent = 'create'
+  intent: AiPlanIntent = 'create',
+  agendaPromptMode?: AiAgendaPromptMode
 ): Promise<AiPlanResponse> {
   const res = await fetch('/api/plan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildAiPayload(config, { message, mode, context, planningMode, intent }))
+    body: JSON.stringify(buildAiPayload(config, { message, mode, context, planningMode, intent, agendaPromptMode }))
   });
   
   const data = await res.json();

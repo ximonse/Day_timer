@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
-import { buildAiPlanSystemPrompt, normalizeAiPlanResponse, reviewAiPlanResponse, type AiPlanIntent, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+import { buildAiPlanSystemPrompt, normalizeAiPlanResponse, reviewAiPlanResponse, type AiAgendaPromptMode, type AiPlanIntent, type AiPlanningMode } from '$lib/ai-plan-engine.js';
 
 type Provider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 type PlanMode = 'strict' | 'helpful';
@@ -81,7 +81,7 @@ function intentFromInput(value: string | undefined): AiPlanIntent {
 }
 
 export const POST: RequestHandler = async ({ request }) => {
-  const { provider = 'anthropic', apiKey, message, mode, planMode = 'helpful', context, baseUrl, customModel, planningMode: bodyPlanningMode, intent: bodyIntent } = await request.json() as {
+  const { provider = 'anthropic', apiKey, message, mode, planMode = 'helpful', context, baseUrl, customModel, planningMode: bodyPlanningMode, intent: bodyIntent, agendaPromptMode } = await request.json() as {
     provider?: Provider;
     apiKey?: string;
     message: string;
@@ -92,6 +92,7 @@ export const POST: RequestHandler = async ({ request }) => {
     customModel?: string;
     planningMode?: AiPlanningMode;
     intent?: string;
+    agendaPromptMode?: AiAgendaPromptMode;
   };
 
   if (!apiKey?.trim()) return json({ error: 'Ingen API-nyckel angiven' }, { status: 400 });
@@ -104,6 +105,7 @@ export const POST: RequestHandler = async ({ request }) => {
     planningMode,
     intent,
     planMode,
+    agendaPromptMode,
     userInput: message,
     currentPlan: context?.currentPlan,
     timeFrame: {

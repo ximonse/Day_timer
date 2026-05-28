@@ -1,6 +1,7 @@
 export type AiPlanningMode = 'fixed-session' | 'anchored-day' | 'free-day';
 export type AiPlanIntent = 'create';
 export type AiBehaviorMode = 'strict' | 'helpful';
+export type AiAgendaPromptMode = 'notes' | 'calendar' | 'strict-format' | 'helpful-questions';
 
 export interface AiTimeFrame {
 	startMin?: number;
@@ -19,6 +20,7 @@ export interface AiPlanRequest {
 	planningMode: AiPlanningMode;
 	intent: AiPlanIntent;
 	planMode?: AiBehaviorMode;
+	agendaPromptMode?: AiAgendaPromptMode;
 	userInput: string;
 	currentPlan?: string;
 	timeFrame?: AiTimeFrame;
@@ -55,6 +57,20 @@ export const AI_PLANNING_MODE_LABELS: Record<AiPlanningMode, string> = {
 
 export const AI_SESSION_PLANNING_MODES: AiPlanningMode[] = ['fixed-session', 'free-day'];
 export const AI_AGENDA_PLANNING_MODES: AiPlanningMode[] = ['anchored-day', 'free-day'];
+
+export const AI_AGENDA_PROMPT_MODE_LABELS: Record<AiAgendaPromptMode, string> = {
+	notes: 'Från anteckningar',
+	calendar: 'Från kalender',
+	'strict-format': 'Strikt formattering',
+	'helpful-questions': 'Hjälpsam dialog'
+};
+
+export const AI_AGENDA_PROMPT_MODE_HELP: Record<AiAgendaPromptMode, string> = {
+	notes: 'Gör lösa anteckningar till en tydlig dagplan.',
+	calendar: 'Konverterar kalendertext till Day Timer-format.',
+	'strict-format': 'Rättar formatet utan att hitta på innehåll.',
+	'helpful-questions': 'Ställer frågor först om underlaget är för oklart.'
+};
 
 export const AI_PLAN_INTENT_LABELS: Record<AiPlanIntent, string> = {
 	create: 'Skapa plan'
@@ -150,6 +166,34 @@ function behaviorInstruction(planMode: AiBehaviorMode): string {
 	return 'Hjälpsamt läge: gör planen mer genomförbar med rimliga tider, buffert, övergångar och korta råd när det tydligt hjälper.';
 }
 
+function agendaPromptModeInstruction(mode: AiAgendaPromptMode | undefined): string {
+	if (mode === 'calendar') {
+		return `Promptlage: Fran kalender.
+Konvertera kalenderhandelser eller inklistrad kalendertext till Day Timer-format.
+Bevara fasta tider och rubriker sa langt det gar.
+Lagg inte till nya aktiviteter som inte framgar av kalendertexten.
+Om en handelse saknar detaljer, gor den till en enkel session med rimlig titel.`;
+	}
+	if (mode === 'strict-format') {
+		return `Promptlage: Strikt formattering.
+Skriv om anvandarens text till giltigt Day Timer-format utan att fantisera.
+Lagg inte till nya aktiviteter, pauser, rad eller antaganden.
+Andra bara struktur, radbrytningar, datumrad, sessionsrubriker och tidssyntax nar det kravs for att appen ska kunna lasa texten.
+Om tider saknas, behall sa mycket som mojligt utan att hitta pa detaljer.`;
+	}
+	if (mode === 'helpful-questions') {
+		return `Promptlage: Hjalpsam dialog.
+Om underlaget ar for oklart for att skapa en anvandbar dagplan, returnera INTE dagplan.
+Returnera da i "text" bara 1-3 korta fragor, en per rad, och varje fraga ska borja med "? ".
+Stall bara fragor nar svaret faktiskt skulle andra planen tydligt.
+Om underlaget racker, skapa en hjalpsam dagplan med rimliga block, buffert och overgangen.`;
+	}
+	return `Promptlage: Fran anteckningar.
+Gor losa anteckningar till en realistisk, tydlig och snall dagplan.
+Strukturera dagen, lagg in pauser och foresla bra overgangen nar det hjalper.
+Om nagot ar oklart men inte avgorande, gor ett forsiktigt antagande och markera det kort.`;
+}
+
 function intentInstruction(): string {
 	return 'Intent: Skapa en ny plan från användarens text.';
 }
@@ -207,7 +251,7 @@ Uppföljning 15m
 & Det här upplägget ser hållbart ut, men lägg gärna in en kort paus efter första arbetspasset om dagen blir lång.`;
 }
 
-export function buildAiPlanSystemPrompt(request: Pick<AiPlanRequest, 'planningMode' | 'intent' | 'planMode' | 'userInput' | 'timeFrame' | 'currentPlan' | 'workspaceContext'>): string {
+export function buildAiPlanSystemPrompt(request: Pick<AiPlanRequest, 'planningMode' | 'intent' | 'planMode' | 'agendaPromptMode' | 'userInput' | 'timeFrame' | 'currentPlan' | 'workspaceContext'>): string {
 	const label = AI_PLANNING_MODE_LABELS[request.planningMode];
 	const frame = timeFrameText(request.timeFrame);
 	const currentPlan = request.currentPlan?.trim() ? request.currentPlan.trim() : 'Ingen befintlig plan.';
@@ -229,6 +273,8 @@ ${modeInstruction(request.planningMode, request.workspaceContext)}
 ${agendaPlanningInstruction(request.planningMode, request.workspaceContext)}
 
 ${behaviorInstruction(planMode)}
+
+${request.workspaceContext?.mode === 'agenda' ? agendaPromptModeInstruction(request.agendaPromptMode) : ''}
 
 ${output}
 

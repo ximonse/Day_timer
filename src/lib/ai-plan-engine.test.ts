@@ -61,6 +61,38 @@ describe('ai-plan-engine', () => {
 		expect(AI_PLANNING_MODE_LABELS['free-day']).toBe('Fri dag');
 	});
 
+	test('agenda strict format prompt forbids invented content', () => {
+		const prompt = buildAiPlanSystemPrompt({
+			planningMode: 'anchored-day',
+			intent: 'create',
+			planMode: 'strict',
+			agendaPromptMode: 'strict-format',
+			userInput: 'rörig text',
+			workspaceContext: { mode: 'agenda' },
+			timeFrame: { date: '2026-05-28' }
+		});
+
+		expect(prompt).toContain('Promptlage: Strikt formattering');
+		expect(prompt).toContain('utan att fantisera');
+		expect(prompt).toContain('Lagg inte till nya aktiviteter');
+	});
+
+	test('agenda helpful dialog prompt can ask questions instead of returning a plan', () => {
+		const prompt = buildAiPlanSystemPrompt({
+			planningMode: 'free-day',
+			intent: 'create',
+			planMode: 'helpful',
+			agendaPromptMode: 'helpful-questions',
+			userInput: 'hjälp mig',
+			workspaceContext: { mode: 'agenda' },
+			timeFrame: { date: '2026-05-28' }
+		});
+
+		expect(prompt).toContain('Promptlage: Hjalpsam dialog');
+		expect(prompt).toContain('returnera INTE dagplan');
+		expect(prompt).toContain('varje fraga ska borja med "? "');
+	});
+
 	test('limits planning modes by ui context', () => {
 		expect(isValidPlanningModeForContext('plan', 'fixed-session')).toBe(true);
 		expect(isValidPlanningModeForContext('plan', 'anchored-day')).toBe(false);

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { AI_AGENDA_PLANNING_MODES, AI_PLANNING_MODE_LABELS, aiPlanMetadataItems, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { AI_AGENDA_PROMPT_MODE_HELP, AI_AGENDA_PROMPT_MODE_LABELS, aiPlanMetadataItems, type AiAgendaPromptMode, type AiPlanResponse } from '$lib/ai-plan-engine.js';
 
-  const planningModeOptions = AI_AGENDA_PLANNING_MODES.map((mode) => [mode, AI_PLANNING_MODE_LABELS[mode]] as [AiPlanningMode, string]);
+  const promptModeOptions = Object.entries(AI_AGENDA_PROMPT_MODE_LABELS) as [AiAgendaPromptMode, string][];
 
   let {
     agendaInputOpen,
@@ -20,10 +20,10 @@
     hasAiKey,
     agendaAiOpen,
     agendaAiInput,
-    aiPlanningMode,
+    agendaAiPromptMode,
     aiLastResponse,
-    aiPlanMode,
     agendaAiError,
+    agendaAiQuestionText,
     agendaAiLoading,
     showHelpHints,
     showImportHelp,
@@ -40,9 +40,7 @@
     onCopyPrompt,
     onToggleAi,
     onAgendaAiInputChange,
-    onSetAiPlanningMode,
-    onSetStrictMode,
-    onSetHelpfulMode,
+    onSetAgendaAiPromptMode,
     onRunAi,
     onToggleImportHelp,
     onToggleIcsHelp
@@ -63,10 +61,10 @@
     hasAiKey: boolean;
     agendaAiOpen: boolean;
     agendaAiInput: string;
-    aiPlanningMode: AiPlanningMode;
+    agendaAiPromptMode: AiAgendaPromptMode;
     aiLastResponse: AiPlanResponse | null;
-    aiPlanMode: 'strict' | 'helpful';
     agendaAiError: string;
+    agendaAiQuestionText: string;
     agendaAiLoading: boolean;
     showHelpHints: boolean;
     showImportHelp: boolean;
@@ -80,12 +78,10 @@
     onIcsFileChange: (event: Event) => void;
     onPreviewIcs: () => void;
     onImportIcs: () => void;
-    onCopyPrompt: (type: 'plan' | 'calendar') => Promise<void>;
+    onCopyPrompt: (type: AiAgendaPromptMode) => Promise<void>;
     onToggleAi: () => void;
     onAgendaAiInputChange: (value: string) => void;
-    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
-    onSetStrictMode: () => void;
-    onSetHelpfulMode: () => void;
+    onSetAgendaAiPromptMode: (mode: AiAgendaPromptMode) => void;
     onRunAi: () => void;
     onToggleImportHelp: () => void;
     onToggleIcsHelp: () => void;
@@ -95,12 +91,20 @@
   let promptMenuOpen = $state(false);
   let agendaTextarea: HTMLTextAreaElement | null = $state(null);
   
-  let copyPlanStatus = $state('Från anteckningar');
-  let copyCalendarStatus = $state('Från kalender');
+  let copyStatuses = $state<Record<AiAgendaPromptMode, string>>({
+    notes: AI_AGENDA_PROMPT_MODE_LABELS.notes,
+    calendar: AI_AGENDA_PROMPT_MODE_LABELS.calendar,
+    'strict-format': AI_AGENDA_PROMPT_MODE_LABELS['strict-format'],
+    'helpful-questions': AI_AGENDA_PROMPT_MODE_LABELS['helpful-questions']
+  });
   const agendaAiPlaceholder = $derived(
-    aiPlanningMode === 'free-day'
-      ? 'Beskriv dagen fritt, t.ex. låg energi, tvätta, röja köket, handla, ringa mamma och enkel middag...'
-      : 'Beskriv dagens ankare, t.ex. jobbar hemifrån, möte kl 10 och 14, träning på lunch...'
+    agendaAiPromptMode === 'calendar'
+      ? 'Klistra in kalendertext eller beskriv kalenderhändelser som ska konverteras...'
+      : agendaAiPromptMode === 'strict-format'
+      ? 'Klistra in texten som ska formatteras, utan att AI:n lägger till något...'
+      : agendaAiPromptMode === 'helpful-questions'
+      ? 'Beskriv dagen. AI:n ställer frågor först om något viktigt saknas...'
+      : 'Beskriv dagen fritt, t.ex. låg energi, tvätta, röja köket, handla, ringa mamma och enkel middag...'
   );
 
   $effect(() => {
@@ -109,15 +113,12 @@
     if (agendaTextarea.value !== agendaDraft) agendaTextarea.value = agendaDraft;
   });
 
-  async function handleCopy(type: 'plan' | 'calendar') {
+  async function handleCopy(type: AiAgendaPromptMode) {
     await onCopyPrompt(type);
-    if (type === 'plan') {
-      copyPlanStatus = '✓ Kopierad';
-      setTimeout(() => copyPlanStatus = 'Från anteckningar', 1500);
-    } else {
-      copyCalendarStatus = '✓ Kopierad';
-      setTimeout(() => copyCalendarStatus = 'Från kalender', 1500);
-    }
+    copyStatuses = { ...copyStatuses, [type]: '✓ Kopierad' };
+    setTimeout(() => {
+      copyStatuses = { ...copyStatuses, [type]: AI_AGENDA_PROMPT_MODE_LABELS[type] };
+    }, 1500);
   }
 </script>
 
@@ -180,16 +181,16 @@
             oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
         </div>
         <div class="ai-mode-row">
-          {#each planningModeOptions as [mode, label]}
-            <button class="ai-mode-btn" class:on={aiPlanningMode === mode} onclick={() => onSetAiPlanningMode(mode)}>{label}</button>
+          {#each promptModeOptions as [mode, label]}
+            <button class="ai-mode-btn" class:on={agendaAiPromptMode === mode} onclick={() => onSetAgendaAiPromptMode(mode)} title={AI_AGENDA_PROMPT_MODE_HELP[mode]}>{label}</button>
           {/each}
         </div>
-        <div class="ai-tone-row">
-          <span class="ai-tone-label">Ton</span>
-          <button class="ai-tone-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode} title="Bara det du skriver, inga tillägg">Strikt</button>
-          <button class="ai-tone-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode} title="Lägger till marginaler, ställtid och pauser">Hjälpsam</button>
-        </div>
         {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
+        {#if agendaAiQuestionText}
+          <div class="feedback" style="margin-bottom:8px; white-space:pre-line;">
+            {agendaAiQuestionText}
+          </div>
+        {/if}
         {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
           <div class="ai-meta-list">
             {#each aiPlanMetadataItems(aiLastResponse) as item}
@@ -217,16 +218,17 @@
     {/if}
     {#if promptMenuOpen}
       <div class="agenda-save-row" style="margin-top:8px;">
-        <button class="agenda-save-btn" onclick={() => handleCopy('plan')} title="Kopiera prompt för ny planering från anteckningar">
-          {copyPlanStatus}
-        </button>
-        <button class="agenda-save-btn" onclick={() => handleCopy('calendar')} title="Kopiera prompt för att hämta kalenderdata">
-          {copyCalendarStatus}
-        </button>
+        {#each promptModeOptions as [mode, label]}
+          <button class="agenda-save-btn" onclick={() => handleCopy(mode)} title={AI_AGENDA_PROMPT_MODE_HELP[mode]}>
+            {copyStatuses[mode] || label}
+          </button>
+        {/each}
       </div>
       <div class="feedback" style="margin-top:6px; border-left: 2px solid var(--accent); padding-left: 8px;">
-        <strong>Från anteckningar</strong>: Kopiera denna prompt till Gemini och skriv ner dina lösa planer. Klistra sedan in resultatet i "Redigera dagtext" ovan.<br/>
-        <strong>Från kalender</strong>: Kopiera denna prompt till Gemini. AI:n hämtar dina kalenderhändelser och skriver ut dem i appens format. Klistra sedan in resultatet i "Redigera dagtext" ovan.
+        <strong>Från anteckningar</strong>: gör lösa planer till dagtext.<br/>
+        <strong>Från kalender</strong>: konverterar kalenderdata.<br/>
+        <strong>Strikt formattering</strong>: rättar format utan att hitta på.<br/>
+        <strong>Hjälpsam dialog</strong>: ställer frågor först om det behövs.
       </div>
     {/if}
   </div>

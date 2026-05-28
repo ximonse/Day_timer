@@ -3,8 +3,8 @@
   import { fmtAgendaDate, shiftMonth, monthKey, parseIsoDate, monthLabel, localDateISO } from '$lib/date.js';
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
-  import { getAiPromptAgenda, AI_PROMPT_CALENDAR_CONVERT } from '$lib/ai.js';
-  import type { AiPlanResponse, AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { getAiAgendaPrompt } from '$lib/ai.js';
+  import type { AiAgendaPromptMode, AiPlanResponse } from '$lib/ai-plan-engine.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { colorForSegment, stripColorDirective } from '$lib/title-color.js';
   import AgendaImportPanel from './AgendaImportPanel.svelte';
@@ -21,6 +21,7 @@
     icsImportError,
     icsCanImport,
     agendaAiError,
+    agendaAiQuestionText,
     agendaAiLoading,
     selectedDay,
     agendaDays,
@@ -32,8 +33,7 @@
     agendaDragMoved,
     calendarCells,
     aiApiKey,
-    aiConfig,
-    aiPlanningMode,
+    agendaAiPromptMode,
     aiLastResponse,
     icsPreviewEvents,
     activeAgendaDate,
@@ -54,8 +54,7 @@
     startAgendaDrag,
     schoolPrimary,
     agendaDimPast,
-    saveAiConfig,
-    onSetAiPlanningMode,
+    onSetAgendaAiPromptMode,
     onSetActiveSection,
     agendaEl = $bindable(),
     timelineEl = $bindable(),
@@ -83,6 +82,7 @@
     icsImportError: string;
     icsCanImport: boolean;
     agendaAiError: string;
+    agendaAiQuestionText: string;
     agendaAiLoading: boolean;
     selectedDay: AgendaDay | null;
     agendaDays: AgendaDay[] | null;
@@ -94,8 +94,7 @@
     agendaDragMoved: boolean;
     calendarCells: any[];
     aiApiKey: string;
-    aiConfig: any;
-    aiPlanningMode: AiPlanningMode;
+    agendaAiPromptMode: AiAgendaPromptMode;
     aiLastResponse: AiPlanResponse | null;
     icsPreviewEvents: any[];
     activeAgendaDate: () => string | null;
@@ -116,8 +115,7 @@
     startAgendaDrag: (e: PointerEvent, i: number, edge: 'top' | 'bottom') => void;
     schoolPrimary: () => boolean;
     agendaDimPast: boolean;
-    saveAiConfig: () => void;
-    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
+    onSetAgendaAiPromptMode: (mode: AiAgendaPromptMode) => void;
     onSetActiveSection: (s: any) => void;
     agendaEl: HTMLElement;
     timelineEl: HTMLElement;
@@ -233,10 +231,10 @@
         hasAiKey={!!aiApiKey}
         {agendaAiOpen}
         {agendaAiInput}
-        {aiPlanningMode}
+        {agendaAiPromptMode}
         {aiLastResponse}
-        aiPlanMode={aiConfig.planMode}
         {agendaAiError}
+        {agendaAiQuestionText}
         {agendaAiLoading}
         showHelpHints={s.showHelpHints}
         showImportHelp={helpVisible(agendaImportHelpOpen)}
@@ -251,14 +249,12 @@
         onPreviewIcs={previewIcsImport}
         onImportIcs={importPreviewedIcs}
         onCopyPrompt={async (type) => {
-          const prompt = type === 'plan' ? getAiPromptAgenda(localDateISO()) : AI_PROMPT_CALENDAR_CONVERT;
+          const prompt = getAiAgendaPrompt(type, localDateISO());
           await navigator.clipboard.writeText(prompt);
         }}
         onToggleAi={() => agendaAiOpen = !agendaAiOpen}
         onAgendaAiInputChange={(value) => agendaAiInput = value}
-        {onSetAiPlanningMode}
-        onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
-        onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
+        {onSetAgendaAiPromptMode}
         onRunAi={runAiAgenda}
         onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
         onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}

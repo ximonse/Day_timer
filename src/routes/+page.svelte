@@ -34,7 +34,7 @@
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { AI_PROMPT_PARTS, getAiPromptAgenda, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
-  import { isValidPlanningModeForContext, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { isValidPlanningModeForContext, type AiAgendaPromptMode, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -194,9 +194,10 @@
   let agendaAiInput = $state('');
   let agendaAiLoading = $state(false);
   let agendaAiError = $state('');
+  let agendaAiQuestionText = $state('');
   let agendaAiOpen = $state(false);
   let sessionAiPlanningMode: AiPlanningMode = $state('fixed-session');
-  let agendaAiPlanningMode: AiPlanningMode = $state('anchored-day');
+  let agendaAiPromptMode: AiAgendaPromptMode = $state('notes');
   let sessionAiLastResponse: AiPlanResponse | null = $state(null);
   let agendaAiLastResponse: AiPlanResponse | null = $state(null);
 
@@ -699,6 +700,20 @@
     if (agendaDraftDirty) return true;
     const day = selectedDay;
     return !day || day.flows.length === 0;
+  }
+
+  function agendaPlanningModeForPromptMode(mode: AiAgendaPromptMode): AiPlanningMode {
+    if (mode === 'notes' || mode === 'helpful-questions') return 'free-day';
+    return 'anchored-day';
+  }
+
+  function agendaPlanModeForPromptMode(mode: AiAgendaPromptMode): AiPlanMode {
+    return mode === 'strict-format' || mode === 'calendar' ? 'strict' : 'helpful';
+  }
+
+  function isAiQuestionResponse(text: string) {
+    const lines = text.trim().split('\n').map(line => line.trim()).filter(Boolean);
+    return lines.length > 0 && lines.every(line => line.startsWith('?'));
   }
 
   function currentEditorDraft(): EditorDraft {
@@ -1928,18 +1943,24 @@
 
   async function runAiAgenda() {
     if (!agendaAiInput.trim()) return;
-    agendaAiLoading = true; agendaAiError = '';
+    agendaAiLoading = true; agendaAiError = ''; agendaAiQuestionText = '';
     try {
       const todayISO = localDateISO();
-      const planningMode = isValidPlanningModeForContext('agenda', agendaAiPlanningMode)
-        ? agendaAiPlanningMode
+      const preferredMode = agendaPlanningModeForPromptMode(agendaAiPromptMode);
+      const planningMode = isValidPlanningModeForContext('agenda', preferredMode)
+        ? preferredMode
         : 'anchored-day';
+      const requestConfig = { ...aiConfig, planMode: agendaPlanModeForPromptMode(agendaAiPromptMode) };
       const targetDate = selectedDay?.date ?? activeAgendaDate() ?? todayISO;
-      const text = await requestAiPlan(aiConfig, agendaAiInput, 'agenda', {
+      const text = await requestAiPlan(requestConfig, agendaAiInput, 'agenda', {
         date: todayISO,
         currentPlan: activeAgendaText()
-      }, planningMode, 'create');
+      }, planningMode, 'create', agendaAiPromptMode);
       agendaAiLastResponse = text;
+      if (agendaAiPromptMode === 'helpful-questions' && isAiQuestionResponse(text.text)) {
+        agendaAiQuestionText = text.text;
+        return;
+      }
       const aiDays = parseAgenda(text.text).map(day => day.date === null ? { ...day, date: targetDate } : day);
       const mergedDays = mergeAgendaDayData(activeAgendaText(), aiDays);
       agendaDraft = serializeSelectedAgendaDay(targetDate, mergedDays);
@@ -1950,6 +1971,7 @@
       agendaAiInput = '';
     } catch (e: any) { 
       agendaAiLastResponse = null;
+      agendaAiQuestionText = '';
       agendaAiError = e.message || 'Nätverksfel'; 
     } finally { 
       agendaAiLoading = false; 
@@ -3227,6 +3249,7 @@
     {icsImportError}
     {icsCanImport}
     {agendaAiError}
+    {agendaAiQuestionText}
     {agendaAiLoading}
     {selectedDay}
     {agendaDays}
@@ -3239,8 +3262,7 @@
     {calendarCells}
     agendaDimPast={s.agendaDimPast}
     {aiApiKey}
-    {aiConfig}
-    aiPlanningMode={agendaAiPlanningMode}
+    {agendaAiPromptMode}
     aiLastResponse={agendaAiLastResponse}
     {icsPreviewEvents}
     {activeAgendaDate}
@@ -3260,8 +3282,7 @@
     {deleteAgendaItem}
     {startAgendaDrag}
     {schoolPrimary}
-    {saveAiConfig}
-    onSetAiPlanningMode={(mode) => { agendaAiPlanningMode = mode; }}
+    onSetAgendaAiPromptMode={(mode) => { agendaAiPromptMode = mode; agendaAiQuestionText = ''; agendaAiError = ''; }}
     onSetActiveSection={setActiveSection}
     bind:agendaEl
     bind:timelineEl
