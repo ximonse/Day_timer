@@ -1982,6 +1982,15 @@
     }
     commitBlockEdit();
   }
+
+  function enforceAiMinimumMinutes(text: string, minimum = 5): string {
+    return text.replace(/(^|\n)([^\n]*?\S)\s+(\d+)\s*m(?:in)?(?=\s*(?:\n|$))/gi, (_match, lineStart: string, title: string, minutesText: string) => {
+      const minutes = parseInt(minutesText, 10);
+      if (!Number.isFinite(minutes) || minutes >= minimum) return `${lineStart}${title} ${minutesText}m`;
+      return `${lineStart}${title} ${minimum}m`;
+    });
+  }
+
   async function runAiParts() {
     if (!aiInput.trim()) return;
     aiLoading = true; aiError = ''; aiQuestionText = '';
@@ -2003,7 +2012,9 @@
         aiQuestionText = text.text;
         return;
       }
-      handlePartsInput(text.text, true);
+      const normalizedText = enforceAiMinimumMinutes(text.text);
+      sessionAiLastResponse = { ...text, text: normalizedText };
+      handlePartsInput(normalizedText, true);
       aiInput = '';
     } catch (e: any) { 
       sessionAiLastResponse = null;
@@ -2034,7 +2045,9 @@
         agendaAiQuestionText = text.text;
         return;
       }
-      const aiDays = parseAgenda(text.text).map(day => day.date === null ? { ...day, date: targetDate } : day);
+      const normalizedText = enforceAiMinimumMinutes(text.text);
+      agendaAiLastResponse = { ...text, text: normalizedText };
+      const aiDays = parseAgenda(normalizedText).map(day => day.date === null ? { ...day, date: targetDate } : day);
       const mergedDays = mergeAgendaDayData(activeAgendaText(), aiDays);
       agendaDraft = serializeSelectedAgendaDay(targetDate, mergedDays);
       agendaDraftDate = targetDate;

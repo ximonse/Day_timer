@@ -111,6 +111,7 @@ Regler:
 - Lägg gärna till små saker som förberedelse, hämtning, paus eller ställtid om det gör planen mer realistisk
 - Om något känns stressigt, skriv en kort &-kommentar efter aktiviteten den gäller
 - Om något verkar saknas, fyll gärna på med 1-3 rimliga steg
+- Skriv aldrig en aktivitet kortare än 5m
 - Var hjälpsam och tydlig, men håll formatet enkelt nog att kunna läsas i timern
 
 ---
@@ -160,6 +161,7 @@ Regler:
 - Gör dagen begriplig, inte bara korrekt
 - Om användaren verkar ha glömt något viktigt, lägg till det som ett kort råd i en &-rad efter aktiviteten det gäller, eller && om det gäller hela passet
 - Håll svenska namn korta, helst max 3 ord per aktivitet
+- Skriv aldrig en aktivitet kortare än 5m
 - Behåll formatet strikt nog att appen kan läsa det
 
 ---
@@ -178,6 +180,7 @@ Returnera BARA en dagplan i detta format (inget "Här är ditt schema" eller lik
 - kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - inga förklaringar eller extra text utanför formatet
+- ingen aktivitet får vara kortare än 5m
 
 Instruktion: Hämta mina kalenderhändelser (om du har tillgång till dem, annars konvertera den text jag klistrar in nedan) och formatera dem strikt enligt reglerna ovan.
 
@@ -200,6 +203,7 @@ Returnera BARA dagplan i detta format:
 - kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - ingen inledning och ingen avslutning
+- ingen aktivitet får vara kortare än 5m
 
 Om information saknas, behåll den enkel. Gissa inte mer än vad som krävs för läsbart format.
 
@@ -222,6 +226,7 @@ När du skapar plan: returnera BARA Day Timer-format:
 - underpunkter börjar med -
 - kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
+- ingen aktivitet får vara kortare än 5m
 
 När du ställer frågor: returnera BARA frågorna, en per rad, och börja varje rad med "? ".
 
@@ -251,6 +256,7 @@ Returnera BARA passformat:
 - inga datumrader
 - inga sessionsrubriker med #
 - ingen inledning eller avslutning
+- ingen aktivitet får vara kortare än 5m
 
 Lägg inte till nya aktiviteter som inte framgår av underlaget.
 
@@ -272,6 +278,7 @@ Returnera BARA passformat:
 - inga datumrader
 - inga sessionsrubriker med #
 - ingen inledning eller avslutning
+- ingen aktivitet får vara kortare än 5m
 
 ---
 
@@ -291,6 +298,7 @@ När du skapar pass: returnera BARA passformat:
 - passkommentarer längst ner börjar med &&
 - inga datumrader
 - inga sessionsrubriker med #
+- ingen aktivitet får vara kortare än 5m
 
 När du ställer frågor: returnera BARA frågorna, en per rad, och börja varje rad med "? ".
 

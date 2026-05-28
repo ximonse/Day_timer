@@ -311,6 +311,7 @@ Regler:
 - Om lage ar Fast pass ska total planerad tid halla ramen sa langt det gar.
 - Om lage ar Dag med ankare ska fasta tider respekteras.
 - Om lage ar Fri dag ska planen vara mild och startbar, inte overplanerad.
+- Ingen aktivitet far vara kortare an 5m.
 - Om lage ar Fri dag ska du inte skriva att planen passar perfekt, fyller exakt tid eller optimerar totalramen.`;
 }
 
