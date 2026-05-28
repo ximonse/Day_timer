@@ -72,8 +72,14 @@ describe('parseParts — opinnade block', () => {
   it('opinnade block delar på återstående tid från befintliga block', () => {
     const existing = [{ id: 'x', title: 'X', minutes: 60, note: '', warning: false, pinned: false }];
     const { blocks } = parseParts('A\nB', existing);
-    // 60 min totalt, 2 opinnada → ca 30 var
-    expect(blocks[0].minutes + blocks[1].minutes).toBeGreaterThanOrEqual(30);
+    expect(blocks.map(b => b.minutes)).toEqual([30, 30]);
+  });
+
+  it('fördelar om opinnade block när fler aktiviteter skrivs in', () => {
+    const existing = [{ id: 'x', title: 'A', minutes: 60, note: '', warning: false, pinned: false }];
+    const { blocks } = parseParts('A\nB\nC', existing);
+
+    expect(blocks.map(b => b.minutes)).toEqual([20, 20, 20]);
   });
 
   it('blandat pinnate och opinnate block', () => {

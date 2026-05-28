@@ -383,8 +383,12 @@
   }
   @media (hover: none) {
     :global(.agenda-drag-top), :global(.agenda-drag-bottom),
-    :global(.agenda-move-btn), :global(.agenda-del-btn) {
+    :global(.agenda-move-btn) {
       display: none;
+    }
+    :global(.agenda-del-btn) {
+      opacity: .58;
+      font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", system-ui, sans-serif;
     }
     :global(.agenda-zone-left) {
       display: block;

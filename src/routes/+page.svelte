@@ -47,7 +47,7 @@
     deleteActualEntry,
     exportActualHistoryJsonl
   } from '$lib/actuals.js';
-  import { createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
+  import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
   import {
     applySharedStatePayload,
     buildLiveShareState,
@@ -1065,18 +1065,7 @@
   }
 
   function scaleMinutesTo(newTotal: number) {
-    const old = totalMin();
-    let newMins: number[];
-    if (old <= 0) {
-      const each = Math.max(2, Math.round(newTotal / s.blocks.length));
-      newMins = s.blocks.map(() => each);
-    } else {
-      const factor = newTotal / old;
-      newMins = s.blocks.map(b => Math.max(2, b.minutes * factor));
-    }
-    newMins = newMins.map(m => Math.round(m));
-    const drift = newTotal - newMins.reduce((a,b)=>a+b, 0);
-    newMins[newMins.length-1] = Math.max(2, newMins[newMins.length-1] + drift);
+    const newMins = allocateBlockMinutes(s.blocks, newTotal);
     s.blocks.forEach((b, i) => { b.minutes = newMins[i]; });
   }
 

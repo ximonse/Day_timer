@@ -63,16 +63,22 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
   const totalExisting = existingBlocks.reduce((a, b) => a + b.minutes, 0) || 45;
   const pinnedSum = parsedMins.reduce<number>((sum, m) => sum + (m ?? 0), 0);
   const unpinnedCount = parsedMins.filter(m => m === null).length;
-  const each = unpinnedCount > 0
-    ? Math.max(2, Math.round(Math.max(unpinnedCount * 2, totalExisting - pinnedSum) / unpinnedCount))
-    : 0;
+  const unpinnedTotal = Math.max(unpinnedCount * 2, totalExisting - pinnedSum);
+  const unpinnedBase = unpinnedCount > 0 ? Math.floor(unpinnedTotal / unpinnedCount) : 0;
+  let unpinnedRemainder = unpinnedCount > 0 ? unpinnedTotal - unpinnedBase * unpinnedCount : 0;
 
   const blocks: Block[] = parts.map((title, i) => {
     const existing = existingBlocks[i];
+    let minutes = parsedMins[i];
+    if (minutes === null) {
+      const extra = unpinnedRemainder > 0 ? 1 : 0;
+      if (unpinnedRemainder > 0) unpinnedRemainder -= 1;
+      minutes = unpinnedBase + extra;
+    }
     return {
       id: existing?.id ?? uid(),
       title,
-      minutes: parsedMins[i] !== null ? parsedMins[i]! : (existing?.minutes ?? each),
+      minutes,
       note: notes[i] ?? '',
       warning: existing?.warning ?? true,
       pinned: parsedMins[i] !== null,

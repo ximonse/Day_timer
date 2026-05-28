@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { createCurrentFallbackSession, createSessionStateFromFlow, ensureRenderableBlocks, flowToBlocks, makeFlowFromSession } from './session.js';
+import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, ensureRenderableBlocks, flowToBlocks, makeFlowFromSession } from './session.js';
 import type { Block, Flow } from './state.svelte.js';
 
 function block(patch: Partial<Block> = {}): Block {
@@ -110,5 +110,28 @@ describe('session helpers', () => {
 			startMin: 485,
 			blocks: []
 		});
+	});
+
+	test('distributes a new total evenly across unpinned blocks', () => {
+		expect(allocateBlockMinutes([
+			block({ minutes: 60, pinned: false }),
+			block({ minutes: 2, pinned: false }),
+			block({ minutes: 2, pinned: false })
+		], 90)).toEqual([30, 30, 30]);
+	});
+
+	test('keeps pinned blocks and distributes remaining total across unpinned blocks', () => {
+		expect(allocateBlockMinutes([
+			block({ minutes: 15, pinned: true }),
+			block({ minutes: 20, pinned: false }),
+			block({ minutes: 25, pinned: false })
+		], 75)).toEqual([15, 30, 30]);
+	});
+
+	test('scales all blocks proportionally when every block is pinned', () => {
+		expect(allocateBlockMinutes([
+			block({ minutes: 10, pinned: true }),
+			block({ minutes: 20, pinned: true })
+		], 60)).toEqual([20, 40]);
 	});
 });

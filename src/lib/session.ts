@@ -1,5 +1,33 @@
 import type { Block, Flow } from './state.svelte.js';
 
+export function allocateBlockMinutes(blocks: Block[], newTotal: number): number[] {
+	if (blocks.length === 0) return [];
+	const minTotal = blocks.length * 2;
+	const targetTotal = Math.max(minTotal, Math.round(newTotal));
+	const pinnedBlocks = blocks.filter(block => block.pinned);
+	const unpinnedBlocks = blocks.filter(block => !block.pinned);
+
+	if (unpinnedBlocks.length > 0) {
+		const pinnedSum = pinnedBlocks.reduce((sum, block) => sum + block.minutes, 0);
+		const unpinnedTotal = Math.max(unpinnedBlocks.length * 2, targetTotal - pinnedSum);
+		const base = Math.floor(unpinnedTotal / unpinnedBlocks.length);
+		let remainder = unpinnedTotal - base * unpinnedBlocks.length;
+		return blocks.map(block => {
+			if (block.pinned) return block.minutes;
+			const extra = remainder > 0 ? 1 : 0;
+			if (remainder > 0) remainder -= 1;
+			return base + extra;
+		});
+	}
+
+	const oldTotal = blocks.reduce((sum, block) => sum + block.minutes, 0);
+	const factor = oldTotal > 0 ? targetTotal / oldTotal : targetTotal / blocks.length;
+	const minutes = blocks.map(block => Math.max(2, Math.round(block.minutes * factor)));
+	const drift = targetTotal - minutes.reduce((sum, minutes) => sum + minutes, 0);
+	minutes[minutes.length - 1] = Math.max(2, minutes[minutes.length - 1] + drift);
+	return minutes;
+}
+
 export function ensureRenderableBlocks(blocks: Block[], createId: () => string): Block[] {
 	if (blocks.some(block => Number.isFinite(block.minutes) && block.minutes > 0)) return blocks;
 	return [];
