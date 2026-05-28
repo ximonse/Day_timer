@@ -202,15 +202,17 @@ export function suggestedStartMinForDate(days: AgendaDay[] | null | undefined, d
 export function findAgendaItemForTime(days: AgendaDay[] | null | undefined, date: string, minute: number, fallbackStart: number): AgendaItem | null {
 	const day = days?.find(entry => entry.date === date) ?? null;
 	if (!day) return null;
-	return buildAgendaItemsForDay(day, fallbackStart).find(item =>
-		minute >= item.startMin && minute < item.startMin + item.totalMin
-	) ?? null;
+	return buildAgendaItemsForDay(day, fallbackStart)
+		.filter(item => minute >= item.startMin && minute < item.startMin + item.totalMin)
+		.sort((a, b) => b.startMin - a.startMin)[0] ?? null;
 }
 
 export function findNextAgendaItemAfterTime(days: AgendaDay[] | null | undefined, date: string, minute: number, fallbackStart: number): AgendaItem | null {
 	const day = days?.find(entry => entry.date === date) ?? null;
 	if (!day) return null;
-	return buildAgendaItemsForDay(day, fallbackStart).find(item => item.startMin > minute) ?? null;
+	return buildAgendaItemsForDay(day, fallbackStart)
+		.filter(item => item.startMin > minute)
+		.sort((a, b) => a.startMin - b.startMin)[0] ?? null;
 }
 
 export function makeAgendaFlowRef(date: string | null, flow: Flow, startMin: number): AgendaFlowRef {

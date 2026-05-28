@@ -133,6 +133,50 @@ describe('agenda helpers', () => {
 		expect(findNextAgendaItemAfterTime(days, '2026-05-19', 9 * 60, 7 * 60)).toBeNull();
 	});
 
+	test('finds the active item by time instead of agenda text order', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [
+				flow({ title: 'Senare', startMin: 20 * 60, minutes: [45] }),
+				flow({ title: 'Nu', startMin: 18 * 60, minutes: [45] }),
+				flow({ title: 'Tidigare', startMin: 17 * 60, minutes: [30] })
+			]
+		}];
+
+		const item = findAgendaItemForTime(days, '2026-05-18', 18 * 60 + 10, 7 * 60);
+
+		expect(item?.flow.title).toBe('Nu');
+	});
+
+	test('finds the nearest next item by start time instead of agenda text order', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [
+				flow({ title: 'Sist', startMin: 21 * 60, minutes: [45] }),
+				flow({ title: 'Snart', startMin: 19 * 60, minutes: [45] }),
+				flow({ title: 'Senare', startMin: 20 * 60, minutes: [45] })
+			]
+		}];
+
+		const item = findNextAgendaItemAfterTime(days, '2026-05-18', 18 * 60 + 30, 7 * 60);
+
+		expect(item?.flow.title).toBe('Snart');
+	});
+
+	test('prefers the latest started overlapping item as active', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [
+				flow({ title: 'Långt pass', startMin: 18 * 60, minutes: [90] }),
+				flow({ title: 'Nytt pass', startMin: 19 * 60, minutes: [30] })
+			]
+		}];
+
+		const item = findAgendaItemForTime(days, '2026-05-18', 19 * 60 + 10, 7 * 60);
+
+		expect(item?.flow.title).toBe('Nytt pass');
+	});
+
 	test('builds stable agenda meta keys and labels', () => {
 		const item = flow({ title: 'Bild', startMin: 10 * 60, parts: ['Skiss', 'Färg'], minutes: [20, 25] });
 

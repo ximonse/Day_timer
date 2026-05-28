@@ -484,7 +484,7 @@
   .seglist { display: flex; flex-direction: column; gap: 4px; }
   .empty-session { display:flex; flex-direction:column; gap:6px; padding:14px 12px; border:1px dashed var(--line); border-radius:8px; color:var(--muted); font-size:14px; line-height:1.35; }
   .empty-session strong { color:var(--text); font-size:15px; }
-  .seglist .row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 50px; font-weight: 400; line-height: 1.2; }
+  .seglist .row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 42px; font-weight: 400; line-height: 1.16; }
   .seglist .row.active { background: var(--pill); font-weight: 500; }
   .seglist .row.past { opacity: .45; }
   .seglist .row.armed {
@@ -515,7 +515,7 @@
     }
     .seglist .row.armed .dot.drag-handle { cursor: grabbing; }
   }
-  .seglist .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 22px; }
+  .seglist .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 17px; }
   .seglist .name {
     flex: 1; overflow: hidden; overflow-wrap: break-word; white-space: normal; cursor: text;
     color: var(--sidebar-heading);
@@ -551,7 +551,7 @@
   .note-line .check-btn:hover, .note-line .check-btn.revealed { opacity: 1 !important; }
 
   .title-check-btn {
-    flex-shrink: 0; margin-top: 15px; margin-right: 4px;
+    flex-shrink: 0; margin-top: 10px; margin-right: 4px;
     background: transparent; border: 2px solid currentColor; border-radius: 8px;
     color: inherit; opacity: 0; width: 30px; height: 30px;
     display: flex; align-items: center; justify-content: center;
