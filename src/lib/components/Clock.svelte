@@ -164,7 +164,10 @@
   // Hand / Spike
   const handData = $derived.by(() => {
     const ang = (nowMin % clockSpan / clockSpan) * 360;
-    const innerR = 30, tipR = R + 2, baseWidth = 22;
+    const isHourView = clockSpan === 720;
+    const innerR = isHourView ? 22 : 30;
+    const tipR = isHourView ? R * 0.68 : R + 2;
+    const baseWidth = isHourView ? 17 : 22;
     const [tx, ty] = polar(ang, tipR);
     const aRad = (ang - 90) * Math.PI / 180;
     const dx = Math.cos(aRad), dy = Math.sin(aRad);
