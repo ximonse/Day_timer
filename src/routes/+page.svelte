@@ -1920,12 +1920,12 @@
   function addAgendaItemToSelectedDay() {
     if (isViewMode) return;
     const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
-    const startMin = suggestedStartMinForDate(agendaDays, targetDate, 30);
+    const startMin = suggestedStartMinForDate(agendaDays, targetDate, 45);
     const flow: Flow = {
       id: uid(),
       title: 'Nytt block',
       parts: ['Aktivitet'],
-      minutes: [30],
+      minutes: [45],
       warnings: [true],
       notes: [''],
       extraInfo: '',
@@ -1937,6 +1937,7 @@
     loadAgendaFlow(insertedFlow, insertedFlow.startMin ?? startMin, 'plan', true);
     markPlanSaved();
     if (hasSyncSession()) void syncSave();
+    return { id: insertedFlow.id, startMin: insertedFlow.startMin ?? startMin };
   }
 
   function commitBlockEdit() {

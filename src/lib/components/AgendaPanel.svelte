@@ -65,7 +65,7 @@
     agendaDimPast: boolean;
     onSetActiveSection: (s: any) => void;
     onRenameAgendaItem: (flowIdx: number, title: string) => void;
-    onAddAgendaItem: () => void;
+    onAddAgendaItem: () => { id: string; startMin: number } | void;
     agendaEl: HTMLElement;
     timelineEl: HTMLElement;
     agendaCalendarOpen: boolean;
@@ -99,6 +99,7 @@
   let suppressNextClick = false;
   let editingAgendaTitleKey = $state('');
   let agendaTitleDraft = $state('');
+  let pendingEditAgendaFlowId = $state<string | null>(null);
 
   function agendaEditKey(item: any, idx: number) {
     return `${selectedDay?.date ?? ''}:${item.startMin}:${item.flow.id ?? item.flow.title}:${idx}`;
@@ -116,6 +117,16 @@
     onRenameAgendaItem(idx, title);
     editingAgendaTitleKey = '';
     agendaTitleDraft = '';
+  }
+
+  function addAgendaItemAndEdit() {
+    const added = onAddAgendaItem();
+    if (added?.id) pendingEditAgendaFlowId = added.id;
+  }
+
+  function commitAgendaTitleAndAddNext(idx: number) {
+    commitAgendaTitle(idx);
+    addAgendaItemAndEdit();
   }
 
   function focusTitleInput(node: HTMLInputElement) {
@@ -166,6 +177,16 @@
     if (agendaDragMoved) return;
     item.fromText ? loadAgendaFlow(item.flow, item.startMin) : loadFlow(item.flow.id);
   }
+
+  $effect(() => {
+    if (!pendingEditAgendaFlowId) return;
+    const idx = agendaItems.findIndex(item => item.flow.id === pendingEditAgendaFlowId);
+    if (idx < 0) return;
+    const item = agendaItems[idx];
+    editingAgendaTitleKey = agendaEditKey(item, idx);
+    agendaTitleDraft = stripColorDirective(item.flow.title || '');
+    pendingEditAgendaFlowId = null;
+  });
 </script>
 
 <aside id="agenda-panel" class="agenda" bind:this={agendaEl}>
@@ -211,9 +232,6 @@
         {#if !schoolPrimary() && !isViewMode}
           <span class="agenda-mode-badge">Eget</span>
         {/if}
-        {#if !isViewMode && !runMode}
-          <button class="agenda-nav-btn agenda-add-btn" onclick={onAddAgendaItem} title="Lägg till block">+</button>
-        {/if}
         <button class="agenda-nav-btn" onclick={nextDay} disabled={!agendaDays || selectedDayIdx >= (agendaDays.length - 1)}>›</button>
       </div>
     {/if}
@@ -221,7 +239,9 @@
     {#if agendaItems.length === 0}
       <p class="agenda-empty">{selectedDay?.date ? `Ingen plan sparad för ${fmtAgendaDate(selectedDay.date)} än.` : 'Skriv in dagplanen i Planera, eller spara flöden via ✎-panelen.'}</p>
       {#if !isViewMode && !runMode}
-        <button class="quickstart agenda-plan-link" onclick={onAddAgendaItem}>+ Lägg block</button>
+        <div class="agenda-add-row">
+          <button class="agenda-add-inline" onclick={addAgendaItemAndEdit} title="Lägg till block">+</button>
+        </div>
       {:else}
         <button class="quickstart agenda-plan-link" onclick={() => onSetActiveSection('plan')}>Gå till Planera</button>
       {/if}
@@ -272,10 +292,14 @@
                 onblur={() => commitAgendaTitle(ai)}
                 onkeydown={(e) => {
                   if (e.key === 'Escape') {
+                    e.preventDefault();
                     editingAgendaTitleKey = '';
                     agendaTitleDraft = '';
                   }
-                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitAgendaTitleAndAddNext(ai);
+                  }
                 }}
                 onclick={(e) => e.stopPropagation()}
                 onpointerdown={(e) => e.stopPropagation()}
@@ -346,5 +370,10 @@
           {/if}
         {/each}
       </div>
+      {#if !isViewMode && !runMode}
+        <div class="agenda-add-row">
+          <button class="agenda-add-inline" onclick={addAgendaItemAndEdit} title="Lägg till block">+</button>
+        </div>
+      {/if}
     {/if}
   </aside>

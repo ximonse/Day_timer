@@ -439,7 +439,14 @@
     border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
     border-radius: 5px; padding: 2px 4px; font-family: inherit;
   }
-  :global(.agenda-add-btn) { font-weight: 700; min-width: 26px; }
+  :global(.agenda-add-row) { display: flex; gap: 8px; margin-top: 4px; }
+  :global(.agenda-add-inline) {
+    display: block; width: 100%; margin-top: 4px; padding: 6px 10px;
+    background: none; border: 1px dashed var(--border); border-radius: 8px;
+    color: var(--muted); font-size: 13px; cursor: pointer; text-align: center;
+    transition: opacity .12s; opacity: .38; font-family: inherit;
+  }
+  :global(.agenda-add-inline:hover) { opacity: .8; }
   :global(.agenda-block.ghost .agenda-source-badge) { display: none; }
   @media (hover: hover) and (pointer: fine) {
     :global(.agenda-block:hover .agenda-source-badge) { opacity: .95; transform: translateY(0); }
