@@ -166,32 +166,43 @@ function behaviorInstruction(planMode: AiBehaviorMode): string {
 	return 'Hjälpsamt läge: gör planen mer genomförbar med rimliga tider, buffert, övergångar och korta råd när det tydligt hjälper.';
 }
 
-function agendaPromptModeInstruction(mode: AiAgendaPromptMode | undefined): string {
+function promptModeInstruction(mode: AiAgendaPromptMode | undefined, context?: AiWorkspaceContext): string {
+	const isAgenda = context?.mode === 'agenda';
 	if (mode === 'calendar') {
-		return `Promptlage: Fran kalender.
+		return isAgenda ? `Promptlage: Fran kalender.
 Konvertera kalenderhandelser eller inklistrad kalendertext till Day Timer-format.
 Bevara fasta tider och rubriker sa langt det gar.
 Lagg inte till nya aktiviteter som inte framgar av kalendertexten.
-Om en handelse saknar detaljer, gor den till en enkel session med rimlig titel.`;
+Om en handelse saknar detaljer, gor den till en enkel session med rimlig titel.` : `Promptlage: Fran kalender.
+Konvertera kalenderhandelser eller inklistrad kalendertext till aktivitetsrader for ett enda pass.
+Returnera inte datumrad eller sessionsrubriker.
+Bevara det som faktiskt finns i kalendertexten och lagg inte till nya aktiviteter.`;
 	}
 	if (mode === 'strict-format') {
-		return `Promptlage: Strikt formattering.
+		return isAgenda ? `Promptlage: Strikt formattering.
 Skriv om anvandarens text till giltigt Day Timer-format utan att fantisera.
 Lagg inte till nya aktiviteter, pauser, rad eller antaganden.
 Andra bara struktur, radbrytningar, datumrad, sessionsrubriker och tidssyntax nar det kravs for att appen ska kunna lasa texten.
-Om tider saknas, behall sa mycket som mojligt utan att hitta pa detaljer.`;
+Om tider saknas, behall sa mycket som mojligt utan att hitta pa detaljer.` : `Promptlage: Strikt formattering.
+Skriv om anvandarens text till giltiga aktivitetsrader for ett enda pass utan att fantisera.
+Lagg inte till nya aktiviteter, pauser, rad eller antaganden.
+Returnera inte datumrad eller sessionsrubriker.
+Andra bara struktur, radbrytningar, underpunkter och minutformat nar det kravs for att appen ska kunna lasa texten.`;
 	}
 	if (mode === 'helpful-questions') {
 		return `Promptlage: Hjalpsam dialog.
 Om underlaget ar for oklart for att skapa en anvandbar dagplan, returnera INTE dagplan.
 Returnera da i "text" bara 1-3 korta fragor, en per rad, och varje fraga ska borja med "? ".
 Stall bara fragor nar svaret faktiskt skulle andra planen tydligt.
-Om underlaget racker, skapa en hjalpsam dagplan med rimliga block, buffert och overgangen.`;
+Om underlaget racker, skapa ${isAgenda ? 'en hjalpsam dagplan' : 'ett hjalpsamt pass'} med rimliga block, buffert och overgangen.`;
 	}
-	return `Promptlage: Fran anteckningar.
+	return isAgenda ? `Promptlage: Fran anteckningar.
 Gor losa anteckningar till en realistisk, tydlig och snall dagplan.
 Strukturera dagen, lagg in pauser och foresla bra overgangen nar det hjalper.
-Om nagot ar oklart men inte avgorande, gor ett forsiktigt antagande och markera det kort.`;
+Om nagot ar oklart men inte avgorande, gor ett forsiktigt antagande och markera det kort.` : `Promptlage: Fran anteckningar.
+Gor losa anteckningar till ett realistiskt, tydligt och snallt pass.
+Returnera bara aktivitetsrader, underpunkter och eventuella &-kommentarer.
+Strukturera passet, lagg in sma overgangen och foresla rimliga steg nar det hjalper.`;
 }
 
 function intentInstruction(): string {
@@ -274,7 +285,7 @@ ${agendaPlanningInstruction(request.planningMode, request.workspaceContext)}
 
 ${behaviorInstruction(planMode)}
 
-${request.workspaceContext?.mode === 'agenda' ? agendaPromptModeInstruction(request.agendaPromptMode) : ''}
+${promptModeInstruction(request.agendaPromptMode, request.workspaceContext)}
 
 ${output}
 

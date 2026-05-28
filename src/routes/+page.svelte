@@ -33,7 +33,7 @@
     type CalendarCell
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
-  import { AI_PROMPT_PARTS, getAiPromptAgenda, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
+  import { getAiPromptAgenda, getAiSessionPrompt, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
   import { isValidPlanningModeForContext, type AiAgendaPromptMode, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
@@ -191,12 +191,13 @@
   let aiInput = $state('');
   let aiLoading = $state(false);
   let aiError = $state('');
+  let aiQuestionText = $state('');
   let agendaAiInput = $state('');
   let agendaAiLoading = $state(false);
   let agendaAiError = $state('');
   let agendaAiQuestionText = $state('');
   let agendaAiOpen = $state(false);
-  let sessionAiPlanningMode: AiPlanningMode = $state('fixed-session');
+  let sessionAiPromptMode: AiAgendaPromptMode = $state('notes');
   let agendaAiPromptMode: AiAgendaPromptMode = $state('notes');
   let sessionAiLastResponse: AiPlanResponse | null = $state(null);
   let agendaAiLastResponse: AiPlanResponse | null = $state(null);
@@ -709,6 +710,10 @@
 
   function agendaPlanModeForPromptMode(mode: AiAgendaPromptMode): AiPlanMode {
     return mode === 'strict-format' || mode === 'calendar' ? 'strict' : 'helpful';
+  }
+
+  function sessionPlanningModeForPromptMode(mode: AiAgendaPromptMode): AiPlanningMode {
+    return mode === 'notes' || mode === 'helpful-questions' ? 'free-day' : 'fixed-session';
   }
 
   function isAiQuestionResponse(text: string) {
@@ -1918,23 +1923,30 @@
   }
   async function runAiParts() {
     if (!aiInput.trim()) return;
-    aiLoading = true; aiError = '';
+    aiLoading = true; aiError = ''; aiQuestionText = '';
     try {
-      const planningMode = isValidPlanningModeForContext('plan', sessionAiPlanningMode)
-        ? sessionAiPlanningMode
+      const preferredMode = sessionPlanningModeForPromptMode(sessionAiPromptMode);
+      const planningMode = isValidPlanningModeForContext('plan', preferredMode)
+        ? preferredMode
         : 'fixed-session';
-      const text = await requestAiPlan(aiConfig, aiInput, 'parts', {
+      const requestConfig = { ...aiConfig, planMode: agendaPlanModeForPromptMode(sessionAiPromptMode) };
+      const text = await requestAiPlan(requestConfig, aiInput, 'parts', {
         startMin: s.startMin,
         totalMin: totalMin(),
         currentPlan: serializeBlocks(s.blocks, undefined, s.extraInfo),
         dayTitle: s.dayTitle,
         extraInfo: s.extraInfo
-      }, planningMode, 'create');
+      }, planningMode, 'create', sessionAiPromptMode);
       sessionAiLastResponse = text;
+      if (sessionAiPromptMode === 'helpful-questions' && isAiQuestionResponse(text.text)) {
+        aiQuestionText = text.text;
+        return;
+      }
       handlePartsInput(text.text, true);
       aiInput = '';
     } catch (e: any) { 
       sessionAiLastResponse = null;
+      aiQuestionText = '';
       aiError = e.message || 'Nätverksfel'; 
     } finally { 
       aiLoading = false; 
@@ -2145,7 +2157,7 @@
   }
 
   const currentAiPrompt = $derived(
-    s.agendaOpen && s.clockSpan === 720 ? getAiPromptAgenda(localDateISO()) : AI_PROMPT_PARTS
+    getAiSessionPrompt(sessionAiPromptMode, localDateISO())
   );
 
   function syncPartsDraftFromState(force = false) {
@@ -2998,10 +3010,10 @@
               {aiPanelOpen}
               {aiInput}
               {aiError}
+              {aiQuestionText}
               {aiLoading}
-              aiPlanningMode={sessionAiPlanningMode}
+              aiPromptMode={sessionAiPromptMode}
               aiLastResponse={sessionAiLastResponse}
-              aiPlanMode={aiConfig.planMode}
               startTimeValue={fmtHM(s.startMin)}
               endTimeValue={fmtHM(s.startMin + totalMin())}
               totalMinutesValue={totalMin()}
@@ -3044,9 +3056,7 @@
               }}
               onToggleAiPanel={() => aiPanelOpen = !aiPanelOpen}
               onAiInputChange={(value) => aiInput = value}
-              onSetAiPlanningMode={(mode) => { sessionAiPlanningMode = mode; }}
-              onSetStrictMode={() => { aiConfig.planMode = 'strict'; saveAiConfig(); }}
-              onSetHelpfulMode={() => { aiConfig.planMode = 'helpful'; saveAiConfig(); }}
+              onSetAiPromptMode={(mode) => { sessionAiPromptMode = mode; aiQuestionText = ''; aiError = ''; }}
               onRunAi={runAiParts}
               onAction={() => {
                 if (s.blocks.length === 0 || totalMin() <= 0) {

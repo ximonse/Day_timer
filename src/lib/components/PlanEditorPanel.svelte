@@ -1,13 +1,13 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
-  import { AI_PLANNING_MODE_LABELS, AI_SESSION_PLANNING_MODES, aiPlanMetadataItems, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { AI_AGENDA_PROMPT_MODE_HELP, AI_AGENDA_PROMPT_MODE_LABELS, aiPlanMetadataItems, type AiAgendaPromptMode, type AiPlanResponse } from '$lib/ai-plan-engine.js';
   import { fade } from 'svelte/transition';
 
   let textareaEl: HTMLTextAreaElement | null = $state(null);
   let aiTextareaEl: HTMLTextAreaElement | null = $state(null);
 
   const voice = createVoiceService();
-  const planningModeOptions = AI_SESSION_PLANNING_MODES.map((mode) => [mode, AI_PLANNING_MODE_LABELS[mode]] as [AiPlanningMode, string]);
+  const promptModeOptions = Object.entries(AI_AGENDA_PROMPT_MODE_LABELS) as [AiAgendaPromptMode, string][];
   let isRecording = $state(false);
   let recordingTarget: 'parts' | 'ai' | null = $state(null);
 
@@ -45,13 +45,11 @@
     onToggleAiPanel,
     aiInput,
     onAiInputChange,
-    aiPlanningMode,
+    aiPromptMode,
     aiLastResponse,
-    onSetAiPlanningMode,
-    aiPlanMode,
-    onSetStrictMode,
-    onSetHelpfulMode,
+    onSetAiPromptMode,
     aiError,
+    aiQuestionText,
     onRunAi,
     aiLoading,
     actualHistoryOpen,
@@ -123,13 +121,11 @@
     onToggleAiPanel: () => void;
     aiInput: string;
     onAiInputChange: (value: string) => void;
-    aiPlanningMode: AiPlanningMode;
+    aiPromptMode: AiAgendaPromptMode;
     aiLastResponse: AiPlanResponse | null;
-    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
-    aiPlanMode: 'strict' | 'helpful';
-    onSetStrictMode: () => void;
-    onSetHelpfulMode: () => void;
+    onSetAiPromptMode: (mode: AiAgendaPromptMode) => void;
     aiError: string;
+    aiQuestionText: string;
     onRunAi: () => void;
     aiLoading: boolean;
     actualHistoryOpen: boolean;
@@ -208,8 +204,12 @@
     Math.abs(suggestedDuration.minutes - totalMinutesValue) >= 2
   );
   const aiInputPlaceholder = $derived(
-    aiPlanningMode === 'free-day'
-      ? 'Beskriv ett sammanhållet pass, t.ex. mjuk morgonstart med te, hygien och skrivstund...'
+    aiPromptMode === 'calendar'
+      ? 'Klistra in kalendertext som ska bli aktivitetsrader för passet...'
+      : aiPromptMode === 'strict-format'
+      ? 'Klistra in texten som ska formatteras utan att AI:n lägger till något...'
+      : aiPromptMode === 'helpful-questions'
+      ? 'Beskriv passet. AI:n ställer frågor först om något viktigt saknas...'
       : 'Beskriv vad som ska rymmas i passet...'
   );
 
@@ -281,16 +281,16 @@
             </button>
           </div>
           <div class="ai-mode-row">
-            {#each planningModeOptions as [mode, label]}
-              <button class="ai-mode-btn" class:on={aiPlanningMode === mode} onclick={() => onSetAiPlanningMode(mode)}>{label}</button>
+            {#each promptModeOptions as [mode, label]}
+              <button class="ai-mode-btn" class:on={aiPromptMode === mode} onclick={() => onSetAiPromptMode(mode)} title={AI_AGENDA_PROMPT_MODE_HELP[mode]}>{label}</button>
             {/each}
           </div>
-          <div class="ai-tone-row">
-            <span class="ai-tone-label">Ton</span>
-            <button class="ai-tone-btn" class:on={aiPlanMode === 'strict'} onclick={onSetStrictMode} title="Bara det du skriver, inga tillägg">Strikt</button>
-            <button class="ai-tone-btn" class:on={aiPlanMode === 'helpful'} onclick={onSetHelpfulMode} title="Lägger till marginaler, ställtid och pauser">Hjälpsam</button>
-          </div>
           {#if aiError}<div class="ai-error">{aiError}</div>{/if}
+          {#if aiQuestionText}
+            <div class="feedback" style="margin-bottom:8px; white-space:pre-line;">
+              {aiQuestionText}
+            </div>
+          {/if}
           {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
             <div class="ai-meta-list">
               {#each aiPlanMetadataItems(aiLastResponse) as item}

@@ -2,7 +2,7 @@
   import { fade } from 'svelte/transition';
   import NowEditorPanel from './NowEditorPanel.svelte';
   import PlanEditorPanel from './PlanEditorPanel.svelte';
-  import type { AiPlanResponse, AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import type { AiAgendaPromptMode, AiPlanResponse } from '$lib/ai-plan-engine.js';
 
   let {
     userLevel,
@@ -20,10 +20,10 @@
     aiPanelOpen,
     aiInput,
     aiError,
+    aiQuestionText,
     aiLoading,
-    aiPlanningMode,
+    aiPromptMode,
     aiLastResponse,
-    aiPlanMode,
     startTimeValue,
     endMode,
     actionLabel,
@@ -44,9 +44,7 @@
     onCopyPrompt,
     onToggleAiPanel,
     onAiInputChange,
-    onSetAiPlanningMode,
-    onSetStrictMode,
-    onSetHelpfulMode,
+    onSetAiPromptMode,
     onRunAi,
     onAction,
     onCreateNew,
@@ -109,10 +107,10 @@
     aiPanelOpen: boolean;
     aiInput: string;
     aiError: string;
+    aiQuestionText: string;
     aiLoading: boolean;
-    aiPlanningMode: AiPlanningMode;
+    aiPromptMode: AiAgendaPromptMode;
     aiLastResponse: AiPlanResponse | null;
-    aiPlanMode: 'strict' | 'helpful';
     startTimeValue: string;
     endTimeValue: string;
     totalMinutesValue: number;
@@ -144,9 +142,7 @@
     onCopyPrompt: () => void;
     onToggleAiPanel: () => void;
     onAiInputChange: (value: string) => void;
-    onSetAiPlanningMode: (mode: AiPlanningMode) => void;
-    onSetStrictMode: () => void;
-    onSetHelpfulMode: () => void;
+    onSetAiPromptMode: (mode: AiAgendaPromptMode) => void;
     onRunAi: () => void;
     onAction: () => void;
     onCreateNew: () => void;
@@ -250,13 +246,11 @@
       {onToggleAiPanel}
       {aiInput}
       {onAiInputChange}
-      {aiPlanningMode}
+      {aiPromptMode}
       {aiLastResponse}
-      {onSetAiPlanningMode}
-      {aiPlanMode}
-      {onSetStrictMode}
-      {onSetHelpfulMode}
+      {onSetAiPromptMode}
       {aiError}
+      {aiQuestionText}
       {onRunAi}
       {aiLoading}
       {actualHistoryOpen}

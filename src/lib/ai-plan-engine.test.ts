@@ -93,6 +93,23 @@ describe('ai-plan-engine', () => {
 		expect(prompt).toContain('varje fraga ska borja med "? "');
 	});
 
+	test('session strict format prompt keeps output to activity rows', () => {
+		const prompt = buildAiPlanSystemPrompt({
+			planningMode: 'fixed-session',
+			intent: 'create',
+			planMode: 'strict',
+			agendaPromptMode: 'strict-format',
+			userInput: 'rörigt pass',
+			workspaceContext: { mode: 'plan' },
+			timeFrame: { totalMin: 45 }
+		});
+
+		expect(prompt).toContain('Promptlage: Strikt formattering');
+		expect(prompt).toContain('aktivitetsrader for ett enda pass');
+		expect(prompt).toContain('Returnera inte datumrad eller sessionsrubriker');
+		expect(prompt).toContain('Output i "text": endast aktivitetsrader');
+	});
+
 	test('limits planning modes by ui context', () => {
 		expect(isValidPlanningModeForContext('plan', 'fixed-session')).toBe(true);
 		expect(isValidPlanningModeForContext('plan', 'anchored-day')).toBe(false);

@@ -211,6 +211,68 @@ export function getAiAgendaPrompt(mode: AiAgendaPromptMode, todayISO: string): s
   return getAiPromptAgenda(todayISO);
 }
 
+export const getAiSessionPrompt = (mode: AiAgendaPromptMode, todayISO: string) => {
+  if (mode === 'calendar') return `Du är en strikt formatterare för Day Timer-pass.
+
+Dagens datum är ${todayISO}.
+
+Konvertera kalendertext eller kalenderanteckningar till aktivitetsrader för ett enda pass.
+Returnera BARA passformat:
+- aktiviteter på egna rader
+- tider skrivs som 10m, 20m osv om de finns eller är uppenbara
+- underpunkter börjar med -
+- kommentarer börjar med &
+- inga datumrader
+- inga sessionsrubriker med #
+- ingen inledning eller avslutning
+
+Lägg inte till nya aktiviteter som inte framgår av underlaget.
+
+---
+
+[Klistra in kalendertexten här]`;
+
+  if (mode === 'strict-format') return `Du är en strikt formatterare för Day Timer-pass.
+
+Din uppgift är bara att skriva om användarens text så att den fungerar i aktivitetfältet för ett pass.
+Du ska inte hitta på aktiviteter, pauser, råd, energi-tolkningar eller extra steg.
+
+Returnera BARA passformat:
+- aktiviteter på egna rader
+- underpunkter börjar med -
+- kommentarer börjar med &
+- tider skrivs som 10m, 20m osv om användaren angivit dem
+- inga datumrader
+- inga sessionsrubriker med #
+- ingen inledning eller avslutning
+
+---
+
+[Klistra in texten här]`;
+
+  if (mode === 'helpful-questions') return `Du är en hjälpsam planeringsassistent för ett Day Timer-pass.
+
+Först ska du avgöra om underlaget räcker för ett användbart pass.
+Om något viktigt saknas och svaret skulle påverka passet tydligt, ställ 1-3 korta klargörande frågor först.
+Om underlaget räcker, skapa direkt ett realistiskt och snällt pass.
+
+När du skapar pass: returnera BARA passformat:
+- aktiviteter på egna rader
+- tider som 10m, 20m osv
+- underpunkter börjar med -
+- kommentarer börjar med &
+- inga datumrader
+- inga sessionsrubriker med #
+
+När du ställer frågor: returnera BARA frågorna, en per rad, och börja varje rad med "? ".
+
+---
+
+[Beskriv passet här]`;
+
+  return AI_PROMPT_PARTS;
+};
+
 export function buildAiPayload(config: AiConfig, extra: Record<string, unknown>) {
   return {
     provider: config.provider,
