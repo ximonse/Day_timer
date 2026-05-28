@@ -2695,6 +2695,7 @@
   }
 
   function checkAutoLoad() {
+    if (s.activeSection !== 'now' || partsDraftDirty) return;
     if (!agendaItems.length) return;
     const nowMin = nowMinutes();
     const current = resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef);
