@@ -246,6 +246,25 @@ describe('parseAgenda — sessioner', () => {
     expect(days[0].flows[0].minutes).toEqual([10, 50]);
   });
 
+  it('tolkar punktlistor direkt under tidsatt session som aktiviteter', () => {
+    const days = parseAgenda('#Lektion 10:00 60m\n- Genomgång\n- Eget arbete');
+    const flow = days[0].flows[0];
+
+    expect(flow.title).toBe('Lektion');
+    expect(flow.parts).toEqual(['Genomgång', 'Eget arbete']);
+    expect(flow.minutes).toEqual([30, 30]);
+    expect(flow.notes).toEqual(['', '']);
+  });
+
+  it('tolkar markdownrubrik direkt under tidsatt session som aktivitet', () => {
+    const days = parseAgenda('#Lektion 10:00 60m\n# Genomgång\nEget arbete');
+    const flow = days[0].flows[0];
+
+    expect(days[0].flows).toHaveLength(1);
+    expect(flow.parts).toEqual(['Genomgång', 'Eget arbete']);
+    expect(flow.minutes).toEqual([30, 30]);
+  });
+
   it('parsar aktiviteter med tid', () => {
     const days = parseAgenda('#Session\nMatematik 45m\nRast 10m');
     const flow = days[0].flows[0];

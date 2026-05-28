@@ -106,6 +106,7 @@ interface RawSection {
   items: { title: string; minutes: number | null; note: string }[];
   extraInfo: string;
   id?: string;
+  listMode?: boolean;
 }
 
 function parseTimeStr(s: string): number | undefined {
@@ -291,10 +292,13 @@ export function parseAgenda(text: string): AgendaDay[] {
     }
 
     if (t.startsWith('#')) {
-      if (cur) sections.push(cur);
       const content = t.slice(1).trim();
-      
-      // Extract hidden ID if present: <!--id:abc-123-->
+      const parsedHeader = parseSessionHeader(content.replace(/<!--id:([a-z0-9-]+)-->/i, '').trim());
+      if (cur && cur.startMin !== undefined && parsedHeader.startMin === undefined && parsedHeader.availableMin === undefined) {
+        cur.items.push({ title: content.replace(/^#+\s*/, '').trim(), minutes: null, note: '' });
+        continue;
+      }
+      if (cur) sections.push(cur);
       let extractedId: string | undefined;
       const idMatch = content.match(/<!--id:([a-z0-9-]+)-->/i);
       let titleContent = content;
@@ -303,8 +307,8 @@ export function parseAgenda(text: string): AgendaDay[] {
         titleContent = content.replace(idMatch[0], '').trim();
       }
 
-      const parsedHeader = parseSessionHeader(titleContent);
-      cur = { ...parsedHeader, items: [], extraInfo: '', id: extractedId };
+      const header = parseSessionHeader(titleContent);
+      cur = { ...header, items: [], extraInfo: '', id: extractedId };
       continue;
     }
 
@@ -327,6 +331,17 @@ export function parseAgenda(text: string): AgendaDay[] {
       continue;
     }
 
+    if (t.startsWith('-') && cur.items.length === 0) {
+      cur.items.push({ title: t.replace(/^-\s*/, ''), minutes: null, note: '' });
+      cur.listMode = true;
+      continue;
+    }
+
+    if (t.startsWith('-') && cur.listMode) {
+      cur.items.push({ title: t.replace(/^-\s*/, ''), minutes: null, note: '' });
+      continue;
+    }
+
     if (t.startsWith('-') && cur.items.length > 0) {
       const note = t.replace(/^-\s*/, '');
       const last = cur.items[cur.items.length - 1];
@@ -336,8 +351,10 @@ export function parseAgenda(text: string): AgendaDay[] {
 
     const mMatch = t.match(/^(.*?)\s+(\d+)\s*m(?:in)?\s*$/i);
     if (mMatch) {
+      cur.listMode = false;
       cur.items.push({ title: mMatch[1].trim(), minutes: Math.max(1, parseInt(mMatch[2], 10)), note: '' });
     } else {
+      cur.listMode = false;
       cur.items.push({ title: t, minutes: null, note: '' });
     }
   }
