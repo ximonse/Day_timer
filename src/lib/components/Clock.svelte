@@ -74,7 +74,7 @@
   const use12hAgenda = $derived(clockSpan === 720 && agendaItems.length > 0);
 
   // 12h Mode Data
-  const periodStart = $derived(Math.floor(nowMin / 720) * 720);
+  const periodStart = 6 * 60;
   const agendaSectors = $derived.by(() => {
     if (!use12hAgenda) return [];
     return agendaItems.map((item: { flow: Flow; startMin: number; totalMin: number }, i: number) => {
@@ -112,6 +112,27 @@
         label: pureEmoji ? displayTitle : `${truncate(displayTitle, 10)} ${fmtHM(item.startMin)}`,
         fontSize: pureEmoji ? 24 : (textOutside ? 14 : 13),
         pureEmoji
+      };
+    }).filter((s): s is NonNullable<typeof s> => s !== null);
+  });
+
+  const agendaOverflowSectors = $derived.by(() => {
+    if (!use12hAgenda) return [];
+    const periodEnd = periodStart + 720;
+    return agendaItems.map((item: { flow: Flow; startMin: number; totalMin: number }, i: number) => {
+      const itemEnd = item.startMin + item.totalMin;
+      if (itemEnd <= periodEnd) return null;
+      const ovStart = Math.max(item.startMin, periodEnd);
+      const ovEnd = Math.min(itemEnd, periodEnd + 720);
+      const a0 = ((ovStart - periodEnd) / 720) * 360;
+      const a1 = ((ovEnd - periodEnd) / 720) * 360;
+      if (a1 - a0 < 0.1) return null;
+      return {
+        id: `agenda-overflow-${i}`,
+        item,
+        a0, a1,
+        baseColor: colorForSegment(item.flow.title, sectorColors, i),
+        isPast: nowMin >= ovEnd
       };
     }).filter((s): s is NonNullable<typeof s> => s !== null);
   });
@@ -163,7 +184,9 @@
 
   // Hand / Spike
   const handData = $derived.by(() => {
-    const ang = (nowMin % clockSpan / clockSpan) * 360;
+    const ang = use12hAgenda
+      ? ((nowMin - periodStart) / 720) * 360
+      : (nowMin % clockSpan / clockSpan) * 360;
     const isHourView = clockSpan === 720;
     const innerR = isHourView ? 22 : 30;
     const tipR = isHourView ? R * 0.68 : R + 2;
@@ -177,7 +200,9 @@
     const bx1 = cxB + px * halfW, by1 = cyB + py * halfW;
     const bx2 = cxB - px * halfW, by2 = cyB - py * halfW;
     const visibleDuration = Math.max(clockSpan, totalMin);
-    const nowInView = nowMin >= startMin && nowMin < startMin + visibleDuration;
+    const nowInView = use12hAgenda
+      ? (nowMin >= periodStart && nowMin < periodStart + 720)
+      : (nowMin >= startMin && nowMin < startMin + visibleDuration);
     return {
       points: `${tx},${ty} ${bx1},${by1} ${bx2},${by2}`,
       opacity: nowInView ? 1 : 0.1
@@ -306,6 +331,20 @@
           if (s.isEnd) onStartEndDrag?.(e);
           else if (s.boundaryIndex !== null) onStartBoundaryDrag?.(e, s.boundaryIndex);
         }} />
+    {/each}
+  {/if}
+
+  {#if use12hAgenda && showFutureSegments}
+    {#each agendaOverflowSectors as s (s.id)}
+      <path
+        role="button"
+        tabindex="0"
+        aria-label="Visa agendaflöde"
+        d={arcPath(s.a0, s.a1, overflowOuterR, overflowInnerR)}
+        fill={s.isPast ? s.baseColor + dimSuffix : s.baseColor}
+        style="cursor:pointer"
+        onclick={() => onLoadAgendaFlow?.(s.item.flow, s.item.startMin)}
+        onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLoadAgendaFlow?.(s.item.flow, s.item.startMin); } }} />
     {/each}
   {/if}
 
