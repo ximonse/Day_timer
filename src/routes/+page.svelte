@@ -292,9 +292,14 @@
 
   function schoolPrimary() { return s.agendaView === 'school'; }
   function activeAgendaText(): string { return schoolPrimary() ? s.agendaText : s.agendaText2; }
-  function activeAgendaDate(): string { return s.agendaDate; }
+  function activeAgendaDate(): string { return schoolPrimary() ? s.agendaDate : s.agendaDate2; }
   function setActiveAgendaText(v: string) { if (schoolPrimary()) s.agendaText = v; else s.agendaText2 = v; }
-  function setActiveAgendaDate(v: string) { s.agendaDate = v; }
+  function setActiveAgendaDate(v: string) { if (schoolPrimary()) s.agendaDate = v; else s.agendaDate2 = v; }
+  function setAgendaView(view: 'school' | 'private') {
+    s.agendaView = view;
+    if (!activeAgendaDate()) setActiveAgendaDate(localDateISO());
+    syncAgendaDraftFromState(true);
+  }
   function hasOverlay() { return false; }
 
   const agendaDays = $derived.by<AgendaDay[] | null>(() => {
@@ -1429,6 +1434,7 @@
       const cloudWorkspace = workspaceDataFromSyncResponse(data, uid);
       const localWorkspace = currentWorkspaceData();
       if (!cloudWorkspace) throw new Error();
+      const preservedRunAgendaView = locked && !miniMenuOpen ? s.agendaView : null;
       
       if (isWorkspaceMeaningfullyEmpty(cloudWorkspace) && !isWorkspaceMeaningfullyEmpty(localWorkspace)) {
         lastSyncedHash = JSON.stringify(localWorkspace);
@@ -1445,6 +1451,7 @@
       const localOnly = localWorkspace.flows.filter((flow) => !cloudIds.has(flow.id));
       
       applyWorkspaceDataToAppState(s, { ...cloudWorkspace, flows: [...cloudFlows, ...localOnly] });
+      if (preservedRunAgendaView) setAgendaView(preservedRunAgendaView);
       s.currentRevision = cloudWorkspace.revision;
       
       let restoredDraft = false;
@@ -2332,7 +2339,7 @@
             showToast('Låst – lås upp (l) för att växla');
             return;
           }
-          s.agendaView = s.agendaView === 'school' ? 'private' : 'school';
+          setAgendaView(s.agendaView === 'school' ? 'private' : 'school');
           const labels: Record<string, string> = { school: 'Öppet', private: 'Eget' };
           showToast(labels[s.agendaView]);
           appState.persist();
@@ -2349,7 +2356,7 @@
           }
         } else {
           s.isLocked = true;
-          s.agendaView = 'school';
+          setAgendaView('school');
           showToast('Låst (Öppet läge)');
         }
         appState.persist();
