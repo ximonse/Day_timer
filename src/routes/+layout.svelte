@@ -431,6 +431,15 @@
   :global(.agenda-source-badge.ai) { background: color-mix(in srgb, var(--accent) 82%, white 18%); color: #2b1208; }
   :global(.agenda-source-badge.imported) { background: color-mix(in srgb, var(--pill-on) 70%, white 30%); color: var(--pill-on-fg); }
   :global(.agenda-name) { flex: 1; min-width: 0; font-size: 30px; font-weight: 500; line-height: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; text-align: left; box-sizing: border-box; }
+  :global(.agenda-name-btn) { border: 0; background: transparent; color: inherit; padding: 0; cursor: text; font-family: inherit; }
+  :global(.agenda-name-btn:focus-visible) { outline: 1px solid color-mix(in srgb, var(--accent) 42%, transparent); outline-offset: 2px; border-radius: 4px; }
+  :global(.agenda-title-input) {
+    flex: 1; min-width: 0; font-size: 28px; font-weight: 500; line-height: 1;
+    color: var(--fg); background: color-mix(in srgb, var(--panel) 86%, white 14%);
+    border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+    border-radius: 5px; padding: 2px 4px; font-family: inherit;
+  }
+  :global(.agenda-add-btn) { font-weight: 700; min-width: 26px; }
   :global(.agenda-block.ghost .agenda-source-badge) { display: none; }
   @media (hover: hover) and (pointer: fine) {
     :global(.agenda-block:hover .agenda-source-badge) { opacity: .95; transform: translateY(0); }

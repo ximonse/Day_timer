@@ -33,7 +33,7 @@
     type CalendarCell
   } from '$lib/agenda.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
-  import { getAiPromptAgenda, getAiSessionPrompt, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
+  import { getAiAgendaPrompt, getAiSessionPrompt, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
   import { isValidPlanningModeForContext, type AiAgendaPromptMode, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
@@ -99,7 +99,6 @@
   let agendaCalendarOpen = $state(true);
   let savedAgendaMsg = $state('');
   let savedFlowMsg = $state('');
-  let copyAgendaPromptText = $state('AI-prompt');
   let workspaceAutosaveTimer: ReturnType<typeof setTimeout> | null = null;
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean; swap: { withIdx: number; neighborNewStart: number } | null } | null>(null);
@@ -1311,6 +1310,7 @@
       sessionSource = { kind: 'agenda', date, title: insertedFlow.title, startMin: insertedFlow.startMin ?? startMin };
     }
     appState.persist();
+    return inserted;
   }
 
   function addFlowToAgendaToday(f: Flow, activate = false, meta: AgendaFlowMeta | null = null) {
@@ -1884,6 +1884,59 @@
       sessionSource = { kind: 'unscheduled' };
     }
     appState.persist();
+  }
+
+  function renameAgendaItem(flowIdx: number, title: string) {
+    if (!agendaDays || selectedDayIdx < 0) return;
+    const nextTitle = title.trim() || 'Utan rubrik';
+    const originalDay = agendaDays[selectedDayIdx];
+    const originalFlow = originalDay?.flows[flowIdx] ?? null;
+    const originalStart = originalFlow ? (originalFlow.startMin ?? suggestedStartMinForDate(agendaDays, originalDay?.date ?? localDateISO(), totalFlowMinutes(originalFlow))) : 0;
+    const oldMetaKey = originalDay && originalFlow ? makeAgendaMetaKeyForFlow(originalDay.date ?? null, originalFlow, originalStart) : null;
+    const days = agendaDays.map((d, i) =>
+      i === selectedDayIdx
+        ? { ...d, flows: d.flows.map((f, j) => j === flowIdx ? { ...f, title: nextTitle } : f) }
+        : d
+    );
+    setActiveAgendaText(serializeAgenda(days));
+    const updatedDay = days[selectedDayIdx];
+    const updatedItems = updatedDay ? buildAgendaItemsForDay(updatedDay, agendaDayStart) : [];
+    const updatedItem = updatedItems[flowIdx];
+    if (selectedAgendaDetails?.dayIdx === selectedDayIdx && selectedAgendaDetails.flowIdx === flowIdx && updatedItem) {
+      s.dayTitle = nextTitle;
+      activeAgendaFlowRef = makeAgendaFlowRef(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin);
+      sessionSource = { kind: 'agenda', date: updatedDay.date ?? null, title: nextTitle, startMin: updatedItem.startMin };
+      capturePanelBaseline(s.activeSection === 'plan' ? 'plan' : 'now');
+      syncPartsDraftFromState(true);
+    }
+    if (oldMetaKey && updatedDay && updatedItem) {
+      s.agendaMeta = moveAgendaMeta(s.agendaMeta, oldMetaKey, makeAgendaMetaKeyForFlow(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin));
+    }
+    markPlanSaved();
+    appState.persist();
+    if (hasSyncSession()) void syncSave();
+  }
+
+  function addAgendaItemToSelectedDay() {
+    if (isViewMode) return;
+    const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+    const startMin = suggestedStartMinForDate(agendaDays, targetDate, 30);
+    const flow: Flow = {
+      id: uid(),
+      title: 'Nytt block',
+      parts: ['Aktivitet'],
+      minutes: [30],
+      warnings: [true],
+      notes: [''],
+      extraInfo: '',
+      startMin
+    };
+    const inserted = addFlowToAgendaDate(targetDate, flow, true, { source: 'manual' }, startMin);
+    const insertedFlow = inserted?.flow ?? flow;
+    planSelectionExplicit = true;
+    loadAgendaFlow(insertedFlow, insertedFlow.startMin ?? startMin, 'plan', true);
+    markPlanSaved();
+    if (hasSyncSession()) void syncSave();
   }
 
   function commitBlockEdit() {
@@ -2980,6 +3033,56 @@
           <SectionHero title={SECTION_LABELS[s.activeSection]} copy={sectionCopy} />
         {/if}
 
+        {#if s.activeSection === 'plan'}
+          <div in:fade={{ duration: 150 }}>
+            <AgendaImportPanel
+              {agendaInputOpen}
+              {agendaDraft}
+              agendaDraftSource={agendaDraftDirty ? agendaDraftSource : 'manual'}
+              draftStatus={agendaDraftStatus}
+              selectedDateLabel={selectedDay?.date ? fmtAgendaDate(selectedDay.date) : 'Odaterad dag'}
+              {savedAgendaMsg}
+              {icsImportOpen}
+              {icsDraft}
+              icsSummary={icsPreviewSummary}
+              {icsPreviewLines}
+              icsError={icsImportError}
+              icsHasPreview={icsPreviewEvents.length > 0}
+              {icsCanImport}
+              hasAiKey={!!aiApiKey}
+              {agendaAiOpen}
+              {agendaAiInput}
+              {agendaAiPromptMode}
+              aiLastResponse={agendaAiLastResponse}
+              {agendaAiError}
+              {agendaAiQuestionText}
+              {agendaAiLoading}
+              showHelpHints={s.showHelpHints}
+              showImportHelp={helpVisible(agendaImportHelpOpen)}
+              showIcsHelp={helpVisible(agendaIcsHelpOpen)}
+              onToggleOpen={() => agendaInputOpen = !agendaInputOpen}
+              onDraftChange={(value) => { agendaDraft = value; agendaDraftDirty = true; agendaDraftDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO(); }}
+              onDraftPaste={() => {}}
+              onSave={saveAgenda}
+              onToggleIcsOpen={() => icsImportOpen = !icsImportOpen}
+              onIcsDraftChange={(value) => { icsDraft = value; resetIcsPreview(); }}
+              onIcsFileChange={readIcsFile}
+              onPreviewIcs={previewIcsImport}
+              onImportIcs={importPreviewedIcs}
+              onCopyPrompt={async (type) => {
+                const prompt = getAiAgendaPrompt(type, localDateISO());
+                await navigator.clipboard.writeText(prompt);
+              }}
+              onToggleAi={() => agendaAiOpen = !agendaAiOpen}
+              onAgendaAiInputChange={(value) => agendaAiInput = value}
+              onSetAgendaAiPromptMode={(mode) => { agendaAiPromptMode = mode; agendaAiQuestionText = ''; agendaAiError = ''; }}
+              onRunAi={runAiAgenda}
+              onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
+              onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}
+            />
+          </div>
+        {/if}
+
         {#if s.activeSection === 'now' && s.blocks.length > 0}
           <div class="now-live-panel" in:fade={{ duration: 150 }}>
             <div>
@@ -3201,6 +3304,7 @@
               aiProviderLabels={AI_PROVIDER_LABELS}
               aiKeyPlaceholders={AI_KEY_PLACEHOLDERS}
               aiApiKey={aiApiKey}
+              aiRememberApiKey={aiConfig.rememberApiKey}
               aiKeyVisible={aiKeyVisible}
               aiBaseUrl={aiConfig.baseUrl}
               aiCustomModel={aiConfig.customModel}
@@ -3227,6 +3331,7 @@
               onToggleAiKeyVisible={() => aiKeyVisible = !aiKeyVisible}
               onClearAiConfig={clearAiConfig}
               onAiApiKeyChange={(value) => { aiConfig.apiKey = value; saveAiConfig(); }}
+              onAiRememberApiKeyChange={(value) => { aiConfig.rememberApiKey = value; saveAiConfig(); }}
               onAiBaseUrlChange={(value) => { aiConfig.baseUrl = value; saveAiConfig(); }}
               onAiCustomModelChange={(value) => { aiConfig.customModel = value; saveAiConfig(); }}
             />
@@ -3252,15 +3357,6 @@
     {sectorColors}
     {isViewMode}
     runMode={locked && !miniMenuOpen}
-    {agendaDraftStatus}
-    {savedAgendaMsg}
-    {icsPreviewSummary}
-    {icsPreviewLines}
-    {icsImportError}
-    {icsCanImport}
-    {agendaAiError}
-    {agendaAiQuestionText}
-    {agendaAiLoading}
     {selectedDay}
     {agendaDays}
     {selectedDayIdx}
@@ -3271,18 +3367,7 @@
     {agendaDragMoved}
     {calendarCells}
     agendaDimPast={s.agendaDimPast}
-    {aiApiKey}
-    {agendaAiPromptMode}
-    aiLastResponse={agendaAiLastResponse}
-    {icsPreviewEvents}
     {activeAgendaDate}
-    {saveAgenda}
-    {resetIcsPreview}
-    {readIcsFile}
-    {previewIcsImport}
-    {importPreviewedIcs}
-    {runAiAgenda}
-    {toggleHelpOverride}
     {selectAgendaDate}
     {prevDay}
     {nextDay}
@@ -3292,22 +3377,13 @@
     {deleteAgendaItem}
     {startAgendaDrag}
     {schoolPrimary}
-    onSetAgendaAiPromptMode={(mode) => { agendaAiPromptMode = mode; agendaAiQuestionText = ''; agendaAiError = ''; }}
     onSetActiveSection={setActiveSection}
+    onRenameAgendaItem={renameAgendaItem}
+    onAddAgendaItem={addAgendaItemToSelectedDay}
     bind:agendaEl
     bind:timelineEl
-    bind:agendaInputOpen
     bind:agendaCalendarOpen
     bind:calendarMonthCursor
-    bind:agendaDraft
-    {agendaDraftSource}
-    bind:agendaDraftDirty
-    bind:agendaDraftDate
-    bind:icsDraft
-    bind:icsImportOpen
-    bind:copyAgendaPromptText
-    bind:agendaAiOpen
-    bind:agendaAiInput
   />
 
   <button id="agenda-toggle-btn" class="agenda-toggle-btn" onclick={toggleAgenda} title="Dagagenda">

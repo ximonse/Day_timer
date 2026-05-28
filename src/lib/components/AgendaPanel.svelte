@@ -1,28 +1,16 @@
 <script lang="ts">
-  import { appState, uid, type Flow, type AgendaFlowMeta } from '$lib/state.svelte.js';
+  import { appState, type Flow, type AgendaFlowMeta } from '$lib/state.svelte.js';
   import { fmtAgendaDate, shiftMonth, monthKey, parseIsoDate, monthLabel, localDateISO } from '$lib/date.js';
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
-  import { getAiAgendaPrompt } from '$lib/ai.js';
-  import type { AiAgendaPromptMode, AiPlanResponse } from '$lib/ai-plan-engine.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { colorForSegment, stripColorDirective } from '$lib/title-color.js';
-  import AgendaImportPanel from './AgendaImportPanel.svelte';
 
   let {
     selectedFlowId,
     sectorColors,
     isViewMode,
     runMode,
-    agendaDraftStatus,
-    savedAgendaMsg,
-    icsPreviewSummary,
-    icsPreviewLines,
-    icsImportError,
-    icsCanImport,
-    agendaAiError,
-    agendaAiQuestionText,
-    agendaAiLoading,
     selectedDay,
     agendaDays,
     selectedDayIdx,
@@ -32,18 +20,7 @@
     nowMinLive,
     agendaDragMoved,
     calendarCells,
-    aiApiKey,
-    agendaAiPromptMode,
-    aiLastResponse,
-    icsPreviewEvents,
     activeAgendaDate,
-    saveAgenda,
-    resetIcsPreview,
-    readIcsFile,
-    previewIcsImport,
-    importPreviewedIcs,
-    runAiAgenda,
-    toggleHelpOverride,
     selectAgendaDate,
     prevDay,
     nextDay,
@@ -54,36 +31,18 @@
     startAgendaDrag,
     schoolPrimary,
     agendaDimPast,
-    onSetAgendaAiPromptMode,
     onSetActiveSection,
+    onRenameAgendaItem,
+    onAddAgendaItem,
     agendaEl = $bindable(),
     timelineEl = $bindable(),
-    agendaInputOpen = $bindable(),
     agendaCalendarOpen = $bindable(),
-    calendarMonthCursor = $bindable(),
-    agendaDraft = $bindable(),
-    agendaDraftSource = 'manual',
-    agendaDraftDirty = $bindable(),
-    agendaDraftDate = $bindable(),
-    icsDraft = $bindable(),
-    icsImportOpen = $bindable(),
-    copyAgendaPromptText = $bindable(),
-    agendaAiOpen = $bindable(),
-    agendaAiInput = $bindable()
+    calendarMonthCursor = $bindable()
   }: {
     selectedFlowId: string | null;
     sectorColors: string[];
     isViewMode: boolean;
     runMode: boolean;
-    agendaDraftStatus: string;
-    savedAgendaMsg: string;
-    icsPreviewSummary: string;
-    icsPreviewLines: string[];
-    icsImportError: string;
-    icsCanImport: boolean;
-    agendaAiError: string;
-    agendaAiQuestionText: string;
-    agendaAiLoading: boolean;
     selectedDay: AgendaDay | null;
     agendaDays: AgendaDay[] | null;
     selectedDayIdx: number;
@@ -93,18 +52,7 @@
     nowMinLive: number;
     agendaDragMoved: boolean;
     calendarCells: any[];
-    aiApiKey: string;
-    agendaAiPromptMode: AiAgendaPromptMode;
-    aiLastResponse: AiPlanResponse | null;
-    icsPreviewEvents: any[];
     activeAgendaDate: () => string | null;
-    saveAgenda: () => void;
-    resetIcsPreview: () => void;
-    readIcsFile: (e: Event) => void;
-    previewIcsImport: () => void;
-    importPreviewedIcs: () => void;
-    runAiAgenda: () => void;
-    toggleHelpOverride: (c: any) => any;
     selectAgendaDate: (d: string) => void;
     prevDay: () => void;
     nextDay: () => void;
@@ -115,31 +63,16 @@
     startAgendaDrag: (e: PointerEvent, i: number, edge: 'top' | 'bottom') => void;
     schoolPrimary: () => boolean;
     agendaDimPast: boolean;
-    onSetAgendaAiPromptMode: (mode: AiAgendaPromptMode) => void;
     onSetActiveSection: (s: any) => void;
+    onRenameAgendaItem: (flowIdx: number, title: string) => void;
+    onAddAgendaItem: () => void;
     agendaEl: HTMLElement;
     timelineEl: HTMLElement;
-    agendaInputOpen: boolean;
     agendaCalendarOpen: boolean;
     calendarMonthCursor: string;
-    agendaDraft: string;
-    agendaDraftSource: 'manual' | 'ai';
-    agendaDraftDirty: boolean;
-    agendaDraftDate: string | null;
-    icsDraft: string;
-    icsImportOpen: boolean;
-    copyAgendaPromptText: string;
-    agendaAiOpen: boolean;
-    agendaAiInput: string;
   } = $props();
 
   const s = appState.value;
-
-  function helpVisible(override: any) {
-    if (override === 'show') return true;
-    if (override === 'hide') return false;
-    return s.showHelpHints;
-  }
 
   function makeAgendaMetaKeyForFlow(date: string | null, flow: Flow, startMin: number): string {
     return `${date ?? ''}:${flow.title}:${startMin}`;
@@ -159,15 +92,38 @@
     return '';
   }
 
-  let agendaImportHelpOpen = $state<any>('inherit');
-  let agendaIcsHelpOpen = $state<any>('inherit');
-
-  // Touch: long-press on right zone of agenda block to move
   let pressTimer: ReturnType<typeof setTimeout> | null = null;
   let pressStartX = 0;
   let pressStartY = 0;
   let pressEvent: PointerEvent | null = null;
   let suppressNextClick = false;
+  let editingAgendaTitleKey = $state('');
+  let agendaTitleDraft = $state('');
+
+  function agendaEditKey(item: any, idx: number) {
+    return `${selectedDay?.date ?? ''}:${item.startMin}:${item.flow.id ?? item.flow.title}:${idx}`;
+  }
+
+  function startAgendaTitleEdit(item: any, idx: number, e: Event) {
+    e.stopPropagation();
+    if (isViewMode || runMode || !item.fromText) return;
+    editingAgendaTitleKey = agendaEditKey(item, idx);
+    agendaTitleDraft = stripColorDirective(item.flow.title || '');
+  }
+
+  function commitAgendaTitle(idx: number) {
+    const title = agendaTitleDraft.trim() || 'Utan rubrik';
+    onRenameAgendaItem(idx, title);
+    editingAgendaTitleKey = '';
+    agendaTitleDraft = '';
+  }
+
+  function focusTitleInput(node: HTMLInputElement) {
+    requestAnimationFrame(() => {
+      node.focus();
+      node.select();
+    });
+  }
 
   function rightZonePointerDown(e: PointerEvent, i: number) {
     if (e.pointerType === 'mouse') return;
@@ -213,54 +169,6 @@
 </script>
 
 <aside id="agenda-panel" class="agenda" bind:this={agendaEl}>
-    {#if !isViewMode && !runMode && s.activeSection === 'plan'}
-      <AgendaImportPanel
-        {agendaInputOpen}
-        {agendaDraft}
-        agendaDraftSource={agendaDraftDirty ? agendaDraftSource : 'manual'}
-        draftStatus={agendaDraftStatus}
-        selectedDateLabel={selectedDay?.date ? fmtAgendaDate(selectedDay.date) : 'Odaterad dag'}
-        {savedAgendaMsg}
-        {icsImportOpen}
-        {icsDraft}
-        icsSummary={icsPreviewSummary}
-        {icsPreviewLines}
-        icsError={icsImportError}
-        icsHasPreview={icsPreviewEvents.length > 0}
-        {icsCanImport}
-        hasAiKey={!!aiApiKey}
-        {agendaAiOpen}
-        {agendaAiInput}
-        {agendaAiPromptMode}
-        {aiLastResponse}
-        {agendaAiError}
-        {agendaAiQuestionText}
-        {agendaAiLoading}
-        showHelpHints={s.showHelpHints}
-        showImportHelp={helpVisible(agendaImportHelpOpen)}
-        showIcsHelp={helpVisible(agendaIcsHelpOpen)}
-        onToggleOpen={() => agendaInputOpen = !agendaInputOpen}
-        onDraftChange={(value) => { agendaDraft = value; agendaDraftDirty = true; agendaDraftDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO(); }}
-        onDraftPaste={() => {}}
-        onSave={saveAgenda}
-        onToggleIcsOpen={() => icsImportOpen = !icsImportOpen}
-        onIcsDraftChange={(value) => { icsDraft = value; resetIcsPreview(); }}
-        onIcsFileChange={readIcsFile}
-        onPreviewIcs={previewIcsImport}
-        onImportIcs={importPreviewedIcs}
-        onCopyPrompt={async (type) => {
-          const prompt = getAiAgendaPrompt(type, localDateISO());
-          await navigator.clipboard.writeText(prompt);
-        }}
-        onToggleAi={() => agendaAiOpen = !agendaAiOpen}
-        onAgendaAiInputChange={(value) => agendaAiInput = value}
-        {onSetAgendaAiPromptMode}
-        onRunAi={runAiAgenda}
-        onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
-        onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}
-      />
-    {/if}
-
     <div class="agenda-calendar" class:collapsed={!agendaCalendarOpen}>
       <div class="agenda-input-header" style="margin-bottom:8px;">
         <span class="agenda-input-label">Kalender</span>
@@ -303,13 +211,20 @@
         {#if !schoolPrimary() && !isViewMode}
           <span class="agenda-mode-badge">Eget</span>
         {/if}
+        {#if !isViewMode && !runMode}
+          <button class="agenda-nav-btn agenda-add-btn" onclick={onAddAgendaItem} title="Lägg till block">+</button>
+        {/if}
         <button class="agenda-nav-btn" onclick={nextDay} disabled={!agendaDays || selectedDayIdx >= (agendaDays.length - 1)}>›</button>
       </div>
     {/if}
 
     {#if agendaItems.length === 0}
-      <p class="agenda-empty">{selectedDay?.date ? `Ingen plan sparad för ${fmtAgendaDate(selectedDay.date)} än.` : 'Skriv in dagplanen ovan, eller spara flöden via ✎-panelen.'}</p>    
-      <button class="quickstart agenda-plan-link" onclick={() => onSetActiveSection('plan')}>Gå till Planera</button>
+      <p class="agenda-empty">{selectedDay?.date ? `Ingen plan sparad för ${fmtAgendaDate(selectedDay.date)} än.` : 'Skriv in dagplanen i Planera, eller spara flöden via ✎-panelen.'}</p>
+      {#if !isViewMode && !runMode}
+        <button class="quickstart agenda-plan-link" onclick={onAddAgendaItem}>+ Lägg block</button>
+      {:else}
+        <button class="quickstart agenda-plan-link" onclick={() => onSetActiveSection('plan')}>Gå till Planera</button>
+      {/if}
     {:else}
       {@const windowStart = Math.floor(agendaItems[0].startMin / 60) * 60}
       <div id="agenda-timeline" class="agenda-timeline" class:has-overlay={overlayItems.length > 0} bind:this={timelineEl}>
@@ -348,13 +263,32 @@
                 {agendaMetaBadge(itemMeta)}
               </span>
             {/if}
-            <span class="agenda-name">
-              {#if isPast}
-                <del>{@html parseMarkdownHtml(itemTitle)}</del>
-              {:else}
-                {@html parseMarkdownHtml(itemTitle)}
-              {/if}
-            </span>
+            {#if editingAgendaTitleKey === agendaEditKey(item, ai)}
+              <input
+                class="agenda-title-input"
+                value={agendaTitleDraft}
+                use:focusTitleInput
+                oninput={(e) => agendaTitleDraft = (e.target as HTMLInputElement).value}
+                onblur={() => commitAgendaTitle(ai)}
+                onkeydown={(e) => {
+                  if (e.key === 'Escape') {
+                    editingAgendaTitleKey = '';
+                    agendaTitleDraft = '';
+                  }
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                }}
+                onclick={(e) => e.stopPropagation()}
+                onpointerdown={(e) => e.stopPropagation()}
+              />
+            {:else}
+              <button class="agenda-name agenda-name-btn" type="button" onclick={(e) => startAgendaTitleEdit(item, ai, e)} title="Ändra blocknamn">
+                {#if isPast}
+                  <del>{@html parseMarkdownHtml(itemTitle)}</del>
+                {:else}
+                  {@html parseMarkdownHtml(itemTitle)}
+                {/if}
+              </button>
+            {/if}
             {#if item.flow.id === selectedFlowId}
               <span class="agenda-editing-badge" title="Redigeras i panelen">✎</span>
             {/if}
@@ -377,6 +311,7 @@
                 <div class="agenda-zone-resize-bottom" aria-hidden="true"
                      onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
                 <div class="agenda-zone-right"
+                     role="presentation"
                      onpointerdown={(e) => rightZonePointerDown(e, ai)}
                      onpointermove={rightZonePointerMove}
                      onpointerup={rightZonePointerUp}

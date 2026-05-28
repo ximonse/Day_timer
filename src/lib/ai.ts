@@ -11,6 +11,7 @@ export interface AiConfig {
   baseUrl: string;
   customModel: string;
   planMode: AiPlanMode;
+  rememberApiKey: boolean;
 }
 
 export type PersistedAiConfig = Omit<AiConfig, 'apiKey'>;
@@ -20,11 +21,13 @@ export const DEFAULT_AI_CONFIG: AiConfig = {
   apiKey: '',
   baseUrl: '',
   customModel: '',
-  planMode: 'helpful'
+  planMode: 'helpful',
+  rememberApiKey: false
 };
 
 const AI_CONFIG_STORAGE = 'daytimer_ai_config';
 const AI_KEY_SESSION_STORAGE = 'daytimer_ai_api_key';
+const AI_KEY_PERSIST_STORAGE = 'daytimer_ai_api_key_persisted';
 const AI_KEY_LEGACY_STORAGE = 'daytimer_ai_key';
 
 export function loadAiConfig(): AiConfig {
@@ -33,10 +36,13 @@ export function loadAiConfig(): AiConfig {
   if (savedConfig) {
     try { config = { ...config, ...JSON.parse(savedConfig) }; } catch { /* ignore */ }
   }
-  const savedKey = readSessionValue(AI_KEY_SESSION_STORAGE) ?? localStorage.getItem(AI_KEY_LEGACY_STORAGE);
+  const savedKey = config.rememberApiKey
+    ? localStorage.getItem(AI_KEY_PERSIST_STORAGE) ?? readSessionValue(AI_KEY_SESSION_STORAGE) ?? localStorage.getItem(AI_KEY_LEGACY_STORAGE)
+    : readSessionValue(AI_KEY_SESSION_STORAGE) ?? localStorage.getItem(AI_KEY_LEGACY_STORAGE);
   if (savedKey) {
     config = { ...config, apiKey: savedKey };
-    writeSessionValue(AI_KEY_SESSION_STORAGE, savedKey);
+    if (config.rememberApiKey) localStorage.setItem(AI_KEY_PERSIST_STORAGE, savedKey);
+    else writeSessionValue(AI_KEY_SESSION_STORAGE, savedKey);
     localStorage.removeItem(AI_KEY_LEGACY_STORAGE);
   }
   return config;
@@ -47,17 +53,29 @@ export function persistAiConfig(config: AiConfig): void {
     provider: config.provider,
     baseUrl: config.baseUrl,
     customModel: config.customModel,
-    planMode: config.planMode
+    planMode: config.planMode,
+    rememberApiKey: config.rememberApiKey
   };
   localStorage.setItem(AI_CONFIG_STORAGE, JSON.stringify(persistedConfig));
-  if (config.apiKey.trim()) writeSessionValue(AI_KEY_SESSION_STORAGE, config.apiKey);
-  else removeSessionValue(AI_KEY_SESSION_STORAGE);
+  if (config.apiKey.trim()) {
+    if (config.rememberApiKey) {
+      localStorage.setItem(AI_KEY_PERSIST_STORAGE, config.apiKey);
+      removeSessionValue(AI_KEY_SESSION_STORAGE);
+    } else {
+      writeSessionValue(AI_KEY_SESSION_STORAGE, config.apiKey);
+      localStorage.removeItem(AI_KEY_PERSIST_STORAGE);
+    }
+  } else {
+    removeSessionValue(AI_KEY_SESSION_STORAGE);
+    localStorage.removeItem(AI_KEY_PERSIST_STORAGE);
+  }
   localStorage.removeItem(AI_KEY_LEGACY_STORAGE);
 }
 
 export function clearStoredAiConfig(): void {
   localStorage.removeItem(AI_CONFIG_STORAGE);
   localStorage.removeItem(AI_KEY_LEGACY_STORAGE);
+  localStorage.removeItem(AI_KEY_PERSIST_STORAGE);
   removeSessionValue(AI_KEY_SESSION_STORAGE);
 }
 

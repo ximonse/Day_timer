@@ -13,6 +13,7 @@
     aiProviderLabels,
     aiKeyPlaceholders,
     aiApiKey,
+    aiRememberApiKey,
     aiKeyVisible,
     aiBaseUrl,
     aiCustomModel,
@@ -43,6 +44,7 @@
     onToggleAiKeyVisible,
     onClearAiConfig,
     onAiApiKeyChange,
+    onAiRememberApiKeyChange,
     onAiBaseUrlChange,
     onAiCustomModelChange
   }: {
@@ -57,6 +59,7 @@
     aiProviderLabels: Record<string, string>;
     aiKeyPlaceholders: Record<string, string>;
     aiApiKey: string;
+    aiRememberApiKey: boolean;
     aiKeyVisible: boolean;
     aiBaseUrl: string;
     aiCustomModel: string;
@@ -87,6 +90,7 @@
     onToggleAiKeyVisible: () => void;
     onClearAiConfig: () => void;
     onAiApiKeyChange: (value: string) => void;
+    onAiRememberApiKeyChange: (value: boolean) => void;
     onAiBaseUrlChange: (value: string) => void;
     onAiCustomModelChange: (value: string) => void;
   } = $props();
@@ -200,7 +204,7 @@
       <div class="section-copy muted" style="margin-bottom:8px;">
         Används på egen risk. Var väldigt försiktig med att skriva in din API-nyckel på nätet. 
         Här används nyckeln enbart för att skicka förfrågningar direkt till vald AI-leverantör från din webbläsare, 
-        och den sparas enbart lokalt i den här sessionen.
+        och den sparas lokalt i denna webbläsare enligt valet nedan.
       </div>
 
       <select class="sync-input ai-provider-select"
@@ -228,6 +232,18 @@
           oninput={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value)}
           placeholder={aiKeyPlaceholders[aiProvider]} />
       {/if}
+
+      <label class="remember-key-row">
+        <input
+          type="checkbox"
+          checked={aiRememberApiKey}
+          onchange={(e) => onAiRememberApiKeyChange((e.target as HTMLInputElement).checked)}
+        />
+        <span>Kom ihåg API-nyckel på denna enhet</span>
+      </label>
+      <div class="section-copy muted" style="margin-top:4px;">
+        Slå bara på detta på egen dator eller mobil.
+      </div>
 
       {#if aiProvider === 'custom'}
         <div class="field-label" style="margin-top:12px;">Base URL</div>
@@ -333,6 +349,17 @@
   }
   .snapshot-restore:hover {
     border-color: var(--accent);
+  }
+  .remember-key-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--menu-text);
+  }
+  .remember-key-row input {
+    width: auto;
   }
   .probe-dot {
     width: 6px;
