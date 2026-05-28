@@ -1751,20 +1751,28 @@
       ?? (parsedDraft[0] ? { ...parsedDraft[0], date: targetDate } : { date: targetDate, flows: [] });
     const baseDays = activeAgendaText().trim() ? parseAgenda(activeAgendaText()) : [];
     const previousDay = baseDays.find(day => day.date === targetDate) ?? null;
+    const previousFlows = previousDay?.flows ?? [];
+    const draftDayWithIds = {
+      ...draftDay,
+      flows: draftDay.flows.map((flow, index) => ({
+        ...flow,
+        id: previousFlows[index]?.id ?? flow.id
+      }))
+    };
     const savingAiDraft = agendaDraftSource === 'ai';
     const nextDays = savingAiDraft
-      ? mergeAgendaDayData(activeAgendaText(), draftDay.flows.length > 0 ? [draftDay] : [])
+      ? mergeAgendaDayData(activeAgendaText(), draftDayWithIds.flows.length > 0 ? [draftDayWithIds] : [])
       : (() => {
         const preservedDays = baseDays
           .filter(day => day.date !== targetDate)
           .map(day => cloneAgendaDay(day));
-        return draftDay.flows.length > 0
-          ? [...preservedDays, cloneAgendaDay(draftDay)].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+        return draftDayWithIds.flows.length > 0
+          ? [...preservedDays, cloneAgendaDay(draftDayWithIds)].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
           : preservedDays.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
       })();
     const savedText = serializeAgenda(nextDays);
     setActiveAgendaText(savedText);
-    agendaDraft = serializeSelectedAgendaDay(targetDate, nextDays);
+    agendaDraft = serializeSelectedAgendaDay(targetDate, nextDays, { includeIds: false });
     agendaDraftDate = targetDate;
     agendaDraftDirty = false;
     agendaDraftSource = 'manual';
@@ -2049,7 +2057,7 @@
       agendaAiLastResponse = { ...text, text: normalizedText };
       const aiDays = parseAgenda(normalizedText).map(day => day.date === null ? { ...day, date: targetDate } : day);
       const mergedDays = mergeAgendaDayData(activeAgendaText(), aiDays);
-      agendaDraft = serializeSelectedAgendaDay(targetDate, mergedDays);
+      agendaDraft = serializeSelectedAgendaDay(targetDate, mergedDays, { includeIds: false });
       agendaDraftDate = targetDate;
       agendaDraftDirty = true;
       agendaDraftSource = 'ai';
@@ -2246,7 +2254,7 @@
 
   function syncAgendaDraftFromState(force = false) {
     const currentDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
-    const source = serializeSelectedAgendaDay(currentDate, agendaDays);
+    const source = serializeSelectedAgendaDay(currentDate, agendaDays, { includeIds: false });
     // ONLY sync from the state into the editable agenda draft 
     // IF the user hasn't started editing the draft yet OR if we force it.
     if (force || agendaDraftDate !== currentDate || !agendaDraftDirty) {

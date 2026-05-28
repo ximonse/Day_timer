@@ -64,6 +64,7 @@ describe('agenda helpers', () => {
 		}];
 
 		expect(serializeSelectedAgendaDay('2026-05-18', days)).toContain('@260518');
+		expect(serializeSelectedAgendaDay('2026-05-18', days, { includeIds: false })).not.toContain('<!--id:');
 		expect(serializeSelectedAgendaDay('2026-05-19', days)).toBe('@260519\n');
 		expect(serializeSelectedAgendaDay(null, days)).toBe('');
 	});

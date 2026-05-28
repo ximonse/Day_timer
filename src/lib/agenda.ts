@@ -184,10 +184,10 @@ export function replaceAgendaFlowInDays(
 	return nextDays;
 }
 
-export function serializeSelectedAgendaDay(date: string | null, days: AgendaDay[] | null): string {
+export function serializeSelectedAgendaDay(date: string | null, days: AgendaDay[] | null, options: { includeIds?: boolean } = {}): string {
 	if (!date) return '';
 	const day = days?.find(entry => entry.date === date);
-	return day ? serializeAgenda([cloneAgendaDay(day)]) : `@${date.slice(2, 4)}${date.slice(5, 7)}${date.slice(8, 10)}\n`;
+	return day ? serializeAgenda([cloneAgendaDay(day)], options) : `@${date.slice(2, 4)}${date.slice(5, 7)}${date.slice(8, 10)}\n`;
 }
 
 export function suggestedStartMinForDate(days: AgendaDay[] | null | undefined, date: string, durationMin: number): number {

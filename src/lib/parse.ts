@@ -89,6 +89,10 @@ export interface AgendaDay {
   flows: Flow[];
 }
 
+export interface SerializeAgendaOptions {
+  includeIds?: boolean;
+}
+
 interface RawSection {
   title: string;
   startMin?: number;
@@ -359,7 +363,8 @@ export function serializeBlocks(blocks: Block[], dayTitle?: string, extraInfo?: 
   return out.join('\n');
 }
 
-export function serializeAgenda(days: AgendaDay[]): string {
+export function serializeAgenda(days: AgendaDay[], options: SerializeAgendaOptions = {}): string {
+  const includeIds = options.includeIds ?? true;
   const lines: string[] = [];
   let firstDay = true;
   for (const day of days) {
@@ -376,7 +381,7 @@ export function serializeAgenda(days: AgendaDay[]): string {
       }
     }
     for (const flow of day.flows) {
-      const idTag = ` <!--id:${flow.id}-->`;
+      const idTag = includeIds ? ` <!--id:${flow.id}-->` : '';
       if (flow.startMin !== undefined) {
         const h = String(Math.floor(flow.startMin / 60)).padStart(2, '0');
         const mi = String(flow.startMin % 60).padStart(2, '0');

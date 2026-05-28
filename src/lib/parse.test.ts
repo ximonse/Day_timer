@@ -348,6 +348,13 @@ describe('serializeAgenda — roundtrip', () => {
     expect(days2[0].flows[0].startMin).toBe(9 * 60 + 15);
   });
 
+  it('kan serialisera utan interna id-taggar', () => {
+    const days = parseAgenda('#Morgon 09:15 <!--id:abc123-->\nLektion 45m');
+    const text = serializeAgenda(days, { includeIds: false });
+    expect(text).not.toContain('<!--id:');
+    expect(text).toContain('#Morgon 09:15');
+  });
+
   it('aktivitetstider bevaras via roundtrip', () => {
     const days = parseAgenda('#Session\nLektion 45m\nRast 10m');
     const text = serializeAgenda(days);
