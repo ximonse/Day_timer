@@ -574,6 +574,9 @@
       agendaInputOpen = writeMenuSections.agenda || shouldOpenAgendaInputInPlan();
     }
 
+    partsDraftDirty = false;
+    syncPartsDraftFromState(true);
+
     s.showControls = true;
     miniMenuOpen = true;
     if (typeof window !== 'undefined' && window.innerWidth <= 800) {
@@ -582,7 +585,7 @@
       scrollMobileViewportTop();
     }
     updateTimeFeedback();
-    
+
     appState.persist();
   }
 
@@ -644,7 +647,7 @@
         agendaInputOpen,
         agendaCalendarOpen
       };
-      const hasRunnableSession = goToTimerNow();
+      const hasRunnableSession = partsDraftDirty ? s.blocks.length > 0 : goToTimerNow();
       if (!hasRunnableSession) {
         miniMenuSnapshot = null;
         locked = false;
@@ -1148,7 +1151,6 @@
       partCount: s.blocks.length
     };
     if (oldKey && activeAgendaFlowRef) s.agendaMeta = moveAgendaMeta(s.agendaMeta, oldKey, makeAgendaMetaKeyForRef(activeAgendaFlowRef));
-    partsDraftDirty = false;
     markPlanSaved();
   }
 
