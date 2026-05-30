@@ -78,6 +78,7 @@
   import AdminPanel from '$lib/components/AdminPanel.svelte';
 
   const s = appState.value;
+  let activeSection = $state<AppSection>(s.activeSection as AppSection);
   const NS = 'http://www.w3.org/2000/svg';
 
   let svgEl = $state<SVGSVGElement>(null!);
@@ -446,10 +447,10 @@
   });
 
   const sectionCopy = $derived.by(() => {
-    if (s.activeSection === 'now') return 'Kör det som händer nu utan planeringsbrus.';
-    if (s.activeSection === 'plan') return '';
-    if (s.activeSection === 'library') return 'Spara och återanvänd mallar utan att blanda ihop dem med dagens plan.';
-    if (s.activeSection === 'admin') return 'Hantera inbjudningar och systemnivåer.';
+    if (activeSection === 'now') return 'Kör det som händer nu utan planeringsbrus.';
+    if (activeSection === 'plan') return '';
+    if (activeSection === 'library') return 'Spara och återanvänd mallar utan att blanda ihop dem med dagens plan.';
+    if (activeSection === 'admin') return 'Hantera inbjudningar och systemnivåer.';
     return 'Hantera konto, synk och AI-stöd.';
   });
   const sortedFlowOptions = $derived.by(() =>
@@ -462,17 +463,17 @@
   const partsFieldValue = $derived(partsDraft);
   const partsFeedbackText = $derived(`${s.blocks.length}${s.blocks.length === 1 ? ' del' : ' delar'}`);
   const timeFeedbackText = $derived(`${totalMin()} min → slutar ${fmtHM(s.startMin + totalMin())}`);
-  const activePanelStatus = $derived(s.activeSection === 'plan' ? planPanelStatus : nowPanelStatus);
+  const activePanelStatus = $derived(activeSection === 'plan' ? planPanelStatus : nowPanelStatus);
   const activePanelStatusLabel = $derived.by(() => {
     if (activePanelStatus === 'saving') return 'Sparar...';
     if (activePanelStatus === 'saved') return 'Sparat';
-    return s.activeSection === 'plan' ? 'Autospar på. Klicka Spara när blocket känns klart.' : 'Autospar på i den här sessionen.';
+    return activeSection === 'plan' ? 'Autospar på. Klicka Spara när blocket känns klart.' : 'Autospar på i den här sessionen.';
   });
   const canRevertPanel = $derived(
-    (s.activeSection === 'plan' ? planPanelBaseline : nowPanelBaseline) !== null
+    (activeSection === 'plan' ? planPanelBaseline : nowPanelBaseline) !== null
   );
   const planActionHint = $derived.by(() =>
-    s.activeSection === 'plan'
+    activeSection === 'plan'
       ? 'Sparar till den dag som är vald i kalendern utan att snabbstarta timern.'
       : 'Sätter starttiden till nu och lägger in sessionen i dagplanen.'
   );
@@ -549,7 +550,7 @@
   }
 
   function setActiveSection(section: AppSection) {
-    const oldSection = s.activeSection;
+    const oldSection = activeSection;
     if (oldSection === section) return;
     const clearImplicitAgendaSelection = oldSection === 'now' && section === 'plan' && !planSelectionExplicit;
 
@@ -560,6 +561,7 @@
     }
 
     s.activeSection = section;
+    activeSection = section;
 
     if (section === 'now') {
       applyEditorDraft(s.nowDraft);
@@ -629,6 +631,7 @@
     if (!active) return;
     closeTransientMenus();
     s.activeSection = 'now';
+    activeSection = 'now';
     mobileTab = 'now';
     agendaInputOpen = false;
     agendaCalendarOpen = false;
@@ -2472,6 +2475,7 @@
       s.sbCollapsed = false;
       s.showControls = true;
       s.activeSection = 'now';
+      activeSection = 'now';
       mobileTab = 'now';
       if (window.innerWidth < 1100 && window.innerWidth > 800) {
         s.agendaOpen = false; // iPad portrait: stäng agenda för att inte tränga
@@ -2625,7 +2629,7 @@
     const _agendaText = activeAgendaText();
     // Only sync from the persistent state into the editable draft 
     // IF the user hasn't started editing the draft yet.
-    if (s.activeSection === 'plan' && !agendaDraftDirty) {
+    if (activeSection === 'plan' && !agendaDraftDirty) {
       syncAgendaDraftFromState();
     }
   });
@@ -2639,7 +2643,7 @@
   });
 
   $effect(() => {
-    const _section = s.activeSection;
+    const _section = activeSection;
     const _title = s.dayTitle;
     const _extra = s.extraInfo;
     const _start = s.startMin;
@@ -3056,9 +3060,9 @@
       <div class="mini-menu-details" class:open={miniMenuOpen}>
       {#if s.showControls}
         <div class="controls">
-        <SectionNav activeSection={s.activeSection} labels={SECTION_LABELS} onSelect={(section) => section === 'now' ? goToTimerNow() : setActiveSection(section)} />
+        <SectionNav {activeSection} labels={SECTION_LABELS} onSelect={(section) => section === 'now' ? goToTimerNow() : setActiveSection(section)} />
 
-        {#if s.activeSection === 'now'}
+        {#if activeSection === 'now'}
           <div class="section-hero section-hero--split section-hero--compact">
             <div class="hero-select-wrap">
               <label class="field-label" for="now-template-select">Mall</label>
@@ -3076,7 +3080,7 @@
               </select>
             </div>
           </div>
-        {:else if s.activeSection === 'plan'}
+        {:else if activeSection === 'plan'}
           <div class="section-hero section-hero--split section-hero--compact">
             <div class="hero-select-wrap">
               <label class="field-label" for="plan-template-select">Mall</label>
@@ -3095,10 +3099,10 @@
             </div>
           </div>
         {:else}
-          <SectionHero title={SECTION_LABELS[s.activeSection]} copy={sectionCopy} />
+          <SectionHero title={SECTION_LABELS[activeSection]} copy={sectionCopy} />
         {/if}
 
-        {#if s.activeSection === 'plan'}
+        {#if activeSection === 'plan'}
           <div in:fade={{ duration: 150 }}>
             <AgendaImportPanel
               {agendaInputOpen}
@@ -3148,7 +3152,7 @@
           </div>
         {/if}
 
-        {#if s.activeSection === 'now' && s.blocks.length > 0}
+        {#if activeSection === 'now' && s.blocks.length > 0}
           <div class="now-live-panel" in:fade={{ duration: 150 }}>
             <div>
               <div class="now-live-title">Nu är live</div>
@@ -3159,13 +3163,13 @@
               <button class="quickstart quickstart-subtle" type="button" onclick={saveFlow}>{savedFlowMsg || 'Spara som mall'}</button>
             </div>
           </div>
-        {:else if s.activeSection === 'now' || s.activeSection === 'plan'}
+        {:else if activeSection === 'now' || activeSection === 'plan'}
           <div in:fade={{ duration: 150 }}>
             <SessionEditorPanel
               userLevel={effectiveUserLevel}
               aiProvider={aiConfig.provider}
               aiApiKey={aiConfig.apiKey}
-              mode={s.activeSection}
+              mode={activeSection}
 
               hasSelection={!!selectedAgendaDetails}
               savedFlowMsg={savedFlowMsg}
@@ -3193,7 +3197,7 @@
               totalMinutesValue={totalMin()}
               minTotalMinutes={s.blocks.length * 2}
               {endMode}
-              actionLabel={s.activeSection === 'plan' ? 'Spara' : 'Kör!'}
+              actionLabel={activeSection === 'plan' ? 'Spara' : 'Kör!'}
               actionHint={planActionHint}
               saveStatusLabel={activePanelStatusLabel}
               canRevert={canRevertPanel}
@@ -3214,11 +3218,11 @@
               isCopyingDay={!!currentDayShareKey && shareCopyTargetKey === currentDayShareKey}
               onTitleInput={(value) => {
                 s.dayTitle = value;
-                if (s.activeSection !== 'plan') {
+                if (activeSection !== 'plan') {
                   syncTimerToAgenda();
                 }
                 appState.persist();
-                notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+                notifyPanelMutation(activeSection === 'plan' ? 'plan' : 'now');
               }}
               onPartsInput={handlePartsInput}
               onPartsKeyDown={handlePartsKeyDown}
@@ -3237,7 +3241,7 @@
                   showToast('Lägg till minst en aktivitet först');
                   return;
                 }
-                if (s.activeSection === 'plan') {
+                if (activeSection === 'plan') {
                   if (selectedAgendaDetails && planSelectionExplicit) {
                     syncTimerToAgenda(true);
                   } else {
@@ -3282,7 +3286,7 @@
                 if (isNaN(h) || isNaN(m)) return;
                 s.startMin = h * 60 + m; warnedSet.clear();
                 updateTimeFeedback();
-                syncTimerToAgenda(); appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+                syncTimerToAgenda(); appState.persist(); notifyPanelMutation(activeSection === 'plan' ? 'plan' : 'now');
               }}
               onEndTimeInput={(value) => {
                 const [h, m] = value.split(':').map(Number);
@@ -3294,16 +3298,16 @@
                 scaleMinutesTo(diff);
                 updateTimeFeedback();
                 syncTimerToAgenda(); appState.persist();
-                notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+                notifyPanelMutation(activeSection === 'plan' ? 'plan' : 'now');
               }}
               onTotalMinutesInput={(value) => {
                 if (!value || value < s.blocks.length * 2) return;
                 scaleMinutesTo(value);
                 updateTimeFeedback();
                 syncTimerToAgenda(); appState.persist();
-                notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+                notifyPanelMutation(activeSection === 'plan' ? 'plan' : 'now');
               }}
-              onEndModeChange={(mode) => { endMode = mode; s.endMode = mode; appState.persist(); notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now'); }}  
+              onEndModeChange={(mode) => { endMode = mode; s.endMode = mode; appState.persist(); notifyPanelMutation(activeSection === 'plan' ? 'plan' : 'now'); }}  
               onRevert={revertActivePanel}
               onToggleTitleHelp={() => sessionTitleHelpOpen = toggleHelpOverride(sessionTitleHelpOpen)}
               onTogglePartsHelp={() => sessionPartsHelpOpen = toggleHelpOverride(sessionPartsHelpOpen)}
@@ -3330,7 +3334,7 @@
                 scaleMinutesTo(mins);
                 updateTimeFeedback();
                 syncTimerToAgenda(); appState.persist();
-                notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
+                notifyPanelMutation(activeSection === 'plan' ? 'plan' : 'now');
               }}
               actualHistoryOpen={actualHistoryOpen}
               onToggleActualHistory={() => setWriteMenuSection('actualHistory', !actualHistoryOpen)}
@@ -3347,7 +3351,7 @@
               onExportActualHistory={exportActualHistory}
             />
           </div>
-        {:else if s.activeSection === 'library'}
+        {:else if activeSection === 'library'}
           <div in:fade={{ duration: 150 }}>
             <LibraryPanel
               savedFlowMsg={savedFlowMsg}
@@ -3362,7 +3366,7 @@
               onDeleteFlow={deleteFlow}
             />
           </div>
-        {:else if s.activeSection === 'workspace'}
+        {:else if activeSection === 'workspace'}
           <div in:fade={{ duration: 150 }}>
             <WorkspacePanel
               userLevel={effectiveUserLevel}
@@ -3413,7 +3417,7 @@
               onAiCustomModelChange={(value) => { aiConfig.customModel = value; saveAiConfig(); }}
             />
           </div>
-        {:else if s.activeSection === 'admin'}
+        {:else if activeSection === 'admin'}
           <div in:fade={{ duration: 150 }}>
             <AdminPanel
               {adminPassword}
@@ -3430,7 +3434,7 @@
 
   <div class="resize-handle-ag" role="separator" aria-orientation="vertical" onpointerdown={startAgendaResize}></div>
   <AgendaPanel
-    selectedFlowId={(s.activeSection === 'plan' && planSelectionExplicit && selectedAgendaDetails) ? selectedAgendaDetails.flow.id : null}
+    selectedFlowId={(activeSection === 'plan' && planSelectionExplicit && selectedAgendaDetails) ? selectedAgendaDetails.flow.id : null}
     {sectorColors}
     {isViewMode}
     runMode={locked && !miniMenuOpen}
@@ -3468,16 +3472,16 @@
   </button>
 
   <nav class="mobile-tabs">
-    <button class:active={s.activeSection === 'now' && mobileTab === 'now'} onclick={goToTimerNow}>
+    <button class:active={activeSection === 'now' && mobileTab === 'now'} onclick={goToTimerNow}>
       <span>◷</span> Nu
     </button>
-    <button class:active={s.activeSection === 'plan' && mobileTab === 'plan'} onclick={() => setActiveSection('plan')}>
+    <button class:active={activeSection === 'plan' && mobileTab === 'plan'} onclick={() => setActiveSection('plan')}>
       <span>▦</span> Planera
     </button>
-    <button class:active={s.activeSection === 'library'} onclick={() => setActiveSection('library')}>
+    <button class:active={activeSection === 'library'} onclick={() => setActiveSection('library')}>
       <span>⌘</span> Bibliotek
     </button>
-    <button class:active={s.activeSection === 'workspace'} onclick={() => setActiveSection('workspace')}>
+    <button class:active={activeSection === 'workspace'} onclick={() => setActiveSection('workspace')}>
       <span>⋯</span> Konto
     </button>
   </nav>
