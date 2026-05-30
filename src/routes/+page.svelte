@@ -63,6 +63,7 @@
     workspaceDataFromSyncResponse
   } from '$lib/workspace.js';
   import { normalizeSyncSaveSource, type SyncSaveSource } from '$lib/sync-source.js';
+  import { shouldSkipWorkspaceAutosave } from '$lib/autosave.js';
   import { stripColorDirective } from '$lib/title-color.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
@@ -1538,7 +1539,7 @@
     syncActiveDraftFromEditor();
     const workspace = currentWorkspaceData();
     const workspaceHash = JSON.stringify(workspace);
-    if (saveSource !== 'manual' && (workspaceHash === lastSyncedHash || workspaceHash === pendingWorkspaceSaveHash)) {
+    if (shouldSkipWorkspaceAutosave(saveSource, workspaceHash, lastSyncedHash, pendingWorkspaceSaveHash)) {
       syncProbeState = 'ok';
       syncProbeText = `Synkad ${probeTime()} (oförändrat)`;
       return;
