@@ -15,7 +15,6 @@
     buildAgendaItemsForDay,
     buildCalendarCells,
     buildSequentialTimeline,
-    cloneAgendaDay,
     computeAgendaDensity,
     insertFlowIntoAgendaDate,
     findAgendaItemForTime,
@@ -48,6 +47,12 @@
     exportActualHistoryJsonl
   } from '$lib/actuals.js';
   import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
+  import {
+    addManualAgendaItem,
+    deleteAgendaItemAt,
+    renameAgendaItemAt,
+    saveAgendaDraft
+  } from '$lib/agenda-actions.js';
   import {
     applySharedStatePayload,
     buildLiveShareState,
@@ -1801,44 +1806,21 @@
 
   function saveAgenda() {
     const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
-    const parsedDraft = agendaDraft.trim() ? parseAgenda(agendaDraft) : [];
-    const draftDay = parsedDraft.find(day => day.date === targetDate)
-      ?? (parsedDraft[0] ? { ...parsedDraft[0], date: targetDate } : { date: targetDate, flows: [] });
-    const baseDays = activeAgendaText().trim() ? parseAgenda(activeAgendaText()) : [];
-    const previousDay = baseDays.find(day => day.date === targetDate) ?? null;
-    const previousFlows = previousDay?.flows ?? [];
-    const draftDayWithIds = {
-      ...draftDay,
-      flows: draftDay.flows.map((flow, index) => ({
-        ...flow,
-        id: previousFlows[index]?.id ?? flow.id
-      }))
-    };
     const savingAiDraft = agendaDraftSource === 'ai';
-    const nextDays = savingAiDraft
-      ? mergeAgendaDayData(activeAgendaText(), draftDayWithIds.flows.length > 0 ? [draftDayWithIds] : [])
-      : (() => {
-        const preservedDays = baseDays
-          .filter(day => day.date !== targetDate)
-          .map(day => cloneAgendaDay(day));
-        return draftDayWithIds.flows.length > 0
-          ? [...preservedDays, cloneAgendaDay(draftDayWithIds)].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-          : preservedDays.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
-      })();
-    const savedText = serializeAgenda(nextDays);
-    setActiveAgendaText(savedText);
-    agendaDraft = serializeSelectedAgendaDay(targetDate, nextDays, { includeIds: false });
-    agendaDraftDate = targetDate;
-    agendaDraftDirty = false;
-    agendaDraftSource = 'manual';
-    s.agendaMeta = rebuildAgendaMetaForDay(
-      s.agendaMeta,
+    const result = saveAgendaDraft({
+      activeText: activeAgendaText(),
+      draftText: agendaDraft,
       targetDate,
-      previousDay,
-      nextDays.find(day => day.date === targetDate) ?? null,
-      agendaDayStart,
-      { defaultMeta: { source: savingAiDraft ? 'ai' : 'manual' } }
-    );
+      source: agendaDraftSource,
+      agendaMeta: s.agendaMeta,
+      agendaDayStart
+    });
+    setActiveAgendaText(result.savedText);
+    agendaDraft = result.draftText;
+    agendaDraftDate = targetDate;
+    agendaDraftDirty = result.draftDirty;
+    agendaDraftSource = result.draftSource;
+    s.agendaMeta = result.agendaMeta;
     activeAgendaFlowRef = null;
     sessionSource = { kind: 'unscheduled' };
     appState.persist();
@@ -1947,11 +1929,7 @@
 
   function deleteAgendaItem(flowIdx: number) {
     if (!agendaDays || selectedDayIdx < 0) return;
-    const days = agendaDays.map((d, i) =>
-      i === selectedDayIdx
-        ? { ...d, flows: d.flows.filter((_, j) => j !== flowIdx) }
-        : d
-    );
+    const days = deleteAgendaItemAt(agendaDays, selectedDayIdx, flowIdx);
     setActiveAgendaText(serializeAgenda(days));
     if (selectedAgendaDetails?.dayIdx === selectedDayIdx && selectedAgendaDetails.flowIdx === flowIdx) {
       activeAgendaFlowRef = null;
@@ -1964,19 +1942,18 @@
   function renameAgendaItem(flowIdx: number, title: string) {
     if (!agendaDays || selectedDayIdx < 0) return;
     const nextTitle = title.trim() || 'Utan rubrik';
-    const originalDay = agendaDays[selectedDayIdx];
-    const originalFlow = originalDay?.flows[flowIdx] ?? null;
-    const originalStart = originalFlow ? (originalFlow.startMin ?? suggestedStartMinForDate(agendaDays, originalDay?.date ?? localDateISO(), totalFlowMinutes(originalFlow))) : 0;
-    const oldMetaKey = originalDay && originalFlow ? makeAgendaMetaKeyForFlow(originalDay.date ?? null, originalFlow, originalStart) : null;
-    const days = agendaDays.map((d, i) =>
-      i === selectedDayIdx
-        ? { ...d, flows: d.flows.map((f, j) => j === flowIdx ? { ...f, title: nextTitle } : f) }
-        : d
-    );
+    const result = renameAgendaItemAt({
+      days: agendaDays,
+      dayIdx: selectedDayIdx,
+      flowIdx,
+      title: nextTitle,
+      agendaDayStart,
+      agendaMeta: s.agendaMeta
+    });
+    const days = result.days;
     setActiveAgendaText(serializeAgenda(days));
     const updatedDay = days[selectedDayIdx];
-    const updatedItems = updatedDay ? buildAgendaItemsForDay(updatedDay, agendaDayStart) : [];
-    const updatedItem = updatedItems[flowIdx];
+    const updatedItem = result.updatedItem;
     if (selectedAgendaDetails?.dayIdx === selectedDayIdx && selectedAgendaDetails.flowIdx === flowIdx && updatedItem) {
       s.dayTitle = nextTitle;
       activeAgendaFlowRef = makeAgendaFlowRef(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin);
@@ -1984,9 +1961,7 @@
       capturePanelBaseline(s.activeSection === 'plan' ? 'plan' : 'now');
       syncPartsDraftFromState(true);
     }
-    if (oldMetaKey && updatedDay && updatedItem) {
-      s.agendaMeta = moveAgendaMeta(s.agendaMeta, oldMetaKey, makeAgendaMetaKeyForFlow(updatedDay.date ?? null, updatedItem.flow, updatedItem.startMin));
-    }
+    s.agendaMeta = result.agendaMeta;
     markPlanSaved();
     appState.persist();
     if (hasSyncSession()) void syncSave();
@@ -1997,18 +1972,18 @@
     const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
     const duration = placement?.duration ?? 45;
     const startMin = placement?.startMin ?? suggestedStartMinForDate(agendaDays, targetDate, duration);
-    const flow: Flow = {
+    const inserted = addManualAgendaItem({
+      days: agendaDays,
+      targetDate,
       id: uid(),
-      title: 'Nytt block',
-      parts: ['Aktivitet'],
-      minutes: [duration],
-      warnings: [true],
-      notes: [''],
-      extraInfo: '',
-      startMin
-    };
-    const inserted = addFlowToAgendaDate(targetDate, flow, false, { source: 'manual' }, startMin);
-    const insertedFlow = inserted?.flow ?? flow;
+      startMin,
+      duration
+    });
+    const insertedFlow = inserted.flow;
+    setActiveAgendaText(serializeAgenda(inserted.days));
+    setActiveAgendaDate(targetDate);
+    setAgendaMeta(makeAgendaMetaKeyForFlow(targetDate, insertedFlow, insertedFlow.startMin ?? startMin), { source: 'manual' });
+    appState.persist();
     planSelectionExplicit = true;
     loadAgendaFlow(insertedFlow, insertedFlow.startMin ?? startMin, 'plan', true);
     markPlanSaved();
