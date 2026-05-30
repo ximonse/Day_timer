@@ -1133,7 +1133,7 @@
   }
 
   function syncTimerToAgenda(forceUpdate = false) {
-    if (s.activeSection === 'plan' && !forceUpdate) return;
+    if (s.activeSection === 'plan' && !forceUpdate && !planSelectionExplicit) return;
     const active = resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef);
     if (!active || !agendaDays) return;
     const { dayIdx, flowIdx } = active;
@@ -1248,9 +1248,7 @@
     s.extraInfo = result.extraInfo;
     updateTimeFeedback();
     
-    if (s.activeSection !== 'plan') {
-      syncTimerToAgenda();
-    }
+    syncTimerToAgenda();
     appState.persist();
     notifyPanelMutation(s.activeSection === 'plan' ? 'plan' : 'now');
   }
@@ -1828,6 +1826,11 @@
     setTimeout(() => { savedAgendaMsg = ''; }, 2000);
   }
 
+  function persistAgendaMutation() {
+    appState.persist();
+    if (hasSyncSession()) void syncSave('auto-panel');
+  }
+
   function previewIcsImport() {
     const parsed = parseIcsEvents(icsDraft);
     icsPreviewEvents = parsed;
@@ -1932,7 +1935,7 @@
       planSelectionExplicit = false;
       sessionSource = { kind: 'unscheduled' };
     }
-    appState.persist();
+    persistAgendaMutation();
   }
 
   function renameAgendaItem(flowIdx: number, title: string) {
@@ -2269,7 +2272,7 @@
     window.removeEventListener('pointerup', endAgendaDrag);
     window.removeEventListener('pointercancel', endAgendaDrag);
     setTimeout(() => { agendaDragMoved = false; }, 0);
-    appState.persist();
+    persistAgendaMutation();
   }
 
   const currentAiPrompt = $derived(
@@ -2822,7 +2825,7 @@
         }
       }
     }
-    appState.persist();
+    persistAgendaMutation();
     setTimeout(() => { agendaDragMoved = false; }, 0);
   }
 
@@ -3221,9 +3224,7 @@
               isCopyingDay={!!currentDayShareKey && shareCopyTargetKey === currentDayShareKey}
               onTitleInput={(value) => {
                 s.dayTitle = value;
-                if (activeSection !== 'plan') {
-                  syncTimerToAgenda();
-                }
+                syncTimerToAgenda();
                 appState.persist();
                 notifyPanelMutation(activeSection === 'plan' ? 'plan' : 'now');
               }}
