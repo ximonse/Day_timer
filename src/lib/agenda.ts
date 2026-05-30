@@ -199,6 +199,19 @@ export function suggestedStartMinForDate(days: AgendaDay[] | null | undefined, d
 	return Math.min(roundedEnd, Math.max(8 * 60, 24 * 60 - durationMin));
 }
 
+export function availableGapAfterAgendaItem(items: Pick<AgendaItem, 'startMin' | 'totalMin'>[], index: number, dayEndMin = 24 * 60): number {
+	const item = items[index];
+	if (!item) return 0;
+	const itemEnd = item.startMin + item.totalMin;
+	const next = items[index + 1];
+	const nextStart = next ? next.startMin : dayEndMin;
+	return Math.max(0, nextStart - itemEnd);
+}
+
+export function canInsertAgendaItemAfter(items: Pick<AgendaItem, 'startMin' | 'totalMin'>[], index: number, minGap = 30): boolean {
+	return availableGapAfterAgendaItem(items, index) > minGap;
+}
+
 export function findAgendaItemForTime(days: AgendaDay[] | null | undefined, date: string, minute: number, fallbackStart: number): AgendaItem | null {
 	const day = days?.find(entry => entry.date === date) ?? null;
 	if (!day) return null;

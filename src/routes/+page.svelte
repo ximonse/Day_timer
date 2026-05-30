@@ -1992,21 +1992,22 @@
     if (hasSyncSession()) void syncSave();
   }
 
-  function addAgendaItemToSelectedDay() {
+  function addAgendaItemToSelectedDay(placement?: { startMin: number; duration: number }) {
     if (isViewMode) return;
     const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
-    const startMin = suggestedStartMinForDate(agendaDays, targetDate, 45);
+    const duration = placement?.duration ?? 45;
+    const startMin = placement?.startMin ?? suggestedStartMinForDate(agendaDays, targetDate, duration);
     const flow: Flow = {
       id: uid(),
       title: 'Nytt block',
       parts: ['Aktivitet'],
-      minutes: [45],
+      minutes: [duration],
       warnings: [true],
       notes: [''],
       extraInfo: '',
       startMin
     };
-    const inserted = addFlowToAgendaDate(targetDate, flow, true, { source: 'manual' }, startMin);
+    const inserted = addFlowToAgendaDate(targetDate, flow, false, { source: 'manual' }, startMin);
     const insertedFlow = inserted?.flow ?? flow;
     planSelectionExplicit = true;
     loadAgendaFlow(insertedFlow, insertedFlow.startMin ?? startMin, 'plan', true);

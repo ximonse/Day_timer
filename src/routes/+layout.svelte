@@ -367,6 +367,17 @@
   :global(.agenda-block:hover .agenda-del-btn) { opacity: .55; }
   :global(.agenda-block:hover .agenda-move-btn) { opacity: .72; }
   :global(.agenda-del-btn:hover) { opacity: 1 !important; }
+  :global(.agenda-insert-after-btn) {
+    position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%);
+    z-index: 4; width: 18px; height: 14px; border: 0; border-radius: 999px;
+    background: transparent; color: var(--muted); cursor: default;
+    opacity: .18; font: 700 13px/13px inherit; padding: 0;
+  }
+  :global(.agenda-insert-after-btn.available) { cursor: pointer; opacity: .32; }
+  :global(.agenda-block:hover .agenda-insert-after-btn.available) {
+    opacity: .78; background: color-mix(in srgb, var(--panel) 80%, transparent);
+  }
+  :global(.agenda-insert-after-btn:disabled) { pointer-events: auto; }
   :global(.agenda-drag-top) {
     position: absolute; top: 0; left: 0; width: 50%; height: 50%;
     cursor: ns-resize; touch-action: none; z-index: 2;

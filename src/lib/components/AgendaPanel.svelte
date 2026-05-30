@@ -3,6 +3,7 @@
   import { fmtAgendaDate, shiftMonth, monthKey, parseIsoDate, monthLabel, localDateISO } from '$lib/date.js';
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
+  import { availableGapAfterAgendaItem, canInsertAgendaItemAfter } from '$lib/agenda.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { colorForSegment, stripColorDirective } from '$lib/title-color.js';
 
@@ -65,7 +66,7 @@
     agendaDimPast: boolean;
     onSetActiveSection: (s: any) => void;
     onRenameAgendaItem: (flowIdx: number, title: string) => void;
-    onAddAgendaItem: () => { id: string; startMin: number } | void;
+    onAddAgendaItem: (placement?: { startMin: number; duration: number }) => { id: string; startMin: number } | void;
     agendaEl: HTMLElement;
     timelineEl: HTMLElement;
     agendaCalendarOpen: boolean;
@@ -100,6 +101,7 @@
   let editingAgendaTitleKey = $state('');
   let agendaTitleDraft = $state('');
   let pendingEditAgendaFlowId = $state<string | null>(null);
+  let suppressAgendaTitleBlur = false;
 
   function agendaEditKey(item: any, idx: number) {
     return `${selectedDay?.date ?? ''}:${item.startMin}:${item.flow.id ?? item.flow.title}:${idx}`;
@@ -113,20 +115,37 @@
   }
 
   function commitAgendaTitle(idx: number) {
+    if (!editingAgendaTitleKey) return;
     const title = agendaTitleDraft.trim() || 'Utan rubrik';
     onRenameAgendaItem(idx, title);
     editingAgendaTitleKey = '';
     agendaTitleDraft = '';
   }
 
-  function addAgendaItemAndEdit() {
-    const added = onAddAgendaItem();
+  function placementAfter(idx: number) {
+    const item = agendaItems[idx];
+    const gap = availableGapAfterAgendaItem(agendaItems, idx);
+    if (!item || gap <= 30) return undefined;
+    return { startMin: item.startMin + item.totalMin, duration: Math.min(45, gap) };
+  }
+
+  function addAgendaItemAndEdit(placement?: { startMin: number; duration: number }) {
+    const added = onAddAgendaItem(placement);
     if (added?.id) pendingEditAgendaFlowId = added.id;
   }
 
   function commitAgendaTitleAndAddNext(idx: number) {
+    const placement = placementAfter(idx);
     commitAgendaTitle(idx);
-    addAgendaItemAndEdit();
+    if (placement) addAgendaItemAndEdit(placement);
+  }
+
+  function handleAgendaTitleBlur(idx: number) {
+    if (suppressAgendaTitleBlur) {
+      suppressAgendaTitleBlur = false;
+      return;
+    }
+    commitAgendaTitle(idx);
   }
 
   function focusTitleInput(node: HTMLInputElement) {
@@ -240,7 +259,7 @@
       <p class="agenda-empty">{selectedDay?.date ? `Ingen plan sparad för ${fmtAgendaDate(selectedDay.date)} än.` : 'Skriv in dagplanen i Planera, eller spara flöden via ✎-panelen.'}</p>
       {#if !isViewMode && !runMode}
         <div class="agenda-add-row">
-          <button class="agenda-add-inline" onclick={addAgendaItemAndEdit} title="Lägg till block">+</button>
+          <button class="agenda-add-inline" onclick={() => addAgendaItemAndEdit()} title="Lägg till block">+</button>
         </div>
       {:else}
         <button class="quickstart agenda-plan-link" onclick={() => onSetActiveSection('plan')}>Gå till Planera</button>
@@ -289,15 +308,18 @@
                 value={agendaTitleDraft}
                 use:focusTitleInput
                 oninput={(e) => agendaTitleDraft = (e.target as HTMLInputElement).value}
-                onblur={() => commitAgendaTitle(ai)}
+                onblur={() => handleAgendaTitleBlur(ai)}
                 onkeydown={(e) => {
+                  e.stopPropagation();
                   if (e.key === 'Escape') {
                     e.preventDefault();
+                    suppressAgendaTitleBlur = true;
                     editingAgendaTitleKey = '';
                     agendaTitleDraft = '';
                   }
                   if (e.key === 'Enter') {
                     e.preventDefault();
+                    suppressAgendaTitleBlur = true;
                     commitAgendaTitleAndAddNext(ai);
                   }
                 }}
@@ -326,6 +348,17 @@
                 >⋮⋮</button>
               {/if}
               <button class="agenda-del-btn" onclick={(e) => { e.stopPropagation(); deleteAgendaItem(ai); }} title="Ta bort block">🗑</button>
+              <button
+                class="agenda-insert-after-btn"
+                class:available={canInsertAgendaItemAfter(agendaItems, ai)}
+                disabled={!canInsertAgendaItemAfter(agendaItems, ai)}
+                onclick={(e) => {
+                  e.stopPropagation();
+                  const placement = placementAfter(ai);
+                  if (placement) addAgendaItemAndEdit(placement);
+                }}
+                title={canInsertAgendaItemAfter(agendaItems, ai) ? 'Lägg till block efter' : 'För lite utrymme efter blocket'}
+              >+</button>
               <div class="agenda-drag-top" role="separator" aria-orientation="horizontal" onpointerdown={(e) => startAgendaDrag(e, ai, 'top')}></div>
               <div class="agenda-drag-bottom" role="separator" aria-orientation="horizontal" onpointerdown={(e) => startAgendaDrag(e, ai, 'bottom')}></div>
               {#if s.activeSection !== 'now'}
@@ -372,7 +405,7 @@
       </div>
       {#if !isViewMode && !runMode}
         <div class="agenda-add-row">
-          <button class="agenda-add-inline" onclick={addAgendaItemAndEdit} title="Lägg till block">+</button>
+          <button class="agenda-add-inline" onclick={() => addAgendaItemAndEdit()} title="Lägg till block">+</button>
         </div>
       {/if}
     {/if}

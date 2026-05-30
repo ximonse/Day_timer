@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import {
+	availableGapAfterAgendaItem,
 	buildAgendaItemsForDay,
 	buildCalendarCells,
 	buildSequentialTimeline,
+	canInsertAgendaItemAfter,
 	computeAgendaDensity,
 	deriveAgendaDayStart,
 	agendaMetaBadge,
@@ -81,6 +83,18 @@ describe('agenda helpers', () => {
 		expect(suggestedStartMinForDate(days, '2026-05-18', 45)).toBe(8 * 60 + 50);
 		expect(suggestedStartMinForDate(days, '2026-05-19', 45)).toBe(8 * 60);
 		expect(suggestedStartMinForDate(days, '2026-05-18', 23 * 60)).toBe(8 * 60);
+	});
+
+	test('calculates whether a block can be inserted after an agenda item', () => {
+		const items = [
+			{ startMin: 8 * 60, totalMin: 30 },
+			{ startMin: 9 * 60, totalMin: 30 }
+		];
+
+		expect(availableGapAfterAgendaItem(items, 0)).toBe(30);
+		expect(canInsertAgendaItemAfter(items, 0)).toBe(false);
+		expect(canInsertAgendaItemAfter([{ startMin: 8 * 60, totalMin: 25 }, { startMin: 9 * 60, totalMin: 30 }], 0)).toBe(true);
+		expect(canInsertAgendaItemAfter([{ startMin: 23 * 60, totalMin: 20 }], 0)).toBe(true);
 	});
 
 	test('finds the agenda item covering a specific time on a date', () => {
