@@ -21,10 +21,7 @@
     findNextAgendaItemAfterTime,
     makeAgendaFlowRef,
     makeAgendaMetaKeyForFlow,
-    makeAgendaMetaKeyForRef,
-    moveAgendaMeta,
     rebuildAgendaMetaForDay,
-    replaceAgendaFlowInDays,
     resolveAgendaFlowRef,
     serializeSelectedAgendaDay,
     suggestedStartMinForDate,
@@ -53,6 +50,11 @@
     renameAgendaItemAt,
     saveAgendaDraft
   } from '$lib/agenda-actions.js';
+  import {
+    prepareAgendaFlowLoad,
+    syncSessionToAgenda,
+    type SessionSource
+  } from '$lib/session-agenda-binding.js';
   import {
     applySharedStatePayload,
     buildLiveShareState,
@@ -114,10 +116,6 @@
   let partsDraft = $state('');
   let partsDraftDirty = $state(false);
   let activeAgendaFlowRef = $state<AgendaFlowRef | null>(null);
-  type SessionSource =
-    | { kind: 'unscheduled' }
-    | { kind: 'template'; templateId: string; title: string }
-    | { kind: 'agenda'; date: string | null; title: string; startMin: number };
   let sessionSource = $state<SessionSource>({ kind: 'unscheduled' });
   let agendaDragMoved = $state(false);
   let agendaEl = $state<HTMLElement>(null!);
@@ -1149,27 +1147,25 @@
   }
 
   function syncTimerToAgenda(forceUpdate = false) {
-    if (s.activeSection === 'plan' && !forceUpdate && !planSelectionExplicit) return;
-    const active = resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef);
-    if (!active || !agendaDays) return;
-    const { dayIdx, flowIdx } = active;
-    const oldKey = activeAgendaFlowRef ? makeAgendaMetaKeyForRef(activeAgendaFlowRef) : null;
-    const newDays = replaceAgendaFlowInDays(agendaDays, dayIdx, flowIdx, makeFlowFromSession({
-      id: active.flow.id,
-      title: s.dayTitle,
-      blocks: s.blocks,
-      extraInfo: s.extraInfo,
-      startMin: s.startMin
-    }, uid));
-    setActiveAgendaText(serializeAgenda(newDays));
-    activeAgendaFlowRef = {
-      ...activeAgendaFlowRef!,
-      title: s.dayTitle,
-      startMin: s.startMin,
-      totalMin: totalMin(),
-      partCount: s.blocks.length
-    };
-    if (oldKey && activeAgendaFlowRef) s.agendaMeta = moveAgendaMeta(s.agendaMeta, oldKey, makeAgendaMetaKeyForRef(activeAgendaFlowRef));
+    const result = syncSessionToAgenda({
+      days: agendaDays,
+      activeRef: activeAgendaFlowRef,
+      activeSection: s.activeSection as AppSection,
+      forceUpdate,
+      planSelectionExplicit,
+      session: {
+        title: s.dayTitle,
+        blocks: s.blocks,
+        extraInfo: s.extraInfo,
+        startMin: s.startMin
+      },
+      agendaMeta: s.agendaMeta,
+      createId: uid
+    });
+    if (!result) return;
+    setActiveAgendaText(serializeAgenda(result.days));
+    activeAgendaFlowRef = result.activeRef;
+    s.agendaMeta = result.agendaMeta;
     markPlanSaved();
   }
 
@@ -2838,14 +2834,23 @@
       setActiveSection(targetSection);
     }
 
-    const session = applySessionStateFromFlow(flow, { startMin: flow.startMin ?? computedStart, pinned: minutes => minutes > 0, clockSpan: 60 });
-    activeAgendaFlowRef = selectedDay
-      ? makeAgendaFlowRef(selectedDay.date ?? null, flow, session.startMin)
-      : null;
-    planSelectionExplicit = markExplicitSelection && targetSection === 'plan';
-    sessionSource = activeAgendaFlowRef
-      ? { kind: 'agenda', date: selectedDay?.date ?? null, title: flow.title, startMin: session.startMin }
-      : { kind: 'unscheduled' };
+    const prepared = prepareAgendaFlowLoad({
+      date: selectedDay?.date ?? null,
+      flow,
+      computedStart,
+      targetSection,
+      markExplicitSelection,
+      createId: uid
+    });
+    s.dayTitle = prepared.session.dayTitle;
+    s.blocks = prepared.session.blocks;
+    s.extraInfo = prepared.session.extraInfo;
+    s.startMin = prepared.session.startMin;
+    if (prepared.session.clockSpan !== undefined) s.clockSpan = prepared.session.clockSpan;
+    warnedSet.clear();
+    activeAgendaFlowRef = selectedDay ? prepared.activeRef : null;
+    planSelectionExplicit = prepared.planSelectionExplicit;
+    sessionSource = activeAgendaFlowRef ? prepared.sessionSource : { kind: 'unscheduled' };
     planLastSavedAt = Date.now();
     capturePanelBaseline('plan');
     capturePanelBaseline('now');
