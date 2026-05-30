@@ -530,7 +530,7 @@
   .seglist .min-inp { width: 5ch; text-align: right; font-size: 20px; font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 500; flex-shrink: 0; margin-top: 4px; }
   .seg-add-btn {
     display: block; width: 100%; margin-top: 4px; padding: 6px 10px;
-    background: none; border: 1px dashed var(--border); border-radius: 8px;
+    background: none; border: 0; border-radius: 8px;
     color: var(--muted); font-size: 13px; cursor: pointer; text-align: center;
     transition: opacity .12s; opacity: .38;
   }

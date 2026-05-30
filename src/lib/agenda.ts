@@ -209,7 +209,7 @@ export function availableGapAfterAgendaItem(items: Pick<AgendaItem, 'startMin' |
 }
 
 export function canInsertAgendaItemAfter(items: Pick<AgendaItem, 'startMin' | 'totalMin'>[], index: number, minGap = 30): boolean {
-	return availableGapAfterAgendaItem(items, index) > minGap;
+	return availableGapAfterAgendaItem(items, index) >= minGap;
 }
 
 export function findAgendaItemForTime(days: AgendaDay[] | null | undefined, date: string, minute: number, fallbackStart: number): AgendaItem | null {

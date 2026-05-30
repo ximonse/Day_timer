@@ -92,7 +92,8 @@ describe('agenda helpers', () => {
 		];
 
 		expect(availableGapAfterAgendaItem(items, 0)).toBe(30);
-		expect(canInsertAgendaItemAfter(items, 0)).toBe(false);
+		expect(canInsertAgendaItemAfter(items, 0)).toBe(true);
+		expect(canInsertAgendaItemAfter([{ startMin: 8 * 60, totalMin: 31 }, { startMin: 9 * 60, totalMin: 30 }], 0)).toBe(false);
 		expect(canInsertAgendaItemAfter([{ startMin: 8 * 60, totalMin: 25 }, { startMin: 9 * 60, totalMin: 30 }], 0)).toBe(true);
 		expect(canInsertAgendaItemAfter([{ startMin: 23 * 60, totalMin: 20 }], 0)).toBe(true);
 	});

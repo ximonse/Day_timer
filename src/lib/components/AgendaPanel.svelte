@@ -125,7 +125,7 @@
   function placementAfter(idx: number) {
     const item = agendaItems[idx];
     const gap = availableGapAfterAgendaItem(agendaItems, idx);
-    if (!item || gap <= 30) return undefined;
+    if (!item || gap < 30) return undefined;
     return { startMin: item.startMin + item.totalMin, duration: Math.min(45, gap) };
   }
 
