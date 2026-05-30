@@ -1161,7 +1161,7 @@
     drag = null;
     window.removeEventListener('pointermove', onDrag);
     window.removeEventListener('pointerup', endDrag);
-    syncTimerToAgenda();
+    syncTimerToAgenda(true);
     partsDraftDirty = false;
     appState.persist();
   }
@@ -2827,6 +2827,9 @@
   }
 
   function loadAgendaFlow(flow: Flow, computedStart: number, targetSection: AppSection = 'plan', markExplicitSelection = true) {
+    if (partsDraftDirty && activeAgendaFlowRef) {
+      syncTimerToAgenda(true);
+    }
     if (s.activeSection !== targetSection) {
       setActiveSection(targetSection);
     }
