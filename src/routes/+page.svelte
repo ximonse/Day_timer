@@ -101,6 +101,7 @@
   let savedAgendaMsg = $state('');
   let savedFlowMsg = $state('');
   let workspaceAutosaveTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingWorkspaceSaveHash: string | null = null;
   let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
   let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean; swap: { withIdx: number; neighborNewStart: number } | null } | null>(null);
   let planSelectionExplicit = $state(false);
@@ -552,6 +553,7 @@
   function setActiveSection(section: AppSection) {
     const oldSection = activeSection;
     if (oldSection === section) return;
+    flushWorkspaceAutosave();
     const clearImplicitAgendaSelection = oldSection === 'now' && section === 'plan' && !planSelectionExplicit;
 
     if (oldSection === 'now') {
@@ -642,6 +644,7 @@
 
   function toggleMiniMenu() {
     if (isViewMode) return;
+    flushWorkspaceAutosave();
     if (miniMenuOpen) {
       miniMenuSnapshot = {
         section: s.activeSection,
@@ -876,7 +879,7 @@
     queueWorkspaceAutosave();
   }
 
-  function queueWorkspaceAutosave() {
+  function queueWorkspaceAutosave(delay = 1500) {
     if (isViewMode || loadingFromCloud || !hasSyncSession()) return;
     syncProbeState = 'queued';
     syncProbeText = 'Väntar...';
@@ -884,7 +887,14 @@
     workspaceAutosaveTimer = setTimeout(() => {
       workspaceAutosaveTimer = null;
       void syncSave('auto-panel');
-    }, 1500);
+    }, delay);
+  }
+
+  function flushWorkspaceAutosave() {
+    if (!workspaceAutosaveTimer) return;
+    clearTimeout(workspaceAutosaveTimer);
+    workspaceAutosaveTimer = null;
+    void syncSave('auto-panel');
   }
 
   function revertActivePanel() {
@@ -1521,9 +1531,18 @@
     const saveSource = normalizeSyncSaveSource(source);
     const token = s.syncKey || '';
     if (!validateSyncToken(token)) { showSyncStatus('Inte inloggad', true); return; }
+    if (workspaceAutosaveTimer) {
+      clearTimeout(workspaceAutosaveTimer);
+      workspaceAutosaveTimer = null;
+    }
     syncActiveDraftFromEditor();
     const workspace = currentWorkspaceData();
     const workspaceHash = JSON.stringify(workspace);
+    if (saveSource !== 'manual' && (workspaceHash === lastSyncedHash || workspaceHash === pendingWorkspaceSaveHash)) {
+      syncProbeState = 'ok';
+      syncProbeText = `Synkad ${probeTime()} (oförändrat)`;
+      return;
+    }
     const payloadStr = JSON.stringify({
       workspace,
       ...(saveSource === 'manual' ? { snapshotReason: 'manual-save' } : {})
@@ -1531,6 +1550,7 @@
     try {
       syncProbeState = 'saving';
       syncProbeText = saveSource === 'manual' ? 'Sparar...' : 'Autosparar...';
+      pendingWorkspaceSaveHash = workspaceHash;
       const res = await fetch('/api/sync', {
         method: 'POST',
         headers: {
@@ -1560,6 +1580,8 @@
       syncProbeState = 'error';
       syncProbeText = 'Kunde inte spara';
       showSyncStatus('Kunde inte spara', true);
+    } finally {
+      if (pendingWorkspaceSaveHash === workspaceHash) pendingWorkspaceSaveHash = null;
     }
   }
 
@@ -2337,6 +2359,7 @@
   }
 
   function handleOutsideClick(e: MouseEvent) {
+    flushWorkspaceAutosave();
     if (!(e.target as Element).closest('.mini-menu-shell')) optionsMenuOpen = false;
   }
 
@@ -2562,6 +2585,7 @@
     const id = setInterval(tick, 1000);
 
     document.addEventListener('click', handleOutsideClick);
+    document.addEventListener('focusout', flushWorkspaceAutosave);
 
     window.addEventListener('keydown', handleKeydown);
     window.addEventListener('resize', handleViewport);
@@ -2595,6 +2619,7 @@
       window.removeEventListener('focus', handleFocus);
       resizeObservers.forEach(ro => ro.disconnect());
       document.removeEventListener('click', handleOutsideClick);
+      document.removeEventListener('focusout', flushWorkspaceAutosave);
       window.removeEventListener('keydown', handleKeydown);
       window.removeEventListener('resize', handleViewport);
     };
@@ -2684,8 +2709,7 @@
     if (isViewMode || loadingFromCloud || !hasSyncSession() || hash === lastSyncedHash) {
       return;
     }
-    const timer = setTimeout(() => { void syncSave('auto-effect'); }, 2000);
-    return () => clearTimeout(timer);
+    queueWorkspaceAutosave(2000);
   });
 
   function toggleCollapse() {
