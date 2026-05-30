@@ -2827,7 +2827,7 @@
   }
 
   function loadAgendaFlow(flow: Flow, computedStart: number, targetSection: AppSection = 'plan', markExplicitSelection = true) {
-    if (partsDraftDirty && activeAgendaFlowRef) {
+    if (activeAgendaFlowRef) {
       syncTimerToAgenda(true);
     }
     if (s.activeSection !== targetSection) {
