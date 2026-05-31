@@ -3,7 +3,7 @@
   import { fmtAgendaDate, shiftMonth, monthKey, parseIsoDate, monthLabel, localDateISO } from '$lib/date.js';
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
-  import { availableGapAfterAgendaItem, canInsertAgendaItemAfter } from '$lib/agenda.js';
+  import { AGENDA_DAY_WINDOW_END, AGENDA_DAY_WINDOW_MINUTES, AGENDA_DAY_WINDOW_START, availableGapAfterAgendaItem, canInsertAgendaItemAfter } from '$lib/agenda.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { colorForSegment, stripColorDirective } from '$lib/title-color.js';
 
@@ -265,10 +265,10 @@
         <button class="quickstart agenda-plan-link" onclick={() => onSetActiveSection('plan')}>Gå till Planera</button>
       {/if}
     {:else}
-      {@const windowStart = Math.floor(agendaItems[0].startMin / 60) * 60}
+      {@const windowStart = AGENDA_DAY_WINDOW_START}
       <div id="agenda-timeline" class="agenda-timeline" class:has-overlay={overlayItems.length > 0} bind:this={timelineEl}>
         {#if agendaMoveState && agendaMoveState.previewValid && agendaMoveState.previewStart !== null}
-          {@const previewTop = ((agendaMoveState.previewStart - windowStart) / 720 * 100).toFixed(3)}
+          {@const previewTop = ((agendaMoveState.previewStart - windowStart) / AGENDA_DAY_WINDOW_MINUTES * 100).toFixed(3)}
           <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>
         {/if}
         {#each agendaItems as item, ai (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-${ai}`)}
@@ -279,8 +279,8 @@
           {@const itemDate = selectedDay?.date || today}
           {@const isPast = itemDate < today || (itemDate === today && nowMinLive >= itemEnd)}
           {@const isActive = itemDate === today && nowMinLive >= item.startMin && nowMinLive < itemEnd}
-          {@const topPct = ((item.startMin - windowStart) / 720 * 100).toFixed(3)}
-          {@const heightPct = (item.totalMin / 720 * 100).toFixed(3)}
+          {@const topPct = ((item.startMin - windowStart) / AGENDA_DAY_WINDOW_MINUTES * 100).toFixed(3)}
+          {@const heightPct = (item.totalMin / AGENDA_DAY_WINDOW_MINUTES * 100).toFixed(3)}
           {@const itemMeta = item.fromText && selectedDay ? s.agendaMeta[makeAgendaMetaKeyForFlow(selectedDay.date ?? null, item.flow, item.startMin)] ?? null : null}
           <div class="agenda-block"
                role="button"
@@ -383,11 +383,11 @@
           {@const activeDate = activeAgendaDate() || today}
           {@const isPast = activeDate < today || (activeDate === today && nowMinLive >= itemEnd)}
           {@const visStart = Math.max(item.startMin, windowStart)}
-          {@const visEnd = Math.min(itemEnd, windowStart + 720)}
+          {@const visEnd = Math.min(itemEnd, AGENDA_DAY_WINDOW_END)}
           {#if visEnd > visStart}
             {@const itemTitle = stripColorDirective(item.flow.title || '(utan rubrik)')}
-            {@const topPct = ((visStart - windowStart) / 720 * 100).toFixed(3)}
-            {@const heightPct = ((visEnd - visStart) / 720 * 100).toFixed(3)}
+            {@const topPct = ((visStart - windowStart) / AGENDA_DAY_WINDOW_MINUTES * 100).toFixed(3)}
+            {@const heightPct = ((visEnd - visStart) / AGENDA_DAY_WINDOW_MINUTES * 100).toFixed(3)}
             <div class="agenda-block ghost"
                  class:past={isPast}
                  style="top: {topPct}%; height: {heightPct}%; border-left-color: var(--muted)">

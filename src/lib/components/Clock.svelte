@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CX, CY, R, Ri, polar, arcPath, fmtHM, truncate, isOnlyEmoji } from '$lib/clock.js';
+  import { CX, CY, R, Ri, polar, arcPath, fmtHM, truncate, isOnlyEmoji, halfDayClockStart } from '$lib/clock.js';
   import { clockTheme, labelColorFor, type Palette } from '$lib/theme.js';
   import type { Block, Flow } from '$lib/state.svelte.js';
   import { parseMarkdownSvg } from '$lib/markdown.js';
@@ -74,7 +74,7 @@
   const use12hAgenda = $derived(clockSpan === 720 && agendaItems.length > 0);
 
   // 12h Mode Data
-  const periodStart = $derived(Math.floor(nowMin / 720) * 720);
+  const periodStart = $derived(halfDayClockStart(nowMin));
   const agendaSectors = $derived.by(() => {
     if (!use12hAgenda) return [];
     return agendaItems.map((item: { flow: Flow; startMin: number; totalMin: number }, i: number) => {

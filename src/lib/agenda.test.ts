@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import {
+	AGENDA_DAY_WINDOW_END,
+	AGENDA_DAY_WINDOW_MINUTES,
+	AGENDA_DAY_WINDOW_START,
 	availableGapAfterAgendaItem,
 	buildAgendaItemsForDay,
 	buildCalendarCells,
@@ -41,6 +44,12 @@ function flow(patch: Partial<Flow>): Flow {
 }
 
 describe('agenda helpers', () => {
+	test('uses a full day window for agenda layout', () => {
+		expect(AGENDA_DAY_WINDOW_START).toBe(0);
+		expect(AGENDA_DAY_WINDOW_END).toBe(24 * 60);
+		expect(AGENDA_DAY_WINDOW_MINUTES).toBe(24 * 60);
+	});
+
 	test('derives day start from the first explicit flow and preceding durations', () => {
 		const day: AgendaDay = {
 			date: '2026-05-18',

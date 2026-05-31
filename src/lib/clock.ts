@@ -30,6 +30,10 @@ export function nowMinutes(): number {
   return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
 }
 
+export function halfDayClockStart(mins: number): number {
+  return Math.floor((mins - 6 * 60) / 720) * 720 + 6 * 60;
+}
+
 export function truncate(s: string, n: number): string {
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }

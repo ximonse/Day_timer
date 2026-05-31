@@ -2,6 +2,10 @@ import type { AgendaFlowMeta, Flow } from './state.svelte.js';
 import { serializeAgenda, totalFlowMinutes, type AgendaDay } from './parse.js';
 import { localDateISO, monthKey, parseIsoDate } from './date.js';
 
+export const AGENDA_DAY_WINDOW_START = 0;
+export const AGENDA_DAY_WINDOW_END = 24 * 60;
+export const AGENDA_DAY_WINDOW_MINUTES = AGENDA_DAY_WINDOW_END - AGENDA_DAY_WINDOW_START;
+
 export interface AgendaFlowRef {
 	date: string | null;
 	title: string;

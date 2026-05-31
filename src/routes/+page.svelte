@@ -9,6 +9,9 @@
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
   import {
+    AGENDA_DAY_WINDOW_END,
+    AGENDA_DAY_WINDOW_MINUTES,
+    AGENDA_DAY_WINDOW_START,
     agendaMetaHelp,
     agendaMetaLabel,
     agendaMetaSignature,
@@ -2110,9 +2113,9 @@
     const items = buildAgendaItemsForDay(day, agendaDayStart);
     const source = items[flowIdx];
     if (!source) return null;
-    const windowStart = Math.floor(items[0].startMin / 60) * 60;
-    const windowEnd = windowStart + 720;
-    const dropMin = windowStart + Math.round((dropY / timelineEl.clientHeight) * 720 / 5) * 5;
+    const windowStart = AGENDA_DAY_WINDOW_START;
+    const windowEnd = AGENDA_DAY_WINDOW_END;
+    const dropMin = windowStart + Math.round((dropY / timelineEl.clientHeight) * AGENDA_DAY_WINDOW_MINUTES / 5) * 5;
     const others = items.filter((_, i) => i !== flowIdx);
 
     // 1. Finger on another block?
@@ -2216,7 +2219,7 @@
     if (!d || !agendaDays) return;
     const deltaY = e.clientY - d.startY;
     if (Math.abs(deltaY) < 4) return;
-    const deltaMin = Math.round(deltaY / d.containerH * 720);
+    const deltaMin = Math.round(deltaY / d.containerH * AGENDA_DAY_WINDOW_MINUTES);
     agendaDragMoved = true;
     const newDays = agendaDays.map((day, di) => {
       if (di !== d.dayIdx) return day;
