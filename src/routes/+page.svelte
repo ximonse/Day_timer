@@ -17,8 +17,6 @@
     buildSequentialTimeline,
     computeAgendaDensity,
     insertFlowIntoAgendaDate,
-    findAgendaItemForTime,
-    findNextAgendaItemAfterTime,
     makeAgendaFlowRef,
     makeAgendaMetaKeyForFlow,
     rebuildAgendaMetaForDay,
@@ -55,6 +53,10 @@
     syncSessionToAgenda,
     type SessionSource
   } from '$lib/session-agenda-binding.js';
+  import {
+    decideAutoLoadAgendaItem,
+    decideNowAgendaTarget
+  } from '$lib/run-mode-decisions.js';
   import {
     applySharedStatePayload,
     buildLiveShareState,
@@ -1023,10 +1025,6 @@
   }
   const elapsedMin = () => nowMinutes() - s.startMin;
   const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
-  function agendaAutoLoadKey(item: { startMin: number; totalMin: number; flow: Flow }) {
-    return `${item.startMin}-${item.totalMin}-${item.flow.title}-${item.flow.parts.length}`;
-  }
-
   let warningsOpen = $state(false);
   let workspaceTimeDataOpen = $state(false);
   let actualHistoryOpen = $state(false);
@@ -2701,21 +2699,23 @@
   }
 
   function checkAutoLoad() {
-    if (s.activeSection !== 'now' || partsDraftDirty) return;
-    if (!agendaItems.length) return;
     const nowMin = nowMinutes();
-    const current = resolveAgendaFlowRef(agendaDays, activeAgendaFlowRef);
-    if (current && nowMin >= current.startMin && nowMin < current.startMin + current.totalMin) {
-      lastAutoLoadKey = `${current.startMin}-${current.totalMin}-${current.flow.title}-${current.flow.parts.length}`;
+    const decision = decideAutoLoadAgendaItem({
+      activeSection: s.activeSection as AppSection,
+      partsDraftDirty,
+      agendaItems,
+      nowMin,
+      days: agendaDays,
+      activeRef: activeAgendaFlowRef,
+      lastAutoLoadKey
+    });
+    if (decision.action === 'skip') return;
+    if (decision.action === 'mark-current') {
+      lastAutoLoadKey = decision.key;
       return;
     }
-    const active = agendaItems.find(item =>
-      nowMin >= item.startMin && nowMin < item.startMin + item.totalMin
-    );
-    if (!active) return;
-    const key = agendaAutoLoadKey(active);
-    if (key === lastAutoLoadKey) return;
-    lastAutoLoadKey = key;
+    const active = decision.item;
+    lastAutoLoadKey = decision.key;
     applySessionStateFromFlow(active.flow, { startMin: active.flow.startMin ?? active.startMin, pinned: minutes => minutes > 0 });
     activeAgendaFlowRef = selectedDay
       ? makeAgendaFlowRef(selectedDay.date ?? null, active.flow, s.startMin)
@@ -2865,17 +2865,9 @@
     setActiveAgendaDate(today);
     const stored = activeAgendaText();
     const days = stored.trim() ? parseAgenda(stored) : [];
-    const activeItem = findAgendaItemForTime(days, today, now, agendaDayStart);
-
-    if (activeItem) {
-      loadAgendaFlow(activeItem.flow, activeItem.startMin, 'now', false);
-      return true;
-    }
-
-    const nextItem = findNextAgendaItemAfterTime(days, today, now, agendaDayStart);
-
-    if (nextItem) {
-      loadAgendaFlow(nextItem.flow, nextItem.startMin, 'now', false);
+    const target = decideNowAgendaTarget(days, today, now, agendaDayStart);
+    if (target) {
+      loadAgendaFlow(target.item.flow, target.item.startMin, 'now', false);
       return true;
     }
 
