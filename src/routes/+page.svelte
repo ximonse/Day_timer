@@ -58,6 +58,11 @@
     decideNowAgendaTarget
   } from '$lib/run-mode-decisions.js';
   import {
+    decideRunMenuClose,
+    decideRunMenuOpen,
+    type RunMenuSnapshot
+  } from '$lib/run-menu-decisions.js';
+  import {
     applySharedStatePayload,
     buildLiveShareState,
     buildSelectedDaySnapshot,
@@ -162,13 +167,7 @@
   let miniMenuOpen = $state(true);
   let quickStartTitle = $state('');
   let quickStartText = $state('');
-  let miniMenuSnapshot = $state<{
-    section: AppSection;
-    locked: boolean;
-    agendaOpen: boolean;
-    agendaInputOpen: boolean;
-    agendaCalendarOpen: boolean;
-  } | null>(null);
+  let miniMenuSnapshot = $state<RunMenuSnapshot | null>(null);
   let themePickerOpen = $state(false);
   let optionsMenuOpen = $state(false);
   let helpOpen = $state(false);
@@ -652,53 +651,49 @@
     if (isViewMode) return;
     flushWorkspaceAutosave();
     if (miniMenuOpen) {
-      miniMenuSnapshot = {
-        section: s.activeSection,
+      const hasRunnableSession = partsDraftDirty ? s.blocks.length > 0 : goToTimerNow();
+      const decision = decideRunMenuClose({
+        currentSection: s.activeSection as AppSection,
         locked,
         agendaOpen: s.agendaOpen,
         agendaInputOpen,
-        agendaCalendarOpen
-      };
-      const hasRunnableSession = partsDraftDirty ? s.blocks.length > 0 : goToTimerNow();
-      if (!hasRunnableSession) {
-        miniMenuSnapshot = null;
-        locked = false;
-        miniMenuOpen = true;
-        s.showControls = true;
-        mobileTab = 'now';
-        persistRunModePreference(false);
-        appState.persist();
-        return;
-      }
-      collapseActiveWorkMenus();
-      locked = true;
-      miniMenuOpen = false;
-      s.showControls = false;
-      persistRunModePreference(true);
+        agendaCalendarOpen,
+        hasRunnableSession
+      });
+      miniMenuSnapshot = decision.snapshot;
+      locked = decision.locked;
+      miniMenuOpen = decision.miniMenuOpen;
+      s.showControls = decision.showControls;
+      if (decision.action === 'stay-open') mobileTab = decision.mobileTab;
+      else collapseActiveWorkMenus();
+      persistRunModePreference(decision.persistRunMode);
       appState.persist();
       return;
     }
     closeTransientMenus();
-    const keepInspectedAgendaBlock = sessionSource.kind === 'agenda' && s.activeSection === 'plan';
-    if (miniMenuSnapshot && !keepInspectedAgendaBlock && s.activeSection !== miniMenuSnapshot.section) {
-      setActiveSection(miniMenuSnapshot.section);
+    const decision = decideRunMenuOpen({
+      currentSection: s.activeSection as AppSection,
+      sessionSourceKind: sessionSource.kind,
+      snapshot: miniMenuSnapshot
+    });
+    if (decision.sectionToRestore) setActiveSection(decision.sectionToRestore);
+    if (decision.snapshotToRestore) {
+      locked = decision.snapshotToRestore.locked;
+      s.agendaOpen = decision.snapshotToRestore.agendaOpen;
+      agendaInputOpen = decision.snapshotToRestore.agendaInputOpen;
+      agendaCalendarOpen = decision.snapshotToRestore.agendaCalendarOpen;
     }
-    if (miniMenuSnapshot) {
-      locked = miniMenuSnapshot.locked;
-      s.agendaOpen = miniMenuSnapshot.agendaOpen;
-      agendaInputOpen = miniMenuSnapshot.agendaInputOpen;
-      agendaCalendarOpen = miniMenuSnapshot.agendaCalendarOpen;
+    if (decision.clearSnapshot) {
       miniMenuSnapshot = null;
     }
-    locked = false;
-    miniMenuOpen = true;
-    s.showControls = true;
-    persistRunModePreference(false);
-    if (keepInspectedAgendaBlock) {
-      locked = false;
-      s.agendaOpen = true;
-      agendaInputOpen = true;
-      planSelectionExplicit = true;
+    locked = decision.locked;
+    miniMenuOpen = decision.miniMenuOpen;
+    s.showControls = decision.showControls;
+    persistRunModePreference(decision.persistRunMode);
+    if (decision.keepInspectedAgendaBlock) {
+      s.agendaOpen = decision.agendaOpen;
+      agendaInputOpen = decision.agendaInputOpen;
+      planSelectionExplicit = decision.planSelectionExplicit;
     }
     appState.persist();
   }
