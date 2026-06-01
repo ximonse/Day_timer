@@ -44,7 +44,7 @@
     deleteActualEntry,
     exportActualHistoryJsonl
   } from '$lib/actuals.js';
-  import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
+  import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, hasRunnableSessionContent, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
   import {
     addManualAgendaItem,
     deleteAgendaItemAt,
@@ -654,7 +654,7 @@
     if (isViewMode) return;
     flushWorkspaceAutosave();
     if (miniMenuOpen) {
-      const hasRunnableSession = partsDraftDirty ? s.blocks.length > 0 : goToTimerNow();
+      const hasRunnableSession = partsDraftDirty ? hasRunnableSessionContent(s.blocks) : goToTimerNow();
       const decision = decideRunMenuClose({
         currentSection: s.activeSection as AppSection,
         locked,
@@ -2701,8 +2701,9 @@
     const decision = decideAutoLoadAgendaItem({
       activeSection: s.activeSection as AppSection,
       partsDraftDirty,
-      agendaItems,
       nowMin,
+      date: localDateISO(),
+      fallbackStart: agendaDayStart,
       days: agendaDays,
       activeRef: activeAgendaFlowRef,
       lastAutoLoadKey

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, ensureRenderableBlocks, flowToBlocks, makeFlowFromSession } from './session.js';
+import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, ensureRenderableBlocks, flowToBlocks, hasRunnableSessionContent, makeFlowFromSession } from './session.js';
 import type { Block, Flow } from './state.svelte.js';
 
 function block(patch: Partial<Block> = {}): Block {
@@ -110,6 +110,21 @@ describe('session helpers', () => {
 			startMin: 485,
 			blocks: []
 		});
+	});
+
+	test('does not treat empty placeholder blocks as runnable', () => {
+		expect(hasRunnableSessionContent([
+			block({ title: '', minutes: 10, note: '' })
+		])).toBe(false);
+	});
+
+	test('treats named or noted blocks as runnable', () => {
+		expect(hasRunnableSessionContent([
+			block({ title: 'Start', minutes: 10, note: '' })
+		])).toBe(true);
+		expect(hasRunnableSessionContent([
+			block({ title: '', minutes: 10, note: 'Kom ihåg' })
+		])).toBe(true);
 	});
 
 	test('distributes a new total evenly across unpinned blocks', () => {

@@ -41,8 +41,9 @@ describe('run mode decisions', () => {
 		expect(decideAutoLoadAgendaItem({
 			activeSection: 'plan',
 			partsDraftDirty: false,
-			agendaItems: items,
 			nowMin: 8 * 60 + 10,
+			date: '2026-05-31',
+			fallbackStart: 8 * 60,
 			days,
 			activeRef: null,
 			lastAutoLoadKey: ''
@@ -51,8 +52,9 @@ describe('run mode decisions', () => {
 		expect(decideAutoLoadAgendaItem({
 			activeSection: 'now',
 			partsDraftDirty: true,
-			agendaItems: items,
 			nowMin: 8 * 60 + 10,
+			date: '2026-05-31',
+			fallbackStart: 8 * 60,
 			days,
 			activeRef: null,
 			lastAutoLoadKey: ''
@@ -67,8 +69,9 @@ describe('run mode decisions', () => {
 		expect(decideAutoLoadAgendaItem({
 			activeSection: 'now',
 			partsDraftDirty: false,
-			agendaItems: items,
 			nowMin: 8 * 60 + 10,
+			date: '2026-05-31',
+			fallbackStart: 8 * 60,
 			days,
 			activeRef: ref,
 			lastAutoLoadKey: ''
@@ -82,8 +85,9 @@ describe('run mode decisions', () => {
 		const first = decideAutoLoadAgendaItem({
 			activeSection: 'now',
 			partsDraftDirty: false,
-			agendaItems: items,
 			nowMin: 8 * 60 + 10,
+			date: '2026-05-31',
+			fallbackStart: 8 * 60,
 			days,
 			activeRef: null,
 			lastAutoLoadKey: ''
@@ -98,11 +102,33 @@ describe('run mode decisions', () => {
 		expect(decideAutoLoadAgendaItem({
 			activeSection: 'now',
 			partsDraftDirty: false,
-			agendaItems: items,
 			nowMin: 8 * 60 + 10,
+			date: '2026-05-31',
+			fallbackStart: 8 * 60,
 			days,
 			activeRef: null,
 			lastAutoLoadKey: '480-30-Aktiv-1'
+		})).toEqual({ action: 'skip' });
+	});
+
+	test('auto-load ignores agenda items from another selected day', () => {
+		const days = parseAgenda([
+			'@260531',
+			'#Idag 09:00',
+			'A 30m',
+			'@260601',
+			'#Imorgon 08:00',
+			'B 30m'
+		].join('\n'));
+		expect(decideAutoLoadAgendaItem({
+			activeSection: 'now',
+			partsDraftDirty: false,
+			nowMin: 8 * 60 + 10,
+			date: '2026-05-31',
+			fallbackStart: 8 * 60,
+			days,
+			activeRef: null,
+			lastAutoLoadKey: ''
 		})).toEqual({ action: 'skip' });
 	});
 });

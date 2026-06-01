@@ -23,8 +23,9 @@ export function decideNowAgendaTarget(days: AgendaDay[] | null | undefined, date
 export interface DecideAutoLoadInput {
 	activeSection: AppSection;
 	partsDraftDirty: boolean;
-	agendaItems: Pick<AgendaItem, 'flow' | 'startMin' | 'totalMin'>[];
 	nowMin: number;
+	date: string;
+	fallbackStart: number;
 	days: AgendaDay[] | null | undefined;
 	activeRef: AgendaFlowRef | null;
 	lastAutoLoadKey: string;
@@ -37,14 +38,11 @@ export type AutoLoadDecision =
 
 export function decideAutoLoadAgendaItem(input: DecideAutoLoadInput): AutoLoadDecision {
 	if (input.activeSection !== 'now' || input.partsDraftDirty) return { action: 'skip' };
-	if (!input.agendaItems.length) return { action: 'skip' };
 	const current = resolveAgendaFlowRef(input.days ?? null, input.activeRef);
-	if (current && input.nowMin >= current.startMin && input.nowMin < current.startMin + current.totalMin) {
+	if (current && current.day.date === input.date && input.nowMin >= current.startMin && input.nowMin < current.startMin + current.totalMin) {
 		return { action: 'mark-current', key: agendaAutoLoadKey(current) };
 	}
-	const active = input.agendaItems.find(item =>
-		input.nowMin >= item.startMin && input.nowMin < item.startMin + item.totalMin
-	);
+	const active = findAgendaItemForTime(input.days, input.date, input.nowMin, input.fallbackStart);
 	if (!active) return { action: 'skip' };
 	const key = agendaAutoLoadKey(active);
 	if (key === input.lastAutoLoadKey) return { action: 'skip' };

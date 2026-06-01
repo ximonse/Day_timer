@@ -33,6 +33,14 @@ export function ensureRenderableBlocks(blocks: Block[], createId: () => string):
 	return [];
 }
 
+export function hasRunnableSessionContent(blocks: Block[]): boolean {
+	return blocks.some(block =>
+		Number.isFinite(block.minutes) &&
+		block.minutes > 0 &&
+		(Boolean(block.title.trim()) || Boolean(block.note.trim()))
+	);
+}
+
 export interface FlowBlockOptions {
 	pinned?: boolean | ((minutes: number, index: number) => boolean);
 	warning?: boolean | ((minutes: number, index: number) => boolean);
