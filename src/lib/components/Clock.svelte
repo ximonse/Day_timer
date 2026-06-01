@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CX, CY, R, Ri, polar, arcPath, fmtHM, truncate, isOnlyEmoji, halfDayClockStart } from '$lib/clock.js';
+  import { CX, CY, R, Ri, polar, arcPath, fmtHM, truncate, isOnlyEmoji, halfDayClockStart, clockAngle } from '$lib/clock.js';
   import { clockTheme, labelColorFor, type Palette } from '$lib/theme.js';
   import type { Block, Flow } from '$lib/state.svelte.js';
   import { parseMarkdownSvg } from '$lib/markdown.js';
@@ -149,9 +149,13 @@
     const res: { ang: number; len: number; w: number; op: number }[] = [];
     const cs = clockSpan;
     if (cs === 720) {
-      if (showMin)     for (let m = 0; m < 720; m += 15)  res.push({ ang: (m/720)*360, len: 5,  w: 1,   op: 0.45 });
-      if (showFive)    for (let m = 0; m < 720; m += 60)  res.push({ ang: (m/720)*360, len: 11, w: 1.8, op: 0.7 });
-      if (showQuarter) for (let m = 0; m < 720; m += 180) res.push({ ang: (m/720)*360, len: 18, w: 3,   op: 0.95 });
+      for (let m = periodStart; m < periodStart + 720; m += 15) {
+        const offset = m - periodStart;
+        const ang = clockAngle(m, periodStart, 720);
+        if (showMin) res.push({ ang, len: 5, w: 1, op: 0.45 });
+        if (showFive && offset % 60 === 0) res.push({ ang, len: 11, w: 1.8, op: 0.7 });
+        if (showQuarter && offset % 180 === 0) res.push({ ang, len: 18, w: 3, op: 0.95 });
+      }
     } else {
       const f = cs / 60;
       if (showMin)     for (let m = 0; m < cs; m += f)    res.push({ ang: (m/cs)*360, len: 5,  w: 1,   op: 0.45 });
@@ -163,7 +167,8 @@
 
   // Hand / Spike
   const handData = $derived.by(() => {
-    const ang = (nowMin % clockSpan / clockSpan) * 360;
+    const period = clockSpan === 720 ? periodStart : 0;
+    const ang = clockAngle(nowMin, period, clockSpan);
     const isHourView = clockSpan === 720;
     const innerR = isHourView ? 22 : 30;
     const tipR = isHourView ? R * 0.68 : R + 2;

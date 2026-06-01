@@ -34,6 +34,10 @@ export function halfDayClockStart(mins: number): number {
   return Math.floor((mins - 6 * 60) / 720) * 720 + 6 * 60;
 }
 
+export function clockAngle(mins: number, periodStart: number, periodMinutes: number): number {
+  return (((mins - periodStart) % periodMinutes + periodMinutes) % periodMinutes / periodMinutes) * 360;
+}
+
 export function truncate(s: string, n: number): string {
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }

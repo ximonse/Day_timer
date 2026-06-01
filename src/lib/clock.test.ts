@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fmtHM, polar, arcPath, truncate, CX, CY, R } from './clock.js';
+import { fmtHM, polar, arcPath, truncate, CX, CY, R, clockAngle } from './clock.js';
 
 describe('fmtHM', () => {
   it('formaterar normala tider', () => {
@@ -104,5 +104,14 @@ describe('truncate', () => {
 
   it('hanterar tom sträng', () => {
     expect(truncate('', 5)).toBe('');
+  });
+});
+
+describe('clockAngle', () => {
+  it('räknar vinkel relativt periodstart', () => {
+    expect(clockAngle(6 * 60, 6 * 60, 720)).toBe(0);
+    expect(clockAngle(9 * 60, 6 * 60, 720)).toBe(90);
+    expect(clockAngle(18 * 60, 18 * 60, 720)).toBe(0);
+    expect(clockAngle(21 * 60, 18 * 60, 720)).toBe(90);
   });
 });
