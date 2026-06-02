@@ -5,6 +5,10 @@ import { localDateISO, monthKey, parseIsoDate } from './date.js';
 export const AGENDA_DAY_WINDOW_START = 0;
 export const AGENDA_DAY_WINDOW_END = 24 * 60;
 export const AGENDA_DAY_WINDOW_MINUTES = AGENDA_DAY_WINDOW_END - AGENDA_DAY_WINDOW_START;
+export const AGENDA_TIMELINE_MINUTE_PX = 1.75;
+export const AGENDA_TIMELINE_HEIGHT_PX = AGENDA_DAY_WINDOW_MINUTES * AGENDA_TIMELINE_MINUTE_PX;
+export const AGENDA_TOP_BREATHING_ROOM_MIN = 30;
+export const AGENDA_COMPACT_ITEM_MINUTES = 30;
 
 export interface AgendaFlowRef {
 	date: string | null;

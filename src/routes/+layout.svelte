@@ -294,15 +294,16 @@
   }
   :global(body:not(.ag-open) .agenda-toggle-btn) { right: 8px; }
   :global(.agenda-timeline) {
-    height: 1200px; position: relative; flex-shrink: 0; overflow: hidden;
+    height: 2520px; position: relative; flex-shrink: 0; overflow: hidden;
   }
   :global(.agenda-block) {
     position: absolute; left: 0; right: 0;
     border-radius: 0 8px 8px 0; border-left: 35px solid transparent;
-    padding: 2px 8px; cursor: pointer; overflow: hidden;
+    min-height: 22px; padding: 2px 8px; cursor: pointer; overflow: hidden;
     transition: background .12s; user-select: none; box-sizing: border-box;
     display: flex; flex-direction: row; align-items: center; gap: 10px;
   }
+  :global(.agenda-block.compact) { gap: 7px; border-left-width: 22px; padding: 1px 7px; }
   :global(.agenda-block:hover) { background: var(--pill); }
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
@@ -434,6 +435,7 @@
     :global(.agenda-zone-right:active) { opacity: .9; }
   }
   :global(.agenda-time) { position: relative; font-size: 12px; color: var(--sidebar-subheading); font-variant-numeric: tabular-nums; font-weight: 600; pointer-events: none; flex-shrink: 0; }
+  :global(.agenda-block.compact .agenda-time) { font-size: 10px; }
   :global(.agenda-source-badge) {
     position: absolute; top: 18px; left: 8px;
     font-size: 10px; font-weight: 700; letter-spacing: .03em;
@@ -446,6 +448,7 @@
   :global(.agenda-source-badge.ai) { background: color-mix(in srgb, var(--accent) 82%, white 18%); color: #2b1208; }
   :global(.agenda-source-badge.imported) { background: color-mix(in srgb, var(--pill-on) 70%, white 30%); color: var(--pill-on-fg); }
   :global(.agenda-name) { flex: 1; min-width: 0; font-size: 30px; font-weight: 500; line-height: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; text-align: left; box-sizing: border-box; }
+  :global(.agenda-block.compact .agenda-name) { font-size: 20px; line-height: 1; }
   :global(.agenda-name-btn) { border: 0; background: transparent; color: inherit; padding: 0; cursor: text; font-family: inherit; }
   :global(.agenda-name-btn:focus-visible) { outline: 1px solid color-mix(in srgb, var(--accent) 42%, transparent); outline-offset: 2px; border-radius: 4px; }
   :global(.agenda-title-input) {

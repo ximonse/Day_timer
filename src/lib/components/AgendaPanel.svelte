@@ -3,7 +3,7 @@
   import { fmtAgendaDate, shiftMonth, monthKey, parseIsoDate, monthLabel, localDateISO } from '$lib/date.js';
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
-  import { AGENDA_DAY_WINDOW_END, AGENDA_DAY_WINDOW_MINUTES, AGENDA_DAY_WINDOW_START, availableGapAfterAgendaItem, canInsertAgendaItemAfter } from '$lib/agenda.js';
+  import { AGENDA_COMPACT_ITEM_MINUTES, AGENDA_DAY_WINDOW_END, AGENDA_DAY_WINDOW_MINUTES, AGENDA_DAY_WINDOW_START, AGENDA_TIMELINE_HEIGHT_PX, AGENDA_TIMELINE_MINUTE_PX, AGENDA_TOP_BREATHING_ROOM_MIN, availableGapAfterAgendaItem, canInsertAgendaItemAfter } from '$lib/agenda.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { colorForSegment, stripColorDirective } from '$lib/title-color.js';
 
@@ -102,10 +102,23 @@
   let agendaTitleDraft = $state('');
   let pendingEditAgendaFlowId = $state<string | null>(null);
   let suppressAgendaTitleBlur = false;
+  let lastAutoScrollKey = '';
 
   function agendaEditKey(item: any, idx: number) {
     return `${selectedDay?.date ?? ''}:${item.startMin}:${item.flow.id ?? item.flow.title}:${idx}`;
   }
+
+  $effect(() => {
+    if (!agendaEl || !timelineEl || !agendaItems.length || agendaDragMoved) return;
+    const key = `${selectedDay?.date ?? ''}:${agendaItems.map((item) => `${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}`).join('|')}`;
+    if (key === lastAutoScrollKey) return;
+    lastAutoScrollKey = key;
+    const firstStart = Math.min(...agendaItems.map((item) => item.startMin));
+    const targetTop = Math.max(0, (firstStart - AGENDA_TOP_BREATHING_ROOM_MIN - AGENDA_DAY_WINDOW_START) * AGENDA_TIMELINE_MINUTE_PX);
+    requestAnimationFrame(() => {
+      agendaEl.scrollTo({ top: targetTop, left: 0, behavior: 'auto' });
+    });
+  });
 
   function startAgendaTitleEdit(item: any, idx: number, e: Event) {
     e.stopPropagation();
@@ -266,7 +279,7 @@
       {/if}
     {:else}
       {@const windowStart = AGENDA_DAY_WINDOW_START}
-      <div id="agenda-timeline" class="agenda-timeline" class:has-overlay={overlayItems.length > 0} bind:this={timelineEl}>
+      <div id="agenda-timeline" class="agenda-timeline" class:has-overlay={overlayItems.length > 0} style="height: {AGENDA_TIMELINE_HEIGHT_PX}px" bind:this={timelineEl}>
         {#if agendaMoveState && agendaMoveState.previewValid && agendaMoveState.previewStart !== null}
           {@const previewTop = ((agendaMoveState.previewStart - windowStart) / AGENDA_DAY_WINDOW_MINUTES * 100).toFixed(3)}
           <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>
@@ -285,8 +298,10 @@
           <div class="agenda-block"
                role="button"
                tabindex="0"
+               title="{itemTitle} {fmtHM(item.startMin)}–{fmtHM(itemEnd)}"
                class:past={isPast}
                class:active={isActive}
+               class:compact={item.totalMin < AGENDA_COMPACT_ITEM_MINUTES}
                class:dragging={agendaMoveState?.dayIdx === selectedDayIdx && agendaMoveState?.flowIdx === ai}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
               onclick={(e) => handleBlockClick(item, ai, e)}
@@ -390,6 +405,8 @@
             {@const heightPct = ((visEnd - visStart) / AGENDA_DAY_WINDOW_MINUTES * 100).toFixed(3)}
             <div class="agenda-block ghost"
                  class:past={isPast}
+                 class:compact={item.totalMin < AGENDA_COMPACT_ITEM_MINUTES}
+                 title="{itemTitle} {fmtHM(item.startMin)}–{fmtHM(itemEnd)}"
                  style="top: {topPct}%; height: {heightPct}%; border-left-color: var(--muted)">
               <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
               <span class="agenda-name">

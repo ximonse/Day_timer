@@ -3,6 +3,8 @@ import {
 	AGENDA_DAY_WINDOW_END,
 	AGENDA_DAY_WINDOW_MINUTES,
 	AGENDA_DAY_WINDOW_START,
+	AGENDA_TIMELINE_HEIGHT_PX,
+	AGENDA_TIMELINE_MINUTE_PX,
 	availableGapAfterAgendaItem,
 	buildAgendaItemsForDay,
 	buildCalendarCells,
@@ -48,6 +50,12 @@ describe('agenda helpers', () => {
 		expect(AGENDA_DAY_WINDOW_START).toBe(0);
 		expect(AGENDA_DAY_WINDOW_END).toBe(24 * 60);
 		expect(AGENDA_DAY_WINDOW_MINUTES).toBe(24 * 60);
+	});
+
+	test('uses a readable agenda timeline scale for short sessions', () => {
+		expect(AGENDA_TIMELINE_MINUTE_PX).toBe(1.75);
+		expect(20 * AGENDA_TIMELINE_MINUTE_PX).toBe(35);
+		expect(AGENDA_TIMELINE_HEIGHT_PX).toBe(2520);
 	});
 
 	test('derives day start from the first explicit flow and preceding durations', () => {
