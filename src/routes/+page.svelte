@@ -10,12 +10,11 @@
   import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
   import {
     AGENDA_DAY_WINDOW_END,
-    AGENDA_DAY_WINDOW_MINUTES,
-    AGENDA_DAY_WINDOW_START,
     agendaMetaHelp,
     agendaMetaLabel,
     agendaMetaSignature,
     buildAgendaItemsForDay,
+    buildAgendaVisualWindow,
     buildCalendarCells,
     buildSequentialTimeline,
     computeAgendaDensity,
@@ -507,6 +506,7 @@
       : buildSequentialTimeline(flows, s.startMin);
     return timeline.map(({ flow, startMin, totalMin }) => ({ flow, startMin, totalMin, fromText }));
   });
+  const agendaVisualWindow = $derived(buildAgendaVisualWindow(agendaItems));
 
   const nextVisibleSessionTitle = $derived.by(() => {
     if (!s.showNextSession || !agendaItems.length) return '';
@@ -2113,9 +2113,9 @@
     const items = buildAgendaItemsForDay(day, agendaDayStart);
     const source = items[flowIdx];
     if (!source) return null;
-    const windowStart = AGENDA_DAY_WINDOW_START;
+    const windowStart = agendaVisualWindow.start;
     const windowEnd = AGENDA_DAY_WINDOW_END;
-    const dropMin = windowStart + Math.round((dropY / timelineEl.clientHeight) * AGENDA_DAY_WINDOW_MINUTES / 5) * 5;
+    const dropMin = windowStart + Math.round((dropY / timelineEl.clientHeight) * agendaVisualWindow.minutes / 5) * 5;
     const others = items.filter((_, i) => i !== flowIdx);
 
     // 1. Finger on another block?
@@ -2219,7 +2219,7 @@
     if (!d || !agendaDays) return;
     const deltaY = e.clientY - d.startY;
     if (Math.abs(deltaY) < 4) return;
-    const deltaMin = Math.round(deltaY / d.containerH * AGENDA_DAY_WINDOW_MINUTES);
+    const deltaMin = Math.round(deltaY / d.containerH * agendaVisualWindow.minutes);
     agendaDragMoved = true;
     const newDays = agendaDays.map((day, di) => {
       if (di !== d.dayIdx) return day;
@@ -3443,6 +3443,7 @@
     {agendaDays}
     {selectedDayIdx}
     {agendaItems}
+    {agendaVisualWindow}
     {overlayItems}
     {agendaMoveState}
     {nowMinLive}

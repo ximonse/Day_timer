@@ -6,6 +6,7 @@ import {
 	AGENDA_TIMELINE_HEIGHT_PX,
 	AGENDA_TIMELINE_MINUTE_PX,
 	agendaAutoScrollTop,
+	buildAgendaVisualWindow,
 	availableGapAfterAgendaItem,
 	buildAgendaItemsForDay,
 	buildCalendarCells,
@@ -59,9 +60,23 @@ describe('agenda helpers', () => {
 		expect(AGENDA_TIMELINE_HEIGHT_PX).toBe(2520);
 	});
 
-	test('auto-scroll includes the timeline offset before the first agenda block', () => {
-		expect(agendaAutoScrollTop(9 * 60, 300)).toBe(300 + 510 * AGENDA_TIMELINE_MINUTE_PX);
-		expect(agendaAutoScrollTop(0, 120)).toBe(67.5);
+	test('builds a visual agenda window starting shortly before the first item', () => {
+		const window = buildAgendaVisualWindow([
+			{ startMin: 9 * 60, totalMin: 20 },
+			{ startMin: 10 * 60, totalMin: 45 }
+		]);
+
+		expect(window.start).toBe(8 * 60 + 30);
+		expect(window.end).toBe(24 * 60);
+		expect(window.minutes).toBe(15 * 60 + 30);
+		expect(window.heightPx).toBe((15 * 60 + 30) * AGENDA_TIMELINE_MINUTE_PX);
+	});
+
+	test('auto-scroll targets the beginning of the visual timeline', () => {
+		const window = buildAgendaVisualWindow([{ startMin: 9 * 60, totalMin: 20 }]);
+
+		expect(agendaAutoScrollTop(window, 300)).toBe(300);
+		expect(agendaAutoScrollTop(buildAgendaVisualWindow([]), 120)).toBe(120);
 	});
 
 	test('derives day start from the first explicit flow and preceding durations', () => {

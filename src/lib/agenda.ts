@@ -10,8 +10,32 @@ export const AGENDA_TIMELINE_HEIGHT_PX = AGENDA_DAY_WINDOW_MINUTES * AGENDA_TIME
 export const AGENDA_TOP_BREATHING_ROOM_MIN = 30;
 export const AGENDA_COMPACT_ITEM_MINUTES = 30;
 
-export function agendaAutoScrollTop(firstStartMin: number, timelineOffsetTop: number): number {
-	return Math.max(0, timelineOffsetTop + (firstStartMin - AGENDA_TOP_BREATHING_ROOM_MIN - AGENDA_DAY_WINDOW_START) * AGENDA_TIMELINE_MINUTE_PX);
+export interface AgendaVisualWindow {
+	start: number;
+	end: number;
+	minutes: number;
+	heightPx: number;
+}
+
+export function buildAgendaVisualWindow(items: Pick<AgendaItem, 'startMin' | 'totalMin'>[]): AgendaVisualWindow {
+	if (items.length === 0) {
+		return {
+			start: AGENDA_DAY_WINDOW_START,
+			end: AGENDA_DAY_WINDOW_END,
+			minutes: AGENDA_DAY_WINDOW_MINUTES,
+			heightPx: AGENDA_TIMELINE_HEIGHT_PX
+		};
+	}
+	const firstStart = Math.min(...items.map(item => item.startMin));
+	const lastEnd = Math.max(...items.map(item => item.startMin + item.totalMin));
+	const start = Math.max(AGENDA_DAY_WINDOW_START, firstStart - AGENDA_TOP_BREATHING_ROOM_MIN);
+	const end = Math.min(AGENDA_DAY_WINDOW_END, Math.max(AGENDA_DAY_WINDOW_END, lastEnd + AGENDA_TOP_BREATHING_ROOM_MIN));
+	const minutes = Math.max(60, end - start);
+	return { start, end: start + minutes, minutes, heightPx: minutes * AGENDA_TIMELINE_MINUTE_PX };
+}
+
+export function agendaAutoScrollTop(window: AgendaVisualWindow, timelineOffsetTop: number): number {
+	return window.start === AGENDA_DAY_WINDOW_START ? timelineOffsetTop : Math.max(0, timelineOffsetTop);
 }
 
 export interface AgendaFlowRef {
