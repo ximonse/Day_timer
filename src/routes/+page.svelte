@@ -119,7 +119,7 @@
   let savedFlowMsg = $state('');
   let workspaceAutosaveTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingWorkspaceSaveHash: string | null = null;
-  let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number } | null>(null);
+  let agendaDragState = $state<{ i: number; dayIdx: number; startY: number; startMinA: number; blockStart: number; blockEnd: number; clampMin: number; clampMax: number; edge: 'top' | 'bottom'; containerH: number; windowMinutes: number } | null>(null);
   let agendaMoveState = $state<{ dayIdx: number; flowIdx: number; startY: number; currentY: number; targetIdx: number; previewStart: number | null; previewValid: boolean; swap: { withIdx: number; neighborNewStart: number } | null } | null>(null);
   let planSelectionExplicit = $state(false);
   let partsDraft = $state('');
@@ -2208,6 +2208,7 @@
       clampMax: next ? next.startMin - 5 : 24 * 60,
       edge,
       containerH: timelineEl.clientHeight,
+      windowMinutes: agendaVisualWindow.minutes,
     };
     window.addEventListener('pointermove', onAgendaDrag);
     window.addEventListener('pointerup', endAgendaDrag);
@@ -2219,7 +2220,7 @@
     if (!d || !agendaDays) return;
     const deltaY = e.clientY - d.startY;
     if (Math.abs(deltaY) < 4) return;
-    const deltaMin = Math.round(deltaY / d.containerH * agendaVisualWindow.minutes);
+    const deltaMin = Math.round(deltaY / d.containerH * d.windowMinutes);
     agendaDragMoved = true;
     const newDays = agendaDays.map((day, di) => {
       if (di !== d.dayIdx) return day;

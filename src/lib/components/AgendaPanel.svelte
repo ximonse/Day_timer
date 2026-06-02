@@ -112,7 +112,7 @@
 
   $effect(() => {
     if (!agendaEl || !timelineEl || !agendaItems.length || agendaDragMoved) return;
-    const key = `${selectedDay?.date ?? ''}:${agendaItems.map((item) => `${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}`).join('|')}`;
+    const key = `${selectedDay?.date ?? ''}:has-items`;
     if (key === lastAutoScrollKey) return;
     lastAutoScrollKey = key;
     const targetTop = agendaAutoScrollTop(agendaVisualWindow, timelineEl.offsetTop);
