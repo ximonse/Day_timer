@@ -14,7 +14,6 @@
     agendaMetaLabel,
     agendaMetaSignature,
     buildAgendaItemsForDay,
-    buildAgendaVisualWindow,
     buildCalendarCells,
     buildSequentialTimeline,
     computeAgendaDensity,
@@ -28,6 +27,7 @@
     type AgendaFlowRef,
     type CalendarCell
   } from '$lib/agenda.js';
+  import { buildAgendaLayout, yToMinute } from '$lib/agenda-layout.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { getAiAgendaPrompt, getAiSessionPrompt, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
   import { isValidPlanningModeForContext, type AiAgendaPromptMode, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
@@ -506,7 +506,12 @@
       : buildSequentialTimeline(flows, s.startMin);
     return timeline.map(({ flow, startMin, totalMin }) => ({ flow, startMin, totalMin, fromText }));
   });
-  const agendaVisualWindow = $derived(buildAgendaVisualWindow(agendaItems));
+  const agendaLayout = $derived(buildAgendaLayout(agendaItems.map((item, index) => ({
+    id: item.flow.id ?? `${item.startMin}-${item.flow.title}-${index}`,
+    title: item.flow.title || '(utan rubrik)',
+    startMin: item.startMin,
+    totalMin: item.totalMin
+  }))));
 
   const nextVisibleSessionTitle = $derived.by(() => {
     if (!s.showNextSession || !agendaItems.length) return '';
@@ -2113,9 +2118,9 @@
     const items = buildAgendaItemsForDay(day, agendaDayStart);
     const source = items[flowIdx];
     if (!source) return null;
-    const windowStart = agendaVisualWindow.start;
+    const windowStart = agendaLayout.window.start;
     const windowEnd = AGENDA_DAY_WINDOW_END;
-    const dropMin = windowStart + Math.round((dropY / timelineEl.clientHeight) * agendaVisualWindow.minutes / 5) * 5;
+    const dropMin = yToMinute(dropY, agendaLayout.window, 5);
     const others = items.filter((_, i) => i !== flowIdx);
 
     // 1. Finger on another block?
@@ -2208,7 +2213,7 @@
       clampMax: next ? next.startMin - 5 : 24 * 60,
       edge,
       containerH: timelineEl.clientHeight,
-      windowMinutes: agendaVisualWindow.minutes,
+      windowMinutes: agendaLayout.window.minutes,
     };
     window.addEventListener('pointermove', onAgendaDrag);
     window.addEventListener('pointerup', endAgendaDrag);
@@ -3444,7 +3449,7 @@
     {agendaDays}
     {selectedDayIdx}
     {agendaItems}
-    {agendaVisualWindow}
+    {agendaLayout}
     {overlayItems}
     {agendaMoveState}
     {nowMinLive}
