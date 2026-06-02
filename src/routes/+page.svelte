@@ -80,6 +80,7 @@
   } from '$lib/workspace.js';
   import { normalizeSyncSaveSource, type SyncSaveSource } from '$lib/sync-source.js';
   import { shouldSkipWorkspaceAutosave } from '$lib/autosave.js';
+  import { nextBindingAfterSectionChange } from '$lib/active-session-binding.js';
   import { stripColorDirective } from '$lib/title-color.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
@@ -567,7 +568,12 @@
     const oldSection = activeSection;
     if (oldSection === section) return;
     flushWorkspaceAutosave();
-    const clearImplicitAgendaSelection = oldSection === 'now' && section === 'plan' && !planSelectionExplicit;
+    const bindingChange = nextBindingAfterSectionChange({
+      oldSection,
+      nextSection: section,
+      planSelectionExplicit,
+      source: sessionSource
+    });
 
     if (oldSection === 'now') {
       s.nowDraft = currentEditorDraft();
@@ -581,10 +587,11 @@
     if (section === 'now') {
       applyEditorDraft(s.nowDraft);
     } else if (section === 'plan') {
-      if (clearImplicitAgendaSelection) {
+      if (bindingChange.activeAgendaFlowRef === null) {
         activeAgendaFlowRef = null;
-        sessionSource = { kind: 'unscheduled' };
       }
+      sessionSource = bindingChange.source;
+      planSelectionExplicit = bindingChange.planSelectionExplicit;
       preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
@@ -1152,6 +1159,7 @@
       days: agendaDays,
       activeRef: activeAgendaFlowRef,
       activeSection: s.activeSection as AppSection,
+      source: sessionSource,
       forceUpdate,
       planSelectionExplicit,
       session: {

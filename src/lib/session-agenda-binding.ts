@@ -9,6 +9,7 @@ import {
 } from './agenda.js';
 import type { AgendaDay } from './parse.js';
 import { createSessionStateFromFlow, makeFlowFromSession } from './session.js';
+import { canWriteActiveSessionBack } from './active-session-binding.js';
 
 export type SessionSource =
 	| { kind: 'unscheduled' }
@@ -26,6 +27,7 @@ export interface SyncSessionToAgendaInput {
 	days: AgendaDay[] | null | undefined;
 	activeRef: AgendaFlowRef | null;
 	activeSection: AppSection;
+	source: SessionSource;
 	forceUpdate: boolean;
 	planSelectionExplicit: boolean;
 	session: SessionAgendaState;
@@ -34,7 +36,12 @@ export interface SyncSessionToAgendaInput {
 }
 
 export function syncSessionToAgenda(input: SyncSessionToAgendaInput) {
-	if (input.activeSection === 'plan' && !input.forceUpdate && !input.planSelectionExplicit) return null;
+	if (!canWriteActiveSessionBack({
+		source: input.source,
+		activeSection: input.activeSection,
+		forceUpdate: input.forceUpdate,
+		planSelectionExplicit: input.planSelectionExplicit
+	})) return null;
 	const daysInput = input.days ?? null;
 	const active = resolveAgendaFlowRef(daysInput, input.activeRef);
 	if (!active || !daysInput || !input.activeRef) return null;
