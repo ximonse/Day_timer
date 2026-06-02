@@ -5,6 +5,7 @@ import {
 	AGENDA_DAY_WINDOW_START,
 	AGENDA_TIMELINE_HEIGHT_PX,
 	AGENDA_TIMELINE_MINUTE_PX,
+	agendaAutoScrollTop,
 	availableGapAfterAgendaItem,
 	buildAgendaItemsForDay,
 	buildCalendarCells,
@@ -56,6 +57,11 @@ describe('agenda helpers', () => {
 		expect(AGENDA_TIMELINE_MINUTE_PX).toBe(1.75);
 		expect(20 * AGENDA_TIMELINE_MINUTE_PX).toBe(35);
 		expect(AGENDA_TIMELINE_HEIGHT_PX).toBe(2520);
+	});
+
+	test('auto-scroll includes the timeline offset before the first agenda block', () => {
+		expect(agendaAutoScrollTop(9 * 60, 300)).toBe(300 + 510 * AGENDA_TIMELINE_MINUTE_PX);
+		expect(agendaAutoScrollTop(0, 120)).toBe(67.5);
 	});
 
 	test('derives day start from the first explicit flow and preceding durations', () => {

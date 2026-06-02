@@ -10,6 +10,10 @@ export const AGENDA_TIMELINE_HEIGHT_PX = AGENDA_DAY_WINDOW_MINUTES * AGENDA_TIME
 export const AGENDA_TOP_BREATHING_ROOM_MIN = 30;
 export const AGENDA_COMPACT_ITEM_MINUTES = 30;
 
+export function agendaAutoScrollTop(firstStartMin: number, timelineOffsetTop: number): number {
+	return Math.max(0, timelineOffsetTop + (firstStartMin - AGENDA_TOP_BREATHING_ROOM_MIN - AGENDA_DAY_WINDOW_START) * AGENDA_TIMELINE_MINUTE_PX);
+}
+
 export interface AgendaFlowRef {
 	date: string | null;
 	title: string;

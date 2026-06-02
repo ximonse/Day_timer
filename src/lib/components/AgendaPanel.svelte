@@ -3,7 +3,7 @@
   import { fmtAgendaDate, shiftMonth, monthKey, parseIsoDate, monthLabel, localDateISO } from '$lib/date.js';
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
-  import { AGENDA_COMPACT_ITEM_MINUTES, AGENDA_DAY_WINDOW_END, AGENDA_DAY_WINDOW_MINUTES, AGENDA_DAY_WINDOW_START, AGENDA_TIMELINE_HEIGHT_PX, AGENDA_TIMELINE_MINUTE_PX, AGENDA_TOP_BREATHING_ROOM_MIN, availableGapAfterAgendaItem, canInsertAgendaItemAfter } from '$lib/agenda.js';
+  import { AGENDA_COMPACT_ITEM_MINUTES, AGENDA_DAY_WINDOW_END, AGENDA_DAY_WINDOW_MINUTES, AGENDA_DAY_WINDOW_START, AGENDA_TIMELINE_HEIGHT_PX, agendaAutoScrollTop, availableGapAfterAgendaItem, canInsertAgendaItemAfter } from '$lib/agenda.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { colorForSegment, stripColorDirective } from '$lib/title-color.js';
 
@@ -114,7 +114,7 @@
     if (key === lastAutoScrollKey) return;
     lastAutoScrollKey = key;
     const firstStart = Math.min(...agendaItems.map((item) => item.startMin));
-    const targetTop = Math.max(0, (firstStart - AGENDA_TOP_BREATHING_ROOM_MIN - AGENDA_DAY_WINDOW_START) * AGENDA_TIMELINE_MINUTE_PX);
+    const targetTop = agendaAutoScrollTop(firstStart, timelineEl.offsetTop);
     requestAnimationFrame(() => {
       agendaEl.scrollTo({ top: targetTop, left: 0, behavior: 'auto' });
     });
