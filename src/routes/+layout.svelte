@@ -303,7 +303,7 @@
     transition: background .12s; user-select: none; box-sizing: border-box;
     display: flex; flex-direction: row; align-items: center; gap: 10px;
   }
-  :global(.agenda-block.compact) { gap: 7px; border-left-width: 22px; padding: 1px 7px; }
+  :global(.agenda-block.compact) { gap: 7px; padding: 1px 7px; }
   :global(.agenda-block:hover) { background: var(--pill); }
   :global(.agenda-block.active) { background: var(--pill); }
   :global(.agenda-block.past) { opacity: .4; }
