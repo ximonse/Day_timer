@@ -1,37 +1,27 @@
 import type { AgendaFlowMeta, Flow } from './state.svelte.js';
 import { serializeAgenda, totalFlowMinutes, type AgendaDay } from './parse.js';
 import { localDateISO, monthKey, parseIsoDate } from './date.js';
+import {
+	AGENDA_COMPACT_ITEM_MINUTES,
+	AGENDA_DAY_END,
+	AGENDA_DAY_START,
+	AGENDA_MINUTE_PX,
+	AGENDA_TOP_BREATHING_ROOM_MIN,
+	buildAgendaLayoutWindow,
+	type AgendaLayoutWindow
+} from './agenda-layout.js';
 
-export const AGENDA_DAY_WINDOW_START = 0;
-export const AGENDA_DAY_WINDOW_END = 24 * 60;
+export const AGENDA_DAY_WINDOW_START = AGENDA_DAY_START;
+export const AGENDA_DAY_WINDOW_END = AGENDA_DAY_END;
 export const AGENDA_DAY_WINDOW_MINUTES = AGENDA_DAY_WINDOW_END - AGENDA_DAY_WINDOW_START;
-export const AGENDA_TIMELINE_MINUTE_PX = 1.75;
+export const AGENDA_TIMELINE_MINUTE_PX = AGENDA_MINUTE_PX;
 export const AGENDA_TIMELINE_HEIGHT_PX = AGENDA_DAY_WINDOW_MINUTES * AGENDA_TIMELINE_MINUTE_PX;
-export const AGENDA_TOP_BREATHING_ROOM_MIN = 30;
-export const AGENDA_COMPACT_ITEM_MINUTES = 30;
+export { AGENDA_TOP_BREATHING_ROOM_MIN, AGENDA_COMPACT_ITEM_MINUTES };
 
-export interface AgendaVisualWindow {
-	start: number;
-	end: number;
-	minutes: number;
-	heightPx: number;
-}
+export type AgendaVisualWindow = AgendaLayoutWindow;
 
 export function buildAgendaVisualWindow(items: Pick<AgendaItem, 'startMin' | 'totalMin'>[]): AgendaVisualWindow {
-	if (items.length === 0) {
-		return {
-			start: AGENDA_DAY_WINDOW_START,
-			end: AGENDA_DAY_WINDOW_END,
-			minutes: AGENDA_DAY_WINDOW_MINUTES,
-			heightPx: AGENDA_TIMELINE_HEIGHT_PX
-		};
-	}
-	const firstStart = Math.min(...items.map(item => item.startMin));
-	const lastEnd = Math.max(...items.map(item => item.startMin + item.totalMin));
-	const start = Math.max(AGENDA_DAY_WINDOW_START, firstStart - AGENDA_TOP_BREATHING_ROOM_MIN);
-	const end = Math.min(AGENDA_DAY_WINDOW_END, Math.max(AGENDA_DAY_WINDOW_END, lastEnd + AGENDA_TOP_BREATHING_ROOM_MIN));
-	const minutes = Math.max(60, end - start);
-	return { start, end: start + minutes, minutes, heightPx: minutes * AGENDA_TIMELINE_MINUTE_PX };
+	return buildAgendaLayoutWindow(items);
 }
 
 export function agendaAutoScrollTop(window: AgendaVisualWindow, timelineOffsetTop: number): number {
