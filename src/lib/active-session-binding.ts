@@ -26,6 +26,7 @@ export interface SectionChangeBindingResult {
 	source: SessionSource;
 	activeAgendaFlowRef: AgendaFlowRef | null | 'keep';
 	planSelectionExplicit: boolean;
+	resetPlanDraft: boolean;
 }
 
 export function nextBindingAfterSectionChange(input: SectionChangeBindingInput): SectionChangeBindingResult {
@@ -38,13 +39,15 @@ export function nextBindingAfterSectionChange(input: SectionChangeBindingInput):
 		return {
 			source: { kind: 'unscheduled' },
 			activeAgendaFlowRef: null,
-			planSelectionExplicit: false
+			planSelectionExplicit: false,
+			resetPlanDraft: true
 		};
 	}
 
 	return {
 		source: input.source,
 		activeAgendaFlowRef: 'keep',
-		planSelectionExplicit: input.planSelectionExplicit
+		planSelectionExplicit: input.planSelectionExplicit,
+		resetPlanDraft: false
 	};
 }

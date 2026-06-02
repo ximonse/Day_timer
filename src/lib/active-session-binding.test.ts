@@ -52,7 +52,8 @@ describe('active session binding', () => {
 		})).toEqual({
 			source: { kind: 'unscheduled' },
 			activeAgendaFlowRef: null,
-			planSelectionExplicit: false
+			planSelectionExplicit: false,
+			resetPlanDraft: true
 		});
 	});
 
@@ -65,7 +66,8 @@ describe('active session binding', () => {
 		})).toEqual({
 			source: { kind: 'agenda', date: '2026-06-03', title: 'Pass', startMin: 9 * 60 },
 			activeAgendaFlowRef: 'keep',
-			planSelectionExplicit: true
+			planSelectionExplicit: true,
+			resetPlanDraft: false
 		});
 	});
 });

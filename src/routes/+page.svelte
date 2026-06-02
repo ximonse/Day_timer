@@ -592,6 +592,9 @@
       }
       sessionSource = bindingChange.source;
       planSelectionExplicit = bindingChange.planSelectionExplicit;
+      if (bindingChange.resetPlanDraft) {
+        s.planDraft = createEmptyPlanDraft();
+      }
       preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
