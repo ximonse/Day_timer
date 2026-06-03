@@ -11,6 +11,7 @@ describe('session agenda binding', () => {
 			days,
 			activeRef: ref,
 			activeSection: 'plan',
+			source: { kind: 'agenda', date: '2026-05-31', title: 'Morgon', startMin: 8 * 60 },
 			forceUpdate: false,
 			planSelectionExplicit: false,
 			session: {
@@ -33,6 +34,7 @@ describe('session agenda binding', () => {
 			days,
 			activeRef: ref,
 			activeSection: 'plan',
+			source: { kind: 'agenda', date: '2026-05-31', title: 'Morgon', startMin: 8 * 60 },
 			forceUpdate: false,
 			planSelectionExplicit: true,
 			session: {

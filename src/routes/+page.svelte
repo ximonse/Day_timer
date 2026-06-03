@@ -14,7 +14,6 @@
     agendaMetaLabel,
     agendaMetaSignature,
     buildAgendaItemsForDay,
-    buildAgendaVisualWindow,
     buildCalendarCells,
     buildSequentialTimeline,
     computeAgendaDensity,
@@ -28,6 +27,7 @@
     type AgendaFlowRef,
     type CalendarCell
   } from '$lib/agenda.js';
+  import { buildAgendaLayout, yToMinute } from '$lib/agenda-layout.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { getAiAgendaPrompt, getAiSessionPrompt, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
   import { isValidPlanningModeForContext, type AiAgendaPromptMode, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
@@ -80,6 +80,7 @@
   } from '$lib/workspace.js';
   import { normalizeSyncSaveSource, type SyncSaveSource } from '$lib/sync-source.js';
   import { shouldSkipWorkspaceAutosave } from '$lib/autosave.js';
+  import { nextBindingAfterSectionChange } from '$lib/active-session-binding.js';
   import { stripColorDirective } from '$lib/title-color.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
@@ -506,7 +507,12 @@
       : buildSequentialTimeline(flows, s.startMin);
     return timeline.map(({ flow, startMin, totalMin }) => ({ flow, startMin, totalMin, fromText }));
   });
-  const agendaVisualWindow = $derived(buildAgendaVisualWindow(agendaItems));
+  const agendaLayout = $derived(buildAgendaLayout(agendaItems.map((item, index) => ({
+    id: item.flow.id ?? `${item.startMin}-${item.flow.title}-${index}`,
+    title: item.flow.title || '(utan rubrik)',
+    startMin: item.startMin,
+    totalMin: item.totalMin
+  }))));
 
   const nextVisibleSessionTitle = $derived.by(() => {
     if (!s.showNextSession || !agendaItems.length) return '';
@@ -562,7 +568,12 @@
     const oldSection = activeSection;
     if (oldSection === section) return;
     flushWorkspaceAutosave();
-    const clearImplicitAgendaSelection = oldSection === 'now' && section === 'plan' && !planSelectionExplicit;
+    const bindingChange = nextBindingAfterSectionChange({
+      oldSection,
+      nextSection: section,
+      planSelectionExplicit,
+      source: sessionSource
+    });
 
     if (oldSection === 'now') {
       s.nowDraft = currentEditorDraft();
@@ -576,9 +587,13 @@
     if (section === 'now') {
       applyEditorDraft(s.nowDraft);
     } else if (section === 'plan') {
-      if (clearImplicitAgendaSelection) {
+      if (bindingChange.activeAgendaFlowRef === null) {
         activeAgendaFlowRef = null;
-        sessionSource = { kind: 'unscheduled' };
+      }
+      sessionSource = bindingChange.source;
+      planSelectionExplicit = bindingChange.planSelectionExplicit;
+      if (bindingChange.resetPlanDraft) {
+        s.planDraft = createEmptyPlanDraft();
       }
       preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
@@ -1147,6 +1162,7 @@
       days: agendaDays,
       activeRef: activeAgendaFlowRef,
       activeSection: s.activeSection as AppSection,
+      source: sessionSource,
       forceUpdate,
       planSelectionExplicit,
       session: {
@@ -2113,9 +2129,9 @@
     const items = buildAgendaItemsForDay(day, agendaDayStart);
     const source = items[flowIdx];
     if (!source) return null;
-    const windowStart = agendaVisualWindow.start;
+    const windowStart = agendaLayout.window.start;
     const windowEnd = AGENDA_DAY_WINDOW_END;
-    const dropMin = windowStart + Math.round((dropY / timelineEl.clientHeight) * agendaVisualWindow.minutes / 5) * 5;
+    const dropMin = yToMinute(dropY, agendaLayout.window, 5);
     const others = items.filter((_, i) => i !== flowIdx);
 
     // 1. Finger on another block?
@@ -2208,7 +2224,7 @@
       clampMax: next ? next.startMin - 5 : 24 * 60,
       edge,
       containerH: timelineEl.clientHeight,
-      windowMinutes: agendaVisualWindow.minutes,
+      windowMinutes: agendaLayout.window.minutes,
     };
     window.addEventListener('pointermove', onAgendaDrag);
     window.addEventListener('pointerup', endAgendaDrag);
@@ -3444,7 +3460,7 @@
     {agendaDays}
     {selectedDayIdx}
     {agendaItems}
-    {agendaVisualWindow}
+    {agendaLayout}
     {overlayItems}
     {agendaMoveState}
     {nowMinLive}

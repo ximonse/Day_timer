@@ -3,7 +3,8 @@
   import { fmtAgendaDate, shiftMonth, monthKey, parseIsoDate, monthLabel, localDateISO } from '$lib/date.js';
   import { fmtHM } from '$lib/clock.js';
   import { type AgendaDay } from '$lib/parse.js';
-  import { AGENDA_COMPACT_ITEM_MINUTES, AGENDA_DAY_WINDOW_END, agendaAutoScrollTop, availableGapAfterAgendaItem, canInsertAgendaItemAfter, type AgendaVisualWindow } from '$lib/agenda.js';
+  import { AGENDA_DAY_WINDOW_END, agendaAutoScrollTop, availableGapAfterAgendaItem, canInsertAgendaItemAfter } from '$lib/agenda.js';
+  import { AGENDA_COMPACT_ITEM_MINUTES, type AgendaLayout } from '$lib/agenda-layout.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { colorForSegment, stripColorDirective } from '$lib/title-color.js';
 
@@ -16,7 +17,7 @@
     agendaDays,
     selectedDayIdx,
     agendaItems,
-    agendaVisualWindow,
+    agendaLayout,
     overlayItems,
     agendaMoveState,
     nowMinLive,
@@ -49,7 +50,7 @@
     agendaDays: AgendaDay[] | null;
     selectedDayIdx: number;
     agendaItems: any[];
-    agendaVisualWindow: AgendaVisualWindow;
+    agendaLayout: AgendaLayout;
     overlayItems: any[];
     agendaMoveState: any;
     nowMinLive: number;
@@ -115,7 +116,7 @@
     const key = `${selectedDay?.date ?? ''}:has-items`;
     if (key === lastAutoScrollKey) return;
     lastAutoScrollKey = key;
-    const targetTop = agendaAutoScrollTop(agendaVisualWindow, timelineEl.offsetTop);
+    const targetTop = agendaAutoScrollTop(agendaLayout.window, timelineEl.offsetTop);
     requestAnimationFrame(() => {
       agendaEl.scrollTo({ top: targetTop, left: 0, behavior: 'auto' });
     });
@@ -279,23 +280,24 @@
         <button class="quickstart agenda-plan-link" onclick={() => onSetActiveSection('plan')}>Gå till Planera</button>
       {/if}
     {:else}
-      {@const windowStart = agendaVisualWindow.start}
-      {@const windowMinutes = agendaVisualWindow.minutes}
-      <div id="agenda-timeline" class="agenda-timeline" class:has-overlay={overlayItems.length > 0} style="height: {agendaVisualWindow.heightPx}px" bind:this={timelineEl}>
+      {@const windowStart = agendaLayout.window.start}
+      {@const windowMinutes = agendaLayout.window.minutes}
+      <div id="agenda-timeline" class="agenda-timeline" class:has-overlay={overlayItems.length > 0} style="height: {agendaLayout.window.heightPx}px" bind:this={timelineEl}>
         {#if agendaMoveState && agendaMoveState.previewValid && agendaMoveState.previewStart !== null}
           {@const previewTop = ((agendaMoveState.previewStart - windowStart) / windowMinutes * 100).toFixed(3)}
           <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>
         {/if}
         {#each agendaItems as item, ai (`${item.startMin}-${item.totalMin}-${item.flow.id ?? item.flow.title}-${ai}`)}
           {@const itemTitle = stripColorDirective(item.flow.title || '(utan rubrik)')}
+          {@const layoutItem = agendaLayout.items[ai]}
           {@const itemColor = colorForSegment(item.flow.title || '(utan rubrik)', sectorColors, ai)}
           {@const itemEnd = item.startMin + item.totalMin}
           {@const today = localDateISO()}
           {@const itemDate = selectedDay?.date || today}
           {@const isPast = itemDate < today || (itemDate === today && nowMinLive >= itemEnd)}
           {@const isActive = itemDate === today && nowMinLive >= item.startMin && nowMinLive < itemEnd}
-          {@const topPct = ((item.startMin - windowStart) / windowMinutes * 100).toFixed(3)}
-          {@const heightPct = (item.totalMin / windowMinutes * 100).toFixed(3)}
+          {@const topPct = (layoutItem?.topPct ?? ((item.startMin - windowStart) / windowMinutes * 100)).toFixed(3)}
+          {@const heightPct = (layoutItem?.heightPct ?? (item.totalMin / windowMinutes * 100)).toFixed(3)}
           {@const itemMeta = item.fromText && selectedDay ? s.agendaMeta[makeAgendaMetaKeyForFlow(selectedDay.date ?? null, item.flow, item.startMin)] ?? null : null}
           <div class="agenda-block"
                role="button"
@@ -303,7 +305,7 @@
                title="{itemTitle} {fmtHM(item.startMin)}–{fmtHM(itemEnd)}"
                class:past={isPast}
                class:active={isActive}
-               class:compact={item.totalMin < AGENDA_COMPACT_ITEM_MINUTES}
+               class:compact={layoutItem?.compact ?? item.totalMin < AGENDA_COMPACT_ITEM_MINUTES}
                class:dragging={agendaMoveState?.dayIdx === selectedDayIdx && agendaMoveState?.flowIdx === ai}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
               onclick={(e) => handleBlockClick(item, ai, e)}
