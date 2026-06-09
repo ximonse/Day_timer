@@ -1,17 +1,21 @@
 import { Redis } from '@upstash/redis';
 import { json, error } from '@sveltejs/kit';
 import { validateSyncToken } from '$lib/security.js';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 const redis = new Redis({
   url: process.env.daytimer_KV_REST_API_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'change-me-in-env';
-
 function isAdmin(request: Request): boolean {
+  const configured = process.env.ADMIN_PASSWORD;
+  if (!configured || !configured.trim()) return false;
   const auth = request.headers.get('x-admin-password');
-  return auth === ADMIN_PASSWORD;
+  if (!auth) return false;
+  const a = createHash('sha256').update(configured).digest();
+  const b = createHash('sha256').update(auth).digest();
+  return timingSafeEqual(a, b);
 }
 
 function inviteKey(code: string): string {
