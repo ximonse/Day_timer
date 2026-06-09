@@ -1,0 +1,18 @@
+{
+  "name": "Day Timer",
+  "short_name": "Day Timer",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f1de",
+  "theme_color": "#e07a5f",
+  "lang": "sv",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
