@@ -4,7 +4,7 @@
 
 <svelte:head>
   <title>Timer [BETA]</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 </svelte:head>
 
 {@render children()}
@@ -141,7 +141,7 @@
   :global(.top-time) { grid-column: 2; position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 0; justify-self: center; }
   :global(.top-time .now) { background: transparent; border: 0; color: inherit; padding: 0; cursor: pointer; }
   :global(.top-time .left) { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); font-size: 20px; color: var(--muted); margin-top: 0; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
-  :global(.clock-wrap) { position: relative; margin-top: 34px; }
+  :global(.clock-wrap) { position: relative; margin-top: 34px; touch-action: none; }
   :global(.mini-menu-shell) { width: min(348px, 100%); display: flex; flex-direction: column; align-items: center; gap: 7px; }  :global(.mini-menu-toggle) { width: 26px; height: 20px; border-radius: 999px; border: 0; background: transparent; color: color-mix(in srgb, var(--muted) 84%, var(--fg) 16%); opacity: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: color .16s, opacity .16s, transform .16s; }
   :global(.mini-menu-toggle:hover), :global(.mini-menu-toggle:focus-visible) { color: var(--fg); opacity: 1; }
   :global(.mini-menu-toggle span) { display: inline-block; line-height: 1; font-size: 18px; font-weight: 700; transform: rotate(0deg); transition: transform .2s ease; }
@@ -784,5 +784,13 @@
     10% { opacity: 1; transform: translate(-50%, 0); }
     90% { opacity: 1; transform: translate(-50%, 0); }
     100% { opacity: 0; transform: translate(-50%, -10px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(*, *::before, *::after) {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
   </style>

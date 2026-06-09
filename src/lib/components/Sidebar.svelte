@@ -481,7 +481,7 @@
 </div>
 
 <style>
-  .seglist { display: flex; flex-direction: column; gap: 4px; }
+  .seglist { display: flex; flex-direction: column; gap: 4px; touch-action: pan-y; }
   .empty-session { display:flex; flex-direction:column; gap:6px; padding:14px 12px; border:1px dashed var(--line); border-radius:8px; color:var(--muted); font-size:14px; line-height:1.35; }
   .empty-session strong { color:var(--text); font-size:15px; }
   .seglist .row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 42px; font-weight: 400; line-height: 1.16; }
