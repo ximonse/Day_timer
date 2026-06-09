@@ -77,6 +77,7 @@ function emptyWorkspace() {
 describe('workspace snapshot store', () => {
 	test('accepts only explicit manual save snapshot requests from sync bodies', () => {
 		expect(snapshotReasonFromSyncBody({ snapshotReason: 'manual-save' })).toBe('manual-save');
+		expect(snapshotReasonFromSyncBody({ snapshotReason: 'conflict-overwrite' })).toBe('conflict-overwrite');
 		expect(snapshotReasonFromSyncBody({ snapshotReason: 'auto-effect' })).toBe(null);
 		expect(snapshotReasonFromSyncBody({})).toBe(null);
 		expect(snapshotReasonFromSyncBody(null)).toBe(null);

@@ -16,9 +16,8 @@ export function workspaceSnapshotsKey(token: string): string {
 }
 
 export function snapshotReasonFromSyncBody(body: unknown): WorkspaceSnapshotReason | null {
-	return body && typeof body === 'object' && (body as { snapshotReason?: unknown }).snapshotReason === 'manual-save'
-		? 'manual-save'
-		: null;
+	const reason = body && typeof body === 'object' ? (body as { snapshotReason?: unknown }).snapshotReason : null;
+	return reason === 'manual-save' || reason === 'conflict-overwrite' ? reason : null;
 }
 
 export async function readWorkspaceSnapshots(redis: SnapshotRedis, key: string): Promise<WorkspaceSnapshot[]> {

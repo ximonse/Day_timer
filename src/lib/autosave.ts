@@ -6,5 +6,5 @@ export function shouldSkipWorkspaceAutosave(
 	lastSyncedHash: string | null,
 	pendingWorkspaceSaveHash: string | null
 ) {
-	return source !== 'manual' && (workspaceHash === lastSyncedHash || workspaceHash === pendingWorkspaceSaveHash);
+	return source !== 'manual' && source !== 'conflict-overwrite' && (workspaceHash === lastSyncedHash || workspaceHash === pendingWorkspaceSaveHash);
 }

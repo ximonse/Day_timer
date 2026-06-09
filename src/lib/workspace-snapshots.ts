@@ -1,6 +1,6 @@
 import type { WorkspaceData } from './workspace.js';
 
-export type WorkspaceSnapshotReason = 'manual-save' | 'restore';
+export type WorkspaceSnapshotReason = 'manual-save' | 'restore' | 'conflict-overwrite';
 
 export interface WorkspaceSnapshot {
 	id: string;

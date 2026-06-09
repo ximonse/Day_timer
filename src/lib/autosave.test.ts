@@ -19,4 +19,8 @@ describe('shouldSkipWorkspaceAutosave', () => {
 	test('never skips manual save because it may need a snapshot', () => {
 		expect(shouldSkipWorkspaceAutosave('manual', 'same', 'same', 'same')).toBe(false);
 	});
+
+	test('never skips conflict overwrite because it must replace the cloud version', () => {
+		expect(shouldSkipWorkspaceAutosave('conflict-overwrite', 'same', 'same', 'same')).toBe(false);
+	});
 });

@@ -189,6 +189,7 @@
   let syncStatusError = $state(false);
   let syncProbeText = $state('');
   let syncProbeState = $state<'idle' | 'queued' | 'loading' | 'saving' | 'ok' | 'error' | 'conflict'>('idle');
+  let syncConflict = $state<{ serverRevision: number } | null>(null);
   type WorkspaceSnapshotSummary = { id: string; revision: number; createdAt: string; reason: 'manual-save' | 'restore' };
   let workspaceSnapshots = $state<WorkspaceSnapshotSummary[]>([]);
   let workspaceSnapshotsLoading = $state(false);
@@ -1471,6 +1472,7 @@
   }
 
   async function syncLoad(source: 'manual' | 'auto' = 'manual') {
+    if (source === 'auto' && syncConflict) return;
     if (source === 'auto' && hasUnsavedAgendaDraft()) {
       syncProbeState = 'idle';
       syncProbeText = 'Dagtext osparad – molnladdning pausad';
@@ -1549,6 +1551,7 @@
       clearTimeout(workspaceAutosaveTimer);
       workspaceAutosaveTimer = null;
     }
+    if (syncConflict && saveSource !== 'conflict-overwrite' && saveSource !== 'manual') return;
     syncActiveDraftFromEditor();
     const workspace = currentWorkspaceData();
     const workspaceHash = JSON.stringify(workspace);
@@ -1559,11 +1562,11 @@
     }
     const payloadStr = JSON.stringify({
       workspace,
-      ...(saveSource === 'manual' ? { snapshotReason: 'manual-save' } : {})
+      ...(saveSource === 'manual' ? { snapshotReason: 'manual-save' } : saveSource === 'conflict-overwrite' ? { snapshotReason: 'conflict-overwrite' } : {})
     });
     try {
       syncProbeState = 'saving';
-      syncProbeText = saveSource === 'manual' ? 'Sparar...' : 'Autosparar...';
+      syncProbeText = saveSource === 'auto-panel' || saveSource === 'auto-effect' ? 'Autosparar...' : 'Sparar...';
       pendingWorkspaceSaveHash = workspaceHash;
       const res = await fetch('/api/sync', {
         method: 'POST',
@@ -1578,7 +1581,7 @@
         const data = await res.json();
         syncProbeState = 'conflict';
         syncProbeText = 'Konflikt (nyare version finns)';
-        showSyncStatus('Kunde inte spara: nyare version finns i molnet', true);
+        syncConflict = { serverRevision: typeof data.currentRevision === 'number' ? data.currentRevision : s.currentRevision + 1 };
         return;
       }
       
@@ -1588,8 +1591,8 @@
       lastSyncedHash = JSON.stringify({ ...workspace, revision: data.revision });
       syncProbeState = 'ok';
       syncProbeText = `Synkad ${probeTime()} (rev ${s.currentRevision})`;
-      showSyncStatus(saveSource === 'manual' ? 'Sparat till moln ✓' : 'Autosparat ✓');
-      if (saveSource === 'manual') void loadWorkspaceSnapshots();
+      showSyncStatus(saveSource === 'auto-panel' || saveSource === 'auto-effect' ? 'Autosparat ✓' : 'Sparat till moln ✓');
+      if (saveSource === 'manual' || saveSource === 'conflict-overwrite') void loadWorkspaceSnapshots();
     } catch {
       syncProbeState = 'error';
       syncProbeText = 'Kunde inte spara';
@@ -1597,6 +1600,25 @@
     } finally {
       if (pendingWorkspaceSaveHash === workspaceHash) pendingWorkspaceSaveHash = null;
     }
+  }
+
+  function backupLocalWorkspace() {
+    try {
+      localStorage.setItem('daytimer.conflictBackup', JSON.stringify({ savedAt: new Date().toISOString(), workspace: currentWorkspaceData() }));
+    } catch { /* ignore */ }
+  }
+
+  async function resolveConflictUseCloud() {
+    backupLocalWorkspace();
+    syncConflict = null;
+    await syncLoad('manual');
+  }
+
+  async function resolveConflictKeepMine() {
+    const serverRevision = syncConflict?.serverRevision ?? s.currentRevision;
+    syncConflict = null;
+    s.currentRevision = Math.max(s.currentRevision, serverRevision);
+    await syncSave('conflict-overwrite');
   }
 
   async function loadWorkspaceSnapshots() {
@@ -3625,6 +3647,21 @@
     {/key}
   {/if}
 
+  {#if syncConflict}
+    <div class="conflict-overlay" in:fade={{ duration: 200 }}>
+      <div class="conflict-card" role="alertdialog" aria-modal="true" aria-labelledby="conflict-title" in:fly={{ y: 16, duration: 300 }}>
+        <h2 id="conflict-title">Nyare version finns i molnet</h2>
+        <p>En annan enhet har sparat efter att den här enheten senast synkade. Välj vilken version som ska gälla.</p>
+        <div class="conflict-actions">
+          <button class="quickstart conflict-primary" onclick={resolveConflictKeepMine}>Behåll den här enhetens version</button>
+          <button class="quickstart quickstart-subtle" onclick={resolveConflictUseCloud}>Använd molnets version</button>
+        </div>
+        <p class="conflict-note">Molnets version säkerhetskopieras under Tidigare versioner. Enhetens version säkerhetskopieras lokalt i webbläsaren.</p>
+        <button class="conflict-later" onclick={() => { syncConflict = null; }}>Avgör senare</button>
+      </div>
+    </div>
+  {/if}
+
   <OnboardingTour
     step={s.onboardingStep}
     onNext={() => {
@@ -3643,3 +3680,41 @@
       appState.persist();
     }}
   />
+
+<style>
+  .conflict-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 11500;
+    backdrop-filter: blur(8px);
+  }
+  .conflict-card {
+    background: var(--menu-surface);
+    color: var(--menu-fg);
+    padding: 36px 32px;
+    border-radius: 24px;
+    width: 90%;
+    max-width: 440px;
+    text-align: center;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    border: 1px solid var(--menu-border);
+  }
+  .conflict-card h2 { margin: 0 0 12px 0; font-size: 24px; font-weight: 800; }
+  .conflict-card p { font-size: 15px; line-height: 1.55; opacity: 0.9; margin: 0 0 20px 0; }
+  .conflict-actions { display: flex; flex-direction: column; gap: 10px; }
+  .conflict-actions :global(.quickstart) { justify-content: center; }
+  .conflict-card :global(.conflict-primary) { background: var(--accent); color: white; }
+  .conflict-note { font-size: 12px; opacity: 0.6; margin: 14px 0 0 0; }
+  .conflict-later {
+    margin-top: 14px;
+    background: transparent;
+    border: 0;
+    color: var(--menu-muted);
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .conflict-later:hover { color: var(--menu-fg); }
+</style>

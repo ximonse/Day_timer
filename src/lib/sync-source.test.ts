@@ -11,4 +11,8 @@ describe('normalizeSyncSaveSource', () => {
 		expect(normalizeSyncSaveSource('auto-panel')).toBe('auto-panel');
 		expect(normalizeSyncSaveSource('auto-effect')).toBe('auto-effect');
 	});
+
+	test('keeps conflict overwrite source', () => {
+		expect(normalizeSyncSaveSource('conflict-overwrite')).toBe('conflict-overwrite');
+	});
 });

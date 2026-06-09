@@ -81,7 +81,7 @@
     onLogin: () => void;
     syncProbeText: string;
     syncProbeState: 'idle' | 'queued' | 'loading' | 'saving' | 'ok' | 'error' | 'conflict';
-    workspaceSnapshots: { id: string; revision: number; createdAt: string; reason: 'manual-save' | 'restore' }[];
+    workspaceSnapshots: { id: string; revision: number; createdAt: string; reason: 'manual-save' | 'restore' | 'conflict-overwrite' }[];
     workspaceSnapshotsLoading: boolean;
     onLoginNameChange: (value: string) => void;
     onLoginPassChange: (value: string) => void;
@@ -156,6 +156,7 @@
               <span>
                 {snapshotLabel(snapshot.createdAt)}
                 <small>rev {snapshot.revision}</small>
+                {#if snapshot.reason === 'conflict-overwrite'}<small>· konflikt</small>{/if}
               </span>
               <button class="snapshot-restore" onclick={() => onRestoreSnapshot(snapshot.id)}>Återställ</button>
             </div>
