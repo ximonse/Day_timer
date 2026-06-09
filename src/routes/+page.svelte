@@ -168,7 +168,6 @@
   let leftText = $state('');
   let flowsOpen = $state(false);
   let miniMenuOpen = $state(true);
-  let quickStartTitle = $state('');
   let quickStartText = $state('');
   let miniMenuSnapshot = $state<RunMenuSnapshot | null>(null);
   let themePickerOpen = $state(false);
@@ -1314,7 +1313,7 @@
       return;
     }
     const d = new Date();
-    s.dayTitle = quickStartTitle.trim() || result.dayTitle || 'Session';
+    s.dayTitle = result.dayTitle || 'Session';
     s.blocks = result.blocks;
     s.extraInfo = result.extraInfo;
     s.startMin = d.getHours() * 60 + d.getMinutes();
@@ -1323,7 +1322,6 @@
     const f = flowFromCurrentSession();
     addFlowToAgendaToday(f, true, sessionAgendaMeta());
     lastAutoLoadKey = `${f.startMin}-${totalFlowMinutes(f)}-${f.title}-${f.parts.length}`;
-    quickStartTitle = '';
     quickStartText = '';
     capturePanelBaseline('now');
     partsDraftDirty = false;
@@ -3353,9 +3351,7 @@
               onTogglePartsHelp={() => sessionPartsHelpOpen = toggleHelpOverride(sessionPartsHelpOpen)}
               onToggleTimeHelp={() => sessionTimeHelpOpen = toggleHelpOverride(sessionTimeHelpOpen)}
               onToggleSourceHelp={() => planSourceHelpOpen = toggleHelpOverride(planSourceHelpOpen)}
-              {quickStartTitle}
               {quickStartText}
-              onQuickStartTitleInput={(value) => { quickStartTitle = value; }}
               onQuickStartTextInput={(value) => { quickStartText = value; }}
               onQuickStart={startQuickNowSession}
               onCopyActiveShare={() => copyShareLinkForKey(ACTIVE_SHARE_KEY)}

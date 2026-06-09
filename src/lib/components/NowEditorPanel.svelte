@@ -38,9 +38,7 @@
     savedFlowMsg,
     showTitleHelp,
     showPartsHelp,
-    quickStartTitle,
     quickStartText,
-    onQuickStartTitleInput,
     onQuickStartTextInput,
     onQuickStart,
     onToggleNowMain,
@@ -74,9 +72,7 @@
     savedFlowMsg: string;
     showTitleHelp: boolean;
     showPartsHelp: boolean;
-    quickStartTitle: string;
     quickStartText: string;
-    onQuickStartTitleInput: (value: string) => void;
     onQuickStartTextInput: (value: string) => void;
     onQuickStart: () => void;
     onToggleNowMain: () => void;
@@ -120,14 +116,12 @@
     <div class="quick-now-panel">
       <div>
         <div class="quick-now-title">Starta något nu</div>
-        <div class="quick-now-copy">Skriv en snabb session och kör direkt.</div>
+        <div class="quick-now-copy">En aktivitet per rad — skriv och kör direkt.</div>
       </div>
-      <input type="text" placeholder="Rubrik, t.ex. Röja köket"
-        value={quickStartTitle}
-        oninput={(e) => onQuickStartTitleInput((e.target as HTMLInputElement).value)} />
-      <textarea class="quick-now-text" placeholder="Aktivitet 15m&#10;- valfri underpunkt"
+      <textarea class="quick-now-text" placeholder="# Rubrik (valfritt)&#10;Uppvärmning 5m&#10;Grupparbete 15m&#10;- valfri underpunkt"
         value={quickStartText}
-        oninput={(e) => onQuickStartTextInput((e.target as HTMLTextAreaElement).value)}></textarea>
+        oninput={(e) => onQuickStartTextInput((e.target as HTMLTextAreaElement).value)}
+        onkeydown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); onQuickStart(); } }}></textarea>
       <button class="quickstart" style="width:100%" onclick={onQuickStart}>Starta nu</button>
     </div>
   {/if}

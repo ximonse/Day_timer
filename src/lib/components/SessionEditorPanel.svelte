@@ -74,9 +74,7 @@
     onToggleSourceHelp,
     onSaveFlow,
     onStartLiveShare,
-    quickStartTitle,
     quickStartText,
-    onQuickStartTitleInput,
     onQuickStartTextInput,
     onQuickStart,
     onStartSessionShare,
@@ -180,9 +178,7 @@
     onToggleTimeHelp: () => void;
     onToggleSourceHelp: () => void;
     onSaveFlow: () => void;
-    quickStartTitle: string;
     quickStartText: string;
-    onQuickStartTitleInput: (value: string) => void;
     onQuickStartTextInput: (value: string) => void;
     onQuickStart: () => void;
     onStartLiveShare: () => void;
@@ -235,9 +231,7 @@
       {savedFlowMsg}
       {showTitleHelp}
       {showPartsHelp}
-      {quickStartTitle}
       {quickStartText}
-      {onQuickStartTitleInput}
       {onQuickStartTextInput}
       {onQuickStart}
       {onToggleNowMain}
