@@ -9,6 +9,11 @@ export const POST: RequestHandler = async ({ request }) => {
   const formData = await request.formData();
   const file = formData.get('file') as File;
   if (!file) throw error(400, 'Ingen ljudfil medföljde');
+  if (file.size === 0) throw error(400, 'Ljudfilen är tom');
+  if (file.size > 25 * 1024 * 1024) throw error(413, 'Ljudfilen är för stor (max 25 MB)');
+  if (file.type && !file.type.startsWith('audio/') && file.type !== 'video/webm' && file.type !== 'video/mp4') {
+    throw error(400, 'Filen verkar inte vara en ljudfil');
+  }
 
   const openai = new OpenAI({ apiKey });
 
