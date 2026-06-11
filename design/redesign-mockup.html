@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<title>Day Timer — UX-omdesign, koncept</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background:#dcd8c8; color:#3d405b; padding:40px;
+    display:flex; flex-direction:column; gap:48px; align-items:center;
+  }
+
+  /* ---------- shared tokens (sansad) ---------- */
+  .board { background:#cfcab7; border-radius:24px; padding:28px; width:1480px; }
+  .board.phone-board { width:1020px; }
+  .board-title { font-size:15px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; opacity:.55; margin-bottom:6px; }
+  .board-sub { font-size:14px; opacity:.7; margin-bottom:18px; max-width:980px; line-height:1.5; }
+
+  .screen {
+    background:#f4f1de; border-radius:16px; overflow:hidden; position:relative;
+    box-shadow:0 18px 50px rgba(61,64,91,.25); width:1424px; height:840px;
+    display:flex; flex-direction:column;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    display:flex; align-items:center; gap:18px; padding:12px 20px;
+    background:#f4f1de; border-bottom:1px solid #dedacb;
+  }
+  .brand { display:flex; flex-direction:column; line-height:1.15; min-width:170px; }
+  .brand b { font-size:16px; letter-spacing:.02em; }
+  .brand b .beta { font-size:9px; vertical-align:super; color:#e07a5f; font-weight:800; letter-spacing:.08em; }
+  .brand span { font-size:12px; color:#8a8478; }
+
+  .modes {
+    display:flex; background:#e8e5d8; border-radius:999px; padding:4px; gap:2px;
+    margin:0 auto;
+  }
+  .mode {
+    padding:8px 22px; border-radius:999px; font-size:14.5px; font-weight:600;
+    color:#6b6e8a; display:flex; align-items:center; gap:8px;
+  }
+  .mode.on { background:#3d405b; color:#f4f1de; box-shadow:0 2px 6px rgba(61,64,91,.3); }
+  .mode .ico { font-size:13px; }
+
+  .topbar-right { display:flex; align-items:center; gap:10px; min-width:170px; justify-content:flex-end; }
+  .chip {
+    display:flex; align-items:center; gap:7px; padding:8px 14px; border-radius:999px;
+    background:#e8e5d8; font-size:13.5px; font-weight:600; color:#3d405b;
+    border:1px solid transparent;
+  }
+  .chip.primary { background:#e07a5f; color:#fff; box-shadow:0 2px 8px rgba(224,122,95,.4); }
+  .chip.account { padding:5px 14px 5px 5px; }
+  .avatar {
+    width:28px; height:28px; border-radius:50%; background:#81b29a; color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;
+    border:2px solid #5e9b80;
+  }
+  .sync-ok { color:#4f8b6f; font-size:12.5px; display:flex; align-items:center; gap:4px; }
+
+  /* ---------- main layout ---------- */
+  .layout { flex:1; display:flex; min-height:0; }
+
+  /* sidebar */
+  .sidebar { width:330px; background:#ece9d5; border-right:1px solid #dedacb; padding:18px 16px; display:flex; flex-direction:column; gap:10px; }
+  .sidebar h3 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:#8a8478; margin:0 0 2px 4px; }
+  .block {
+    background:#f7f4e6; border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:12px;
+    border-left:5px solid; box-shadow:0 1px 3px rgba(61,64,91,.08);
+  }
+  .block.done { opacity:.45; }
+  .block.done .b-title { text-decoration:line-through; }
+  .block.active { box-shadow:0 0 0 2px #e07a5f, 0 3px 10px rgba(224,122,95,.25); }
+  .b-main { flex:1; }
+  .b-title { font-size:16.5px; font-weight:700; }
+  .b-note { font-size:12.5px; color:#8a8478; margin-top:2px; }
+  .b-min { font-size:13px; font-weight:700; color:#6b6e8a; background:#ece9d5; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+  .b-min.left { background:#fbe3dc; color:#c75f44; }
+  .b-snd { font-size:13px; color:#b4b0a0; }
+  .b-snd.on { color:#e07a5f; }
+  .add-block {
+    border:2px dashed #c8c5b5; border-radius:12px; padding:10px; text-align:center;
+    color:#8a8478; font-size:14px; font-weight:600;
+  }
+  .infobox { margin-top:auto; background:#f7f4e6; border-radius:12px; padding:12px 14px; font-size:13px; color:#6b6e8a; line-height:1.5; }
+  .infobox b { color:#3d405b; display:block; font-size:13.5px; }
+
+  /* center clock */
+  .center { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; position:relative; }
+  .session-head { text-align:center; margin-bottom:6px; }
+  .session-head h1 { font-size:30px; letter-spacing:.01em; }
+  .session-head p { font-size:14px; color:#8a8478; margin-top:3px; }
+  .clock { width:430px; height:430px; border-radius:50%; position:relative;
+    background:conic-gradient(#9aa3b8 0 14%, #81b29a 14% 42%, #f2cc8f 42% 66%, #e07a5f 66% 88%, #8da7be 88% 100%);
+    box-shadow:0 10px 36px rgba(61,64,91,.22), inset 0 0 0 1px rgba(61,64,91,.12);
+  }
+  .clock::after { content:""; position:absolute; inset:86px; background:#f4f1de; border-radius:50%;
+    box-shadow:inset 0 2px 10px rgba(61,64,91,.12); }
+  .clock-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:2; }
+  .clock-center .big { font-size:54px; font-weight:800; letter-spacing:-.01em; }
+  .clock-center .small { font-size:16px; color:#8a8478; margin-top:2px; }
+  .clock-label { position:absolute; font-size:14px; font-weight:700; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.25); z-index:1; }
+  .hand { position:absolute; left:50%; top:50%; width:4px; height:208px; background:#3d405b; border-radius:4px;
+    transform-origin:50% 0%; transform:rotate(331deg); z-index:1; }
+  .hand::before { content:""; position:absolute; left:50%; top:0; transform:translate(-50%,-50%);
+    width:14px; height:14px; background:#3d405b; border-radius:50%; }
+
+  .edit-hint {
+    position:absolute; right:40px; bottom:26px; display:flex; gap:10px;
+  }
+  .ghost-btn {
+    background:#fff; border:1px solid #dedacb; border-radius:999px; padding:9px 18px;
+    font-size:13.5px; font-weight:600; color:#3d405b; box-shadow:0 2px 8px rgba(61,64,91,.12);
+    display:flex; align-items:center; gap:7px;
+  }
+
+  /* agenda */
+  .agenda { width:300px; background:#ece9d5; border-left:1px solid #dedacb; padding:16px 14px; display:flex; flex-direction:column; gap:12px; }
+  .cal { background:#f7f4e6; border-radius:12px; padding:12px; }
+  .cal-head { display:flex; justify-content:space-between; align-items:center; font-size:13.5px; font-weight:700; margin-bottom:8px; }
+  .cal-head span.nav { color:#8a8478; font-weight:400; padding:0 6px; }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; font-size:11.5px; text-align:center; }
+  .cal-grid .wd { color:#8a8478; font-weight:700; padding:3px 0; }
+  .cal-grid .d { padding:5px 0; border-radius:7px; color:#6b6e8a; position:relative; }
+  .cal-grid .d.has { font-weight:700; color:#3d405b; }
+  .cal-grid .d.has::after { content:""; position:absolute; left:25%; right:25%; bottom:2px; height:2.5px; border-radius:2px; background:#81b29a; }
+  .cal-grid .d.sel { background:#3d405b; color:#f4f1de; }
+  .cal-grid .d.sel::after { background:#f2cc8f; }
+  .cal-grid .d.mut { opacity:.35; }
+
+  .tl-head { display:flex; justify-content:space-between; align-items:center; font-size:13.5px; font-weight:700; padding:0 4px; }
+  .tl-head .nav { color:#8a8478; font-weight:400; }
+  .tl { flex:1; position:relative; display:flex; flex-direction:column; gap:8px; }
+  .tl-item { border-radius:10px; padding:9px 12px; background:#f7f4e6; border-left:4px solid; box-shadow:0 1px 3px rgba(61,64,91,.08); }
+  .tl-item .t { font-size:13.5px; font-weight:700; }
+  .tl-item .m { font-size:11.5px; color:#8a8478; margin-top:1px; }
+  .tl-item.past { opacity:.45; }
+  .tl-item.now { box-shadow:0 0 0 2px #e07a5f; }
+  .now-line { display:flex; align-items:center; gap:6px; color:#e07a5f; font-size:10.5px; font-weight:800; letter-spacing:.05em; }
+  .now-line::before, .now-line::after { content:""; flex:1; height:2px; background:#e07a5f; border-radius:2px; }
+
+  /* ---------- annotations ---------- */
+  .pin {
+    position:absolute; width:26px; height:26px; border-radius:50%; background:#3d405b; color:#f2cc8f;
+    font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 4px rgba(242,204,143,.85), 0 4px 10px rgba(0,0,0,.3); z-index:50;
+  }
+  .legend { display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:16px; }
+  .legend div { display:flex; gap:9px; font-size:13.5px; line-height:1.45; max-width:440px; }
+  .legend .n {
+    flex:none; width:22px; height:22px; border-radius:50%; background:#3d405b; color:#f2cc8f;
+    font-size:12.5px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;
+  }
+
+  /* ---------- settings panel ---------- */
+  .dim { position:absolute; inset:0; background:rgba(61,64,91,.18); z-index:9; }
+  .settings {
+    position:absolute; top:64px; right:130px; width:660px; background:#fbf9ee; border-radius:16px;
+    box-shadow:0 24px 70px rgba(61,64,91,.4); z-index:10; overflow:hidden; border:1px solid #e3dfcd;
+  }
+  .set-tabs { display:flex; gap:4px; padding:14px 18px 0; border-bottom:1px solid #ece8d6; }
+  .set-tab { padding:9px 18px 11px; font-size:14px; font-weight:700; color:#8a8478; border-radius:10px 10px 0 0; }
+  .set-tab.on { color:#3d405b; background:#f4f1de; box-shadow:inset 0 -3px 0 #e07a5f; }
+  .set-body { padding:18px 22px 16px; display:flex; flex-direction:column; gap:18px; }
+  .set-group h4 { font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:#8a8478; margin-bottom:10px; }
+
+  .clockviews { display:flex; gap:14px; }
+  .cv { flex:1; border:2px solid #e3dfcd; border-radius:14px; padding:14px 10px 12px; text-align:center; background:#fff; }
+  .cv.on { border-color:#e07a5f; background:#fdf3ef; box-shadow:0 3px 10px rgba(224,122,95,.18); }
+  .cv .ring { width:74px; height:74px; border-radius:50%; margin:0 auto 8px; position:relative; }
+  .cv .ring::after { content:""; position:absolute; inset:17px; background:#fff; border-radius:50%; }
+  .cv.on .ring::after { background:#fdf3ef; }
+  .cv .lbl { font-size:14px; font-weight:800; }
+  .cv .sub { font-size:11.5px; color:#8a8478; margin-top:1px; }
+  .ring.r1 { background:conic-gradient(#81b29a 0 40%, #f2cc8f 40% 75%, #e07a5f 75% 100%); }
+  .ring.r2 { background:conic-gradient(#81b29a 0 22%, #f2cc8f 22% 40%, #e07a5f 40% 55%, #8da7be 55% 70%, #ece9d5 70% 100%); }
+  .ring.r12 { background:conic-gradient(#81b29a 0 8%, #f2cc8f 8% 14%, #e07a5f 14% 19%, #8da7be 19% 24%, #ece9d5 24% 100%); }
+
+  .togglegrid { display:grid; grid-template-columns:1fr 1fr; gap:9px 28px; }
+  .tg { display:flex; justify-content:space-between; align-items:center; font-size:14px; }
+  .sw { width:38px; height:22px; border-radius:999px; background:#d9d5c4; position:relative; flex:none; }
+  .sw::after { content:""; position:absolute; top:2.5px; left:3px; width:17px; height:17px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+  .sw.on { background:#81b29a; }
+  .sw.on::after { left:auto; right:3px; }
+  .seg3 { display:flex; background:#ece9d5; border-radius:999px; padding:3px; font-size:12px; font-weight:700; }
+  .seg3 span { padding:4px 11px; border-radius:999px; color:#8a8478; }
+  .seg3 span.on { background:#3d405b; color:#f4f1de; }
+
+  .set-foot { display:flex; gap:10px; padding:13px 22px; border-top:1px solid #ece8d6; background:#f7f4e6; font-size:13.5px; color:#6b6e8a; align-items:center; }
+  .set-foot .spacer { flex:1; }
+  .linky { font-weight:700; color:#3d405b; display:flex; gap:6px; align-items:center; }
+
+  /* ---------- phones ---------- */
+  .phones { display:flex; gap:40px; justify-content:center; }
+  .phone {
+    width:330px; height:700px; background:#f4f1de; border-radius:38px; border:10px solid #3d405b;
+    box-shadow:0 18px 50px rgba(61,64,91,.35); overflow:hidden; display:flex; flex-direction:column; position:relative;
+  }
+  .p-top { padding:14px 18px 8px; display:flex; justify-content:space-between; align-items:center; }
+  .p-top .t { font-weight:800; font-size:15px; }
+  .p-top .t small { display:block; font-weight:500; font-size:11px; color:#8a8478; }
+  .p-clock { width:230px; height:230px; margin:8px auto; }
+  .p-clock .clock-center .big { font-size:30px; }
+  .p-clock .clock-center .small { font-size:12px; }
+  .p-clock.clock::after { inset:46px; }
+  .p-blocks { padding:0 16px; display:flex; flex-direction:column; gap:7px; flex:1; overflow:hidden; }
+  .p-blocks .block { padding:9px 12px; }
+  .p-blocks .b-title { font-size:14px; }
+  .p-fab {
+    position:absolute; right:16px; bottom:76px; background:#e07a5f; color:#fff; font-weight:800; font-size:15px;
+    border-radius:999px; padding:13px 22px; box-shadow:0 6px 18px rgba(224,122,95,.5); display:flex; gap:8px; align-items:center;
+  }
+  .tabbar {
+    margin-top:auto; display:flex; border-top:1px solid #dedacb; background:#f7f4e6; padding:7px 4px 14px;
+  }
+  .tab { flex:1; text-align:center; font-size:10.5px; font-weight:700; color:#9a9688; }
+  .tab .i { font-size:19px; display:block; margin-bottom:2px; }
+  .tab.on { color:#e07a5f; }
+  .p-agenda { padding:0 16px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .p-agenda .cal { padding:10px; }
+  .p-agenda .cal-grid { font-size:10px; }
+  .p-day-head { display:flex; justify-content:space-between; align-items:center; font-size:13.5px; font-weight:800; padding:2px 2px 0; }
+  .p-day-head .nav { color:#8a8478; font-weight:400; }
+</style>
+</head>
+<body>
+
+<!-- ====================== BOARD 1 : DESKTOP NU ====================== -->
+<section class="board" id="board-desktop">
+  <div class="board-title">1 · Skrivbord — Nu-läge</div>
+  <div class="board-sub">En enda lugn topprad ersätter dagens nio omärkta ikoner. Lägena är alltid synliga som ett segmentreglage i mitten, och allt som handlar om utseende samlas bakom en knapp.</div>
+  <div class="screen">
+    <div class="topbar">
+      <div class="brand"><b>Day Timer <span class="beta">BETA</span></b><span>torsdag 11 juni</span></div>
+      <div class="modes">
+        <div class="mode on"><span class="ico">▶</span> Nu</div>
+        <div class="mode"><span class="ico">▦</span> Planera</div>
+        <div class="mode"><span class="ico">▤</span> Bibliotek</div>
+      </div>
+      <div class="topbar-right">
+        <div class="chip">⚙ Visa</div>
+        <div class="chip primary">▷ Presentera</div>
+        <div class="chip account"><div class="avatar">S</div><span class="sync-ok">✓ Synkad</span></div>
+      </div>
+      <div class="pin" style="top:46px; left:560px;">1</div>
+      <div class="pin" style="top:46px; right:330px;">2</div>
+      <div class="pin" style="top:46px; right:185px;">3</div>
+      <div class="pin" style="top:46px; right:40px;">4</div>
+    </div>
+    <div class="layout">
+      <div class="sidebar">
+        <h3>Dagens pass · 08:10–09:00</h3>
+        <div class="block done" style="border-color:#9aa3b8;">
+          <div class="b-main"><div class="b-title">Samling</div></div>
+          <span class="b-snd">♪</span><span class="b-min">7 min</span>
+        </div>
+        <div class="block active" style="border-color:#81b29a;">
+          <div class="b-main"><div class="b-title">Genomgång</div><div class="b-note">Kapitel 4 · bråk</div></div>
+          <span class="b-snd on">♪</span><span class="b-min left">12 min kvar</span>
+        </div>
+        <div class="block" style="border-color:#f2cc8f;">
+          <div class="b-main"><div class="b-title">Eget arbete</div><div class="b-note">s. 42–45</div></div>
+          <span class="b-snd on">♪</span><span class="b-min">15 min</span>
+        </div>
+        <div class="block" style="border-color:#e07a5f;">
+          <div class="b-main"><div class="b-title">Redovisning</div></div>
+          <span class="b-snd">♪</span><span class="b-min">10 min</span>
+        </div>
+        <div class="block" style="border-color:#8da7be;">
+          <div class="b-main"><div class="b-title">Städning 🧹</div></div>
+          <span class="b-snd">♪</span><span class="b-min">6 min</span>
+        </div>
+        <div class="add-block">＋ Lägg till block</div>
+        <div class="infobox"><b>Kom ihåg</b>Idrottskläder imorgon · Frukt finns i lådan</div>
+        <div class="pin" style="bottom:188px; left:295px;">5</div>
+      </div>
+      <div class="center">
+        <div class="session-head">
+          <h1>Matematik åk 5</h1>
+          <p>Nästa: Rast 09:00 · klockan är 08:31</p>
+        </div>
+        <div class="clock">
+          <div class="hand"></div>
+          <div class="clock-label" style="top:130px; left:52px;">Genomgång</div>
+          <div class="clock-label" style="top:96px; right:96px;">Eget arbete</div>
+          <div class="clock-label" style="bottom:120px; right:74px;">Redovisning</div>
+          <div class="clock-center"><div class="big">12 min</div><div class="small">kvar av Genomgång</div></div>
+        </div>
+        <div class="edit-hint">
+          <div class="ghost-btn">✎ Redigera pass</div>
+          <div class="ghost-btn">⤴ Dela live</div>
+        </div>
+        <div class="pin" style="right:300px; bottom:32px;">6</div>
+      </div>
+      <div class="agenda">
+        <div class="cal">
+          <div class="cal-head"><span class="nav">‹</span> Juni 2026 <span class="nav">›</span></div>
+          <div class="cal-grid">
+            <span class="wd">M</span><span class="wd">T</span><span class="wd">O</span><span class="wd">T</span><span class="wd">F</span><span class="wd">L</span><span class="wd">S</span>
+            <span class="d mut">25</span><span class="d mut">26</span><span class="d mut">27</span><span class="d mut">28</span><span class="d mut">29</span><span class="d mut">30</span><span class="d mut">31</span>
+            <span class="d has">1</span><span class="d has">2</span><span class="d">3</span><span class="d has">4</span><span class="d has">5</span><span class="d">6</span><span class="d">7</span>
+            <span class="d has">8</span><span class="d has">9</span><span class="d has">10</span><span class="d sel">11</span><span class="d has">12</span><span class="d">13</span><span class="d">14</span>
+            <span class="d has">15</span><span class="d has">16</span><span class="d">17</span><span class="d has">18</span><span class="d">19</span><span class="d">20</span><span class="d">21</span>
+            <span class="d">22</span><span class="d">23</span><span class="d">24</span><span class="d">25</span><span class="d">26</span><span class="d">27</span><span class="d">28</span>
+          </div>
+        </div>
+        <div class="tl-head"><span class="nav">‹</span> Torsdag 11 juni <span class="nav">›</span></div>
+        <div class="tl">
+          <div class="tl-item past" style="border-color:#9aa3b8;"><div class="t">Morgonsamling</div><div class="m">07:50–08:10 · 20 min</div></div>
+          <div class="now-line">NU 08:31</div>
+          <div class="tl-item now" style="border-color:#81b29a;"><div class="t">Matematik åk 5</div><div class="m">08:10–09:00 · 50 min</div></div>
+          <div class="tl-item" style="border-color:#f2cc8f;"><div class="t">Svenska — läsgrupper</div><div class="m">09:20–10:10 · 50 min</div></div>
+          <div class="tl-item" style="border-color:#e07a5f;"><div class="t">Lunch &amp; rast</div><div class="m">10:10–11:00 · 50 min</div></div>
+          <div class="tl-item" style="border-color:#8da7be;"><div class="t">NO — vattnets kretslopp</div><div class="m">11:00–11:50 · 50 min</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <div><span class="n">1</span><span><b>Lägen alltid synliga.</b> Nu / Planera / Bibliotek som segmentreglage — ersätter ☰-menyn, flikarna och kortkommandona som enda väg. Konto bor i avataren.</span></div>
+    <div><span class="n">2</span><span><b>En "Visa"-knapp.</b> Klockvy, tema, ljud och alla ~20 reglage samlas i en panel (board 2) — istället för ⚙ + ● + ♪+ som tre olika popuper.</span></div>
+    <div><span class="n">3</span><span><b>"Presentera" istället för låsikon.</b> Run-läget är en tydlig, benämnd huvudknapp — det läraren faktiskt gör framför klassen.</span></div>
+    <div><span class="n">4</span><span><b>Synkstatus i ord.</b> "✓ Synkad / Sparar… / ⚠ Konflikt" istället för enbart en färgad prick.</span></div>
+    <div><span class="n">5</span><span><b>Block som kort.</b> Färgkant, ♪-toggle och minuter direkt på raden — ljudvarningar ställs där blocket är, inte i en separat popup.</span></div>
+    <div><span class="n">6</span><span><b>Redigering är kontextuell.</b> ✎ och Dela ligger som lugna knappar vid klockan och visas där de används — inte som globala ikonlägen i toppraden.</span></div>
+  </div>
+</section>
+
+<!-- ====================== BOARD 2 : SETTINGS PANEL ====================== -->
+<section class="board" id="board-settings">
+  <div class="board-title">2 · "Visa"-panelen — alla utseende-val på ett ställe</div>
+  <div class="board-sub">Dagens ⚙-meny (20 toggles i en lista), temaväljaren (●) och ljudpopupen (♪+) blir en panel med tre flikar. Klockvyn väljs visuellt med miniatyrklockor istället för en cyklande knapp.</div>
+  <div class="screen" style="height:700px;">
+    <div class="topbar">
+      <div class="brand"><b>Day Timer <span class="beta">BETA</span></b><span>torsdag 11 juni</span></div>
+      <div class="modes">
+        <div class="mode on"><span class="ico">▶</span> Nu</div>
+        <div class="mode"><span class="ico">▦</span> Planera</div>
+        <div class="mode"><span class="ico">▤</span> Bibliotek</div>
+      </div>
+      <div class="topbar-right">
+        <div class="chip" style="background:#3d405b; color:#f4f1de;">⚙ Visa</div>
+        <div class="chip primary">▷ Presentera</div>
+        <div class="chip account"><div class="avatar">S</div><span class="sync-ok">✓ Synkad</span></div>
+      </div>
+    </div>
+    <div class="dim"></div>
+    <div class="settings">
+      <div class="set-tabs">
+        <div class="set-tab on">Klocka</div>
+        <div class="set-tab">Tema</div>
+        <div class="set-tab">Ljud</div>
+      </div>
+      <div class="set-body">
+        <div class="set-group">
+          <h4>Klockvy</h4>
+          <div class="clockviews">
+            <div class="cv on"><div class="ring r1"></div><div class="lbl">1 timme</div><div class="sub">ett pass i taget</div></div>
+            <div class="cv"><div class="ring r2"></div><div class="lbl">2 timmar</div><div class="sub">förmiddagen</div></div>
+            <div class="cv"><div class="ring r12"></div><div class="lbl">12 timmar</div><div class="sub">hela dagen</div></div>
+          </div>
+        </div>
+        <div class="set-group">
+          <h4>På klockan</h4>
+          <div class="togglegrid">
+            <div class="tg">Tid kvar i mitten <span class="sw on"></span></div>
+            <div class="tg">Kvartmarkeringar <span class="sw on"></span></div>
+            <div class="tg">Nästa pass <span class="sw on"></span></div>
+            <div class="tg">5-minutersmarkeringar <span class="sw"></span></div>
+            <div class="tg">Sluttid i mitten <span class="sw"></span></div>
+            <div class="tg">Text utanför ringen <span class="sw"></span></div>
+          </div>
+        </div>
+        <div class="set-group">
+          <h4>Sidopanelen</h4>
+          <div class="togglegrid">
+            <div class="tg">Minuter <span class="seg3"><span>Av</span><span>Planerade</span><span class="on">Kvar</span></span></div>
+            <div class="tg">Underrubriker <span class="sw on"></span></div>
+            <div class="tg">Info-ruta <span class="sw on"></span></div>
+            <div class="tg">Tona ner passerad tid <span class="sw on"></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="set-foot">
+        <span class="linky">ⓘ Hjälp &amp; guide</span>
+        <span class="linky">⌘ Kortkommandon</span>
+        <span class="spacer"></span>
+        <span>Återställ till standard</span>
+      </div>
+    </div>
+    <div class="pin" style="top:78px; left:900px;">1</div>
+    <div class="pin" style="top:200px; left:608px;">2</div>
+    <div class="pin" style="top:420px; left:608px;">3</div>
+    <div class="pin" style="top:600px; left:608px;">4</div>
+  </div>
+  <div class="legend">
+    <div><span class="n">1</span><span><b>Tre flikar istället för tre popuper.</b> Klocka (vy + reglage), Tema (de 7 paletterna med namn + dag/natt) och Ljud (varningssignaler) bor ihop.</span></div>
+    <div><span class="n">2</span><span><b>Välj klockvy visuellt.</b> Miniatyrklockor med rubrik och användningsfall ersätter knappen som cyklar 1h→2h→12h utan förhandsvisning.</span></div>
+    <div><span class="n">3</span><span><b>Grupperat efter plats, inte funktion.</b> "På klockan" och "Sidopanelen" — läraren tänker på var saker syns, inte på inställningskategorier.</span></div>
+    <div><span class="n">4</span><span><b>Hjälpen flyttar in.</b> ⓘ-knappen försvinner ur toppraden; guide och kortkommandon nås härifrån istället.</span></div>
+  </div>
+</section>
+
+<!-- ====================== BOARD 3 : MOBILE ====================== -->
+<section class="board phone-board" id="board-mobile">
+  <div class="board-title">3 · iPad/mobil — flikar med namn, allt viktigt nåbart med tummen</div>
+  <div class="board-sub">Samma fyra lägen som på skrivbordet, nu med etiketter. "Kör!" ligger som flytande knapp i Nu-läget — från tanke till startad timer på under tio sekunder, med en hand.</div>
+  <div class="phones">
+    <div class="phone">
+      <div class="p-top">
+        <div class="t">Matematik åk 5<small>08:10–09:00 · Nästa: Rast</small></div>
+        <div class="chip" style="padding:6px 11px; font-size:12px;">▷</div>
+      </div>
+      <div class="clock p-clock">
+        <div class="clock-center"><div class="big">12 min</div><div class="small">kvar · Genomgång</div></div>
+      </div>
+      <div class="p-blocks">
+        <div class="block done" style="border-color:#9aa3b8;"><div class="b-main"><div class="b-title">Samling</div></div><span class="b-min">7</span></div>
+        <div class="block active" style="border-color:#81b29a;"><div class="b-main"><div class="b-title">Genomgång</div></div><span class="b-min left">12 kvar</span></div>
+        <div class="block" style="border-color:#f2cc8f;"><div class="b-main"><div class="b-title">Eget arbete</div></div><span class="b-min">15</span></div>
+        <div class="block" style="border-color:#e07a5f;"><div class="b-main"><div class="b-title">Redovisning</div></div><span class="b-min">10</span></div>
+      </div>
+      <div class="p-fab">▶ Kör!</div>
+      <div class="tabbar">
+        <div class="tab on"><span class="i">▶</span>Nu</div>
+        <div class="tab"><span class="i">▦</span>Planera</div>
+        <div class="tab"><span class="i">▤</span>Bibliotek</div>
+        <div class="tab"><span class="i">◯</span>Konto</div>
+      </div>
+      <div class="pin" style="bottom:88px; right:128px;">1</div>
+      <div class="pin" style="bottom:62px; left:14px;">2</div>
+    </div>
+    <div class="phone">
+      <div class="p-top">
+        <div class="t">Planera<small>torsdag 11 juni</small></div>
+        <div class="chip" style="padding:6px 11px; font-size:12px;">✦ AI</div>
+      </div>
+      <div class="p-agenda">
+        <div class="cal">
+          <div class="cal-head"><span class="nav">‹</span> Juni 2026 <span class="nav">›</span></div>
+          <div class="cal-grid">
+            <span class="wd">M</span><span class="wd">T</span><span class="wd">O</span><span class="wd">T</span><span class="wd">F</span><span class="wd">L</span><span class="wd">S</span>
+            <span class="d has">8</span><span class="d has">9</span><span class="d has">10</span><span class="d sel">11</span><span class="d has">12</span><span class="d">13</span><span class="d">14</span>
+            <span class="d has">15</span><span class="d has">16</span><span class="d">17</span><span class="d has">18</span><span class="d">19</span><span class="d">20</span><span class="d">21</span>
+          </div>
+        </div>
+        <div class="p-day-head"><span class="nav">‹</span> Torsdag 11 juni <span class="nav">›</span></div>
+        <div class="tl-item past" style="border-color:#9aa3b8;"><div class="t">Morgonsamling</div><div class="m">07:50–08:10</div></div>
+        <div class="tl-item now" style="border-color:#81b29a;"><div class="t">Matematik åk 5</div><div class="m">08:10–09:00</div></div>
+        <div class="tl-item" style="border-color:#f2cc8f;"><div class="t">Svenska — läsgrupper</div><div class="m">09:20–10:10</div></div>
+        <div class="tl-item" style="border-color:#8da7be;"><div class="t">NO — vattnets kretslopp</div><div class="m">11:00–11:50</div></div>
+        <div class="add-block" style="padding:8px; font-size:13px;">＋ Lägg till pass</div>
+      </div>
+      <div class="p-fab" style="background:#3d405b; bottom:72px;">✎ Dagtext</div>
+      <div class="tabbar">
+        <div class="tab"><span class="i">▶</span>Nu</div>
+        <div class="tab on"><span class="i">▦</span>Planera</div>
+        <div class="tab"><span class="i">▤</span>Bibliotek</div>
+        <div class="tab"><span class="i">◯</span>Konto</div>
+      </div>
+      <div class="pin" style="bottom:108px; right:128px;">3</div>
+      <div class="pin" style="top:104px; right:14px;">4</div>
+    </div>
+  </div>
+  <div class="legend">
+    <div><span class="n">1</span><span><b>"Kör!" som flytande knapp.</b> Det vanligaste flödet — starta ett pass nu — kräver aldrig att man öppnar en meny.</span></div>
+    <div><span class="n">2</span><span><b>Flikar med etiketter.</b> Ikoner + ord, alltid synliga; ingen ☰-meny att fälla ut mellan barnen i klassrummet.</span></div>
+    <div><span class="n">3</span><span><b>Dagtexten lyfts fram.</b> Textplaneringen (@-syntaxen) får en egen tydlig knapp i Planera istället för att gömmas bakom en toggle.</span></div>
+    <div><span class="n">4</span><span><b>AI där den används.</b> En ✦-knapp i Planera öppnar AI-hjälpen; nyckel och leverantör bor kvar under Konto.</span></div>
+  </div>
+</section>
+
+</body>
+</html>
