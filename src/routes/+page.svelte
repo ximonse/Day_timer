@@ -674,9 +674,10 @@
     if (isViewMode) return;
     flushWorkspaceAutosave();
     if (miniMenuOpen) {
+      const sectionBeforeRun = s.activeSection as AppSection;
       const hasRunnableSession = partsDraftDirty ? hasRunnableSessionContent(s.blocks) : goToTimerNow();
       const decision = decideRunMenuClose({
-        currentSection: s.activeSection as AppSection,
+        currentSection: sectionBeforeRun,
         locked,
         agendaOpen: s.agendaOpen,
         agendaInputOpen,
