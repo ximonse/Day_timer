@@ -3018,9 +3018,9 @@
               class:open={miniMenuOpen}
               type="button"
               onclick={(e) => { e.stopPropagation(); toggleMiniMenu(); }}
-              title={miniMenuOpen ? 'Starta kör-läge' : 'Öppna meny'}
+              title={miniMenuOpen ? 'Starta kör-läge' : 'Stoppa kör-läge'}
             >
-              <span>{miniMenuOpen ? '▶' : '☰'}</span>
+              <span>{miniMenuOpen ? '▶' : '■'}</span>
             </button>
           </div>
         {/if}
