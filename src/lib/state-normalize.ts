@@ -27,5 +27,8 @@ export function normalizePersistedState(state: Partial<AppState>, createId: () =
 	if ('agendaMeta' in state && !isPlainRecord(state.agendaMeta)) {
 		next.agendaMeta = {};
 	}
+	if (state.clockSpan !== undefined && state.clockSpan !== 60 && state.clockSpan !== 720) {
+		next.clockSpan = 60;
+	}
 	return next;
 }

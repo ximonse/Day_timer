@@ -309,9 +309,9 @@ export function workspaceDataFromSyncResponse(value: unknown, createId: () => st
 		planDraft: normalized.planDraft ?? defaultDraft(createId),
 		palette: typeof preferences?.palette === 'string' ? preferences.palette as AppState['palette'] : typeof raw.palette === 'string' ? raw.palette as AppState['palette'] : DEFAULT_WORKSPACE_PREFERENCES.palette,
 		dark: typeof preferences?.dark === 'boolean' ? preferences.dark : typeof raw.dark === 'boolean' ? raw.dark : DEFAULT_WORKSPACE_PREFERENCES.dark,
-		clockSpan: preferences?.clockSpan === 60 || preferences?.clockSpan === 120 || preferences?.clockSpan === 720
+		clockSpan: preferences?.clockSpan === 60 || preferences?.clockSpan === 720
 			? preferences.clockSpan
-			: raw.clockSpan === 60 || raw.clockSpan === 120 || raw.clockSpan === 720
+			: raw.clockSpan === 60 || raw.clockSpan === 720
 				? raw.clockSpan
 				: DEFAULT_WORKSPACE_PREFERENCES.clockSpan,
 		endMode: preferences?.endMode === 'end' || preferences?.endMode === 'len'

@@ -66,7 +66,7 @@ describe('share-state helpers', () => {
 			extraInfo: 'Info',
 			startMin: 480,
 			endMode: 'len' as const,
-			clockSpan: 120 as const,
+			clockSpan: 60 as const,
 			agendaText: 'text',
 			agendaDate: '2026-05-19'
 		};
@@ -74,7 +74,7 @@ describe('share-state helpers', () => {
 		live.blocks[0].title = 'B';
 		expect(state.blocks[0].title).toBe('A');
 		expect(live.shareType).toBe('active-session-live');
-		expect(live.clockSpan).toBe(120);
+		expect(live.clockSpan).toBe(60);
 	});
 
 	test('builds selected session snapshot from agenda details', () => {

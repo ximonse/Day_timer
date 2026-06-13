@@ -166,7 +166,7 @@ interface WorkspaceData {
   preferences: {
     palette: Palette;
     dark: boolean;
-    clockSpan: 60 | 120 | 720;
+    clockSpan: 60 | 720;
     endMode: 'end' | 'len';
     agendaView: 'school' | 'private';
     showSegNotes: boolean;

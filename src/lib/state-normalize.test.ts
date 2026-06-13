@@ -55,4 +55,13 @@ describe('normalizePersistedState', () => {
 
 		expect(normalizePersistedState({ agendaMeta }, () => 'new').agendaMeta).toBe(agendaMeta);
 	});
+
+	test('migrates the removed 2h clock span to 1h', () => {
+		expect(normalizePersistedState({ clockSpan: 120 } as never, () => 'new').clockSpan).toBe(60);
+	});
+
+	test('keeps supported clock spans untouched', () => {
+		expect(normalizePersistedState({ clockSpan: 720 }, () => 'new').clockSpan).toBe(720);
+		expect(normalizePersistedState({ clockSpan: 60 }, () => 'new').clockSpan).toBe(60);
+	});
 });

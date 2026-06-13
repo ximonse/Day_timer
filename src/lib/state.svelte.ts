@@ -63,7 +63,7 @@ export interface AppState {
   startMin: number;        // minutes since midnight
   endMode: 'end' | 'len';
   syncKey: string;
-  clockSpan: 60 | 120 | 720;
+  clockSpan: 60 | 720;
   showLeft: boolean;
   showNextSession: boolean;
   showCenterEnd: boolean;

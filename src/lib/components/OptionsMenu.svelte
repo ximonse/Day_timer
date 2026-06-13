@@ -32,7 +32,7 @@
     <div class="menu-list">
       <button class="menu-row" type="button" class:on={s.clockSpan !== 60} onclick={onCycleClockSpan}>
         <span>Klockvy</span>
-        <span class="menu-row-state">{s.clockSpan === 60 ? '1h' : s.clockSpan === 120 ? '2h' : '12h'}</span>
+        <span class="menu-row-state">{s.clockSpan === 60 ? '1h' : '12h'}</span>
       </button>
       <button class="menu-row" type="button" class:on={s.showLeft} onclick={() => { s.showLeft = !s.showLeft; appState.persist(); }}>
         <span>Tid kvar</span><span class="menu-row-state">{s.showLeft ? 'På' : 'Av'}</span>

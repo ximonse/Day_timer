@@ -169,7 +169,8 @@ export function applySharedStatePayload(
 	if (payload.extraInfo !== undefined) state.extraInfo = payload.extraInfo;
 	if (payload.startMin !== undefined) state.startMin = payload.startMin;
 	if (payload.endMode) state.endMode = payload.endMode;
-	if (payload.clockSpan) state.clockSpan = payload.clockSpan;
+	if (payload.clockSpan === 720) state.clockSpan = 720;
+	else if (payload.clockSpan) state.clockSpan = 60;
 	if (payload.palette) state.palette = payload.palette;
 	if (payload.dark !== undefined) state.dark = payload.dark;
 	if (payload.showLeft !== undefined) state.showLeft = payload.showLeft;

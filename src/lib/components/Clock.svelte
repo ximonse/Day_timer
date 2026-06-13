@@ -328,7 +328,7 @@
     {/if}
   {/if}
 
-  <!-- Start/End handles for 1h/2h mode -->
+  <!-- Start/End handles for 1h mode -->
   {#if !use12hAgenda && !isViewMode}
     {@const [sx0, sy0] = polar(startAngle, ri || 0)}
     {@const [sx1, sy1] = polar(startAngle, R)}

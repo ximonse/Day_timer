@@ -48,7 +48,7 @@ export interface FlowBlockOptions {
 
 export interface SessionFromFlowOptions extends FlowBlockOptions {
 	startMin?: number;
-	clockSpan?: 60 | 120 | 720;
+	clockSpan?: 60 | 720;
 }
 
 function resolveFlowBlockFlag(
