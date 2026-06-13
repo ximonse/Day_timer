@@ -7,7 +7,7 @@
     onSelect
   }: {
     activeSection: AppSection;
-    labels: Record<AppSection, string>;
+    labels: Partial<Record<AppSection, string>>;
     onSelect: (section: AppSection) => void;
   } = $props();
 </script>

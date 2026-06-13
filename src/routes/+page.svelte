@@ -235,6 +235,13 @@
     admin: 'Admin'
   };
 
+  const NAV_LABELS: Partial<Record<AppSection, string>> = {
+    plan: SECTION_LABELS.plan,
+    library: SECTION_LABELS.library,
+    workspace: SECTION_LABELS.workspace,
+    admin: SECTION_LABELS.admin
+  };
+
   function helpVisible(override: HelpOverride) {
     if (override === 'show') return true;
     if (override === 'hide') return false;
@@ -3080,7 +3087,7 @@
       <div class="mini-menu-details" class:open={miniMenuOpen}>
       {#if s.showControls}
         <div class="controls">
-        <SectionNav {activeSection} labels={SECTION_LABELS} onSelect={(section) => section === 'now' ? goToTimerNow() : setActiveSection(section)} />
+        <SectionNav {activeSection} labels={NAV_LABELS} onSelect={(section) => setActiveSection(section)} />
 
         {#if activeSection === 'now'}
           <div class="section-hero section-hero--split section-hero--compact">
