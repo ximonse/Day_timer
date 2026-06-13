@@ -235,12 +235,15 @@
     admin: 'Admin'
   };
 
-  const NAV_LABELS: Partial<Record<AppSection, string>> = {
-    plan: SECTION_LABELS.plan,
-    library: SECTION_LABELS.library,
-    workspace: SECTION_LABELS.workspace,
-    admin: SECTION_LABELS.admin
-  };
+  const NAV_LABELS = $derived.by(() => {
+    const labels: Partial<Record<AppSection, string>> = {
+      plan: SECTION_LABELS.plan,
+      library: SECTION_LABELS.library,
+      workspace: SECTION_LABELS.workspace
+    };
+    if (loggedInUser.toLowerCase() === 'admin') labels.admin = SECTION_LABELS.admin;
+    return labels;
+  });
 
   function helpVisible(override: HelpOverride) {
     if (override === 'show') return true;
@@ -3153,56 +3156,6 @@
           <SectionHero title={SECTION_LABELS[activeSection]} copy={sectionCopy} />
         {/if}
 
-        {#if activeSection === 'plan'}
-          <div in:fade={{ duration: 150 }}>
-            <AgendaImportPanel
-              {agendaInputOpen}
-              {agendaDraft}
-              agendaDraftSource={agendaDraftDirty ? agendaDraftSource : 'manual'}
-              draftStatus={agendaDraftStatus}
-              selectedDateLabel={selectedDay?.date ? fmtAgendaDate(selectedDay.date) : 'Odaterad dag'}
-              {savedAgendaMsg}
-              {icsImportOpen}
-              {icsDraft}
-              icsSummary={icsPreviewSummary}
-              {icsPreviewLines}
-              icsError={icsImportError}
-              icsHasPreview={icsPreviewEvents.length > 0}
-              {icsCanImport}
-              hasAiKey={!!aiApiKey}
-              {agendaAiOpen}
-              {agendaAiInput}
-              {agendaAiPromptMode}
-              aiLastResponse={agendaAiLastResponse}
-              {agendaAiError}
-              {agendaAiQuestionText}
-              {agendaAiLoading}
-              showHelpHints={s.showHelpHints}
-              showImportHelp={helpVisible(agendaImportHelpOpen)}
-              showIcsHelp={helpVisible(agendaIcsHelpOpen)}
-              onToggleOpen={() => setWriteMenuSection('agenda', !agendaInputOpen)}
-              onDraftChange={(value) => { agendaDraft = value; agendaDraftDirty = true; agendaDraftDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO(); }}
-              onDraftPaste={() => {}}
-              onSave={saveAgenda}
-              onToggleIcsOpen={() => icsImportOpen = !icsImportOpen}
-              onIcsDraftChange={(value) => { icsDraft = value; resetIcsPreview(); }}
-              onIcsFileChange={readIcsFile}
-              onPreviewIcs={previewIcsImport}
-              onImportIcs={importPreviewedIcs}
-              onCopyPrompt={async (type) => {
-                const prompt = getAiAgendaPrompt(type, localDateISO());
-                await navigator.clipboard.writeText(prompt);
-              }}
-              onToggleAi={() => agendaAiOpen = !agendaAiOpen}
-              onAgendaAiInputChange={(value) => agendaAiInput = value}
-              onSetAgendaAiPromptMode={(mode) => { agendaAiPromptMode = mode; agendaAiQuestionText = ''; agendaAiError = ''; }}
-              onRunAi={runAiAgenda}
-              onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
-              onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}
-            />
-          </div>
-        {/if}
-
         {#if activeSection === 'now' && s.blocks.length > 0}
           <div class="now-live-panel" in:fade={{ duration: 150 }}>
             <div>
@@ -3472,6 +3425,56 @@
               {adminPassword}
               onGenerateInvite={generateInvite}
               {inviteCodeResult}
+            />
+          </div>
+        {/if}
+
+        {#if activeSection === 'plan'}
+          <div in:fade={{ duration: 150 }}>
+            <AgendaImportPanel
+              {agendaInputOpen}
+              {agendaDraft}
+              agendaDraftSource={agendaDraftDirty ? agendaDraftSource : 'manual'}
+              draftStatus={agendaDraftStatus}
+              selectedDateLabel={selectedDay?.date ? fmtAgendaDate(selectedDay.date) : 'Odaterad dag'}
+              {savedAgendaMsg}
+              {icsImportOpen}
+              {icsDraft}
+              icsSummary={icsPreviewSummary}
+              {icsPreviewLines}
+              icsError={icsImportError}
+              icsHasPreview={icsPreviewEvents.length > 0}
+              {icsCanImport}
+              hasAiKey={!!aiApiKey}
+              {agendaAiOpen}
+              {agendaAiInput}
+              {agendaAiPromptMode}
+              aiLastResponse={agendaAiLastResponse}
+              {agendaAiError}
+              {agendaAiQuestionText}
+              {agendaAiLoading}
+              showHelpHints={s.showHelpHints}
+              showImportHelp={helpVisible(agendaImportHelpOpen)}
+              showIcsHelp={helpVisible(agendaIcsHelpOpen)}
+              onToggleOpen={() => setWriteMenuSection('agenda', !agendaInputOpen)}
+              onDraftChange={(value) => { agendaDraft = value; agendaDraftDirty = true; agendaDraftDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO(); }}
+              onDraftPaste={() => {}}
+              onSave={saveAgenda}
+              onToggleIcsOpen={() => icsImportOpen = !icsImportOpen}
+              onIcsDraftChange={(value) => { icsDraft = value; resetIcsPreview(); }}
+              onIcsFileChange={readIcsFile}
+              onPreviewIcs={previewIcsImport}
+              onImportIcs={importPreviewedIcs}
+              onCopyPrompt={async (type) => {
+                const prompt = getAiAgendaPrompt(type, localDateISO());
+                await navigator.clipboard.writeText(prompt);
+              }}
+              onToggleAi={() => agendaAiOpen = !agendaAiOpen}
+              onAgendaAiInputChange={(value) => agendaAiInput = value}
+              onSetAgendaAiPromptMode={(mode) => { agendaAiPromptMode = mode; agendaAiQuestionText = ''; agendaAiError = ''; }}
+              onRunAi={runAiAgenda}
+              onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
+              onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}
             />
           </div>
         {/if}
