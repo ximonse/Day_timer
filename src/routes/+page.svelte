@@ -2913,6 +2913,29 @@
     appState.persist();
     return false;
   }
+
+  function openPlan() {
+    if (activeSection === 'plan') return;
+    const today = localDateISO();
+    setActiveAgendaDate(today);
+    const stored = activeAgendaText();
+    const days = stored.trim() ? parseAgenda(stored) : [];
+    const target = decideNowAgendaTarget(days, today, nowMinutes(), agendaDayStart);
+    if (target && target.kind === 'active') {
+      loadAgendaFlow(target.item.flow, target.item.startMin, 'plan', true);
+      return;
+    }
+    const carry = hasRunnableSessionContent(s.blocks) ? currentEditorDraft() : null;
+    setActiveSection('plan');
+    if (carry) {
+      s.planDraft = carry;
+      applyEditorDraft(s.planDraft);
+      capturePanelBaseline('plan');
+      partsDraftDirty = false;
+      syncPartsDraftFromState(true);
+      appState.persist();
+    }
+  }
 </script>
 
 <div class="app" bind:this={appEl}>
@@ -3087,7 +3110,7 @@
       <div class="mini-menu-details" class:open={miniMenuOpen}>
       {#if s.showControls}
         <div class="controls">
-        <SectionNav {activeSection} labels={NAV_LABELS} onSelect={(section) => setActiveSection(section)} />
+        <SectionNav {activeSection} labels={NAV_LABELS} onSelect={(section) => section === 'plan' ? openPlan() : setActiveSection(section)} />
 
         {#if activeSection === 'now'}
           <div class="section-hero section-hero--split section-hero--compact">
@@ -3186,7 +3209,7 @@
               <div class="now-live-copy">Justera direkt i rubriken, vänsterpanelen eller genom att dra i klockan. Använd Planera för större ändringar.</div>
             </div>
             <div class="now-live-actions">
-              <button class="quickstart quickstart-subtle" type="button" onclick={() => setActiveSection('plan')}>Redigera i Planera</button>
+              <button class="quickstart quickstart-subtle" type="button" onclick={openPlan}>Redigera i Planera</button>
               <button class="quickstart quickstart-subtle" type="button" onclick={saveFlow}>{savedFlowMsg || 'Spara som mall'}</button>
             </div>
           </div>
@@ -3501,7 +3524,7 @@
     <button class:active={activeSection === 'now' && mobileTab === 'now'} onclick={goToTimerNow}>
       <span>◷</span> Nu
     </button>
-    <button class:active={activeSection === 'plan' && mobileTab === 'plan'} onclick={() => setActiveSection('plan')}>
+    <button class:active={activeSection === 'plan' && mobileTab === 'plan'} onclick={openPlan}>
       <span>▦</span> Planera
     </button>
     <button class:active={activeSection === 'library'} onclick={() => setActiveSection('library')}>
