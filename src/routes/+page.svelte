@@ -643,8 +643,6 @@
 
   function collapseActiveWorkMenus() {
     closeTransientMenus();
-    s.agendaOpen = true;
-    s.sbCollapsed = false;
     agendaInputOpen = false;
     agendaCalendarOpen = false;
   }
@@ -2894,18 +2892,20 @@
       return true;
     }
 
-    const fallback = createCurrentFallbackSession(now, uid);
     setActiveSection('now');
-    s.dayTitle = fallback.dayTitle;
-    s.blocks = fallback.blocks;
-    s.extraInfo = fallback.extraInfo;
-    s.startMin = fallback.startMin;
+    if (!hasRunnableSessionContent(s.blocks)) {
+      const fallback = createCurrentFallbackSession(now, uid);
+      s.dayTitle = fallback.dayTitle;
+      s.blocks = fallback.blocks;
+      s.extraInfo = fallback.extraInfo;
+      s.startMin = fallback.startMin;
 
-    lastAutoLoadKey = '';
-    activeAgendaFlowRef = null;
-    planSelectionExplicit = false;
-    sessionSource = { kind: 'unscheduled' };
-    
+      lastAutoLoadKey = '';
+      activeAgendaFlowRef = null;
+      planSelectionExplicit = false;
+      sessionSource = { kind: 'unscheduled' };
+    }
+
     capturePanelBaseline('now');
     capturePanelBaseline('plan');
     syncPartsDraftFromState(true);
