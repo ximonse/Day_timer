@@ -203,6 +203,7 @@
   }
 
   function handleBlockClick(item: any, ai: number, e: MouseEvent) {
+    if (runMode) return;
     if (suppressNextClick) {
       suppressNextClick = false;
       e.preventDefault();
@@ -312,7 +313,7 @@
                onkeydown={(e) => {
                  if (e.key === 'Enter' || e.key === ' ') {
                    e.preventDefault();
-                   if (!agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin, 'plan', true) : loadFlow(item.flow.id);
+                   if (!runMode && !agendaDragMoved) item.fromText ? loadAgendaFlow(item.flow, item.startMin, 'plan', true) : loadFlow(item.flow.id);
                  }
                }}>
             <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
