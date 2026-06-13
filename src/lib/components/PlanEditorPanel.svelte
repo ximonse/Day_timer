@@ -241,7 +241,7 @@
   {/if}
 
   <button class="write-section-toggle" type="button" onclick={onTogglePlanMain}>
-    <span>Rubrik & innehåll</span>
+    <span>Rubrik, innehåll & tid</span>
     <span>{planMainOpen ? '▲' : '▼'}</span>
   </button>
   {#if planMainOpen}
@@ -361,14 +361,7 @@
       </div>
     {/if}
   </div>
-  {/if}
-
-  <button class="write-section-toggle" type="button" onclick={onTogglePlanTime}>
-    <span>Tid</span>
-    <span>{planTimeOpen ? '▲' : '▼'}</span>
-  </button>
-  {#if planTimeOpen}
-    <div class="write-section-body">
+    <div class="write-section-body" style="margin-top:10px;">
       <div id="plan-time-row" class="row2">
         <div>
           <div class="field-head">

@@ -618,7 +618,7 @@
     :global(body.m-now .sidebar) { display: block; }
     :global(body.m-now .resize-handle-sb) { display: none; }
     :global(.resize-handle-ag) { display: none; }
-    :global(body.m-library .sidebar), :global(body.m-workspace .sidebar) { display: none; }
+    :global(body.m-library .sidebar), :global(body.m-workspace .sidebar), :global(body.m-admin .sidebar) { display: none; }
     :global(body.m-now .resize-handle-sb), :global(body.m-plan .resize-handle-sb), :global(body.m-library .resize-handle-sb), :global(body.m-workspace .resize-handle-sb) { display: none; }
     :global(body.m-plan .main) { order: 1; }
     :global(body.m-plan .sidebar) { display: block; order: 2; border-top: 1px solid var(--border); }
