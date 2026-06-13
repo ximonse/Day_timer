@@ -618,9 +618,11 @@
     :global(body.m-now .sidebar) { display: block; }
     :global(body.m-now .resize-handle-sb) { display: none; }
     :global(.resize-handle-ag) { display: none; }
-    :global(body.m-plan .sidebar), :global(body.m-library .sidebar), :global(body.m-workspace .sidebar) { display: none; }
+    :global(body.m-library .sidebar), :global(body.m-workspace .sidebar) { display: none; }
     :global(body.m-now .resize-handle-sb), :global(body.m-plan .resize-handle-sb), :global(body.m-library .resize-handle-sb), :global(body.m-workspace .resize-handle-sb) { display: none; }
-    :global(body.m-plan .agenda) { display: flex !important; }
+    :global(body.m-plan .main) { order: 1; }
+    :global(body.m-plan .sidebar) { display: block; order: 2; border-top: 1px solid var(--border); }
+    :global(body.m-plan .agenda) { display: flex !important; order: 3; border-top: 1px solid var(--border); }
     :global(body.run-mode .app) { padding-bottom: 0; }
     :global(body.run-mode .main) { order: 1; }
     :global(body.run-mode .sidebar) { display: block !important; order: 2; border-top: 1px solid var(--border); }
