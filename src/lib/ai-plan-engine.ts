@@ -92,7 +92,7 @@ export function isValidPlanningModeForContext(context: 'plan' | 'agenda', mode: 
 
 function stripMarkdownJsonFence(raw: string): string {
 	const trimmed = raw.trim();
-	const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+	const match = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
 	return match ? match[1].trim() : trimmed;
 }
 
@@ -331,6 +331,21 @@ export function normalizeAiPlanResponse(raw: string): AiPlanResponse {
 			warnings: stringArray(parsed.warnings)
 		};
 	} catch {
+		const jsonStart = normalizedRaw.indexOf('{');
+		const jsonEnd = normalizedRaw.lastIndexOf('}');
+		if (jsonStart !== -1 && jsonEnd > jsonStart) {
+			try {
+				const extracted = JSON.parse(normalizedRaw.slice(jsonStart, jsonEnd + 1)) as unknown;
+				if (isRecord(extracted) && typeof extracted.text === 'string') {
+					return {
+						text: (extracted.text as string).trim(),
+						assumptions: stringArray(extracted.assumptions),
+						changes: stringArray(extracted.changes),
+						warnings: stringArray(extracted.warnings)
+					};
+				}
+			} catch { /* ignore */ }
+		}
 		return fallback;
 	}
 }
