@@ -690,6 +690,7 @@
   :global(body.widget-mode .collapse-btn) { display: none !important; }
   :global(body.widget-mode .resize-handle-sb) { display: none !important; }
   :global(body.widget-mode .resize-handle-ag) { display: none !important; }
+  :global(body.widget-mode .main .clock) { width: min(90vh, 96vw); height: min(90vh, 96vw); }
 
   /* ── View-mode: dölj kontroller ── */
   :global(body.view-mode .toolbar) { display: none; }
