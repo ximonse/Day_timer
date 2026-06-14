@@ -2297,7 +2297,7 @@
   }
 
   const currentAiPrompt = $derived(
-    getAiSessionPrompt(sessionAiPromptMode, localDateISO())
+    getAiSessionPrompt(sessionAiPromptMode, localDateISO(), totalMin())
   );
 
   function syncPartsDraftFromState(force = false) {

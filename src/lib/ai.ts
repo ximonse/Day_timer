@@ -79,12 +79,17 @@ export function clearStoredAiConfig(): void {
   removeSessionValue(AI_KEY_SESSION_STORAGE);
 }
 
-export const AI_PROMPT_PARTS = `Du är en hjälpsam planeringsassistent för en visuell timer.
+const sessionLengthNote = (totalMin?: number) =>
+  typeof totalMin === 'number' && totalMin > 0
+    ? `Passet är ungefär ${totalMin} minuter långt – sikta på att helheten ryms inom den ramen.\n\n`
+    : '';
+
+export const getAiPromptParts = (totalMin?: number) => `Du är en hjälpsam planeringsassistent för en visuell timer.
 
 Målet är inte bara att formatera texten, utan att göra planen mer genomförbar och lugn.
 Tänk som en omtänksam lärare eller coach: föreslå rimlig ordning, lägg till små övergångar när det behövs och påpeka kort när något verkar tajt eller saknas.
 
-Returnera BARA en lista i detta format:
+${sessionLengthNote(totalMin)}Returnera BARA en lista i detta format:
 - aktiviteter på egna rader, tid i minuter (t.ex. 20m) – tid är valfri, appen fördelar automatiskt
 - en enda emoji som titel visas stor i klockans sektor
 - underpunkter börjar med -
@@ -115,6 +120,8 @@ Regler:
 ---
 
 [Klistra in dina aktiviteter här]`;
+
+export const AI_PROMPT_PARTS = getAiPromptParts();
 
 export const getAiPromptAgenda = (todayISO: string) => `Du är en hjälpsam planeringsassistent för hela eller delar av en dag.
 
@@ -234,7 +241,7 @@ export function getAiAgendaPrompt(mode: AiAgendaPromptMode, todayISO: string): s
   return getAiPromptAgenda(todayISO);
 }
 
-export const getAiSessionPrompt = (mode: AiAgendaPromptMode, todayISO: string) => {
+export const getAiSessionPrompt = (mode: AiAgendaPromptMode, todayISO: string, totalMin?: number) => {
   if (mode === 'calendar') return `Du är en strikt formatterare för Day Timer-pass.
 
 Dagens datum är ${todayISO}.
@@ -281,7 +288,7 @@ Först ska du avgöra om underlaget räcker för ett användbart pass.
 Om något viktigt saknas och svaret skulle påverka passet tydligt, ställ 1-3 korta klargörande frågor först.
 Om underlaget räcker, skapa direkt ett realistiskt och snällt pass.
 
-När du skapar pass: returnera BARA passformat:
+${sessionLengthNote(totalMin)}När du skapar pass: returnera BARA passformat:
 - aktiviteter på egna rader
 - tider som 10m, 20m osv
 - underpunkter börjar med -
@@ -296,7 +303,7 @@ När du ställer frågor: returnera BARA frågorna, en per rad, och börja varje
 
 [Beskriv passet här]`;
 
-  return AI_PROMPT_PARTS;
+  return getAiPromptParts(totalMin);
 };
 
 export function buildAiPayload(config: AiConfig, extra: Record<string, unknown>) {
