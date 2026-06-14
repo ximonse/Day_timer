@@ -291,44 +291,6 @@
       </div>
     {/if}
 
-    {#if userLevel >= 2}
-      <div class="ai-panel" style="margin-top:10px;">
-        <button class="ai-panel-toggle" onclick={onToggleActualHistory}>
-          {actualHistoryOpen ? '▲' : '▼'} Faktisk tid & lärande <span class="beta-tag">BETA</span>
-        </button>
-        {#if actualHistoryOpen}
-          <div class="feedback" style="margin-bottom:8px; opacity:0.8;">
-            Funktion under utveckling. Sparar din faktiska tidsåtgång för att ge bättre förslag framöver.
-          </div>
-          <div class="agenda-section-note" style="background:transparent; padding:0; border:0; margin-top:8px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-              <strong>Historik</strong>
-              <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={onExportActualHistory}>Exportera (JSONL)</button>
-            </div>
-            <div class="feedback" style="margin-top:8px;">
-              Kategori: <strong>{currentSubjectCategory}</strong>
-              {#if suggestedDuration}
-                · Föreslagen tid: <strong>{suggestedDuration.minutes} min</strong> ({suggestedDuration.sampleSize} träffar)
-              {:else}
-                · Ingen historik ännu för rekommendation
-              {/if}
-            </div>
-            {#if pendingActualEntries.length > 0}
-              <div class="feedback" style="margin-top:8px;">Obekräftade pass idag (autosparas vid nytt dygn):</div>
-              {#each pendingActualEntries as entry, pi (`${entry.id}-${pi}`)}
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;">
-                  <span>{startTimeValue} {titleValue} · {entry.durationActualMin} min</span>
-                  <div style="display:flex;gap:6px;align-items:center;">
-                    <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={() => onConfirmActualEntry(entry.id)}>Bekräfta</button>
-                    <button class="agenda-save-btn" style="margin:0;flex:0;" onclick={() => onDeleteActualEntry(entry.id)}>Ta bort</button>
-                  </div>
-                </div>
-              {/each}
-            {/if}
-          </div>
-        {/if}
-      </div>
-    {/if}
   </div>
     <div class="write-section-body">
       <div id="plan-time-row" class="row2">

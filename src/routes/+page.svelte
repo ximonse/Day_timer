@@ -3119,7 +3119,6 @@
         {#if activeSection === 'now'}
           <div class="section-hero section-hero--split section-hero--compact">
             <div class="hero-select-wrap">
-              <label class="field-label" for="now-template-select">Mall</label>
               <select
                 id="now-template-select"
                 class="hero-select"
@@ -3137,7 +3136,6 @@
         {:else if activeSection === 'plan'}
           <div class="section-hero section-hero--split section-hero--compact">
             <div class="hero-select-wrap">
-              <label class="field-label" for="plan-template-select">Mall</label>
               <select
                 id="plan-template-select"
                 class="hero-select"
@@ -3430,7 +3428,7 @@
         {/if}
 
         {#if activeSection === 'plan'}
-          <div in:fade={{ duration: 150 }}>
+          <div class="menu-blob" in:fade={{ duration: 150 }}>
             <AgendaImportPanel
               {agendaInputOpen}
               {agendaDraft}
