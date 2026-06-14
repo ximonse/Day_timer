@@ -105,28 +105,7 @@
   }
 </script>
 
-<div class="plan-editor">
-  <button class="quickstart" style="justify-content:center; background:var(--accent); color:white;"
-    onclick={() => appState.value.onboardingStep = 1}
-    title="Starta en guidad tur genom appens viktigaste funktioner.">
-    Starta hela guiden
-  </button>
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
-      onclick={() => appState.value.onboardingStep = 1}>1. Grunderna</button>
-    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
-      onclick={() => { appState.value.activeSection = 'now'; appState.value.onboardingStep = 7; }}>2. Nu-läget</button>
-    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
-      onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 10; }}>3. Planera</button>
-    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
-      onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 13; }}>4. Avancerat</button>
-  </div>
-  <button class="write-section-toggle" type="button" onclick={onToggleHelpHints}
-    title="Visar förklarande hjälptexter i hela appen. Lokala i-knappar fungerar alltid. · Alt+i">
-    <span>Hjälpläge</span>
-    <span class="state-chip" class:on={showHelpHints}>{showHelpHints ? 'på' : 'av'}</span>
-  </button>
-</div>
+<div class="ws-stack">
 
 <div class="plan-editor">
   {#if loggedInUser}
@@ -270,6 +249,31 @@
   {/if}
 </div>
 
+<div class="plan-editor">
+  <button class="quickstart" style="justify-content:center; background:var(--accent); color:white;"
+    onclick={() => appState.value.onboardingStep = 1}
+    title="Starta en guidad tur genom appens viktigaste funktioner.">
+    Starta hela guiden
+  </button>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
+      onclick={() => appState.value.onboardingStep = 1}>1. Grunderna</button>
+    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
+      onclick={() => { appState.value.activeSection = 'now'; appState.value.onboardingStep = 7; }}>2. Nu-läget</button>
+    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
+      onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 10; }}>3. Planera</button>
+    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
+      onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 13; }}>4. Avancerat</button>
+  </div>
+  <button class="write-section-toggle" type="button" onclick={onToggleHelpHints}
+    title="Visar förklarande hjälptexter i hela appen. Lokala i-knappar fungerar alltid. · Alt+i">
+    <span>Hjälpläge</span>
+    <span class="state-chip" class:on={showHelpHints}>{showHelpHints ? 'på' : 'av'}</span>
+  </button>
+</div>
+
+</div><!-- ws-stack -->
+
 <div style="padding-top:24px; display:flex; justify-content:flex-end;">
   <input
     type="text"
@@ -281,6 +285,11 @@
 </div>
 
 <style>
+  .ws-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
   .state-chip {
     font-size: 10px;
     font-weight: 700;

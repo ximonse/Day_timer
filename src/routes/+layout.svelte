@@ -172,7 +172,11 @@
     border: 6px solid transparent; border-top-color: var(--menu-border);
   }
   :global(.theme-popup-new::after) { right: auto; left: 18px; }
+  :global(.mute-all-btn) { width: 100%; margin-bottom: 8px; padding: 5px 8px; border-radius: 999px; border: 1px solid var(--menu-border); background: transparent; color: var(--menu-muted); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; text-align: center; transition: background .12s, color .12s; }
+  :global(.mute-all-btn:hover) { background: var(--pill); color: var(--fg); }
+  :global(.mute-all-btn.on) { background: color-mix(in srgb, var(--accent) 15%, var(--menu-surface)); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--menu-border)); }
   :global(.warn-dots-grid) { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; }
+  :global(.warn-dots-grid.muted) { opacity: .35; pointer-events: none; }
   :global(.warn-dots-grid .wd) { width: 22px; height: 22px; border: 0; cursor: pointer; background: transparent; color: color-mix(in srgb, var(--muted) 45%, var(--border) 55%); padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; line-height: 1; border-radius: 999px; transition: all .12s; }
   :global(.warn-dots-grid .wd:hover) { background: var(--pill); color: var(--fg); }
   :global(.warn-dots-grid .wd.on) { color: var(--warn-color); text-shadow: 0 0 8px color-mix(in srgb, var(--warn-color) 40%, transparent); transform: scale(1.1); }
@@ -318,10 +322,12 @@
     display: inline-flex; align-items: center; justify-content: center;
     width: 28px; height: 28px; border-radius: 50%;
     font-size: 14px; line-height: 1;
-    margin-left: 4px; cursor: help;
+    margin-left: 4px; cursor: pointer;
     border: 1px solid var(--border);
+    background: transparent; padding: 0;
     transition: background .25s, border-color .25s, box-shadow .25s;
   }
+  :global(.sync-emoji:hover) { opacity: .8; }
   :global(.sync-emoji[data-sync="green"])    { background: rgba(46,160,67,.28); border-color: rgba(46,160,67,.5); }
   :global(.sync-emoji[data-sync="halfgreen"]){ background: rgba(46,160,67,.13); border-color: rgba(46,160,67,.32); }
   :global(.sync-emoji[data-sync="orange"])   { background: rgba(255,140,0,.32); border-color: rgba(255,140,0,.55); box-shadow: 0 0 0 2px rgba(255,140,0,.18); }

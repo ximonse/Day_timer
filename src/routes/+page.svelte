@@ -1048,6 +1048,7 @@
   const elapsedMin = () => nowMinutes() - s.startMin;
   const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
   let warningsOpen = $state(false);
+  let soundMuted = $state(false);
   let workspaceTimeDataOpen = $state(false);
   let actualHistoryOpen = $state(false);
 
@@ -1232,6 +1233,7 @@
   }
 
   function checkWarnings() {
+    if (soundMuted) return;
     const elapsed = elapsedMin();
     let cum = 0;
     s.blocks.forEach((b, i) => {
@@ -3074,31 +3076,40 @@
               </button>
               {#if warningsOpen}
                 <div class="warnings-popup" role="none" onclick={(e) => e.stopPropagation()}>
-                  <div class="field-label" style="font-size:10px;margin-bottom:6px;opacity:.7;">Aviseringar</div>
-                  <div class="warn-dots-grid">
-                    {#each s.blocks as b, i (b.id)}
-                      {@const ct = clockTheme(s.palette, s.dark)}
-                      <button class="wd" class:on={b.warning} style={`--warn-color:${ct.colors[i % ct.colors.length]}`}
-                        title={b.title || 'Aktivitet'}
-                        onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
-                      >♪</button>
-                    {/each}
-                  </div>
+                  <button
+                    class="mute-all-btn"
+                    class:on={soundMuted}
+                    onclick={() => soundMuted = !soundMuted}
+                    title="Tystar alla ljud för detta pass tills du slår på igen. Per-aktivitetsinställningar påverkas inte.">
+                    {soundMuted ? '🔇 Tystat' : '🔔 Ljud på'}
+                  </button>
+                  {#if s.blocks.length > 0}
+                    <div class="warn-dots-grid" class:muted={soundMuted}>
+                      {#each s.blocks as b, i (b.id)}
+                        {@const ct = clockTheme(s.palette, s.dark)}
+                        <button class="wd" class:on={b.warning && !soundMuted} style={`--warn-color:${ct.colors[i % ct.colors.length]}`}
+                          title={b.title || 'Aktivitet'}
+                          onclick={() => { b.warning = !b.warning; syncTimerToAgenda(); appState.persist(); }}
+                        >♪</button>
+                      {/each}
+                    </div>
+                  {/if}
                 </div>
               {/if}
             </div>
           </div>
 
-          <span class="sync-emoji"
+          <button class="sync-emoji"
             data-sync={!hasSyncSession() ? 'grey'
               : (syncProbeState === 'error' || syncProbeState === 'conflict') ? 'red'
               : (syncProbeState === 'saving' || syncProbeState === 'loading') ? 'orange'
               : syncProbeState === 'queued' ? 'halfgreen'
               : 'green'}
-            title={!hasSyncSession()
+            title={(!hasSyncSession()
               ? 'Ej inloggad'
-              : (syncProbeText ? `${loggedInUser ? loggedInUser + ' · ' : ''}${syncProbeText}` : (loggedInUser ? `Inloggad som ${loggedInUser}` : ''))}
-          >👤</span>
+              : (syncProbeText ? `${loggedInUser ? loggedInUser + ' · ' : ''}${syncProbeText}` : (loggedInUser ? `Inloggad som ${loggedInUser}` : ''))) + ' · Öppna Konto & AI'}
+            onclick={() => setActiveSection('workspace')}
+          >👤</button>
         </div>
       </div> <!-- toolbar end -->
 
