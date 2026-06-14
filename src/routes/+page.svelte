@@ -2479,6 +2479,10 @@
       document.addEventListener('visibilitychange', viewVisibilityHandler);
     }
 
+    if (new URLSearchParams(location.search).get('widget') === '1') {
+      widgetMode = true;
+    }
+
     shareEntries = loadPersistedShareEntries();
     const legacyToken = readSessionValue(SHARE_TOKEN_STORAGE) ?? localStorage.getItem(SHARE_TOKEN_STORAGE);
     const legacyOwner = readSessionValue(SHARE_OWNER_STORAGE) ?? localStorage.getItem(SHARE_OWNER_STORAGE);
