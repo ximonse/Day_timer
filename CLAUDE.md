@@ -57,6 +57,14 @@ För djupare läsning: `VISION_FRAMEWORK.md` (filosofi), `WORKSPACE_SYNC_ARCHITE
 - ✅ **Beta-branding**: BETA-markeringar och ny SVG-favicon
 - ✅ **Prestanda**: SVG-masker och `requestAnimationFrame` för laggfri scroll
 
+### Phase D — Meny- & flödesomdesign (juni 2026)
+- ✅ **Klockvy**: 2h-vyn borttagen — bara 1h/12h (`clockSpan: 60 | 720`, lagrad 120 migreras till 60 i `normalizePersistedState`).
+- ✅ **Kör-läge**: Mittknappen visar ▶/■ (kör/stopp). Klick i agendan släpper inte längre kör-läget; `goToTimerNow` skriver inte över en levande session; sidopanelerna tvingas inte öppna i kör-läge (fällbara); stopp återgår till den meny som var öppen när man startade.
+- ✅ **"Nu" som huvudvy**: "Nu"-fliken borttagen ur sektionsraden (huvudvyn ÄR Nu). Planera-knappen öppnar aktuellt pass (som att klicka i agendan) i stället för en tom yta (`openPlan`). Admin-fliken visas bara för admin-användaren.
+- ✅ **Mobil**: Planera-vyn visar aktivitetslistan; admin-vyns tomma utrymme fixat.
+- ✅ **Minimal Planera-meny**: Editorn nedskalad till kärnan — fält med placeholders, extra info i tooltips, inga versala etiketter/(i)-knappar. Enhetliga knapp-storlekar. "Mall"-etikett och "Faktisk tid & lärande" borttagna. Dagtext-panelen separerad som egen "blob" (kort-bakgrund), tunna linje-avdelare borttagna.
+- 📁 **`design/`**: `logik-karta` (struktur-referens för meny-logiken) renderas från `redesign-mockup.html` via `render-mockup.cjs`.
+
 ---
 
 ## Stack & Teknik
