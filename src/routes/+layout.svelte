@@ -683,6 +683,14 @@
     pointer-events: none;
   }
 
+  /* ── Widget-mode: bara klockan ── */
+  :global(body.widget-mode .sidebar) { display: none !important; }
+  :global(body.widget-mode .agenda) { display: none !important; }
+  :global(body.widget-mode .controls) { display: none !important; }
+  :global(body.widget-mode .collapse-btn) { display: none !important; }
+  :global(body.widget-mode .resize-handle-sb) { display: none !important; }
+  :global(body.widget-mode .resize-handle-ag) { display: none !important; }
+
   /* ── View-mode: dölj kontroller ── */
   :global(body.view-mode .toolbar) { display: none; }
   :global(body.view-mode .controls) { display: none; }

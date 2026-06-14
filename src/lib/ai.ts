@@ -85,9 +85,9 @@ Målet är inte bara att formatera texten, utan att göra planen mer genomförba
 Tänk som en omtänksam lärare eller coach: föreslå rimlig ordning, lägg till små övergångar när det behövs och påpeka kort när något verkar tajt eller saknas.
 
 Returnera BARA en lista i detta format:
-- aktiviteter på egna rader
+- aktiviteter på egna rader, tid i minuter (t.ex. 20m) – tid är valfri, appen fördelar automatiskt
+- en enda emoji som titel visas stor i klockans sektor
 - underpunkter börjar med -
-- kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - inga rubriker, ingen inledning, ingen avslutning
 
@@ -101,7 +101,6 @@ Medicin 2m
 
 Frukost 20m
 - kolla inte skärm
-& Om du vill hinna i tid kan det vara bra att lägga in 5 min buffert efter frukost.
 
 && Passet är lugnast om du börjar direkt med vatten och toalett.
 
@@ -109,7 +108,6 @@ Regler:
 - Håll aktiviteterna korta och svenska, max 3 ord per namn
 - Föreslå en rimlig ordning om användaren skriver saker huller om buller
 - Lägg gärna till små saker som förberedelse, hämtning, paus eller ställtid om det gör planen mer realistisk
-- Om något känns stressigt, skriv en kort &-kommentar efter aktiviteten den gäller
 - Om något verkar saknas, fyll gärna på med 1-3 rimliga steg
 - Skriv aldrig en aktivitet kortare än 5m
 - Var hjälpsam och tydlig, men håll formatet enkelt nog att kunna läsas i timern
@@ -131,7 +129,6 @@ Returnera BARA en dagplan i detta format:
 - sessionsrubriker som #Rubrik HH:MM
 - aktiviteter på egna rader med tid
 - underpunkter börjar med -
-- kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - inga förklaringar eller extra text utanför formatet
 
@@ -149,7 +146,6 @@ Planering 10m
 Epost 20m
 Djuparbete 60m
 - stäng av notiser
-& Lägg telefonen utom räckhåll.
 Paus 10m
 Uppföljning 15m
 
@@ -159,7 +155,7 @@ Regler:
 - Var realistisk och gärna lite generös med tid
 - Lägg till ställtid, pauser och övergångar när det förbättrar flödet
 - Gör dagen begriplig, inte bara korrekt
-- Om användaren verkar ha glömt något viktigt, lägg till det som ett kort råd i en &-rad efter aktiviteten det gäller, eller && om det gäller hela passet
+- Om användaren verkar ha glömt något viktigt, lägg till ett kort råd som en &&-kommentar längst ner i passet
 - Håll svenska namn korta, helst max 3 ord per aktivitet
 - Skriv aldrig en aktivitet kortare än 5m
 - Behåll formatet strikt nog att appen kan läsa det
@@ -177,7 +173,6 @@ Returnera BARA en dagplan i detta format (inget "Här är ditt schema" eller lik
 - sessionsrubriker som #Rubrik HH:MM (starttid är obligatorisk)
 - aktiviteter på egna rader med tid (om det finns detaljer i eventet)
 - underpunkter börjar med - (för beskrivningar/anteckningar)
-- kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - inga förklaringar eller extra text utanför formatet
 - ingen aktivitet får vara kortare än 5m
@@ -200,7 +195,6 @@ Returnera BARA dagplan i detta format:
 - sessionsrubriker som #Rubrik HH:MM om starttid finns
 - aktiviteter på egna rader, gärna med tid om användaren angivit tid
 - underpunkter börjar med -
-- kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - ingen inledning och ingen avslutning
 - ingen aktivitet får vara kortare än 5m
@@ -224,7 +218,6 @@ När du skapar plan: returnera BARA Day Timer-format:
 - sessionsrubriker som #Rubrik HH:MM
 - aktiviteter på egna rader med tid
 - underpunkter börjar med -
-- kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - ingen aktivitet får vara kortare än 5m
 
@@ -251,7 +244,6 @@ Returnera BARA passformat:
 - aktiviteter på egna rader
 - tider skrivs som 10m, 20m osv om de finns eller är uppenbara
 - underpunkter börjar med -
-- kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - inga datumrader
 - inga sessionsrubriker med #
@@ -272,7 +264,6 @@ Du ska inte hitta på aktiviteter, pauser, råd, energi-tolkningar eller extra s
 Returnera BARA passformat:
 - aktiviteter på egna rader
 - underpunkter börjar med -
-- kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - tider skrivs som 10m, 20m osv om användaren angivit dem
 - inga datumrader
@@ -294,7 +285,6 @@ När du skapar pass: returnera BARA passformat:
 - aktiviteter på egna rader
 - tider som 10m, 20m osv
 - underpunkter börjar med -
-- kommentarer till senaste aktivitet börjar med &
 - passkommentarer längst ner börjar med &&
 - inga datumrader
 - inga sessionsrubriker med #

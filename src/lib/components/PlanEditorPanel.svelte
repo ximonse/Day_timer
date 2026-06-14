@@ -9,7 +9,7 @@
   const voice = createVoiceService();
   const promptModeOptions = Object.entries(AI_AGENDA_PROMPT_MODE_LABELS) as [AiAgendaPromptMode, string][];
   let isRecording = $state(false);
-  let recordingTarget: 'parts' | 'ai' | null = $state(null);
+  let recordingTarget: 'parts' | 'ai' | 'voice-plan' | null = $state(null);
 
   $effect(() => {
     if (textareaEl && textareaEl.value !== partsValue) {
@@ -98,7 +98,8 @@
     onStartSessionShare,
     onStartDayShare,
     onSaveFlow,
-    savedFlowMsg
+    savedFlowMsg,
+    onRunAiWithText
   }: {
     userLevel: number;
     aiProvider: string;
@@ -181,6 +182,7 @@
     onStartDayShare: () => void;
     onSaveFlow: () => void;
     savedFlowMsg: string;
+    onRunAiWithText: (text: string) => void;
   } = $props();
 
   function startRecording(target: 'parts' | 'ai') {
@@ -204,6 +206,31 @@
       },
       onError: (err) => {
         console.error('Voice error:', err);
+        isRecording = false;
+        recordingTarget = null;
+      }
+    });
+  }
+
+  function startVoicePlan() {
+    if (isRecording) {
+      voice.stop();
+      isRecording = false;
+      recordingTarget = null;
+      return;
+    }
+    isRecording = true;
+    recordingTarget = 'voice-plan';
+    voice.start({
+      useWhisper: true,
+      apiKey: aiApiKey,
+      onResult: (text) => {
+        isRecording = false;
+        recordingTarget = null;
+        onRunAiWithText(text);
+      },
+      onError: (err) => {
+        console.error('Voice plan error:', err);
         isRecording = false;
         recordingTarget = null;
       }
@@ -239,7 +266,15 @@
   <div>
     <div class="field-head-actions" style="justify-content:flex-end; margin-bottom:4px;">
       {#if userLevel >= 2}
-        <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-Plan">🎤</button>
+        <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-text – klistras in i aktivitetsfältet">🎤</button>
+      {/if}
+      {#if userLevel >= 2 && hasAiKey && aiProvider === 'openai'}
+        <button class="micro-btn voice-plan-btn" class:recording={recordingTarget === 'voice-plan'}
+          disabled={aiLoading && recordingTarget !== 'voice-plan'}
+          onclick={startVoicePlan}
+          title="Prata in hela passet – Whisper transkriberar och AI strukturerar aktiviteterna direkt">
+          {recordingTarget === 'voice-plan' ? '⏹' : '🎙'}
+        </button>
       {/if}
       <button class="micro-btn" onclick={onCopyPrompt} title="Kopiera AI-prompt">{copyBtnText}</button>
     </div>

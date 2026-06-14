@@ -1049,12 +1049,13 @@
   const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
   let warningsOpen = $state(false);
   let soundMuted = $state(false);
+  let widgetMode = $state(false);
   let workspaceTimeDataOpen = $state(false);
   let actualHistoryOpen = $state(false);
 
   function syncBodyClasses() {
     const PALETTE_CLASSES = ['sansad','meadow','mlp','bright','clear','psychedelic'];
-    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-now', 'm-plan', 'm-library', 'm-workspace', 'page-locked', 'run-mode');
+    document.body.classList.remove(...PALETTE_CLASSES, 'dark', 'sb-collapsed', 'ag-open', 'm-now', 'm-plan', 'm-library', 'm-workspace', 'page-locked', 'run-mode', 'widget-mode');
     if (s.palette) document.body.classList.add(s.palette);
     if (s.dark && s.palette !== 'psychedelic') document.body.classList.add('dark');
     if (s.sbCollapsed) document.body.classList.add('sb-collapsed');
@@ -1062,6 +1063,7 @@
     document.body.classList.add('m-' + mobileTab);
     if (locked) document.body.classList.add('page-locked');
     if (locked && !miniMenuOpen) document.body.classList.add('run-mode');
+    if (widgetMode) document.body.classList.add('widget-mode');
   }
 
   // ── Drag ──
@@ -2623,7 +2625,7 @@
   });
 
   $effect(() => {
-    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab + locked + miniMenuOpen;
+    const _ = s.palette + s.dark + s.sbCollapsed + s.agendaOpen + mobileTab + locked + miniMenuOpen + widgetMode;
     if (typeof document !== 'undefined') syncBodyClasses();
   });
 
@@ -3044,6 +3046,7 @@
           <button class="icon" onclick={(e) => { e.stopPropagation(); optionsMenuOpen = !optionsMenuOpen; }} title="Visningsalternativ">⚙</button>
           <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : '1h'}</button>
           <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
+          <button class="icon" class:active={widgetMode} onclick={() => widgetMode = !widgetMode} title={widgetMode ? 'Avsluta widget-läge' : 'Widget-läge – dölj menyer, visa bara klockan'}>⊡</button>
         </div>
 
         {#if !isViewMode}
@@ -3247,6 +3250,7 @@
               onAiInputChange={(value) => aiInput = value}
               onSetAiPromptMode={(mode) => { sessionAiPromptMode = mode; aiQuestionText = ''; aiError = ''; }}
               onRunAi={runAiParts}
+              onRunAiWithText={(text) => { aiInput = text; runAiParts(); }}
               onAction={() => {
                 if (s.blocks.length === 0 || totalMin() <= 0) {
                   showToast('Lägg till minst en aktivitet först');

@@ -201,7 +201,7 @@ Gor losa anteckningar till en realistisk, tydlig och snall dagplan.
 Strukturera dagen, lagg in pauser och foresla bra overgangen nar det hjalper.
 Om nagot ar oklart men inte avgorande, gor ett forsiktigt antagande och markera det kort.` : `Promptlage: Fran anteckningar.
 Gor losa anteckningar till ett realistiskt, tydligt och snallt pass.
-Returnera bara aktivitetsrader, underpunkter, &-kommentarer på aktiviteter och eventuella &&-kommentarer längst ner.
+Returnera bara aktivitetsrader, underpunkter och eventuella &&-kommentarer längst ner.
 Strukturera passet, lagg in sma overgangen och foresla rimliga steg nar det hjalper.`;
 }
 
@@ -236,7 +236,6 @@ Medicin 2m
 
 Frukost 20m
 - kolla inte skärm
-& Förbered koppen innan du sätter dig.
 
 && Om du vill hinna i tid kan det vara bra att lägga in 5 min buffert efter frukost.`;
 }
@@ -257,7 +256,6 @@ Planering 10m
 Epost 20m
 Djuparbete 60m
 - stäng av notiser
-& Lägg telefonen utom räckhåll.
 Paus 10m
 Uppföljning 15m
 
@@ -306,7 +304,6 @@ Regler:
 - Aktiviteter ska ha korta svenska namn.
 - För pass: inga rubriker, ingen inledning, ingen avslutning.
 - Underpunkter borja med "-".
-- Kommentarer till senaste aktivitet borja med "&".
 - Passkommentarer langst ner borja med "&&".
 - Om lage ar Fast pass ska total planerad tid halla ramen sa langt det gar.
 - Om lage ar Dag med ankare ska fasta tider respekteras.

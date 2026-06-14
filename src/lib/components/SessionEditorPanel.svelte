@@ -102,7 +102,8 @@
     onConfirmActualEntry,
     onDeleteActualEntry,
     onExportActualHistory,
-    onApplySuggestedDuration
+    onApplySuggestedDuration,
+    onRunAiWithText
   }: {
     userLevel: number;
     aiProvider: string;
@@ -203,6 +204,7 @@
     onDeleteActualEntry: (id: string) => void;
     onExportActualHistory: () => void;
     onApplySuggestedDuration: (mins: number) => void;
+    onRunAiWithText: (text: string) => void;
   } = $props();
 
 </script>
@@ -331,6 +333,7 @@
       {onStartDayShare}
       {onSaveFlow}
       {savedFlowMsg}
+      {onRunAiWithText}
     />
   </div>
 {/if}
