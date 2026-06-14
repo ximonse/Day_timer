@@ -240,7 +240,7 @@
     </div>
   {/if}
 
-  <button class="write-section-toggle" type="button" onclick={onTogglePlanMain}>
+  <button class="write-section-toggle" type="button" style="border-top:0; padding-top:2px;" onclick={onTogglePlanMain}>
     <span>Rubrik, innehåll & tid</span>
     <span>{planMainOpen ? '▲' : '▼'}</span>
   </button>
@@ -258,7 +258,7 @@
       oninput={(e) => onTitleInput((e.target as HTMLInputElement).value)} />
   </div>
 
-  <div style="border-top: 1px solid var(--menu-border); padding-top: 8px;">
+  <div>
     <div class="field-head field-head--wrap">
       <div class="field-label">Aktiviteter</div>
       <div class="field-head-actions">
@@ -361,7 +361,7 @@
       </div>
     {/if}
   </div>
-    <div class="write-section-body" style="border-top: 1px solid var(--menu-border); padding-top: 8px;">
+    <div class="write-section-body">
       <div id="plan-time-row" class="row2">
         <div>
           <div class="field-head">

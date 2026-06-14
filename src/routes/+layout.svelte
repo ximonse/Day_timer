@@ -207,7 +207,7 @@
   }
   :global(.controls) { background: var(--menu-panel); border: 1px solid var(--menu-border); border-radius: 16px; padding: 15px; display: flex; flex-direction: column; gap: 10px; width: min(348px, 100%); color: var(--menu-fg); }
   :global(.controls label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
-  :global(.field-label) { font-size: 12px; color: color-mix(in srgb, var(--menu-fg) 75%, var(--menu-muted) 25%); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
+  :global(.field-label) { font-size: 11px; color: var(--menu-muted); letter-spacing: 0; font-weight: 600; }
   :global(.field-head) { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
   :global(.field-head--wrap) { align-items: flex-start; flex-wrap: wrap; }
   :global(.field-head-actions) { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -557,7 +557,7 @@
   }
   :global(.plan-editor) { display: flex; flex-direction: column; gap: 12px; }
   :global(.plan-editor-bottom) { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; border-top: 1px solid var(--menu-border); }
-  :global(.write-section-toggle) { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: transparent; border: 0; border-top: 1px solid color-mix(in srgb, var(--menu-border) 88%, transparent); padding: 8px 2px 5px; color: var(--menu-muted); cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: .35px; text-transform: uppercase; }
+  :global(.write-section-toggle) { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: transparent; border: 0; border-top: 1px solid color-mix(in srgb, var(--menu-border) 88%, transparent); padding: 9px 2px 5px; color: var(--menu-muted); cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
   :global(.write-section-toggle:first-child) { border-top: 0; padding-top: 2px; }
   :global(.write-section-toggle:hover) { color: var(--menu-fg); }
   :global(.write-section-body) { display: flex; flex-direction: column; gap: 10px; }
