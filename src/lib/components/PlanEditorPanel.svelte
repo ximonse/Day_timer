@@ -228,53 +228,22 @@
 </script>
 
 <div class="plan-editor">
-  <div class="section-copy field-head" style="justify-content:space-between;">
-    <span><strong>Vald dag:</strong> {targetDateLabel}</span>
-    <button class="info-btn" type="button" onclick={onToggleSourceHelp}>i</button>
+  <div class="section-copy" style="font-size:12px;color:var(--menu-muted);" title={hasSelection ? `Ändringar sparas tillbaka till det markerade blocket. Källa: ${sourceLabel}. ${sourceHelp}` : 'Sparas som ett nytt block på den dag som är vald i kalendern.'}>
+    {targetDateLabel}
   </div>
-  {#if showSourceHelp}
-    <div class="feedback">
-      {hasSelection
-        ? `Ändringar sparas tillbaka till det markerade blocket. Källa: ${sourceLabel}. ${sourceHelp}`
-        : 'När inget block är valt sparar Planera ett nytt block på den dag som är markerad i kalendern.'}
-    </div>
-  {/if}
 
-  <button class="write-section-toggle" type="button" style="border-top:0; padding-top:2px;" onclick={onTogglePlanMain}>
-    <span>Rubrik, innehåll & tid</span>
-    <span>{planMainOpen ? '▲' : '▼'}</span>
-  </button>
-  {#if planMainOpen}
-  <div class="write-section-body">
-    <div class="field-head">
-      <div class="field-label">Rubrik</div>
-      <button class="info-btn" type="button" onclick={onToggleTitleHelp}>i</button>
-    </div>
-    {#if showTitleHelp}
-      <div class="feedback">Rubriken blir blockets namn i agendan och i timern.</div>
-    {/if}
-    <input type="text" placeholder="Matematik"
-      value={titleValue}
-      oninput={(e) => onTitleInput((e.target as HTMLInputElement).value)} />
-  </div>
+  <input type="text" placeholder="Rubrik" title="Blir blockets namn i agendan och i timern."
+    value={titleValue}
+    oninput={(e) => onTitleInput((e.target as HTMLInputElement).value)} />
 
   <div>
-    <div class="field-head field-head--wrap">
-      <div class="field-label">Aktiviteter</div>
-      <div class="field-head-actions">
-        {#if userLevel >= 2}
-          <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-Plan">
-            🎤
-          </button>
-        {/if}
-        <button class="micro-btn" onclick={onCopyPrompt}>{copyBtnText}</button>
-        <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
-      </div>
+    <div class="field-head-actions" style="justify-content:flex-end; margin-bottom:4px;">
+      {#if userLevel >= 2}
+        <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-Plan">🎤</button>
+      {/if}
+      <button class="micro-btn" onclick={onCopyPrompt} title="Kopiera AI-prompt">{copyBtnText}</button>
     </div>
-    {#if showPartsHelp}
-      <div class="feedback">Skriv eller klistra in aktiviteter här. En per rad. <code>Tab</code> gör underpunkt och <code>Enter</code> ny rad.</div>
-    {/if}
-    <textarea id="plan-activities-input" placeholder="Genomgång&#10;Eget arbete&#10;Avslut"
+    <textarea id="plan-activities-input" placeholder="Aktiviteter – en per rad" title="En aktivitet per rad. Tab gör underpunkt, Enter ny rad."
       bind:this={textareaEl}
       oninput={(e) => onPartsInput((e.target as HTMLTextAreaElement).value)}
       onkeydown={onPartsKeyDown}></textarea>
@@ -364,20 +333,15 @@
     <div class="write-section-body">
       <div id="plan-time-row" class="row2">
         <div>
-          <div class="field-head">
-            <div class="field-label">Starttid</div>
-            <button class="info-btn" type="button" onclick={onToggleTimeHelp}>i</button>
-          </div>
-          <input type="time" value={startTimeValue}
+          <input type="time" value={startTimeValue} title="Starttid"
             oninput={(e) => onStartTimeInput((e.target as HTMLInputElement).value)} />
         </div>
         <div>
-          <div class="field-label">{endMode === 'end' ? 'Sluttid' : 'Längd (min)'}</div>
           {#if endMode === 'end'}
-            <input type="time" value={endTimeValue}
+            <input type="time" value={endTimeValue} title="Sluttid"
               oninput={(e) => onEndTimeInput((e.target as HTMLInputElement).value)} />
           {:else}
-            <input type="number" min={minTotalMinutes} value={totalMinutesValue}
+            <input type="number" min={minTotalMinutes} value={totalMinutesValue} title="Längd i minuter"
               oninput={(e) => onTotalMinutesInput(Number((e.target as HTMLInputElement).value))} />
           {/if}
         </div>
@@ -394,25 +358,17 @@
         </div>
       {/if}
 
-      {#if showTimeHelp}
-        <div class="feedback">Tiden sparas på vald dag. Välj en annan dag i kalendern först om blocket ska hamna där.</div>
-      {/if}
       <div class="feedback">{timeFeedbackText}</div>
     </div>
-  {/if}
 
   <div class="plan-editor-bottom">
-    <div style="display:flex; gap:6px;">
-      <button id="quickStartBtn" class="quickstart" style="flex:1;" onclick={onAction}><span class="ico">✓</span> {actionLabel}</button>
+    <div style="display:flex; gap:6px; align-items:stretch;">
+      <button id="quickStartBtn" class="quickstart" style="flex:1;" onclick={onAction} title={actionHint}><span class="ico">✓</span> {actionLabel}</button>
       <button class="quickstart" style="flex:1;" onclick={onCreateNew} title="Skapa nytt block med aktuella värden"><span class="ico">＋</span> Nytt</button>
-    </div>
-    <div class="feedback">{actionHint}</div>
-    <div class="feedback" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <span>{saveStatusLabel}</span>
-      <button class="ai-key-btn" type="button" onclick={onRevert} disabled={!canRevert}>Återställ</button>
+      <button class="ai-key-btn" type="button" style="flex:0 0 auto;" onclick={onRevert} disabled={!canRevert} title={saveStatusLabel || 'Återställ ändringar'}>↺</button>
     </div>
 
-    <button class="quickstart quickstart-subtle" style="width:100%; margin-top:4px;" onclick={onSaveFlow}>
+    <button class="quickstart quickstart-subtle" style="width:100%; margin-top:4px;" onclick={onSaveFlow} title="Spara passet som återanvändbar mall i Biblioteket">
       <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
     </button>
 
