@@ -248,7 +248,7 @@
   :global(.quickstart-subtle) { background: color-mix(in srgb, var(--menu-surface) 82%, white 18%); color: var(--menu-muted); }
   :global(.quickstart-subtle:hover) { background: var(--menu-surface); color: var(--menu-fg); }
   :global(.quickstart:disabled), :global(.ai-key-btn:disabled) { opacity: .45; cursor: default; }
-  :global(#quickStartBtn) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); border-color: var(--menu-pill-on); font-weight: 600; padding: 11px 15px; font-size: 15px; }
+  :global(#quickStartBtn) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); border-color: var(--menu-pill-on); font-weight: 600; padding: 9px 15px; font-size: 14px; }
   :global(#quickStartBtn:hover) { background: #26221d; border-color: #26221d; }
   :global(.now-live-panel) { display:flex; flex-direction:column; gap:12px; padding:12px; border:1px solid var(--menu-border); border-radius:12px; background: color-mix(in srgb, var(--menu-surface) 90%, white 10%); }
   :global(.now-live-title) { font-size:14px; font-weight:800; color:var(--menu-fg); }
