@@ -65,6 +65,8 @@ För djupare läsning: `VISION_FRAMEWORK.md` (filosofi), `WORKSPACE_SYNC_ARCHITE
 - ✅ **Minimal Planera-meny**: Editorn nedskalad till kärnan — fält med placeholders, extra info i tooltips, inga versala etiketter/(i)-knappar. Enhetliga knapp-storlekar. "Mall"-etikett och "Faktisk tid & lärande" borttagna. Dagtext-panelen separerad som egen "blob" (kort-bakgrund), tunna linje-avdelare borttagna.
 - 📁 **`design/`**: `logik-karta` (struktur-referens för meny-logiken) renderas från `redesign-mockup.html` via `render-mockup.cjs`.
 
+**🔜 Att göra:** Gör vyerna i de andra menyerna (**Bibliotek**, **Konto & AI**) lika **Planera** — samma minimala uttryck: fält med placeholders, extra info i tooltips, inga versala etiketter eller (i)-knappar, enhetliga knapp-storlekar, regioner som egna "blobbar" och inga onödiga linje-avdelare.
+
 ---
 
 ## Stack & Teknik
