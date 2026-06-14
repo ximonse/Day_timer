@@ -26,15 +26,14 @@
   } = $props();
 </script>
 
-<div class="flows">
-  <div class="field-label">Mallar</div>
+<div class="plan-editor">
   <button class="quickstart" onclick={onSaveFlow}
-    title="Sparar nuvarande schema som en återanvändbar mall">
-    <span class="ico">💾︎</span> {savedFlowMsg || 'Spara aktuell som mall'}
+    title="Sparar nuvarande schema — rubrik, aktiviteter och tid — som en återanvändbar mall i biblioteket.">
+    <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
   </button>
-  <p class="flows-hint">Här sparar du återanvändbara upplägg. Ladda dem i planeringen eller lägg in dem direkt på vald dag.</p>
+
   {#if flows.length === 0}
-    <p class="flows-hint">Inga mallar sparade ännu. Spara en session från Nu eller Planera för att bygga upp biblioteket.</p>
+    <p class="flows-hint">Inga mallar ännu. Spara ett pass från Nu eller Planera.</p>
   {:else}
     <button class="flows-toggle" onclick={onToggleFlows}>
       Sparade mallar {flowsOpen ? '▾' : '▸'}

@@ -270,6 +270,7 @@
   :global(.flow-item .flow-del) { background: transparent; border: 0; color: var(--menu-muted); cursor: pointer; font-size: 14px; padding: 6px 10px; border-radius: 6px; flex-shrink: 0; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; }
   :global(.flow-item .flow-del:hover) { background: #e7ddcf; color: var(--menu-fg); }
   :global(.flows-hint) { font-size: 13px; color: var(--menu-muted); margin: 2px 0 0; }
+  :global(.beta-tag) { font-size: 9px; font-weight: 800; letter-spacing: .04em; background: var(--accent); color: white; padding: 1px 5px; border-radius: 4px; vertical-align: middle; opacity: .85; }
   :global(.sync-section) { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--menu-border); }
   :global(.sync-input) { width: 100%; padding: 9px 12px; border: 1px solid var(--menu-border); border-radius: 8px; background: var(--menu-surface); color: var(--menu-fg); font-size: 15px; font-family: inherit; }
   :global(.sync-input:focus) { outline: 2px solid #4a443c; outline-offset: 1px; }

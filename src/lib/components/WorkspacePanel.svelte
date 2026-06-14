@@ -105,38 +105,31 @@
   }
 </script>
 
-<div class="ai-key-section" style="margin-bottom:24px;">
-  <div class="field-label">Introduktionsguide</div>
-  <div class="section-copy muted" style="margin-top:4px;">Få en guidad tur genom appens viktigaste funktioner.</div>
-  
-  <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-    <button class="quickstart" style="width:100%; justify-content:center; background:var(--accent); color:white;" onclick={() => appState.value.onboardingStep = 1}>
-      Starta hela guiden
-    </button>
-    
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-      <button class="quickstart quickstart-subtle" style="font-size:12px; padding: 6px;" onclick={() => appState.value.onboardingStep = 1}>1. Grunderna</button>
-      <button class="quickstart quickstart-subtle" style="font-size:12px; padding: 6px;" onclick={() => { appState.value.activeSection = 'now'; appState.value.onboardingStep = 7; }}>2. Nu-läget</button>
-      <button class="quickstart quickstart-subtle" style="font-size:12px; padding: 6px;" onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 10; }}>3. Planera</button>
-      <button class="quickstart quickstart-subtle" style="font-size:12px; padding: 6px;" onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 13; }}>4. Avancerat</button>
-    </div>
+<div class="plan-editor">
+  <button class="quickstart" style="justify-content:center; background:var(--accent); color:white;"
+    onclick={() => appState.value.onboardingStep = 1}
+    title="Starta en guidad tur genom appens viktigaste funktioner.">
+    Starta hela guiden
+  </button>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
+      onclick={() => appState.value.onboardingStep = 1}>1. Grunderna</button>
+    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
+      onclick={() => { appState.value.activeSection = 'now'; appState.value.onboardingStep = 7; }}>2. Nu-läget</button>
+    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
+      onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 10; }}>3. Planera</button>
+    <button class="quickstart quickstart-subtle" style="font-size:12px; padding:6px; justify-content:center;"
+      onclick={() => { appState.value.activeSection = 'plan'; appState.value.onboardingStep = 13; }}>4. Avancerat</button>
   </div>
+  <button class="write-section-toggle" type="button" onclick={onToggleHelpHints}
+    title="Visar förklarande hjälptexter i hela appen. Lokala i-knappar fungerar alltid. · Alt+i">
+    <span>Hjälpläge</span>
+    <span class="state-chip" class:on={showHelpHints}>{showHelpHints ? 'på' : 'av'}</span>
+  </button>
 </div>
 
-<div class="ai-key-section" style="margin-bottom:20px;">
-  <div class="field-label">
-    Hjälpläge
-    <button class="quickstart" onclick={onToggleHelpHints} style="margin-left:auto; width:auto; padding: 2px 8px; font-size:11px;">
-      {showHelpHints ? 'Dölj hjälp' : 'Visa hjälp'} · Alt+i
-    </button>
-  </div>
-  <div class="section-copy muted" style="margin-top:4px;">Global hjälp visar förklarande texter. Lokala <code>i</code>-knappar fungerar alltid.</div>
-</div>
-
-<div class="login-form">
-  <div class="section-copy muted">Synk gäller mallar, dagplaner och faktisk tid. Inloggningen sparas bara för den här webbläsarsessionen.</div>
+<div class="plan-editor">
   {#if loggedInUser}
-    <div class="field-label">Synkronisering</div>
     <div class="logged-in-row">
       <span class="username">👤 {loggedInUser}</span>
       <button class="logout-btn" onclick={onLogout}>Logga ut</button>
@@ -170,12 +163,11 @@
       </div>
     {/if}
     {#if syncProbeState === 'conflict'}
-      <div class="section-copy" style="margin-top:4px; color:var(--accent); font-weight:600; font-size:11px;">
+      <div class="section-copy" style="color:var(--accent); font-weight:600; font-size:11px;">
         Välj "Ladda" för att hämta molnets version.
       </div>
     {/if}
   {:else}
-    <div class="field-label">Synkronisering</div>
     <input type="text" class="sync-input"
       value={loginName}
       oninput={(e) => onLoginNameChange((e.target as HTMLInputElement).value)}
@@ -184,7 +176,10 @@
       value={loginPass}
       oninput={(e) => onLoginPassChange((e.target as HTMLInputElement).value)}
       placeholder="Lösenord" autocomplete="current-password" />
-    <button class="quickstart" onclick={onLogin}>Logga in & synka</button>
+    <button class="quickstart" onclick={onLogin}
+      title="Synkar mallar, dagplaner och faktisk tid. Inloggningen sparas bara i denna webbläsarsession.">
+      Logga in & synka
+    </button>
   {/if}
   {#if syncStatusText}
     <div class="sync-status" class:error={syncStatusError}>{syncStatusText}</div>
@@ -192,19 +187,13 @@
 </div>
 
 {#if userLevel >= 2}
-  <div class="ai-key-section">
-    <div class="field-label">
-      AI-planering <span class="beta-tag">BETA</span>
-      <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen} style="margin-left:4px;">
-        {aiConfigOpen ? '▲' : '▼'}
-      </button>
-    </div>
-    
+  <div class="plan-editor">
+    <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen}>
+      {aiConfigOpen ? '▲' : '▼'} AI-planering <span class="beta-tag">BETA</span>
+    </button>
     {#if aiConfigOpen}
-      <div class="section-copy muted" style="margin-bottom:8px;">
-        Används på egen risk. Var väldigt försiktig med att skriva in din API-nyckel på nätet. 
-        Här används nyckeln enbart för att skicka förfrågningar direkt till vald AI-leverantör från din webbläsare, 
-        och den sparas lokalt i denna webbläsare enligt valet nedan.
+      <div class="section-copy muted" style="font-size:11px;">
+        Nyckeln skickas enbart direkt till vald leverantör — sparas aldrig på server.
       </div>
 
       <select class="sync-input ai-provider-select"
@@ -214,6 +203,7 @@
           <option value={val}>{label}</option>
         {/each}
       </select>
+
       {#if aiApiKey}
         <div class="ai-key-row">
           <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
@@ -221,13 +211,13 @@
           <button class="ai-key-btn" onclick={onClearAiConfig}>Rensa</button>
         </div>
         {#if aiKeyVisible}
-          <input type="password" class="sync-input" 
+          <input type="password" class="sync-input"
             value={aiApiKey}
             oninput={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value)}
             placeholder={aiKeyPlaceholders[aiProvider]} />
         {/if}
       {:else}
-        <input type="password" class="sync-input" 
+        <input type="password" class="sync-input"
           value={aiApiKey}
           oninput={(e) => onAiApiKeyChange((e.target as HTMLInputElement).value)}
           placeholder={aiKeyPlaceholders[aiProvider]} />
@@ -239,81 +229,120 @@
           checked={aiRememberApiKey}
           onchange={(e) => onAiRememberApiKeyChange((e.target as HTMLInputElement).checked)}
         />
-        <span>Kom ihåg API-nyckel på denna enhet</span>
+        <span title="Slå bara på detta på egen dator eller mobil.">Kom ihåg nyckel på denna enhet</span>
       </label>
-      <div class="section-copy muted" style="margin-top:4px;">
-        Slå bara på detta på egen dator eller mobil.
-      </div>
 
       {#if aiProvider === 'custom'}
-        <div class="field-label" style="margin-top:12px;">Base URL</div>
-        <input type="text" class="sync-input" 
+        <input type="text" class="sync-input"
           value={aiBaseUrl}
           oninput={(e) => onAiBaseUrlChange((e.target as HTMLInputElement).value)}
-          placeholder="https://api.openai.com/v1" />
-        <div class="field-label" style="margin-top:8px;">Model name</div>
-        <input type="text" class="sync-input" 
+          placeholder="Base URL (t.ex. https://api.openai.com/v1)" />
+        <input type="text" class="sync-input"
           value={aiCustomModel}
           oninput={(e) => onAiCustomModelChange((e.target as HTMLInputElement).value)}
-          placeholder="gpt-4o" />
+          placeholder="Modellnamn (t.ex. gpt-4o)" />
       {/if}
     {/if}
   </div>
 {/if}
 
-<div class="ai-key-section" style="margin-top:16px;">
-  <div class="field-label">
-    Tidsdata & Lärande <span class="beta-tag">BETA</span>
-    <button class="ai-panel-toggle" onclick={onToggleTimeData} style="margin-left:4px;">
-      {timeDataOpen ? '▲' : '▼'}
-    </button>
-  </div>
-  
+<div class="plan-editor">
+  <button class="ai-panel-toggle" onclick={onToggleTimeData}>
+    {timeDataOpen ? '▲' : '▼'} Tidsdata & Lärande <span class="beta-tag">BETA</span>
+  </button>
   {#if timeDataOpen}
-    <div class="section-copy muted" style="margin-bottom:8px;">
+    <div class="section-copy muted" style="font-size:11px;">
       Baserat på {confirmedActualCount} bekräftade pass.
     </div>
-    <div class="reliability-box">
+    <div class="rel-box">
       <div class="rel-head">
         <span>Tillförlitlighet: <strong>{reliabilityLevel}</strong></span>
         <span class="rel-percent">{reliabilityPercent}%</span>
       </div>
-      <div class="rel-bar"><div class="rel-progress" style="width: {reliabilityPercent}%"></div></div>
+      <div class="rel-bar"><div class="rel-fill" style="width: {reliabilityPercent}%"></div></div>
       <div class="rel-hint">{reliabilityHint}</div>
     </div>
     {#if pendingActualCount > 0}
-      <div class="section-copy muted" style="margin-top:8px;">
+      <div class="section-copy muted" style="font-size:11px;">
         Du har <strong>{pendingActualCount}</strong> obekräftade pass. Gå till Planera för att granska dem.
       </div>
     {/if}
   {/if}
 </div>
 
-<div style="margin-top: auto; padding-top: 40px; display: flex; justify-content: flex-end;">
-  <input 
-    type="text" 
+<div style="padding-top:24px; display:flex; justify-content:flex-end;">
+  <input
+    type="text"
     bind:value={inviteCode}
     onkeydown={(e) => { if (e.key === 'Enter') { onUpgrade(inviteCode); inviteCode = ''; } }}
-    style="opacity: 0.15; background: transparent; border: none; width: 80px; color: currentColor; font-size: 11px; cursor: default; transition: opacity 0.2s;"
-    class="secret-unlock-input"
+    style="opacity:0.15; background:transparent; border:none; width:80px; color:currentColor; font-size:11px; cursor:default; transition:opacity 0.2s;"
     title="Unlock Level 2"
   />
 </div>
 
 <style>
+  .state-chip {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--menu-muted);
+    background: var(--menu-pill);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .state-chip.on {
+    background: var(--menu-pill-on);
+    color: var(--menu-pill-on-fg);
+  }
+  .rel-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    background: color-mix(in srgb, var(--menu-pill) 52%, transparent);
+    border: 1px solid color-mix(in srgb, var(--menu-border) 70%, transparent);
+    border-radius: 10px;
+  }
+  .rel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--menu-fg);
+  }
+  .rel-percent {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .rel-bar {
+    height: 5px;
+    background: color-mix(in srgb, var(--menu-border) 60%, transparent);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .rel-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+  }
+  .rel-hint {
+    font-size: 11px;
+    color: var(--menu-muted);
+  }
   .sync-probe {
     font-size: 11px;
     color: var(--menu-muted);
-    margin-top: 6px;
     display: flex;
     align-items: center;
     gap: 6px;
-    font-family: tabular-nums;
+    font-variant-numeric: tabular-nums;
   }
   .sync-probe.error { color: #a12d21; }
   .sync-probe.conflict { color: var(--accent); font-weight: 600; }
   .snapshot-panel {
-    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
   .snapshot-load {
     width: 100%;
@@ -324,7 +353,6 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-top: 8px;
   }
   .snapshot-row {
     display: flex;
@@ -346,6 +374,7 @@
     padding: 3px 7px;
     font-size: 11px;
     cursor: pointer;
+    font-family: inherit;
   }
   .snapshot-restore:hover {
     border-color: var(--accent);
@@ -354,9 +383,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 10px;
     font-size: 12px;
     color: var(--menu-text);
+    cursor: pointer;
   }
   .remember-key-row input {
     width: auto;
@@ -367,6 +396,7 @@
     border-radius: 50%;
     background: var(--menu-muted);
     opacity: 0.3;
+    flex-shrink: 0;
   }
   .probe-dot.active {
     background: var(--accent);
@@ -378,4 +408,3 @@
     to { opacity: 1; transform: scale(1.1); }
   }
 </style>
-
