@@ -258,7 +258,7 @@
       oninput={(e) => onTitleInput((e.target as HTMLInputElement).value)} />
   </div>
 
-  <div>
+  <div style="border-top: 1px solid var(--menu-border); padding-top: 8px;">
     <div class="field-head field-head--wrap">
       <div class="field-label">Aktiviteter</div>
       <div class="field-head-actions">
@@ -361,7 +361,7 @@
       </div>
     {/if}
   </div>
-    <div class="write-section-body" style="margin-top:10px;">
+    <div class="write-section-body" style="border-top: 1px solid var(--menu-border); padding-top: 8px;">
       <div id="plan-time-row" class="row2">
         <div>
           <div class="field-head">
