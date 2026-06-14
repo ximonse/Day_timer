@@ -214,7 +214,7 @@
   :global(.section-nav) { display: flex; gap: 6px; flex-wrap: wrap; }
   :global(.section-tab) { border: 1px solid var(--menu-border); background: var(--menu-surface); color: var(--menu-muted); border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
   :global(.section-tab.active) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); border-color: var(--menu-pill-on); }
-  :global(.section-hero) { display: flex; flex-direction: column; gap: 3px; padding-bottom: 6px; border-bottom: 1px solid var(--menu-border); }
+  :global(.section-hero) { display: flex; flex-direction: column; gap: 3px; padding-bottom: 2px; }
   :global(.section-hero--split) { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 12px; }
   :global(.section-hero--compact) { padding-bottom: 2px; }
   :global(.section-title) { font-size: 18px; font-weight: 700; color: var(--menu-fg); }
@@ -557,8 +557,8 @@
   }
   :global(.plan-editor) { display: flex; flex-direction: column; gap: 12px; background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 12px; padding: 12px; }
   :global(.menu-blob) { background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 12px; padding: 12px; }
-  :global(.plan-editor-bottom) { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; border-top: 1px solid var(--menu-border); }
-  :global(.write-section-toggle) { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: transparent; border: 0; border-top: 1px solid color-mix(in srgb, var(--menu-border) 88%, transparent); padding: 9px 2px 5px; color: var(--menu-muted); cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+  :global(.plan-editor-bottom) { display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
+  :global(.write-section-toggle) { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: transparent; border: 0; padding: 6px 2px 5px; color: var(--menu-muted); cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
   :global(.write-section-toggle:first-child) { border-top: 0; padding-top: 2px; }
   :global(.write-section-toggle:hover) { color: var(--menu-fg); }
   :global(.write-section-body) { display: flex; flex-direction: column; gap: 10px; }
