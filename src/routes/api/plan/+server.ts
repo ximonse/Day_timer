@@ -12,7 +12,7 @@ async function callAnthropic(apiKey: string, systemPrompt: string, message: stri
   const client = new Anthropic({ apiKey });
   const res = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: message }]
   });
@@ -23,7 +23,7 @@ async function callOpenAI(apiKey: string, systemPrompt: string, message: string,
   const client = new OpenAI({ apiKey, ...(baseUrl ? { baseURL: baseUrl } : {}) });
   const res = await client.chat.completions.create({
     model: model || 'gpt-4o-mini',
-    max_tokens: 1024,
+    max_tokens: 4096,
     ...(jsonMode ? { response_format: { type: 'json_object' as const } } : {}),
     messages: [
       { role: 'system', content: systemPrompt },
