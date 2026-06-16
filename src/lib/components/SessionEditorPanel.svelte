@@ -103,7 +103,8 @@
     onDeleteActualEntry,
     onExportActualHistory,
     onApplySuggestedDuration,
-    onRunAiWithText
+    onRunAiWithText,
+    whisperApiKey = ''
   }: {
     userLevel: number;
     aiProvider: string;
@@ -205,6 +206,7 @@
     onExportActualHistory: () => void;
     onApplySuggestedDuration: (mins: number) => void;
     onRunAiWithText: (text: string) => void;
+    whisperApiKey?: string;
   } = $props();
 
 </script>
@@ -334,6 +336,7 @@
       {onSaveFlow}
       {savedFlowMsg}
       {onRunAiWithText}
+      {whisperApiKey}
     />
   </div>
 {/if}

@@ -8,17 +8,19 @@ export type AiPlanMode = 'strict' | 'helpful';
 export interface AiConfig {
   provider: AiProvider;
   apiKey: string;
+  whisperKey: string;
   baseUrl: string;
   customModel: string;
   planMode: AiPlanMode;
   rememberApiKey: boolean;
 }
 
-export type PersistedAiConfig = Omit<AiConfig, 'apiKey'>;
+export type PersistedAiConfig = Omit<AiConfig, 'apiKey' | 'whisperKey'>;
 
 export const DEFAULT_AI_CONFIG: AiConfig = {
   provider: 'anthropic',
   apiKey: '',
+  whisperKey: '',
   baseUrl: '',
   customModel: '',
   planMode: 'helpful',
@@ -29,6 +31,8 @@ const AI_CONFIG_STORAGE = 'daytimer_ai_config';
 const AI_KEY_SESSION_STORAGE = 'daytimer_ai_api_key';
 const AI_KEY_PERSIST_STORAGE = 'daytimer_ai_api_key_persisted';
 const AI_KEY_LEGACY_STORAGE = 'daytimer_ai_key';
+const WHISPER_KEY_SESSION_STORAGE = 'daytimer_whisper_key';
+const WHISPER_KEY_PERSIST_STORAGE = 'daytimer_whisper_key_persisted';
 
 export function loadAiConfig(): AiConfig {
   let config: AiConfig = { ...DEFAULT_AI_CONFIG };
@@ -44,6 +48,14 @@ export function loadAiConfig(): AiConfig {
     if (config.rememberApiKey) localStorage.setItem(AI_KEY_PERSIST_STORAGE, savedKey);
     else writeSessionValue(AI_KEY_SESSION_STORAGE, savedKey);
     localStorage.removeItem(AI_KEY_LEGACY_STORAGE);
+  }
+  const savedWhisperKey = config.rememberApiKey
+    ? localStorage.getItem(WHISPER_KEY_PERSIST_STORAGE) ?? readSessionValue(WHISPER_KEY_SESSION_STORAGE)
+    : readSessionValue(WHISPER_KEY_SESSION_STORAGE);
+  if (savedWhisperKey) {
+    config = { ...config, whisperKey: savedWhisperKey };
+    if (config.rememberApiKey) localStorage.setItem(WHISPER_KEY_PERSIST_STORAGE, savedWhisperKey);
+    else writeSessionValue(WHISPER_KEY_SESSION_STORAGE, savedWhisperKey);
   }
   return config;
 }
@@ -70,6 +82,18 @@ export function persistAiConfig(config: AiConfig): void {
     localStorage.removeItem(AI_KEY_PERSIST_STORAGE);
   }
   localStorage.removeItem(AI_KEY_LEGACY_STORAGE);
+  if (config.whisperKey.trim()) {
+    if (config.rememberApiKey) {
+      localStorage.setItem(WHISPER_KEY_PERSIST_STORAGE, config.whisperKey);
+      removeSessionValue(WHISPER_KEY_SESSION_STORAGE);
+    } else {
+      writeSessionValue(WHISPER_KEY_SESSION_STORAGE, config.whisperKey);
+      localStorage.removeItem(WHISPER_KEY_PERSIST_STORAGE);
+    }
+  } else {
+    removeSessionValue(WHISPER_KEY_SESSION_STORAGE);
+    localStorage.removeItem(WHISPER_KEY_PERSIST_STORAGE);
+  }
 }
 
 export function clearStoredAiConfig(): void {
@@ -77,6 +101,8 @@ export function clearStoredAiConfig(): void {
   localStorage.removeItem(AI_KEY_LEGACY_STORAGE);
   localStorage.removeItem(AI_KEY_PERSIST_STORAGE);
   removeSessionValue(AI_KEY_SESSION_STORAGE);
+  localStorage.removeItem(WHISPER_KEY_PERSIST_STORAGE);
+  removeSessionValue(WHISPER_KEY_SESSION_STORAGE);
 }
 
 const sessionLengthNote = (totalMin?: number) =>

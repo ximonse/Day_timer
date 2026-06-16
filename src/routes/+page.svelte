@@ -3368,6 +3368,7 @@
               onConfirmActualEntry={confirmActualEntryLocal}
               onDeleteActualEntry={deleteActualEntryLocal}
               onExportActualHistory={exportActualHistory}
+              whisperApiKey={aiConfig.whisperKey}
             />
           </div>
         {:else if activeSection === 'library'}
@@ -3434,6 +3435,8 @@
               onAiRememberApiKeyChange={(value) => { aiConfig.rememberApiKey = value; saveAiConfig(); }}
               onAiBaseUrlChange={(value) => { aiConfig.baseUrl = value; saveAiConfig(); }}
               onAiCustomModelChange={(value) => { aiConfig.customModel = value; saveAiConfig(); }}
+              whisperKey={aiConfig.whisperKey}
+              onWhisperKeyChange={(value) => { aiConfig.whisperKey = value; saveAiConfig(); }}
             />
           </div>
         {:else if activeSection === 'admin'}

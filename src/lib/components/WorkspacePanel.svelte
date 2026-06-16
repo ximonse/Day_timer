@@ -46,7 +46,9 @@
     onAiApiKeyChange,
     onAiRememberApiKeyChange,
     onAiBaseUrlChange,
-    onAiCustomModelChange
+    onAiCustomModelChange,
+    whisperKey,
+    onWhisperKeyChange
   }: {
     userLevel: number;
     onUpgrade: (code: string) => void;
@@ -93,6 +95,8 @@
     onAiRememberApiKeyChange: (value: boolean) => void;
     onAiBaseUrlChange: (value: string) => void;
     onAiCustomModelChange: (value: string) => void;
+    whisperKey: string;
+    onWhisperKeyChange: (value: string) => void;
   } = $props();
 
   let aiConfigOpen = $state(false);
@@ -220,6 +224,14 @@
           value={aiCustomModel}
           oninput={(e) => onAiCustomModelChange((e.target as HTMLInputElement).value)}
           placeholder="Modellnamn (t.ex. gpt-4o)" />
+      {/if}
+
+      {#if aiProvider !== 'openai'}
+        <input type="password" class="sync-input"
+          value={whisperKey}
+          oninput={(e) => onWhisperKeyChange((e.target as HTMLInputElement).value)}
+          placeholder="OpenAI-nyckel för röst (Whisper) – valfri"
+          title="Lägg till en OpenAI-nyckel enbart för röstigenkänning med Whisper. Din AI-leverantör för planering påverkas inte." />
       {/if}
     {/if}
   </div>

@@ -25,12 +25,12 @@ describe('AI config persistence', () => {
   });
 
   it('round-trips a saved config but keeps the api key in session storage by default', () => {
-    persistAiConfig({ provider: 'openai', apiKey: 'secret', baseUrl: 'b', customModel: 'm', planMode: 'strict', rememberApiKey: false });
+    persistAiConfig({ provider: 'openai', apiKey: 'secret', whisperKey: '', baseUrl: 'b', customModel: 'm', planMode: 'strict', rememberApiKey: false });
     const raw = localStorage.getItem('daytimer_ai_config')!;
     expect(JSON.parse(raw)).not.toHaveProperty('apiKey');
     expect(localStorage.getItem('daytimer_ai_api_key_persisted')).toBeNull();
     expect(sessionStorage.getItem('daytimer_ai_api_key')).toBe('secret');
-    expect(loadAiConfig()).toEqual({ provider: 'openai', apiKey: 'secret', baseUrl: 'b', customModel: 'm', planMode: 'strict', rememberApiKey: false });
+    expect(loadAiConfig()).toEqual({ provider: 'openai', apiKey: 'secret', whisperKey: '', baseUrl: 'b', customModel: 'm', planMode: 'strict', rememberApiKey: false });
   });
 
   it('can remember the api key in localStorage when explicitly enabled', () => {

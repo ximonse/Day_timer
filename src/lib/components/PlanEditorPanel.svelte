@@ -99,7 +99,8 @@
     onStartDayShare,
     onSaveFlow,
     savedFlowMsg,
-    onRunAiWithText
+    onRunAiWithText,
+    whisperApiKey = ''
   }: {
     userLevel: number;
     aiProvider: string;
@@ -183,6 +184,7 @@
     onSaveFlow: () => void;
     savedFlowMsg: string;
     onRunAiWithText: (text: string) => void;
+    whisperApiKey?: string;
   } = $props();
 
   function startRecording(target: 'parts' | 'ai') {
@@ -212,7 +214,7 @@
     });
   }
 
-  function startVoicePlan() {
+  function startVoicePlan(key: string) {
     if (isRecording) {
       voice.stop();
       isRecording = false;
@@ -223,7 +225,7 @@
     recordingTarget = 'voice-plan';
     voice.start({
       useWhisper: true,
-      apiKey: aiApiKey,
+      apiKey: key,
       onResult: (text) => {
         isRecording = false;
         recordingTarget = null;
@@ -236,6 +238,8 @@
       }
     });
   }
+
+  const effectiveWhisperKey = $derived(whisperApiKey || (aiProvider === 'openai' ? aiApiKey : ''));
 
   const showRecSuggestion = $derived(
     userLevel >= 2 && 
@@ -268,10 +272,10 @@
       {#if userLevel >= 2}
         <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-text – klistras in i aktivitetsfältet">🎤</button>
       {/if}
-      {#if userLevel >= 2 && hasAiKey && aiProvider === 'openai'}
+      {#if userLevel >= 2 && hasAiKey && effectiveWhisperKey}
         <button class="micro-btn voice-plan-btn" class:recording={recordingTarget === 'voice-plan'}
           disabled={aiLoading && recordingTarget !== 'voice-plan'}
-          onclick={startVoicePlan}
+          onclick={() => startVoicePlan(effectiveWhisperKey)}
           title="Prata in hela passet – Whisper transkriberar och AI strukturerar aktiviteterna direkt">
           {recordingTarget === 'voice-plan' ? '⏹' : '🎙'}
         </button>
