@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AI_AGENDA_PROMPT_MODE_HELP, AI_AGENDA_PROMPT_MODE_LABELS, aiPlanMetadataItems, type AiAgendaPromptMode, type AiPlanResponse } from '$lib/ai-plan-engine.js';
+  import { resolveWeekInput } from '$lib/parse.js';
 
   const promptModeOptions = Object.entries(AI_AGENDA_PROMPT_MODE_LABELS) as [AiAgendaPromptMode, string][];
 
@@ -109,6 +110,20 @@
   let promptMenuOpen = $state(false);
   let agendaTextarea: HTMLTextAreaElement | null = $state(null);
   let selectedScheduleFile = $state<File | null>(null);
+
+  const DAYS = ['sön', 'mån', 'tis', 'ons', 'tor', 'fre', 'lör'];
+  const MONTHS = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+  function fmtShort(d: Date) { return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`; }
+
+  const weekPreview = $derived.by(() => {
+    const yymmdd = resolveWeekInput(scheduleMondayDate);
+    if (!yymmdd) return '';
+    const m = yymmdd.match(/^(\d{2})(\d{2})(\d{2})$/);
+    if (!m) return '';
+    const monday = new Date(2000 + parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+    const friday = new Date(monday.getTime() + 4 * 86400000);
+    return `${fmtShort(monday)} – ${fmtShort(friday)}`;
+  });
   
   let copyStatuses = $state<Record<AiAgendaPromptMode, string>>({
     notes: AI_AGENDA_PROMPT_MODE_LABELS.notes,
@@ -325,6 +340,9 @@
     oninput={(e) => onScheduleMondayDateChange((e.target as HTMLInputElement).value)}
     style="margin-top:6px;"
   />
+  {#if weekPreview}
+    <div class="feedback" style="margin-top:3px; font-size:0.82em; opacity:.8;">{weekPreview}</div>
+  {/if}
   <label class="checkbox-label" style="margin-top:8px; display:flex; align-items:center; gap:6px; font-size:0.85em; cursor:pointer;">
     <input type="checkbox" checked={scheduleAddStandardParts} onchange={onToggleScheduleStandardParts} />
     Lägg till standarddelar (Närvaro, Arbete, Avslut)
@@ -338,6 +356,9 @@
       {scheduleLoading ? 'Läser av...' : selectedScheduleFile ? 'Läs av schema ▶' : 'Välj fil ovan'}
     </button>
   </div>
+  {#if scheduleLoading}
+    <div class="feedback" style="margin-top:6px; opacity:.72;">Det här tar 15–30 sekunder ⏳</div>
+  {/if}
   {#if scheduleError}
     <div class="ai-error" style="margin-top:6px;">{scheduleError}</div>
   {/if}

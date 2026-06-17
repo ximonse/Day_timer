@@ -80,31 +80,41 @@ async function callAnthropicVision(
     model: 'claude-opus-4-8',
     max_tokens: 8192,
     system: systemPrompt,
-    messages: [{
-      role: 'user',
-      content: [
-        contentBlock,
-        { type: 'text', text: 'Läs schemat och returnera agendatexten.' }
-      ]
-    }]
+    messages: [
+      {
+        role: 'user',
+        content: [
+          contentBlock,
+          { type: 'text', text: 'Läs schemat och returnera agendatexten.' }
+        ]
+      },
+      {
+        role: 'assistant',
+        content: [{ type: 'text', text: '@' }]
+      }
+    ]
   });
 
-  return res.content[0].type === 'text' ? res.content[0].text : '';
+  const raw = res.content[0].type === 'text' ? res.content[0].text : '';
+  const truncated = res.stop_reason === 'max_tokens';
+  return '@' + raw + (truncated ? '\n\n// OBS: svaret verkar avkortat — kontrollera att alla dagar kom med' : '');
 }
 
 async function callOpenAIVision(
   apiKey: string,
   systemPrompt: string,
   fileData: string,
-  mediaType: string
+  mediaType: string,
+  baseUrl?: string,
+  model?: string
 ): Promise<string> {
   if (mediaType === 'application/pdf') {
     throw new Error('OpenAI stöder inte PDF-filer direkt. Ladda upp en bild (JPEG/PNG) istället.');
   }
-  const client = new OpenAI({ apiKey });
+  const client = new OpenAI({ apiKey, ...(baseUrl ? { baseURL: baseUrl } : {}) });
   const dataUrl = `data:${mediaType};base64,${fileData}`;
   const res = await client.chat.completions.create({
-    model: 'gpt-4o',
+    model: model || 'gpt-4o',
     max_tokens: 8192,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -143,15 +153,12 @@ async function callGeminiVision(
 
 function extractAgendaText(raw: string): string {
   const s = raw.trim();
-  // Strip markdown code fences
   const fenced = s.replace(/^```[a-z]*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-  // If it looks like JSON, try to extract a "text" field
   if (fenced.startsWith('{')) {
     try {
       const parsed = JSON.parse(fenced);
       if (typeof parsed?.text === 'string') return parsed.text.trim();
     } catch { /* fall through */ }
-    // Try to extract text field with regex as fallback
     const m = fenced.match(/"text"\s*:\s*"([\s\S]*?)"\s*[,}]/);
     if (m) return m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').trim();
   }
@@ -197,26 +204,7 @@ export const POST: RequestHandler = async ({ request }) => {
       try { parsedUrl = new URL(baseUrl.trim()); } catch { return json({ error: 'Ogiltig bas-URL' }, { status: 400 }); }
       if (parsedUrl.protocol !== 'https:') return json({ error: 'Bas-URL måste använda https://' }, { status: 400 });
       if (isPrivateHost(parsedUrl.hostname)) return json({ error: 'Bas-URL pekar på ett otillåtet nätverk' }, { status: 400 });
-      if (mediaType === 'application/pdf') {
-        return json({ error: 'Anpassad provider stöder inte PDF. Ladda upp en bild istället.' }, { status: 400 });
-      }
-      const client = new OpenAI({ apiKey: key, baseURL: parsedUrl.toString() });
-      const dataUrl = `data:${mediaType};base64,${fileData}`;
-      const res = await client.chat.completions.create({
-        model: customModel?.trim() || 'gpt-4o',
-        max_tokens: 8192,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: dataUrl } },
-              { type: 'text', text: 'Läs schemat och returnera agendatexten.' }
-            ]
-          }
-        ]
-      });
-      text = res.choices[0]?.message?.content ?? '';
+      text = await callOpenAIVision(key, systemPrompt, fileData, mediaType, parsedUrl.toString(), customModel?.trim() || undefined);
     }
 
     return json({ text: extractAgendaText(text) });
