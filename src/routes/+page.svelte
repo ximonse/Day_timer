@@ -1833,6 +1833,26 @@
   function saveAgenda() {
     const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
     const savingAiDraft = agendaDraftSource === 'ai';
+
+    const parsedDraft = agendaDraft.trim() ? parseAgenda(agendaDraft) : [];
+    const datedDays = parsedDraft.filter(d => d.date !== null);
+    if (savingAiDraft && datedDays.length > 1) {
+      const merged = mergeAgendaDayData(activeAgendaText(), parsedDraft);
+      const savedText = serializeAgenda(merged);
+      setActiveAgendaText(savedText);
+      agendaDraft = savedText;
+      agendaDraftDate = targetDate;
+      agendaDraftDirty = false;
+      agendaDraftSource = 'manual';
+      activeAgendaFlowRef = null;
+      sessionSource = { kind: 'unscheduled' };
+      appState.persist();
+      if (hasSyncSession()) syncSave();
+      savedAgendaMsg = 'Schema importerat ✓';
+      setTimeout(() => { savedAgendaMsg = ''; }, 2000);
+      return;
+    }
+
     const result = saveAgendaDraft({
       activeText: activeAgendaText(),
       draftText: agendaDraft,
