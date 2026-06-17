@@ -2161,7 +2161,7 @@
     try {
       const result = await runScheduleImport({ file, weekInput: scheduleMondayDate, addStandardParts: scheduleAddStandardParts, aiConfig });
       if (result.error) { scheduleError = result.error; return; }
-      agendaDraft = result.text;
+      agendaDraft = result.text ?? '';
       agendaDraftDate = null;
       agendaDraftDirty = true;
       agendaDraftSource = 'ai';
