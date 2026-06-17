@@ -320,7 +320,7 @@
   <input
     type="text"
     class="sync-input"
-    placeholder="Vecka eller datum, t.ex. v35 eller 260825 (tomt = datum från schemat)"
+    placeholder="Vecka eller datum, t.ex. v35 eller 260825 (tomt = pågående vecka)"
     value={scheduleMondayDate}
     oninput={(e) => onScheduleMondayDateChange((e.target as HTMLInputElement).value)}
     style="margin-top:6px;"

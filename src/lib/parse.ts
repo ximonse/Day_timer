@@ -440,6 +440,15 @@ const WEEKDAY_TOKENS: Record<string, number> = {
 
 export function resolveWeekInput(input: string): string {
   const s = input.trim().toLowerCase();
+  if (!s) {
+    const today = new Date();
+    const dow = today.getDay() || 7;
+    const monday = new Date(today.getTime() - (dow - 1) * 86400000);
+    const yy = String(monday.getFullYear()).slice(2);
+    const mm = String(monday.getMonth() + 1).padStart(2, '0');
+    const dd = String(monday.getDate()).padStart(2, '0');
+    return `${yy}${mm}${dd}`;
+  }
   const weekMatch = s.match(/^v\s*(\d{1,2})(?:\s+(\d{2,4}))?$/);
   if (weekMatch) {
     const week = parseInt(weekMatch[1], 10);

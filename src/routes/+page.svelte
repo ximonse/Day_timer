@@ -2185,9 +2185,7 @@
 
       let text: string = data.text ?? '';
       const resolvedMonday = resolveWeekInput(scheduleMondayDate);
-      if (resolvedMonday) {
-        text = applyMondayAnchor(text, resolvedMonday);
-      }
+      text = applyMondayAnchor(text, resolvedMonday);
 
       if (!text.trim()) { scheduleError = 'Schemat kunde inte läsas av – försök med en skarpare bild.'; return; }
       agendaDraft = text;
