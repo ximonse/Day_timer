@@ -108,6 +108,7 @@
   let promptHelpOpen = $state(false);
   let promptMenuOpen = $state(false);
   let agendaTextarea: HTMLTextAreaElement | null = $state(null);
+  let selectedScheduleFile = $state<File | null>(null);
   
   let copyStatuses = $state<Record<AiAgendaPromptMode, string>>({
     notes: AI_AGENDA_PROMPT_MODE_LABELS.notes,
@@ -312,7 +313,7 @@
     class="sync-input"
     onchange={(e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) onReadSchedule(file);
+      selectedScheduleFile = file ?? null;
     }}
     disabled={scheduleLoading}
   />
@@ -328,9 +329,15 @@
     <input type="checkbox" checked={scheduleAddStandardParts} onchange={onToggleScheduleStandardParts} />
     Lägg till standarddelar (Närvaro, Arbete, Avslut)
   </label>
-  {#if scheduleLoading}
-    <div class="feedback" style="margin-top:8px;">Läser av schema...</div>
-  {/if}
+  <div class="agenda-save-row" style="margin-top:8px;">
+    <button
+      class="agenda-save-btn"
+      onclick={() => { if (selectedScheduleFile) onReadSchedule(selectedScheduleFile); }}
+      disabled={!selectedScheduleFile || scheduleLoading}
+    >
+      {scheduleLoading ? 'Läser av...' : 'Läs av schema'}
+    </button>
+  </div>
   {#if scheduleError}
     <div class="ai-error" style="margin-top:6px;">{scheduleError}</div>
   {/if}
