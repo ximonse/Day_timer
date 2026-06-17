@@ -141,6 +141,23 @@ async function callGeminiVision(
   return res.text ?? '';
 }
 
+function extractAgendaText(raw: string): string {
+  const s = raw.trim();
+  // Strip markdown code fences
+  const fenced = s.replace(/^```[a-z]*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+  // If it looks like JSON, try to extract a "text" field
+  if (fenced.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(fenced);
+      if (typeof parsed?.text === 'string') return parsed.text.trim();
+    } catch { /* fall through */ }
+    // Try to extract text field with regex as fallback
+    const m = fenced.match(/"text"\s*:\s*"([\s\S]*?)"\s*[,}]/);
+    if (m) return m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').trim();
+  }
+  return fenced;
+}
+
 export const POST: RequestHandler = async ({ request }) => {
   const {
     provider = 'anthropic',
@@ -202,7 +219,7 @@ export const POST: RequestHandler = async ({ request }) => {
       text = res.choices[0]?.message?.content ?? '';
     }
 
-    return json({ text: text.trim() });
+    return json({ text: extractAgendaText(text) });
   } catch (err: unknown) {
     console.error('[api/schedule] vision call failed:', err instanceof Error ? err.message : err);
     return json({ error: safeErrorMessage(err) }, { status: 500 });

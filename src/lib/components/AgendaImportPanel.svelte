@@ -335,11 +335,14 @@
       onclick={() => { if (selectedScheduleFile) onReadSchedule(selectedScheduleFile); }}
       disabled={!selectedScheduleFile || scheduleLoading}
     >
-      {scheduleLoading ? 'Läser av...' : 'Läs av schema'}
+      {scheduleLoading ? 'Läser av...' : selectedScheduleFile ? 'Läs av schema ▶' : 'Välj fil ovan'}
     </button>
   </div>
   {#if scheduleError}
     <div class="ai-error" style="margin-top:6px;">{scheduleError}</div>
+  {/if}
+  {#if !scheduleLoading && !scheduleError && selectedScheduleFile}
+    <div class="feedback" style="margin-top:4px; opacity:.72; font-size:0.82em;">{selectedScheduleFile.name}</div>
   {/if}
 {/if}
 {/if}

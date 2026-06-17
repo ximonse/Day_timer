@@ -2168,6 +2168,7 @@
         text = applyMondayAnchor(text, scheduleMondayDate);
       }
 
+      if (!text.trim()) { scheduleError = 'Schemat kunde inte läsas av – försök med en skarpare bild.'; return; }
       agendaDraft = text;
       agendaDraftDate = null;
       agendaDraftDirty = true;
