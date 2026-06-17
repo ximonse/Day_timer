@@ -7,7 +7,7 @@
   import { clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
-  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
+  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, applyMondayAnchor, type AgendaDay } from '$lib/parse.js';
   import {
     AGENDA_DAY_WINDOW_END,
     agendaMetaHelp,
@@ -139,6 +139,11 @@
   let icsPreviewEvents = $state<IcsEvent[]>([]);
   let icsPreviewSummary = $state('');
   let icsImportError = $state('');
+  let scheduleOpen = $state(false);
+  let scheduleMondayDate = $state('');
+  let scheduleAddStandardParts = $state(true);
+  let scheduleLoading = $state(false);
+  let scheduleError = $state('');
   let locked = $state(false);
   let titleDraftValue = $state('');
   let agendaDayStart = $state(s.startMin);
@@ -2129,6 +2134,53 @@
     }
   }
 
+  async function runScheduleVision(file: File) {
+    scheduleLoading = true;
+    scheduleError = '';
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      const fileData = btoa(binary);
+      const mediaType = file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
+
+      const body: Record<string, unknown> = {
+        provider: aiConfig.provider,
+        apiKey: aiConfig.apiKey,
+        fileData,
+        mediaType,
+        addStandardParts: scheduleAddStandardParts
+      };
+      if (aiConfig.baseUrl) body.baseUrl = aiConfig.baseUrl;
+      if (aiConfig.customModel) body.customModel = aiConfig.customModel;
+
+      const res = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.error) { scheduleError = data.error; return; }
+
+      let text: string = data.text ?? '';
+      if (scheduleMondayDate.match(/^\d{6}$/)) {
+        text = applyMondayAnchor(text, scheduleMondayDate);
+      }
+
+      agendaDraft = text;
+      agendaDraftDate = null;
+      agendaDraftDirty = true;
+      agendaDraftSource = 'ai';
+      agendaInputOpen = true;
+      if (s.activeSection !== 'plan') setActiveSection('plan');
+    } catch (e: unknown) {
+      scheduleError = e instanceof Error ? e.message : 'Nätverksfel';
+    } finally {
+      scheduleLoading = false;
+    }
+  }
+
   function setFlowMinutes(flow: Flow, newTotal: number): Flow {
     const oldTotal = flow.minutes.reduce((a, b) => a + b, 0);
     if (oldTotal === 0) return { ...flow, minutes: flow.minutes.map(() => Math.max(1, Math.round(newTotal / flow.minutes.length))) };
@@ -3495,6 +3547,15 @@
               onRunAi={runAiAgenda}
               onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
               onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}
+              {scheduleOpen}
+              {scheduleMondayDate}
+              {scheduleAddStandardParts}
+              {scheduleLoading}
+              {scheduleError}
+              onToggleScheduleOpen={() => scheduleOpen = !scheduleOpen}
+              onScheduleMondayDateChange={(value) => scheduleMondayDate = value}
+              onToggleScheduleStandardParts={() => scheduleAddStandardParts = !scheduleAddStandardParts}
+              onReadSchedule={runScheduleVision}
             />
           </div>
         {/if}

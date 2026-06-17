@@ -429,3 +429,31 @@ export function serializeAgenda(days: AgendaDay[], options: SerializeAgendaOptio
   }
   return lines.join('\n');
 }
+
+const WEEKDAY_TOKENS: Record<string, number> = {
+  '@MÅNDAG': 0,
+  '@TISDAG': 1,
+  '@ONSDAG': 2,
+  '@TORSDAG': 3,
+  '@FREDAG': 4,
+};
+
+export function applyMondayAnchor(text: string, mondayYYMMDD: string): string {
+  const match = mondayYYMMDD.match(/^(\d{2})(\d{2})(\d{2})$/);
+  if (!match) return text;
+  const [, yy, mm, dd] = match;
+  const mondayMs = new Date(
+    2000 + parseInt(yy, 10),
+    parseInt(mm, 10) - 1,
+    parseInt(dd, 10)
+  ).getTime();
+
+  return text.replace(/@(MÅNDAG|TISDAG|ONSDAG|TORSDAG|FREDAG)/g, (token) => {
+    const offset = WEEKDAY_TOKENS[token] ?? 0;
+    const d = new Date(mondayMs + offset * 86400000);
+    const y = String(d.getFullYear()).slice(2);
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const dy = String(d.getDate()).padStart(2, '0');
+    return `@${y}${mo}${dy}`;
+  });
+}

@@ -28,6 +28,11 @@
     showHelpHints,
     showImportHelp,
     showIcsHelp,
+    scheduleOpen,
+    scheduleMondayDate,
+    scheduleAddStandardParts,
+    scheduleLoading,
+    scheduleError,
     onToggleOpen,
     onDraftChange,
     onDraftPaste,
@@ -43,7 +48,11 @@
     onSetAgendaAiPromptMode,
     onRunAi,
     onToggleImportHelp,
-    onToggleIcsHelp
+    onToggleIcsHelp,
+    onToggleScheduleOpen,
+    onScheduleMondayDateChange,
+    onToggleScheduleStandardParts,
+    onReadSchedule
   }: {
     agendaInputOpen: boolean;
     agendaDraft: string;
@@ -85,6 +94,15 @@
     onRunAi: () => void;
     onToggleImportHelp: () => void;
     onToggleIcsHelp: () => void;
+    scheduleOpen: boolean;
+    scheduleMondayDate: string;
+    scheduleAddStandardParts: boolean;
+    scheduleLoading: boolean;
+    scheduleError: string;
+    onToggleScheduleOpen: () => void;
+    onScheduleMondayDateChange: (value: string) => void;
+    onToggleScheduleStandardParts: () => void;
+    onReadSchedule: (file: File) => void;
   } = $props();
 
   let promptHelpOpen = $state(false);
@@ -278,4 +296,43 @@
       Heldagshändelser visas i förhandsgranskningen men importeras inte än i den här versionen.
     </div>
   {/if}
+{/if}
+
+{#if hasAiKey}
+<div class="agenda-input-header" style="margin-top:12px;">
+  <span class="agenda-input-label">Läs av schemafoto</span>
+  <button class="agenda-input-toggle" onclick={onToggleScheduleOpen}>
+    {scheduleOpen ? '△' : '▽'}
+  </button>
+</div>
+{#if scheduleOpen}
+  <input
+    type="file"
+    accept="image/*,application/pdf"
+    class="sync-input"
+    onchange={(e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) onReadSchedule(file);
+    }}
+    disabled={scheduleLoading}
+  />
+  <input
+    type="text"
+    class="sync-input"
+    placeholder="Måndagens datum, t.ex. 260831 (lämna tomt om datum syns i schemat)"
+    value={scheduleMondayDate}
+    oninput={(e) => onScheduleMondayDateChange((e.target as HTMLInputElement).value)}
+    style="margin-top:6px;"
+  />
+  <label class="checkbox-label" style="margin-top:8px; display:flex; align-items:center; gap:6px; font-size:0.85em; cursor:pointer;">
+    <input type="checkbox" checked={scheduleAddStandardParts} onchange={onToggleScheduleStandardParts} />
+    Lägg till standarddelar (Närvaro, Arbete, Avslut)
+  </label>
+  {#if scheduleLoading}
+    <div class="feedback" style="margin-top:8px;">Läser av schema...</div>
+  {/if}
+  {#if scheduleError}
+    <div class="ai-error" style="margin-top:6px;">{scheduleError}</div>
+  {/if}
+{/if}
 {/if}

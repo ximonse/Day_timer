@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
 import { buildAiPlanSystemPrompt, normalizeAiPlanResponse, reviewAiPlanResponse, type AiAgendaPromptMode, type AiPlanIntent, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+import { isPrivateHost, safeErrorMessage } from '$lib/server/ai-shared.js';
 
 type Provider = 'anthropic' | 'openai' | 'gemini' | 'custom';
 type PlanMode = 'strict' | 'helpful';
@@ -43,33 +44,6 @@ async function callGemini(apiKey: string, systemPrompt: string, message: string)
   return res.text ?? '';
 }
 
-const PRIVATE_IP = [
-  /^127\./,
-  /^10\./,
-  /^172\.(1[6-9]|2\d|3[01])\./,
-  /^192\.168\./,
-  /^169\.254\./,
-  /^::1$/,
-  /^fc/i,
-  /^fe80/i,
-  /^0\./,
-];
-
-function isPrivateHost(hostname: string): boolean {
-  const h = hostname.replace(/^\[|\]$/g, '');
-  return PRIVATE_IP.some(r => r.test(h));
-}
-
-function safeErrorMessage(err: unknown): string {
-  if (!(err instanceof Error)) return 'Okänt fel';
-  const m = err.message.toLowerCase();
-  if (m.includes('401') || m.includes('unauthorized') || m.includes('invalid api key') || m.includes('incorrect api key')) return 'Ogiltig API-nyckel';
-  if (m.includes('429') || m.includes('rate limit') || m.includes('quota')) return 'För många förfrågningar — försök igen om en stund';
-  if (m.includes('403') || m.includes('forbidden')) return 'Åtkomst nekad av AI-tjänsten';
-  if (m.includes('timeout') || m.includes('timed out')) return 'AI-tjänsten svarade inte i tid';
-  if (m.includes('network') || m.includes('fetch') || m.includes('econnrefused')) return 'Kunde inte nå AI-tjänsten';
-  return 'AI-tjänsten svarade med ett fel';
-}
 
 function planningModeFromInput(mode: 'parts' | 'agenda', value: AiPlanningMode | undefined): AiPlanningMode {
   if (value === 'fixed-session' || value === 'anchored-day' || value === 'free-day') return value;
