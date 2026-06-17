@@ -7,7 +7,8 @@
   import { clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
-  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, applyMondayAnchor, resolveWeekInput, type AgendaDay } from '$lib/parse.js';
+  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
+  import { runScheduleImport } from '$lib/schedule-import.js';
   import {
     AGENDA_DAY_WINDOW_END,
     agendaMetaHelp,
@@ -2158,37 +2159,9 @@
     scheduleLoading = true;
     scheduleError = '';
     try {
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-      const fileData = btoa(binary);
-      const mediaType = file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
-
-      const body: Record<string, unknown> = {
-        provider: aiConfig.provider,
-        apiKey: aiConfig.apiKey,
-        fileData,
-        mediaType,
-        addStandardParts: scheduleAddStandardParts
-      };
-      if (aiConfig.baseUrl) body.baseUrl = aiConfig.baseUrl;
-      if (aiConfig.customModel) body.customModel = aiConfig.customModel;
-
-      const res = await fetch('/api/schedule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (data.error) { scheduleError = data.error; return; }
-
-      let text: string = data.text ?? '';
-      const resolvedMonday = resolveWeekInput(scheduleMondayDate);
-      text = applyMondayAnchor(text, resolvedMonday);
-
-      if (!text.trim()) { scheduleError = 'Schemat kunde inte läsas av – försök med en skarpare bild.'; return; }
-      agendaDraft = text;
+      const result = await runScheduleImport({ file, weekInput: scheduleMondayDate, addStandardParts: scheduleAddStandardParts, aiConfig });
+      if (result.error) { scheduleError = result.error; return; }
+      agendaDraft = result.text;
       agendaDraftDate = null;
       agendaDraftDirty = true;
       agendaDraftSource = 'ai';

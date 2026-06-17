@@ -12,6 +12,7 @@
 
 - **Polish är prioriterat**: Små UI-förbättringar, mjukare animationer och UX-puts är alltid välkommet.
 - **Tänk efter före**: Om användaren vill ändra kärnlogik eller lägga till stora features ska detta **motiveras och genomtänkas noggrant**. Fråga hellre en gång för mycket än att börja riva i stabil kod.
+- **Bygg inte på god-filen**: `src/routes/+page.svelte` är orkestrering — ny logik ska ligga i `src/lib/`. Skapa en ny lib-modul hellre än att utöka +page.
 - **Inga kommentarer i kod**: All förklaring ska ligga i dokumentationen eller commit-meddelanden.
 
 ---
