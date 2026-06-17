@@ -2193,8 +2193,8 @@
       agendaDraftDate = null;
       agendaDraftDirty = true;
       agendaDraftSource = 'ai';
-      agendaInputOpen = true;
       if (s.activeSection !== 'plan') setActiveSection('plan');
+      setWriteMenuSection('agenda', true);
     } catch (e: unknown) {
       scheduleError = e instanceof Error ? e.message : 'Nätverksfel';
     } finally {
