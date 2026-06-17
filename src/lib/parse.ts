@@ -438,6 +438,35 @@ const WEEKDAY_TOKENS: Record<string, number> = {
   '@FREDAG': 4,
 };
 
+export function resolveWeekInput(input: string): string {
+  const s = input.trim().toLowerCase();
+  const weekMatch = s.match(/^v\s*(\d{1,2})(?:\s+(\d{2,4}))?$/);
+  if (weekMatch) {
+    const week = parseInt(weekMatch[1], 10);
+    const yearRaw = weekMatch[2];
+    const year = yearRaw
+      ? (yearRaw.length === 2 ? 2000 + parseInt(yearRaw, 10) : parseInt(yearRaw, 10))
+      : new Date().getFullYear();
+    const monday = isoWeekMonday(year, week);
+    if (!monday) return '';
+    const yy = String(monday.getFullYear()).slice(2);
+    const mm = String(monday.getMonth() + 1).padStart(2, '0');
+    const dd = String(monday.getDate()).padStart(2, '0');
+    return `${yy}${mm}${dd}`;
+  }
+  if (/^\d{6}$/.test(s)) return s;
+  return '';
+}
+
+function isoWeekMonday(year: number, week: number): Date | null {
+  if (week < 1 || week > 53) return null;
+  const jan4 = new Date(year, 0, 4);
+  const dayOfWeek = jan4.getDay() || 7;
+  const monday1 = new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000);
+  const result = new Date(monday1.getTime() + (week - 1) * 7 * 86400000);
+  return result;
+}
+
 export function applyMondayAnchor(text: string, mondayYYMMDD: string): string {
   const match = mondayYYMMDD.match(/^(\d{2})(\d{2})(\d{2})$/);
   if (!match) return text;

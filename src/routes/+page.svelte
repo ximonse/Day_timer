@@ -7,7 +7,7 @@
   import { clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
-  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, applyMondayAnchor, type AgendaDay } from '$lib/parse.js';
+  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, applyMondayAnchor, resolveWeekInput, type AgendaDay } from '$lib/parse.js';
   import {
     AGENDA_DAY_WINDOW_END,
     agendaMetaHelp,
@@ -2184,8 +2184,9 @@
       if (data.error) { scheduleError = data.error; return; }
 
       let text: string = data.text ?? '';
-      if (scheduleMondayDate.match(/^\d{6}$/)) {
-        text = applyMondayAnchor(text, scheduleMondayDate);
+      const resolvedMonday = resolveWeekInput(scheduleMondayDate);
+      if (resolvedMonday) {
+        text = applyMondayAnchor(text, resolvedMonday);
       }
 
       if (!text.trim()) { scheduleError = 'Schemat kunde inte läsas av – försök med en skarpare bild.'; return; }
