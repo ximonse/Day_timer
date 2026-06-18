@@ -2,6 +2,7 @@
   import { createVoiceService } from '$lib/voice.js';
   import { AI_AGENDA_PROMPT_MODE_HELP, AI_AGENDA_PROMPT_MODE_LABELS, AI_FLEXIBILITY_LABELS, aiPlanMetadataItems, type AiAgendaPromptMode, type AiFlexibilityLevel, type AiPlanResponse } from '$lib/ai-plan-engine.js';
   import { fade } from 'svelte/transition';
+  import MicIcon from './MicIcon.svelte';
 
   let textareaEl: HTMLTextAreaElement | null = $state(null);
 
@@ -274,7 +275,7 @@
   <div>
     <div class="field-head-actions" style="justify-content:flex-end; margin-bottom:4px;">
       {#if userLevel >= 2}
-        <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-text – klistras in i aktivitetsfältet">●</button>
+        <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-text – klistras in i aktivitetsfältet"><MicIcon /></button>
       {/if}
       {#if userLevel >= 2 && hasAiKey && effectiveWhisperKey}
         <button class="micro-btn voice-plan-btn" class:recording={recordingTarget === 'voice-plan'}

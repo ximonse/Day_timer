@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
+  import MicIcon from './MicIcon.svelte';
 
   let textareaEl = $state<HTMLTextAreaElement | null>(null);
 
@@ -162,7 +163,7 @@
             <div class="field-head-actions">
               {#if userLevel >= 2}
                 <button class="micro-btn" class:recording={isRecording} onclick={startRecording} title="Röst-till-Plan">
-                  ●
+                  <MicIcon />
                 </button>
               {/if}
               <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>

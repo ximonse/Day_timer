@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AI_AGENDA_PROMPT_MODE_HELP, AI_AGENDA_PROMPT_MODE_LABELS, AI_FLEXIBILITY_LABELS, aiPlanMetadataItems, type AiAgendaPromptMode, type AiFlexibilityLevel, type AiPlanResponse } from '$lib/ai-plan-engine.js';
+  import MicIcon from './MicIcon.svelte';
 
   const promptModeOptions = Object.entries(AI_AGENDA_PROMPT_MODE_LABELS) as [AiAgendaPromptMode, string][];
 
@@ -179,7 +180,7 @@
               class:recording={isRecordingAgendaAi}
               onclick={onToggleAgendaVoice}
               title="Diktera instruktion"
-            >●</button>
+            ><MicIcon /></button>
             <button
               class="micro-btn"
               onclick={() => fileInputEl?.click()}
