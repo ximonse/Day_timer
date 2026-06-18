@@ -2,7 +2,7 @@
   import { fade } from 'svelte/transition';
   import NowEditorPanel from './NowEditorPanel.svelte';
   import PlanEditorPanel from './PlanEditorPanel.svelte';
-  import type { AiAgendaPromptMode, AiPlanResponse } from '$lib/ai-plan-engine.js';
+  import type { AiAgendaPromptMode, AiFlexibilityLevel, AiPlanResponse } from '$lib/ai-plan-engine.js';
 
   let {
     userLevel,
@@ -104,7 +104,9 @@
     onExportActualHistory,
     onApplySuggestedDuration,
     onRunAiWithText,
-    whisperApiKey = ''
+    whisperApiKey = '',
+    aiFlexibilityLevel = 2,
+    onFlexibilityChange = () => {}
   }: {
     userLevel: number;
     aiProvider: string;
@@ -207,6 +209,8 @@
     onApplySuggestedDuration: (mins: number) => void;
     onRunAiWithText: (text: string) => void;
     whisperApiKey?: string;
+    aiFlexibilityLevel?: AiFlexibilityLevel;
+    onFlexibilityChange?: (level: AiFlexibilityLevel) => void;
   } = $props();
 
 </script>
@@ -337,6 +341,8 @@
       {savedFlowMsg}
       {onRunAiWithText}
       {whisperApiKey}
+      {aiFlexibilityLevel}
+      {onFlexibilityChange}
     />
   </div>
 {/if}

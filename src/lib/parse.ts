@@ -476,6 +476,10 @@ function isoWeekMonday(year: number, week: number): Date | null {
   return result;
 }
 
+export function stripDraftComments(text: string): string {
+  return text.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
+}
+
 export function applyMondayAnchor(text: string, mondayYYMMDD: string): string {
   const match = mondayYYMMDD.match(/^(\d{2})(\d{2})(\d{2})$/);
   if (!match) return text;
@@ -495,3 +499,4 @@ export function applyMondayAnchor(text: string, mondayYYMMDD: string): string {
     return `@${y}${mo}${dy}`;
   });
 }
+

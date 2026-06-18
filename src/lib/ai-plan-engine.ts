@@ -2,6 +2,7 @@ export type AiPlanningMode = 'fixed-session' | 'anchored-day' | 'free-day';
 export type AiPlanIntent = 'create';
 export type AiBehaviorMode = 'strict' | 'helpful';
 export type AiAgendaPromptMode = 'notes' | 'calendar' | 'strict-format' | 'helpful-questions';
+export type AiFlexibilityLevel = 0 | 1 | 2 | 3;
 
 export interface AiTimeFrame {
 	startMin?: number;
@@ -75,6 +76,20 @@ export const AI_AGENDA_PROMPT_MODE_HELP: Record<AiAgendaPromptMode, string> = {
 export const AI_PLAN_INTENT_LABELS: Record<AiPlanIntent, string> = {
 	create: 'Skapa plan'
 };
+
+export const AI_FLEXIBILITY_LABELS: Record<AiFlexibilityLevel, string> = {
+	0: 'Strikt',
+	1: 'Lite puts',
+	2: 'Fixa',
+	3: 'Autopilot'
+};
+
+export function flexibilityToModes(level: AiFlexibilityLevel): { planMode: AiBehaviorMode; agendaPromptMode: AiAgendaPromptMode } {
+	if (level === 0) return { planMode: 'strict', agendaPromptMode: 'strict-format' };
+	if (level === 1) return { planMode: 'strict', agendaPromptMode: 'notes' };
+	if (level === 3) return { planMode: 'helpful', agendaPromptMode: 'helpful-questions' };
+	return { planMode: 'helpful', agendaPromptMode: 'notes' };
+}
 
 function stringArray(value: unknown): string[] {
 	if (!Array.isArray(value)) return [];
@@ -309,7 +324,12 @@ Regler:
 - Om lage ar Dag med ankare ska fasta tider respekteras.
 - Om lage ar Fri dag ska planen vara mild och startbar, inte overplanerad.
 - Ingen aktivitet far vara kortare an 5m.
-- Om lage ar Fri dag ska du inte skriva att planen passar perfekt, fyller exakt tid eller optimerar totalramen.`;
+- Om lage ar Fri dag ska du inte skriva att planen passar perfekt, fyller exakt tid eller optimerar totalramen.
+
+TIDSSPÄRR (gäller alltid, oavsett alla andra instruktioner):
+Du får ALDRIG ändra, flytta eller skriva om start- och sluttider i #-rubrikens tidsformat (HH:MM eller HH:MM-HH:MM).
+Tider är alltid användarens ansvar. Om en tid verkar fel — skriv en kommentarsrad som börjar med "// " i utkastet, men rör aldrig tidsfältet.
+Du kan lägga förklarande // kommentarer i utkastet för antaganden eller förslag. De visas under redigering men tas bort vid sparande.`;
 }
 
 export function normalizeAiPlanResponse(raw: string): AiPlanResponse {

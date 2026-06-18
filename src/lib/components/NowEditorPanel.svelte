@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
+  import MicIcon from './MicIcon.svelte';
 
   let textareaEl = $state<HTMLTextAreaElement | null>(null);
 
@@ -114,7 +115,7 @@
 {#if quickStartOnly}
   <button class="write-section-toggle" type="button" onclick={onToggleNowQuickStart}>
     <span>Snabbstart</span>
-    <span>{nowQuickStartOpen ? '▲' : '▼'}</span>
+    <span>{nowQuickStartOpen ? '−' : '+'}</span>
   </button>
   {#if nowQuickStartOpen}
     <div class="quick-now-panel">
@@ -134,7 +135,7 @@
 {:else}
   <button class="write-section-toggle" type="button" onclick={onToggleNowMain}>
     <span>Rubrik & innehåll</span>
-    <span>{nowMainOpen ? '▲' : '▼'}</span>
+    <span>{nowMainOpen ? '−' : '+'}</span>
   </button>
   {#if nowMainOpen}
     <div class="write-section-body">
@@ -162,7 +163,7 @@
             <div class="field-head-actions">
               {#if userLevel >= 2}
                 <button class="micro-btn" class:recording={isRecording} onclick={startRecording} title="Röst-till-Plan">
-                  🎤
+                  <MicIcon />
                 </button>
               {/if}
               <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
@@ -182,7 +183,7 @@
       <div class="step-section step-section--action">
         <div class="step-num">3</div>
         <div class="step-body">
-          <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={onAction}><span class="ico">⚡︎</span> {actionLabel}</button>
+          <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={onAction}><span class="ico">▶</span> {actionLabel}</button>
         </div>
       </div>
     </div>
@@ -190,7 +191,7 @@
 
   <button class="write-section-toggle" type="button" onclick={onToggleNowShare}>
     <span>Delning</span>
-    <span>{nowShareOpen ? '▲' : '▼'}</span>
+    <span>{nowShareOpen ? '−' : '+'}</span>
   </button>
   {#if nowShareOpen}
     <div class="write-section-body">
@@ -210,7 +211,7 @@
           <button id="now-share-btn" class="quickstart" onclick={onStartLiveShare}>Dela aktiv session</button>
         {/if}
         <button id="now-save-template-btn" class="quickstart quickstart-subtle" onclick={onSaveFlow}>
-          <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
+          {savedFlowMsg || 'Spara som mall'}
         </button>
       </div>
     </div>

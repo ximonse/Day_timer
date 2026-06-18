@@ -172,7 +172,7 @@
 {#if userLevel >= 2}
   <div class="plan-editor">
     <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen}>
-      {aiConfigOpen ? '▲' : '▼'} AI-planering <span class="beta-tag">BETA</span>
+      {aiConfigOpen ? '−' : '+'} AI-planering <span class="beta-tag">BETA</span>
     </button>
     {#if aiConfigOpen}
       <div class="section-copy muted" style="font-size:11px;">
@@ -189,7 +189,7 @@
 
       {#if aiApiKey}
         <div class="ai-key-row">
-          <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
+          <span class="ai-key-masked">◆ {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
           <button class="ai-key-btn" onclick={onToggleAiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
           <button class="ai-key-btn" onclick={onClearAiConfig}>Rensa</button>
         </div>
@@ -239,7 +239,7 @@
 
 <div class="plan-editor">
   <button class="ai-panel-toggle" onclick={onToggleTimeData}>
-    {timeDataOpen ? '▲' : '▼'} Tidsdata & Lärande <span class="beta-tag">BETA</span>
+    {timeDataOpen ? '−' : '+'} Tidsdata & Lärande <span class="beta-tag">BETA</span>
   </button>
   {#if timeDataOpen}
     <div class="section-copy muted" style="font-size:11px;">
