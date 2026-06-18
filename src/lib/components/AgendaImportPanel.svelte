@@ -97,6 +97,12 @@
     if (agendaTextarea.value !== agendaDraft) agendaTextarea.value = agendaDraft;
   });
 
+  $effect(() => {
+    if (agendaDraftSource === 'ai' && agendaTextarea) {
+      agendaTextarea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+
   async function handleCopy(type: AiAgendaPromptMode) {
     await onCopyPrompt(type);
     copyStatuses = { ...copyStatuses, [type]: '✓ Kopierad' };
@@ -173,7 +179,7 @@
               class:recording={isRecordingAgendaAi}
               onclick={onToggleAgendaVoice}
               title="Diktera instruktion"
-            >⏺</button>
+            >●</button>
             <button
               class="micro-btn"
               onclick={() => fileInputEl?.click()}

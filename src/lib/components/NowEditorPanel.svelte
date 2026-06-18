@@ -162,7 +162,7 @@
             <div class="field-head-actions">
               {#if userLevel >= 2}
                 <button class="micro-btn" class:recording={isRecording} onclick={startRecording} title="Röst-till-Plan">
-                  ⏺
+                  ●
                 </button>
               {/if}
               <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
