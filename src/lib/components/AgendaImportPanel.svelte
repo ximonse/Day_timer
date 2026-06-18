@@ -208,12 +208,6 @@
           </div>
         </div>
 
-        <div class="ai-mode-row">
-          {#each promptModeOptions as [mode, label]}
-            <button class="ai-mode-btn" class:on={agendaAiPromptMode === mode} onclick={() => onSetAgendaAiPromptMode(mode)} title={AI_AGENDA_PROMPT_MODE_HELP[mode]}>{label}</button>
-          {/each}
-        </div>
-
         {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
         {#if agendaAiQuestionText}
           <div class="feedback" style="margin-bottom:8px; white-space:pre-line;">
