@@ -7,7 +7,7 @@
   import { clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
-  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
+  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, stripDraftComments, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
   import { runScheduleImport } from '$lib/schedule-import.js';
   import {
     AGENDA_DAY_WINDOW_END,
@@ -31,7 +31,9 @@
   import { buildAgendaLayout, yToMinute } from '$lib/agenda-layout.js';
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { getAiAgendaPrompt, getAiSessionPrompt, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
-  import { isValidPlanningModeForContext, type AiAgendaPromptMode, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { flexibilityToModes, isValidPlanningModeForContext, type AiAgendaPromptMode, type AiFlexibilityLevel, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
+  import { createVoiceService } from '$lib/voice.js';
+  import { detectImportType } from '$lib/unified-import.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
   import { clickOutside } from '$lib/actions.js';
   import { readSessionValue, writeSessionValue, removeSessionValue } from '$lib/storage.js';
@@ -216,6 +218,9 @@
   let agendaAiPromptMode: AiAgendaPromptMode = $state('notes');
   let sessionAiLastResponse: AiPlanResponse | null = $state(null);
   let agendaAiLastResponse: AiPlanResponse | null = $state(null);
+  let aiFlexibilityLevel: AiFlexibilityLevel = $state(2);
+  const agendaVoice = createVoiceService();
+  let agendaAiRecording = $state(false);
 
   let adminPassword = $state('');
   let inviteCodeResult = $state('');
@@ -1835,7 +1840,8 @@
     const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
     const savingAiDraft = agendaDraftSource === 'ai';
 
-    const parsedDraft = agendaDraft.trim() ? parseAgenda(agendaDraft) : [];
+    const cleanedDraft = stripDraftComments(agendaDraft);
+    const parsedDraft = cleanedDraft.trim() ? parseAgenda(cleanedDraft) : [];
     const datedDays = parsedDraft.filter(d => d.date !== null);
     if (savingAiDraft && datedDays.length > 1) {
       const merged = mergeAgendaDayData(activeAgendaText(), parsedDraft);
@@ -2083,23 +2089,26 @@
   }
 
   async function runAiParts() {
-    if (!aiInput.trim()) return;
+    const input = aiInput.trim() || partsDraft.trim();
+    if (!input) return;
     aiLoading = true; aiError = ''; aiQuestionText = '';
     try {
-      const preferredMode = sessionPlanningModeForPromptMode(sessionAiPromptMode);
+      const { planMode, agendaPromptMode } = flexibilityToModes(aiFlexibilityLevel);
+      sessionAiPromptMode = agendaPromptMode;
+      const preferredMode = sessionPlanningModeForPromptMode(agendaPromptMode);
       const planningMode = isValidPlanningModeForContext('plan', preferredMode)
         ? preferredMode
         : 'fixed-session';
-      const requestConfig = { ...aiConfig, planMode: agendaPlanModeForPromptMode(sessionAiPromptMode) };
-      const text = await requestAiPlan(requestConfig, aiInput, 'parts', {
+      const requestConfig = { ...aiConfig, planMode };
+      const text = await requestAiPlan(requestConfig, input, 'parts', {
         startMin: s.startMin,
         totalMin: totalMin(),
         currentPlan: serializeBlocks(s.blocks, undefined, s.extraInfo),
         dayTitle: s.dayTitle,
         extraInfo: s.extraInfo
-      }, planningMode, 'create', sessionAiPromptMode);
+      }, planningMode, 'create', agendaPromptMode);
       sessionAiLastResponse = text;
-      if (sessionAiPromptMode === 'helpful-questions' && isAiQuestionResponse(text.text)) {
+      if (agendaPromptMode === 'helpful-questions' && isAiQuestionResponse(text.text)) {
         aiQuestionText = text.text;
         return;
       }
@@ -2107,12 +2116,12 @@
       sessionAiLastResponse = { ...text, text: normalizedText };
       handlePartsInput(normalizedText, true);
       aiInput = '';
-    } catch (e: any) { 
+    } catch (e: any) {
       sessionAiLastResponse = null;
       aiQuestionText = '';
-      aiError = e.message || 'Nätverksfel'; 
-    } finally { 
-      aiLoading = false; 
+      aiError = e.message || 'Nätverksfel';
+    } finally {
+      aiLoading = false;
     }
   }
 
@@ -2121,18 +2130,20 @@
     agendaAiLoading = true; agendaAiError = ''; agendaAiQuestionText = '';
     try {
       const todayISO = localDateISO();
-      const preferredMode = agendaPlanningModeForPromptMode(agendaAiPromptMode);
+      const { planMode, agendaPromptMode } = flexibilityToModes(aiFlexibilityLevel);
+      agendaAiPromptMode = agendaPromptMode;
+      const preferredMode = agendaPlanningModeForPromptMode(agendaPromptMode);
       const planningMode = isValidPlanningModeForContext('agenda', preferredMode)
         ? preferredMode
         : 'anchored-day';
-      const requestConfig = { ...aiConfig, planMode: agendaPlanModeForPromptMode(agendaAiPromptMode) };
+      const requestConfig = { ...aiConfig, planMode };
       const targetDate = selectedDay?.date ?? activeAgendaDate() ?? todayISO;
       const text = await requestAiPlan(requestConfig, agendaAiInput, 'agenda', {
         date: todayISO,
         currentPlan: activeAgendaText()
-      }, planningMode, 'create', agendaAiPromptMode);
+      }, planningMode, 'create', agendaPromptMode);
       agendaAiLastResponse = text;
-      if (agendaAiPromptMode === 'helpful-questions' && isAiQuestionResponse(text.text)) {
+      if (agendaPromptMode === 'helpful-questions' && isAiQuestionResponse(text.text)) {
         agendaAiQuestionText = text.text;
         return;
       }
@@ -2171,6 +2182,44 @@
       scheduleError = e instanceof Error ? e.message : 'Nätverksfel';
     } finally {
       scheduleLoading = false;
+    }
+  }
+
+  function toggleAgendaVoice() {
+    if (agendaAiRecording) {
+      agendaVoice.stop();
+      agendaAiRecording = false;
+      return;
+    }
+    agendaAiRecording = true;
+    const useWhisper = aiConfig.provider === 'openai' && !!aiConfig.apiKey;
+    agendaVoice.start({
+      useWhisper,
+      apiKey: aiConfig.whisperKey || aiConfig.apiKey,
+      onResult: (text) => {
+        agendaAiInput = agendaAiInput ? agendaAiInput + ' ' + text : text;
+        agendaAiRecording = false;
+      },
+      onError: (err) => {
+        console.error('Agenda voice error:', err);
+        agendaAiRecording = false;
+      }
+    });
+  }
+
+  async function handleUnifiedUpload(file: File) {
+    const type = detectImportType(file);
+    if (type === 'ics') {
+      const text = await file.text();
+      icsDraft = text;
+      previewIcsImport();
+      importPreviewedIcs();
+    } else if (type === 'text') {
+      const text = await file.text();
+      agendaAiInput = text;
+      agendaAiOpen = true;
+    } else {
+      await runScheduleVision(file);
     }
   }
 
@@ -3229,7 +3278,7 @@
             </div>
           </div>
         {:else if activeSection === 'now' || activeSection === 'plan'}
-          <div in:fade={{ duration: 150 }}>
+          <div class={activeSection === 'plan' ? 'menu-blob' : ''} in:fade={{ duration: 150 }}>
             <SessionEditorPanel
               userLevel={effectiveUserLevel}
               aiProvider={aiConfig.provider}
@@ -3300,6 +3349,8 @@
               onSetAiPromptMode={(mode) => { sessionAiPromptMode = mode; aiQuestionText = ''; aiError = ''; }}
               onRunAi={runAiParts}
               onRunAiWithText={(text) => { aiInput = text; runAiParts(); }}
+              {aiFlexibilityLevel}
+              onFlexibilityChange={(level) => { aiFlexibilityLevel = level; }}
               onAction={() => {
                 if (s.blocks.length === 0 || totalMin() <= 0) {
                   showToast('Lägg till minst en aktivitet först');
@@ -3503,13 +3554,6 @@
               draftStatus={agendaDraftStatus}
               selectedDateLabel={selectedDay?.date ? fmtAgendaDate(selectedDay.date) : 'Odaterad dag'}
               {savedAgendaMsg}
-              {icsImportOpen}
-              {icsDraft}
-              icsSummary={icsPreviewSummary}
-              {icsPreviewLines}
-              icsError={icsImportError}
-              icsHasPreview={icsPreviewEvents.length > 0}
-              {icsCanImport}
               hasAiKey={!!aiApiKey}
               {agendaAiOpen}
               {agendaAiInput}
@@ -3520,16 +3564,12 @@
               {agendaAiLoading}
               showHelpHints={s.showHelpHints}
               showImportHelp={helpVisible(agendaImportHelpOpen)}
-              showIcsHelp={helpVisible(agendaIcsHelpOpen)}
+              {aiFlexibilityLevel}
+              isRecordingAgendaAi={agendaAiRecording}
               onToggleOpen={() => setWriteMenuSection('agenda', !agendaInputOpen)}
               onDraftChange={(value) => { agendaDraft = value; agendaDraftDirty = true; agendaDraftDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO(); }}
               onDraftPaste={() => {}}
               onSave={saveAgenda}
-              onToggleIcsOpen={() => icsImportOpen = !icsImportOpen}
-              onIcsDraftChange={(value) => { icsDraft = value; resetIcsPreview(); }}
-              onIcsFileChange={readIcsFile}
-              onPreviewIcs={previewIcsImport}
-              onImportIcs={importPreviewedIcs}
               onCopyPrompt={async (type) => {
                 const prompt = getAiAgendaPrompt(type, localDateISO());
                 await navigator.clipboard.writeText(prompt);
@@ -3539,16 +3579,9 @@
               onSetAgendaAiPromptMode={(mode) => { agendaAiPromptMode = mode; agendaAiQuestionText = ''; agendaAiError = ''; }}
               onRunAi={runAiAgenda}
               onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}
-              onToggleIcsHelp={() => agendaIcsHelpOpen = toggleHelpOverride(agendaIcsHelpOpen)}
-              {scheduleOpen}
-              {scheduleMondayDate}
-              {scheduleAddStandardParts}
-              {scheduleLoading}
-              {scheduleError}
-              onToggleScheduleOpen={() => scheduleOpen = !scheduleOpen}
-              onScheduleMondayDateChange={(value) => scheduleMondayDate = value}
-              onToggleScheduleStandardParts={() => scheduleAddStandardParts = !scheduleAddStandardParts}
-              onReadSchedule={runScheduleVision}
+              onFlexibilityChange={(level) => { aiFlexibilityLevel = level; }}
+              onToggleAgendaVoice={toggleAgendaVoice}
+              onUnifiedUpload={handleUnifiedUpload}
             />
           </div>
         {/if}

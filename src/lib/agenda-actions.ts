@@ -1,5 +1,5 @@
 import { type AgendaFlowMeta, type Flow } from './state.svelte.js';
-import { mergeAgendaDayData, parseAgenda, serializeAgenda, type AgendaDay } from './parse.js';
+import { mergeAgendaDayData, parseAgenda, serializeAgenda, stripDraftComments, type AgendaDay } from './parse.js';
 import {
 	buildAgendaItemsForDay,
 	cloneAgendaDay,
@@ -33,7 +33,8 @@ export interface SaveAgendaDraftResult {
 }
 
 export function saveAgendaDraft(input: SaveAgendaDraftInput): SaveAgendaDraftResult {
-	const parsedDraft = input.draftText.trim() ? parseAgenda(input.draftText) : [];
+	const cleanedDraft = stripDraftComments(input.draftText);
+	const parsedDraft = cleanedDraft.trim() ? parseAgenda(cleanedDraft) : [];
 	const draftDay = parsedDraft.find(day => day.date === input.targetDate)
 		?? (parsedDraft[0] ? { ...parsedDraft[0], date: input.targetDate } : { date: input.targetDate, flows: [] });
 	const baseDays = input.activeText.trim() ? parseAgenda(input.activeText) : [];

@@ -1,10 +1,9 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
-  import { AI_AGENDA_PROMPT_MODE_HELP, AI_AGENDA_PROMPT_MODE_LABELS, aiPlanMetadataItems, type AiAgendaPromptMode, type AiPlanResponse } from '$lib/ai-plan-engine.js';
+  import { AI_AGENDA_PROMPT_MODE_HELP, AI_AGENDA_PROMPT_MODE_LABELS, AI_FLEXIBILITY_LABELS, aiPlanMetadataItems, type AiAgendaPromptMode, type AiFlexibilityLevel, type AiPlanResponse } from '$lib/ai-plan-engine.js';
   import { fade } from 'svelte/transition';
 
   let textareaEl: HTMLTextAreaElement | null = $state(null);
-  let aiTextareaEl: HTMLTextAreaElement | null = $state(null);
 
   const voice = createVoiceService();
   const promptModeOptions = Object.entries(AI_AGENDA_PROMPT_MODE_LABELS) as [AiAgendaPromptMode, string][];
@@ -100,7 +99,9 @@
     onSaveFlow,
     savedFlowMsg,
     onRunAiWithText,
-    whisperApiKey = ''
+    whisperApiKey = '',
+    aiFlexibilityLevel = 2,
+    onFlexibilityChange = () => {}
   }: {
     userLevel: number;
     aiProvider: string;
@@ -138,6 +139,8 @@
     aiPromptMode: AiAgendaPromptMode;
     aiLastResponse: AiPlanResponse | null;
     onSetAiPromptMode: (mode: AiAgendaPromptMode) => void;
+    aiFlexibilityLevel?: AiFlexibilityLevel;
+    onFlexibilityChange?: (level: AiFlexibilityLevel) => void;
     aiError: string;
     aiQuestionText: string;
     onRunAi: () => void;
@@ -259,6 +262,7 @@
 </script>
 
 <div class="plan-editor">
+  <div class="plan-section-title">Planera ett pass</div>
   <div class="section-copy" style="font-size:12px;color:var(--menu-muted);" title={hasSelection ? `Ändringar sparas tillbaka till det markerade blocket. Källa: ${sourceLabel}. ${sourceHelp}` : 'Sparas som ett nytt block på den dag som är vald i kalendern.'}>
     {targetDateLabel}
   </div>
@@ -290,25 +294,20 @@
     {#if userLevel >= 2 && hasAiKey}
       <div class="ai-panel">
         <button class="ai-panel-toggle" onclick={onToggleAiPanel}>
-          {aiPanelOpen ? '▲' : '▼'} Planera med AI <span class="beta-tag">BETA</span>
+          {aiPanelOpen ? '▲' : '▼'} Hjälp av AI
         </button>
         {#if aiPanelOpen}
-          <div class="feedback" style="margin-bottom:8px; opacity:0.8;">
-            Används på egen risk. Din API-nyckel används enbart för att skicka instruktioner direkt till AI-leverantör.
-          </div>
-          <div style="position:relative;">
-            <textarea class="ai-input" placeholder={aiInputPlaceholder}
-              bind:this={aiTextareaEl}
-              value={aiInput}
-              oninput={(e) => onAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
-            <button class="mic-overlay-btn" class:recording={isRecording && recordingTarget === 'ai'} onclick={() => startRecording('ai')} title="Prata in instruktion">
-              🎤
-            </button>
-          </div>
-          <div class="ai-mode-row">
-            {#each promptModeOptions as [mode, label]}
-              <button class="ai-mode-btn" class:on={aiPromptMode === mode} onclick={() => onSetAiPromptMode(mode)} title={AI_AGENDA_PROMPT_MODE_HELP[mode]}>{label}</button>
-            {/each}
+          <div class="ai-flex-slider">
+            <input type="range" min="0" max="3" step="1"
+              value={aiFlexibilityLevel}
+              oninput={(e) => onFlexibilityChange(Number((e.target as HTMLInputElement).value) as AiFlexibilityLevel)}
+              class="flex-range"
+            />
+            <div class="flex-labels">
+              {#each [0, 1, 2, 3] as level}
+                <span class="flex-label" class:active={aiFlexibilityLevel === level}>{AI_FLEXIBILITY_LABELS[level as AiFlexibilityLevel]}</span>
+              {/each}
+            </div>
           </div>
           {#if aiError}<div class="ai-error">{aiError}</div>{/if}
           {#if aiQuestionText}
@@ -323,8 +322,8 @@
               {/each}
             </div>
           {/if}
-          <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={aiLoading || !aiInput.trim()}>
-            {aiLoading ? 'Tänker...' : 'Generera ▶'}
+          <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={aiLoading}>
+            {aiLoading ? 'Tänker...' : 'Planera med AI ▶'}
           </button>
         {/if}
       </div>
@@ -473,4 +472,10 @@
     cursor: pointer;
     margin-left: auto;
   }
+  .ai-flex-slider { margin-bottom: 8px; }
+  .flex-range { width: 100%; accent-color: var(--accent); cursor: pointer; }
+  .flex-labels { display: flex; justify-content: space-between; margin-top: 2px; }
+  .flex-label { font-size: 11px; color: var(--menu-muted); transition: color 0.15s; }
+  .flex-label.active { color: var(--accent); font-weight: 600; }
+  .plan-section-title { font-size: 13px; font-weight: 600; color: var(--menu-fg); margin-bottom: 8px; }
 </style>
