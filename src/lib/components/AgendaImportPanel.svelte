@@ -116,7 +116,7 @@
   <span class="agenda-input-label">Dag- & veckoplanering</span>
   <button class="info-btn" onclick={onToggleImportHelp}>i</button>
   <button class="agenda-input-toggle" onclick={onToggleOpen}>
-    {agendaInputOpen ? '△' : '▽'}
+    {agendaInputOpen ? '−' : '+'}
   </button>
 </div>
 {#if showImportHelp}
@@ -142,14 +142,16 @@
     <div class="agenda-save-row">
       <button class="agenda-save-btn" onclick={onSave}
         title="Sparar dagtexten och synkar till molnet om du är inloggad.">
-        {savedAgendaMsg || (agendaDraftSource === 'ai' ? '✓ Godkänn AI-förslag' : '📅 Spara i dagplan')}
+        {savedAgendaMsg || (agendaDraftSource === 'ai' ? '✓ Godkänn AI-förslag' : 'Spara i dagplan')}
       </button>
-      {#if hasAiKey}
-        <button class="agenda-save-btn agenda-ai-btn" onclick={onToggleAi}>
-          ✨ Skapa med AI
-        </button>
-      {/if}
     </div>
+
+    {#if hasAiKey}
+      <div class="agenda-input-header" style="margin-top:12px;">
+        <span class="agenda-input-label">Skapa med AI</span>
+        <button class="agenda-input-toggle" onclick={onToggleAi}>{agendaAiOpen ? '−' : '+'}</button>
+      </div>
+    {/if}
 
     {#if agendaAiOpen && hasAiKey}
       <div class="agenda-ai-panel">
@@ -171,12 +173,12 @@
               class:recording={isRecordingAgendaAi}
               onclick={onToggleAgendaVoice}
               title="Diktera instruktion"
-            >🎤</button>
+            >⏺</button>
             <button
               class="micro-btn"
               onclick={() => fileInputEl?.click()}
               title="Ladda upp schema, ICS, bild eller textfil"
-            >📎</button>
+            >↑</button>
             <input
               bind:this={fileInputEl}
               type="file"
@@ -229,7 +231,7 @@
       <span class="agenda-input-label">Prompter för extern AI</span>
       <button class="info-btn" onclick={() => promptHelpOpen = !promptHelpOpen}>i</button>
       <button class="agenda-input-toggle" onclick={() => promptMenuOpen = !promptMenuOpen}>
-        {promptMenuOpen ? '△' : '▽'}
+        {promptMenuOpen ? '−' : '+'}
       </button>
     </div>
     {#if promptHelpOpen}

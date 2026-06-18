@@ -229,7 +229,7 @@
       <div class="agenda-input-header" style="margin-bottom:8px;">
         <span class="agenda-input-label">Kalender</span>
         <button class="agenda-input-toggle" onclick={() => agendaCalendarOpen = !agendaCalendarOpen}>
-          {agendaCalendarOpen ? '△' : '▽'}
+          {agendaCalendarOpen ? '−' : '+'}
         </button>
       </div>
       {#if agendaCalendarOpen}

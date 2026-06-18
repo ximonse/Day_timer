@@ -274,7 +274,7 @@
   <div>
     <div class="field-head-actions" style="justify-content:flex-end; margin-bottom:4px;">
       {#if userLevel >= 2}
-        <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-text – klistras in i aktivitetsfältet">🎤</button>
+        <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-text – klistras in i aktivitetsfältet">⏺</button>
       {/if}
       {#if userLevel >= 2 && hasAiKey && effectiveWhisperKey}
         <button class="micro-btn voice-plan-btn" class:recording={recordingTarget === 'voice-plan'}
@@ -294,7 +294,7 @@
     {#if userLevel >= 2 && hasAiKey}
       <div class="ai-panel">
         <button class="ai-panel-toggle" onclick={onToggleAiPanel}>
-          {aiPanelOpen ? '▲' : '▼'} Hjälp av AI
+          {aiPanelOpen ? '−' : '+'} Hjälp av AI
         </button>
         {#if aiPanelOpen}
           <div class="ai-flex-slider">
@@ -353,7 +353,7 @@
 
       {#if showRecSuggestion}
         <div class="rec-suggestion" transition:fade>
-          <span class="ico">✨</span> Tidigare har {titleValue || 'detta'} tagit <strong>{suggestedDuration?.minutes} min</strong>.
+          <span class="ico">★</span> Tidigare har {titleValue || 'detta'} tagit <strong>{suggestedDuration?.minutes} min</strong>.
           <button class="rec-apply-btn" onclick={() => onApplySuggestedDuration(suggestedDuration!.minutes)}>Använd</button>
         </div>
       {/if}
@@ -374,7 +374,7 @@
 
     <button class="write-section-toggle" type="button" onclick={onTogglePlanShare}>
       <span>Delning</span>
-      <span>{planShareOpen ? '▲' : '▼'}</span>
+      <span>{planShareOpen ? '−' : '+'}</span>
     </button>
     {#if planShareOpen}
       <div class="write-section-body">

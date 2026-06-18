@@ -172,7 +172,7 @@
 {#if userLevel >= 2}
   <div class="plan-editor">
     <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen}>
-      {aiConfigOpen ? '▲' : '▼'} AI-planering <span class="beta-tag">BETA</span>
+      {aiConfigOpen ? '−' : '+'} AI-planering <span class="beta-tag">BETA</span>
     </button>
     {#if aiConfigOpen}
       <div class="section-copy muted" style="font-size:11px;">
@@ -239,7 +239,7 @@
 
 <div class="plan-editor">
   <button class="ai-panel-toggle" onclick={onToggleTimeData}>
-    {timeDataOpen ? '▲' : '▼'} Tidsdata & Lärande <span class="beta-tag">BETA</span>
+    {timeDataOpen ? '−' : '+'} Tidsdata & Lärande <span class="beta-tag">BETA</span>
   </button>
   {#if timeDataOpen}
     <div class="section-copy muted" style="font-size:11px;">

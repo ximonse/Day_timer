@@ -3698,14 +3698,14 @@
 
       <!-- Column 2 -->
       <div class="help-column">
-        <h3>📅 Agendan & Kalendern</h3>
+        <h3>Agendan & Kalendern</h3>
         <p>Öppna agendan med pilen <span class="ico">▷</span> till höger om klockan.</p>
         <div class="help-box">
           <strong>Tidslinjen</strong>: Här ser du hela dagen. Du kan dra i blocken för att justera deras tid eller flytta dem i ordningen.<br/><br/>
           <strong>Dagtext</strong>: Det kraftfullaste sättet att planera. Skriv <code>@260517</code> för datum och <code>#Rubrik</code> för att snabbt bygga hela dagar med text.
         </div>
 
-        <h3>✨ AI & Smart Import</h3>
+        <h3>AI & Smart Import</h3>
         <div class="help-box">
           <strong>Prompter</strong>: Vi har färdiga prompter för Gemini/ChatGPT. Kopiera dem för att be AI:n konvertera röriga anteckningar eller Google Kalender-data till Day Timer-format.<br/><br/>
           <strong>AI-planering</strong>: Har du en egen API-nyckel? Använd den inbyggda AI-panelen i editorn för att generera hela pass från en enkel beskrivning.

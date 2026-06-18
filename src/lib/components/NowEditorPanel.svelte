@@ -114,7 +114,7 @@
 {#if quickStartOnly}
   <button class="write-section-toggle" type="button" onclick={onToggleNowQuickStart}>
     <span>Snabbstart</span>
-    <span>{nowQuickStartOpen ? '▲' : '▼'}</span>
+    <span>{nowQuickStartOpen ? '−' : '+'}</span>
   </button>
   {#if nowQuickStartOpen}
     <div class="quick-now-panel">
@@ -134,7 +134,7 @@
 {:else}
   <button class="write-section-toggle" type="button" onclick={onToggleNowMain}>
     <span>Rubrik & innehåll</span>
-    <span>{nowMainOpen ? '▲' : '▼'}</span>
+    <span>{nowMainOpen ? '−' : '+'}</span>
   </button>
   {#if nowMainOpen}
     <div class="write-section-body">
@@ -162,7 +162,7 @@
             <div class="field-head-actions">
               {#if userLevel >= 2}
                 <button class="micro-btn" class:recording={isRecording} onclick={startRecording} title="Röst-till-Plan">
-                  🎤
+                  ⏺
                 </button>
               {/if}
               <button class="info-btn" type="button" onclick={onTogglePartsHelp}>i</button>
@@ -190,7 +190,7 @@
 
   <button class="write-section-toggle" type="button" onclick={onToggleNowShare}>
     <span>Delning</span>
-    <span>{nowShareOpen ? '▲' : '▼'}</span>
+    <span>{nowShareOpen ? '−' : '+'}</span>
   </button>
   {#if nowShareOpen}
     <div class="write-section-body">
