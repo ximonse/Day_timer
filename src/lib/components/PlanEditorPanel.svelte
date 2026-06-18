@@ -282,7 +282,7 @@
           disabled={aiLoading && recordingTarget !== 'voice-plan'}
           onclick={() => startVoicePlan(effectiveWhisperKey)}
           title="Prata in hela passet – Whisper transkriberar och AI strukturerar aktiviteterna direkt">
-          {recordingTarget === 'voice-plan' ? '⏹' : '🎙'}
+          {#if recordingTarget === 'voice-plan'}■{:else}<MicIcon />{/if}
         </button>
       {/if}
       <button class="micro-btn" onclick={onCopyPrompt} title="Kopiera AI-prompt">{copyBtnText}</button>
@@ -370,7 +370,7 @@
     </div>
 
     <button class="quickstart quickstart-subtle" style="width:100%; margin-top:4px;" onclick={onSaveFlow} title="Spara passet som återanvändbar mall i Biblioteket">
-      <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
+      {savedFlowMsg || 'Spara som mall'}
     </button>
 
     <button class="write-section-toggle" type="button" onclick={onTogglePlanShare}>

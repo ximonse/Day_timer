@@ -183,7 +183,7 @@
       <div class="step-section step-section--action">
         <div class="step-num">3</div>
         <div class="step-body">
-          <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={onAction}><span class="ico">⚡︎</span> {actionLabel}</button>
+          <button id="quickStartBtn" class="quickstart" style="width:100%" onclick={onAction}><span class="ico">▶</span> {actionLabel}</button>
         </div>
       </div>
     </div>
@@ -211,7 +211,7 @@
           <button id="now-share-btn" class="quickstart" onclick={onStartLiveShare}>Dela aktiv session</button>
         {/if}
         <button id="now-save-template-btn" class="quickstart quickstart-subtle" onclick={onSaveFlow}>
-          <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
+          {savedFlowMsg || 'Spara som mall'}
         </button>
       </div>
     </div>

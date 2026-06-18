@@ -189,7 +189,7 @@
 
       {#if aiApiKey}
         <div class="ai-key-row">
-          <span class="ai-key-masked">🔑 {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
+          <span class="ai-key-masked">◆ {aiApiKey.slice(0, 8)}···{aiApiKey.slice(-4)}</span>
           <button class="ai-key-btn" onclick={onToggleAiKeyVisible}>{aiKeyVisible ? 'Dölj' : 'Ändra'}</button>
           <button class="ai-key-btn" onclick={onClearAiConfig}>Rensa</button>
         </div>
