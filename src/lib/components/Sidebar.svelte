@@ -18,7 +18,8 @@
     
     // Actions/Callbacks
     onCommitEdit: () => void;
-    onEndSegmentEarly?: () => void;
+    onToggleSegmentDone?: (id: string) => void;
+    doneBlockIds?: string[];
   }
 
   let {
@@ -33,7 +34,8 @@
     elapsedMin,
     agendaView,
     onCommitEdit,
-    onEndSegmentEarly
+    onToggleSegmentDone,
+    doneBlockIds = []
   }: Props = $props();
 
   let editingBlockId = $state<string | null>(null);
@@ -400,7 +402,7 @@
     {#if dragOverIdx === i && armedBlockId !== b.id}
       <div class="drag-drop-line" aria-hidden="true"></div>
     {/if}
-    <div class="row" class:active={isActive} class:past={isPast} class:armed={armedBlockId === b.id}
+    <div class="row" class:active={isActive} class:past={isPast} class:armed={armedBlockId === b.id} class:done={doneBlockIds.includes(b.id)}
          use:bindRow={b.id}
          onclickcapture={maybeSuppressClick}>
       <span class="dot drag-handle"
@@ -416,9 +418,11 @@
         <button class="name seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'name')} oncontextmenu={(e) => { e.preventDefault(); revealedCheckId = `${b.id}-title`; }}>
           {@html parseMarkdownHtml(displayTitle)}
         </button>
-        <div class="title-check-btn" class:revealed={revealedCheckId === `${b.id}-title`} onclick={(e) => { e.stopPropagation(); toggleTitleCheck(b); revealedCheckId = null; }} title="Bocka av block">
-          {#if b.title.includes('~~')}✓{/if}
-        </div>
+        {#if !onToggleSegmentDone}
+          <div class="title-check-btn" class:revealed={revealedCheckId === `${b.id}-title`} onclick={(e) => { e.stopPropagation(); toggleTitleCheck(b); revealedCheckId = null; }} title="Bocka av block">
+            {#if b.title.includes('~~')}✓{/if}
+          </div>
+        {/if}
       {/if}
       {#if editingBlockId === b.id && editingBlockField === 'min'}
         <input class="inline-edit min-inp" type="number" min="1" use:focusOnMount
@@ -431,8 +435,8 @@
       {:else if segMinutesMode === 'remaining'}
         <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsedMin)) : b.minutes}m kvar</button>
       {/if}
-      {#if isActive && !isViewMode && onEndSegmentEarly}
-        <button class="seg-done-btn" onclick={(e) => { e.stopPropagation(); onEndSegmentEarly(); }} title="Klar nu — resterande tid läggs på kommande">✓</button>
+      {#if !isViewMode && onToggleSegmentDone}
+        <button class="seg-done-btn" class:checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på kommande'}>{doneBlockIds.includes(b.id) ? '✓' : '○'}</button>
       {/if}
     </div>
     {#if showSegNotes}
@@ -527,8 +531,10 @@
   }
   .seglist .min { color: var(--sidebar-subheading); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; cursor: text; }
   .seg-inline-btn { background: transparent; border: 0; padding: 0; font: inherit; text-align: left; }
-  .seg-done-btn { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 2px 8px; font-size: 18px; font-weight: 700; color: var(--menu-muted); cursor: pointer; flex-shrink: 0; margin-left: auto; transition: background 0.15s, color 0.15s; }
+  .seg-done-btn { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 2px 7px; font-size: 14px; color: var(--menu-muted); cursor: pointer; flex-shrink: 0; margin-left: auto; transition: background 0.15s, color 0.15s, border-color 0.15s; }
   .seg-done-btn:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: var(--accent); }
+  .seg-done-btn.checked { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .row.done { opacity: 0.5; }
   .seglist .inline-edit {
     background: transparent; border: none; border-bottom: 1px solid var(--muted);
     color: var(--fg); font: inherit; padding: 0; outline: none; min-width: 0;

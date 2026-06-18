@@ -169,6 +169,7 @@
 
 
   let nowMinLive = $state(nowMinutes());
+  let doneSegments = $state<Record<string, number>>({});
   let lastAutoLoadKey = $state('');
   let mobileTab = $state<AppSection>('now');
   let showAgendaOverlay = $state(typeof window !== 'undefined' ? window.innerWidth > 980 : true);
@@ -1123,13 +1124,33 @@
     s.blocks.forEach((b, i) => { b.minutes = newMins[i]; });
   }
 
-  function endSegmentEarly() {
+  function toggleSegmentDone(blockId: string) {
+    if (doneSegments[blockId] !== undefined) {
+      const saved = doneSegments[blockId];
+      const idx = s.blocks.findIndex(b => b.id === blockId);
+      if (idx !== -1) {
+        s.blocks[idx].minutes += saved;
+        if (saved > 0 && idx < s.blocks.length - 1) {
+          const later = s.blocks.slice(idx + 1);
+          const laterTotal = later.reduce((a, b) => a + b.minutes, 0);
+          const newMins = allocateBlockMinutes(later, Math.max(later.length * 2, laterTotal - saved));
+          later.forEach((b, j) => { b.minutes = newMins[j]; });
+        }
+      }
+      const next = { ...doneSegments };
+      delete next[blockId];
+      doneSegments = next;
+      warnedSet.clear();
+      syncTimerToAgenda(true);
+      appState.persist();
+      return;
+    }
     const elapsed = elapsedMin();
     let cum = 0;
     for (let i = 0; i < s.blocks.length; i++) {
-      const end = cum + s.blocks[i].minutes;
-      if (elapsed >= cum && elapsed < end) {
-        const newDur = Math.max(1, Math.round(elapsed - cum));
+      if (s.blocks[i].id === blockId) {
+        const isActive = elapsed >= cum && elapsed < cum + s.blocks[i].minutes;
+        const newDur = isActive ? Math.max(1, Math.round(elapsed - cum)) : 1;
         const saved = s.blocks[i].minutes - newDur;
         s.blocks[i].minutes = newDur;
         if (saved > 0 && i < s.blocks.length - 1) {
@@ -1138,12 +1159,13 @@
           const newMins = allocateBlockMinutes(later, laterTotal + saved);
           later.forEach((b, j) => { b.minutes = newMins[j]; });
         }
+        doneSegments = { ...doneSegments, [blockId]: saved };
         warnedSet.clear();
         syncTimerToAgenda(true);
         appState.persist();
         return;
       }
-      cum = end;
+      cum += s.blocks[i].minutes;
     }
   }
 
@@ -3082,7 +3104,8 @@
       elapsedMin={elapsedMin()}
       agendaView={s.agendaView}
       onCommitEdit={commitBlockEdit}
-      onEndSegmentEarly={endSegmentEarly}
+      onToggleSegmentDone={toggleSegmentDone}
+      doneBlockIds={Object.keys(doneSegments)}
     />
   </aside>
 
