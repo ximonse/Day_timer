@@ -18,6 +18,7 @@
     
     // Actions/Callbacks
     onCommitEdit: () => void;
+    onEndSegmentEarly?: () => void;
   }
 
   let {
@@ -31,7 +32,8 @@
     isViewMode,
     elapsedMin,
     agendaView,
-    onCommitEdit
+    onCommitEdit,
+    onEndSegmentEarly
   }: Props = $props();
 
   let editingBlockId = $state<string | null>(null);
@@ -429,6 +431,9 @@
       {:else if segMinutesMode === 'remaining'}
         <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsedMin)) : b.minutes}m kvar</button>
       {/if}
+      {#if isActive && !isViewMode && onEndSegmentEarly}
+        <button class="seg-done-btn" onclick={(e) => { e.stopPropagation(); onEndSegmentEarly(); }} title="Klar nu — resterande tid läggs på kommande">✓</button>
+      {/if}
     </div>
     {#if showSegNotes}
       {#if editingBlockId === b.id && editingBlockField === 'note'}
@@ -522,6 +527,8 @@
   }
   .seglist .min { color: var(--sidebar-subheading); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; cursor: text; }
   .seg-inline-btn { background: transparent; border: 0; padding: 0; font: inherit; text-align: left; }
+  .seg-done-btn { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 2px 8px; font-size: 18px; font-weight: 700; color: var(--menu-muted); cursor: pointer; flex-shrink: 0; margin-left: auto; transition: background 0.15s, color 0.15s; }
+  .seg-done-btn:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: var(--accent); }
   .seglist .inline-edit {
     background: transparent; border: none; border-bottom: 1px solid var(--muted);
     color: var(--fg); font: inherit; padding: 0; outline: none; min-width: 0;

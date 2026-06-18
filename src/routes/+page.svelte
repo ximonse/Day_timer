@@ -1123,6 +1123,30 @@
     s.blocks.forEach((b, i) => { b.minutes = newMins[i]; });
   }
 
+  function endSegmentEarly() {
+    const elapsed = elapsedMin();
+    let cum = 0;
+    for (let i = 0; i < s.blocks.length; i++) {
+      const end = cum + s.blocks[i].minutes;
+      if (elapsed >= cum && elapsed < end) {
+        const newDur = Math.max(1, Math.round(elapsed - cum));
+        const saved = s.blocks[i].minutes - newDur;
+        s.blocks[i].minutes = newDur;
+        if (saved > 0 && i < s.blocks.length - 1) {
+          const later = s.blocks.slice(i + 1);
+          const laterTotal = later.reduce((a, b) => a + b.minutes, 0);
+          const newMins = allocateBlockMinutes(later, laterTotal + saved);
+          later.forEach((b, j) => { b.minutes = newMins[j]; });
+        }
+        warnedSet.clear();
+        syncTimerToAgenda(true);
+        appState.persist();
+        return;
+      }
+      cum = end;
+    }
+  }
+
   function onDrag(e: PointerEvent) {
     if (!drag || locked) return;
     const ang = pointerAngle(e);
@@ -3058,6 +3082,7 @@
       elapsedMin={elapsedMin()}
       agendaView={s.agendaView}
       onCommitEdit={commitBlockEdit}
+      onEndSegmentEarly={endSegmentEarly}
     />
   </aside>
 
