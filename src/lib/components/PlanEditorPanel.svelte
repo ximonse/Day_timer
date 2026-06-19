@@ -219,20 +219,38 @@
       ? 'Beskriv passet. AI:n ställer frågor först om något viktigt saknas...'
       : 'Beskriv vad som ska rymmas i passet...'
   );
+  const hasPassDraft = $derived(titleValue.trim().length > 0 || partsValue.trim().length > 0);
+  const showPassEditor = $derived(hasSelection || hasPassDraft);
 
 </script>
 
-<div class="plan-editor">
-  <div class="plan-section-title">Planera ett pass</div>
-  <div class="section-copy" style="font-size:12px;color:var(--menu-muted);" title={hasSelection ? `Ändringar sparas tillbaka till det markerade blocket. Källa: ${sourceLabel}. ${sourceHelp}` : 'Sparas som ett nytt block på den dag som är vald i kalendern.'}>
-    {targetDateLabel}
+<div class="plan-editor plan-editor--pass-help">
+  <div class="plan-section-title">{hasSelection ? 'Valt pass' : 'Passhjälp'}</div>
+  <div class="section-copy" style="font-size:12px;color:var(--menu-muted);" title={hasSelection ? `Ändringar sparas tillbaka till det markerade blocket. Källa: ${sourceLabel}. ${sourceHelp}` : 'Passhjälpen aktiveras när ett pass är valt eller när ett passutkast finns.'}>
+    {#if hasSelection}
+      {targetDateLabel}
+    {:else if hasPassDraft}
+      Nytt pass för {targetDateLabel}
+    {:else}
+      Välj ett pass i agendan för passpecifik hjälp.
+    {/if}
   </div>
 
-  <input type="text" placeholder="Rubrik" title="Blir blockets namn i agendan och i timern."
-    value={titleValue}
-    oninput={(e) => onTitleInput((e.target as HTMLInputElement).value)} />
+  {#if !showPassEditor}
+    <div class="pass-help-empty">
+      <div class="pass-help-empty-title">Ingen passredigering här just nu</div>
+      <div class="pass-help-empty-copy">Planera dagen i huvudytan. När du väljer ett pass i agendan visas tid, delmoment och AI-hjälp här.</div>
+    </div>
+  {:else}
+    <div class="planner-card-copy">
+      Redigera aktiviteter i vänsterpanelen eller direkt i timern. Den här ytan hjälper med tider, AI och sparåtgärder för passet.
+    </div>
 
-  <div>
+    <input type="text" placeholder="Rubrik" title="Blir blockets namn i agendan och i timern."
+      value={titleValue}
+      oninput={(e) => onTitleInput((e.target as HTMLInputElement).value)} />
+
+    <div>
     <div class="field-head-actions" style="justify-content:flex-end; margin-bottom:4px;">
       {#if userLevel >= 2}
         <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={startRecording} title="Röst-till-text – klistras in i aktivitetsfältet"><MicIcon /></button>
@@ -297,7 +315,7 @@
       </div>
     {/if}
 
-  </div>
+    </div>
     <div class="write-section-body">
       <div id="plan-time-row" class="row2">
         <div>
@@ -329,7 +347,7 @@
       <div class="feedback">{timeFeedbackText}</div>
     </div>
 
-  <div class="plan-editor-bottom">
+    <div class="plan-editor-bottom">
     <div style="display:flex; gap:6px; align-items:stretch;">
       <button id="quickStartBtn" class="quickstart" style="flex:1;" onclick={onAction} title={actionHint}><span class="ico">✓</span> {actionLabel}</button>
       {#if hasSelection}
@@ -381,7 +399,8 @@
         </div>
       </div>
     {/if}
-  </div>
+    </div>
+  {/if}
 </div>
 
 <style>

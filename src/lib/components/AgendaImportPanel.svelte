@@ -113,20 +113,22 @@
   }
 </script>
 
-<div class="agenda-input-header">
-  <span class="agenda-input-label">Dag- & veckoplanering</span>
-  <button class="info-btn" onclick={onToggleImportHelp}>i</button>
-  <button class="agenda-input-toggle" onclick={onToggleOpen}>
-    {agendaInputOpen ? '−' : '+'}
-  </button>
-</div>
-{#if showImportHelp}
-  <div class="feedback" style="margin-bottom:8px;">
-    Redigera dagplanen direkt här, klistra in ny text, ladda upp ett schema, ICS-fil eller textfil, eller AI-generera. Inget ändras förrän du sparar.
+<div class="agenda-planner-card">
+  <div class="agenda-input-header">
+    <span class="agenda-input-label">Planera dag / vecka</span>
+    <button class="info-btn" onclick={onToggleImportHelp}>i</button>
+    <button class="agenda-input-toggle" onclick={onToggleOpen}>
+      {agendaInputOpen ? '−' : '+'}
+    </button>
   </div>
-{/if}
-{#if agendaInputOpen}
-  <div id="agenda-text-and-prompts">
+  <div class="planner-card-copy">Skriv hela dagen som text, importera schema eller låt AI skapa ett dagförslag. Spara först när dagplanen ser rätt ut.</div>
+  {#if showImportHelp}
+    <div class="feedback" style="margin-bottom:8px;">
+      Redigera dagplanen direkt här, klistra in ny text, ladda upp ett schema, ICS-fil eller textfil, eller AI-generera. Inget ändras förrän du sparar.
+    </div>
+  {/if}
+  {#if agendaInputOpen}
+    <div id="agenda-text-and-prompts">
     <div class="section-chip-row" style="margin-bottom:8px;">
       <span class="section-chip on">{selectedDateLabel}</span>
       <span class="section-chip">{draftStatus}</span>
@@ -248,8 +250,9 @@
         <strong>Hjälpsam dialog</strong>: ställer frågor först om det behövs.
       </div>
     {/if}
-  </div>
-{/if}
+    </div>
+  {/if}
+</div>
 
 <style>
   .ai-input-row { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 8px; }
