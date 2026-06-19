@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, ensureRenderableBlocks, flowToBlocks, hasRunnableSessionContent, makeFlowFromSession } from './session.js';
+import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, ensureRenderableBlocks, flowToBlocks, hasRunnableSessionContent, makeFlowFromSession, showSegmentDoneControl, undoCompletedSegment } from './session.js';
 import type { Block, Flow } from './state.svelte.js';
 
 function block(patch: Partial<Block> = {}): Block {
@@ -148,5 +148,30 @@ describe('session helpers', () => {
 			block({ minutes: 10, pinned: true }),
 			block({ minutes: 20, pinned: true })
 		], 60)).toEqual([20, 40]);
+	});
+
+	test('moves an active segment remainder only to the directly following segment', () => {
+		expect(completeActiveSegment([20, 10, 15], 0, 6)).toEqual({
+			minutes: [6, 24, 15],
+			savedMinutes: 14
+		});
+	});
+
+	test('restores transferred time from the directly following segment', () => {
+		expect(undoCompletedSegment([6, 24, 15], 0, 14)).toEqual([20, 10, 15]);
+	});
+
+	test('shortens the final active segment without transferring time', () => {
+		expect(completeActiveSegment([10, 20], 1, 7)).toEqual({
+			minutes: [10, 7],
+			savedMinutes: 13
+		});
+	});
+
+	test('shows completion for the active segment and undo only for the latest completed segment', () => {
+		expect(showSegmentDoneControl('active', 'active', ['done-a'])).toBe(true);
+		expect(showSegmentDoneControl('done-b', 'active', ['done-a', 'done-b'])).toBe(true);
+		expect(showSegmentDoneControl('done-a', 'active', ['done-a', 'done-b'])).toBe(false);
+		expect(showSegmentDoneControl('future', 'active', ['done-a'])).toBe(false);
 	});
 });

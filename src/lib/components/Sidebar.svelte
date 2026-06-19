@@ -2,6 +2,7 @@
   import { clockTheme, type Palette } from '$lib/theme.js';
   import { uid, type Block } from '$lib/state.svelte.js';
   import { parseMarkdownHtml } from '$lib/markdown.js';
+  import { showSegmentDoneControl } from '$lib/session.js';
   import { colorForSegment, stripColorDirective, toggleTitleStrikethrough } from '$lib/title-color.js';
 
   interface Props {
@@ -435,8 +436,8 @@
       {:else if segMinutesMode === 'remaining'}
         <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsedMin)) : b.minutes}m kvar</button>
       {/if}
-      {#if !isViewMode && onToggleSegmentDone}
-        <button class="seg-done-btn" class:checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på kommande'}>{doneBlockIds.includes(b.id) ? '✓' : '○'}</button>
+      {#if !isViewMode && onToggleSegmentDone && showSegmentDoneControl(b.id, isActive ? b.id : null, doneBlockIds)}
+        <button class="seg-done-btn" class:checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på nästa segment'}>{doneBlockIds.includes(b.id) ? '✓' : '○'}</button>
       {/if}
     </div>
     {#if showSegNotes}
@@ -531,7 +532,7 @@
   }
   .seglist .min { color: var(--sidebar-subheading); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; cursor: text; }
   .seg-inline-btn { background: transparent; border: 0; padding: 0; font: inherit; text-align: left; }
-  .seg-done-btn { background: transparent; border: 1px solid var(--menu-border); border-radius: 6px; padding: 2px 7px; font-size: 14px; color: var(--menu-muted); cursor: pointer; flex-shrink: 0; margin-left: auto; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+  .seg-done-btn { background: color-mix(in srgb, var(--accent) 5%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--menu-border)); border-radius: 6px; padding: 2px 7px; font-size: 14px; color: color-mix(in srgb, var(--accent) 45%, var(--menu-muted)); cursor: pointer; flex-shrink: 0; margin-left: auto; transition: background 0.15s, color 0.15s, border-color 0.15s; }
   .seg-done-btn:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: var(--accent); }
   .seg-done-btn.checked { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .row.done { opacity: 0.5; }

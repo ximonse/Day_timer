@@ -46,7 +46,7 @@
     deleteActualEntry,
     exportActualHistoryJsonl
   } from '$lib/actuals.js';
-  import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, hasRunnableSessionContent, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
+  import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, hasRunnableSessionContent, makeFlowFromSession, undoCompletedSegment, type SessionFromFlowOptions } from '$lib/session.js';
   import {
     addManualAgendaItem,
     deleteAgendaItemAt,
@@ -1129,13 +1129,8 @@
       const saved = doneSegments[blockId];
       const idx = s.blocks.findIndex(b => b.id === blockId);
       if (idx !== -1) {
-        s.blocks[idx].minutes += saved;
-        if (saved > 0 && idx < s.blocks.length - 1) {
-          const later = s.blocks.slice(idx + 1);
-          const laterTotal = later.reduce((a, b) => a + b.minutes, 0);
-          const newMins = allocateBlockMinutes(later, Math.max(later.length * 2, laterTotal - saved));
-          later.forEach((b, j) => { b.minutes = newMins[j]; });
-        }
+        const restoredMinutes = undoCompletedSegment(s.blocks.map(b => b.minutes), idx, saved);
+        s.blocks.forEach((b, i) => { b.minutes = restoredMinutes[i]; });
       }
       const next = { ...doneSegments };
       delete next[blockId];
@@ -1150,16 +1145,10 @@
     for (let i = 0; i < s.blocks.length; i++) {
       if (s.blocks[i].id === blockId) {
         const isActive = elapsed >= cum && elapsed < cum + s.blocks[i].minutes;
-        const newDur = isActive ? Math.max(1, Math.round(elapsed - cum)) : 1;
-        const saved = s.blocks[i].minutes - newDur;
-        s.blocks[i].minutes = newDur;
-        if (saved > 0 && i < s.blocks.length - 1) {
-          const later = s.blocks.slice(i + 1);
-          const laterTotal = later.reduce((a, b) => a + b.minutes, 0);
-          const newMins = allocateBlockMinutes(later, laterTotal + saved);
-          later.forEach((b, j) => { b.minutes = newMins[j]; });
-        }
-        doneSegments = { ...doneSegments, [blockId]: saved };
+        if (!isActive) return;
+        const completion = completeActiveSegment(s.blocks.map(b => b.minutes), i, elapsed - cum);
+        s.blocks.forEach((b, j) => { b.minutes = completion.minutes[j]; });
+        doneSegments = { ...doneSegments, [blockId]: completion.savedMinutes };
         warnedSet.clear();
         syncTimerToAgenda(true);
         appState.persist();

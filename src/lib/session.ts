@@ -1,5 +1,55 @@
 import type { Block, Flow } from './state.svelte.js';
 
+export interface SegmentCompletion {
+	minutes: number[];
+	savedMinutes: number;
+}
+
+export function completeActiveSegment(
+	minutes: number[],
+	activeIndex: number,
+	elapsedInSegment: number
+): SegmentCompletion {
+	const nextMinutes = [...minutes];
+	if (activeIndex < 0 || activeIndex >= nextMinutes.length) {
+		return { minutes: nextMinutes, savedMinutes: 0 };
+	}
+
+	const completedMinutes = Math.min(nextMinutes[activeIndex], Math.max(1, Math.round(elapsedInSegment)));
+	const savedMinutes = nextMinutes[activeIndex] - completedMinutes;
+	nextMinutes[activeIndex] = completedMinutes;
+	if (savedMinutes > 0 && activeIndex < nextMinutes.length - 1) {
+		nextMinutes[activeIndex + 1] += savedMinutes;
+	}
+
+	return { minutes: nextMinutes, savedMinutes };
+}
+
+export function undoCompletedSegment(
+	minutes: number[],
+	completedIndex: number,
+	savedMinutes: number
+): number[] {
+	const nextMinutes = [...minutes];
+	if (completedIndex < 0 || completedIndex >= nextMinutes.length || savedMinutes <= 0) {
+		return nextMinutes;
+	}
+
+	nextMinutes[completedIndex] += savedMinutes;
+	if (completedIndex < nextMinutes.length - 1) {
+		nextMinutes[completedIndex + 1] -= savedMinutes;
+	}
+	return nextMinutes;
+}
+
+export function showSegmentDoneControl(
+	blockId: string,
+	activeBlockId: string | null,
+	doneBlockIds: string[]
+): boolean {
+	return blockId === activeBlockId || blockId === doneBlockIds[doneBlockIds.length - 1];
+}
+
 export function allocateBlockMinutes(blocks: Block[], newTotal: number): number[] {
 	if (blocks.length === 0) return [];
 	const minTotal = blocks.length * 2;
