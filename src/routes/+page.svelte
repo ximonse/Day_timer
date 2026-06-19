@@ -81,6 +81,7 @@
   } from '$lib/workspace.js';
   import { normalizeSyncSaveSource, type SyncSaveSource } from '$lib/sync-source.js';
   import { shouldSkipWorkspaceAutosave } from '$lib/autosave.js';
+  import { decideWorkspaceSyncLoad, type SyncLoadSource } from '$lib/sync-load-decision.js';
   import { nextBindingAfterSectionChange } from '$lib/active-session-binding.js';
   import { stripColorDirective } from '$lib/title-color.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
@@ -1501,7 +1502,7 @@
     return s.activeSection === 'plan' && agendaDraftDirty;
   }
 
-  async function syncLoad(source: 'manual' | 'auto' = 'manual') {
+  async function syncLoad(source: SyncLoadSource = 'manual') {
     if (source === 'auto' && hasUnsavedAgendaDraft()) {
       syncProbeState = 'idle';
       syncProbeText = 'Dagtext osparad – molnladdning pausad';
@@ -1523,13 +1524,23 @@
       if (!cloudWorkspace) throw new Error();
       const preservedRunAgendaView = locked && !miniMenuOpen ? s.agendaView : null;
       
-      if (isWorkspaceMeaningfullyEmpty(cloudWorkspace) && !isWorkspaceMeaningfullyEmpty(localWorkspace)) {
-        lastSyncedHash = JSON.stringify(localWorkspace);
+      const localWorkspaceHash = JSON.stringify(localWorkspace);
+      const cloudWorkspaceHash = JSON.stringify(cloudWorkspace);
+      const syncLoadDecision = decideWorkspaceSyncLoad({
+        source,
+        localRevision: localWorkspace.revision,
+        cloudRevision: cloudWorkspace.revision,
+        localHash: localWorkspaceHash,
+        cloudHash: cloudWorkspaceHash,
+        localEmpty: isWorkspaceMeaningfullyEmpty(localWorkspace),
+        cloudEmpty: isWorkspaceMeaningfullyEmpty(cloudWorkspace)
+      });
+
+      if (syncLoadDecision === 'upload-local') {
+        const uploadedToEmptyCloud = isWorkspaceMeaningfullyEmpty(cloudWorkspace);
         appState.persist();
-        queueMicrotask(() => { void syncSave('auto-effect'); });
-        showSyncStatus('Molnet var tomt. Lokal data laddades upp ✓');
-        syncProbeState = 'ok';
-        syncProbeText = `Synkad ${probeTime()}`;
+        await syncSave('auto-effect');
+        if (uploadedToEmptyCloud) showSyncStatus('Molnet var tomt. Lokal data laddades upp ✓');
         return;
       }
       
@@ -1995,6 +2006,13 @@
       activeAgendaFlowRef = null;
       planSelectionExplicit = false;
       sessionSource = { kind: 'unscheduled' };
+      if (s.activeSection === 'plan') {
+        s.planDraft = createEmptyPlanDraft();
+        applyEditorDraft(s.planDraft);
+        partsDraftDirty = false;
+        syncPartsDraftFromState(true);
+        capturePanelBaseline('plan');
+      }
     }
     persistAgendaMutation();
   }
@@ -2678,7 +2696,7 @@
         }
       }
       // Trigger sync load once we have a valid key
-      if (s.syncKey) await syncLoad();
+      if (s.syncKey) await syncLoad('auto');
       else loadingFromCloud = false;
     };
     void migrateLegacyToken();
