@@ -46,6 +46,7 @@
     aiQuestionText,
     onRunAi,
     aiLoading,
+    canUsePartsFallback = true,
     suggestedDuration,
     startTimeValue,
     onStartTimeInput,
@@ -114,6 +115,7 @@
     aiQuestionText: string;
     onRunAi: () => void;
     aiLoading: boolean;
+    canUsePartsFallback?: boolean;
     suggestedDuration: { minutes: number; sampleSize: number } | null;
     startTimeValue: string;
     onStartTimeInput: (value: string) => void;
@@ -288,7 +290,7 @@
             </div>
           {/if}
           <button class="quickstart ai-generate-btn" onclick={onRunAi}
-            disabled={aiLoading || (!!aiQuestionText && !aiInput.trim()) || (!aiQuestionText && !aiInput.trim() && !partsValue.trim())}>
+            disabled={aiLoading || (!!aiQuestionText && !aiInput.trim()) || (!aiQuestionText && !aiInput.trim() && !(canUsePartsFallback && partsValue.trim()))}>
             {aiLoading ? 'Tänker...' : aiQuestionText ? 'Skicka svar ▶' : 'Planera med AI ▶'}
           </button>
         {/if}

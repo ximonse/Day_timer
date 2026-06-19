@@ -26,6 +26,7 @@
     aiError,
     aiQuestionText,
     aiLoading,
+    canUsePartsFallback = true,
     aiPromptMode,
     aiLastResponse,
     startTimeValue,
@@ -113,6 +114,7 @@
     aiError: string;
     aiQuestionText: string;
     aiLoading: boolean;
+    canUsePartsFallback?: boolean;
     aiPromptMode: AiAgendaPromptMode;
     aiLastResponse: AiPlanResponse | null;
     startTimeValue: string;
@@ -254,6 +256,7 @@
       {aiQuestionText}
       {onRunAi}
       {aiLoading}
+      {canUsePartsFallback}
       {suggestedDuration}
       {onApplySuggestedDuration}
       {startTimeValue}

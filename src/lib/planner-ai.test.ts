@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildAgendaAiContext, composeAiConversationInput } from './planner-ai.js';
+import { buildAgendaAiContext, buildAgendaAiDraftText, composeAiConversationInput } from './planner-ai.js';
 
 describe('planner ai helpers', () => {
 	test('uses the selected planning date in agenda ai context', () => {
@@ -44,5 +44,23 @@ describe('planner ai helpers', () => {
 			seed: '',
 			questions: ''
 		})).toBe('Start 5m\nGenomgång 20m');
+	});
+
+	test('can block fallback to avoid reusing a stale session as a new instruction', () => {
+		expect(composeAiConversationInput({
+			input: '',
+			fallback: 'Gammal session 45m',
+			seed: '',
+			questions: '',
+			allowFallback: false
+		})).toBe('');
+	});
+
+	test('builds agenda ai draft from the ai response without carrying old day sessions', () => {
+		const draft = buildAgendaAiDraftText('2026-05-31', '#Ny AI-plan 10:00\nNy aktivitet 30m');
+
+		expect(draft).toContain('@260531');
+		expect(draft).toContain('#Ny AI-plan 10:00');
+		expect(draft).not.toContain('Gammal session');
 	});
 });

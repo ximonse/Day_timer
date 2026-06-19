@@ -32,7 +32,7 @@
   import { icsEventsToAgendaDays, parseIcsEvents, type IcsEvent } from '$lib/ics.js';
   import { getAiAgendaPrompt, getAiSessionPrompt, requestAiPlan, DEFAULT_AI_CONFIG, loadAiConfig, persistAiConfig, clearStoredAiConfig, type AiProvider, type AiPlanMode, type AiConfig } from '$lib/ai.js';
   import { flexibilityToModes, isValidPlanningModeForContext, type AiAgendaPromptMode, type AiFlexibilityLevel, type AiPlanResponse, type AiPlanningMode } from '$lib/ai-plan-engine.js';
-  import { buildAgendaAiContext, composeAiConversationInput } from '$lib/planner-ai.js';
+  import { buildAgendaAiContext, buildAgendaAiDraftText, composeAiConversationInput } from '$lib/planner-ai.js';
   import { createVoiceService } from '$lib/voice.js';
   import { detectImportType } from '$lib/unified-import.js';
   import { createShareTokens, deriveSyncToken, validateSyncToken } from '$lib/security.js';
@@ -2100,7 +2100,8 @@
       input: aiInput,
       fallback: partsDraft,
       seed: sessionAiConversationSeed,
-      questions: aiQuestionText
+      questions: aiQuestionText,
+      allowFallback: partsDraftDirty
     });
     if (!input) return;
     aiLoading = true; aiError = ''; aiQuestionText = '';
@@ -2177,9 +2178,7 @@
       }
       const normalizedText = enforceAiMinimumMinutes(text.text);
       agendaAiLastResponse = { ...text, text: normalizedText };
-      const aiDays = parseAgenda(normalizedText).map(day => day.date === null ? { ...day, date: targetDate } : day);
-      const mergedDays = mergeAgendaDayData(activeAgendaText(), aiDays);
-      agendaDraft = serializeSelectedAgendaDay(targetDate, mergedDays, { includeIds: false });
+      agendaDraft = buildAgendaAiDraftText(targetDate, normalizedText);
       agendaDraftDate = targetDate;
       agendaDraftDirty = true;
       agendaDraftSource = 'ai';
@@ -3374,7 +3373,12 @@
                   setTimeout(() => { copyBtnText = 'AI-prompt'; }, 1500);
                 });
               }}
-              onToggleAiPanel={() => setWriteMenuSection('sessionAi', !aiPanelOpen)}
+              canUsePartsFallback={partsDraftDirty}
+              onToggleAiPanel={() => {
+                const nextOpen = !aiPanelOpen;
+                setWriteMenuSection('sessionAi', nextOpen);
+                if (nextOpen) agendaAiOpen = false;
+              }}
               onAiInputChange={(value) => aiInput = value}
               onRunAi={runAiParts}
               onRunAiWithText={(text) => { aiInput = text; runAiParts(); }}
@@ -3595,7 +3599,10 @@
                 const prompt = getAiAgendaPrompt(type, localDateISO());
                 await navigator.clipboard.writeText(prompt);
               }}
-              onToggleAi={() => agendaAiOpen = !agendaAiOpen}
+              onToggleAi={() => {
+                agendaAiOpen = !agendaAiOpen;
+                if (agendaAiOpen) setWriteMenuSection('sessionAi', false);
+              }}
               onAgendaAiInputChange={(value) => agendaAiInput = value}
               onRunAi={runAiAgenda}
               onToggleImportHelp={() => agendaImportHelpOpen = toggleHelpOverride(agendaImportHelpOpen)}

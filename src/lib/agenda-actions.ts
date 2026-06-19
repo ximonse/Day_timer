@@ -1,5 +1,5 @@
 import { type AgendaFlowMeta, type Flow } from './state.svelte.js';
-import { mergeAgendaDayData, parseAgenda, serializeAgenda, stripDraftComments, type AgendaDay } from './parse.js';
+import { parseAgenda, serializeAgenda, stripDraftComments, type AgendaDay } from './parse.js';
 import {
 	buildAgendaItemsForDay,
 	cloneAgendaDay,
@@ -47,16 +47,12 @@ export function saveAgendaDraft(input: SaveAgendaDraftInput): SaveAgendaDraftRes
 			id: previousFlows[index]?.id ?? flow.id
 		}))
 	};
-	const days = input.source === 'ai'
-		? mergeAgendaDayData(input.activeText, draftDayWithIds.flows.length > 0 ? [draftDayWithIds] : [])
-		: (() => {
-			const preservedDays = baseDays
-				.filter(day => day.date !== input.targetDate)
-				.map(day => cloneAgendaDay(day));
-			return draftDayWithIds.flows.length > 0
-				? [...preservedDays, cloneAgendaDay(draftDayWithIds)].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-				: preservedDays.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
-		})();
+	const preservedDays = baseDays
+		.filter(day => day.date !== input.targetDate)
+		.map(day => cloneAgendaDay(day));
+	const days = draftDayWithIds.flows.length > 0
+		? [...preservedDays, cloneAgendaDay(draftDayWithIds)].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
+		: preservedDays.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
 	const savedDay = days.find(day => day.date === input.targetDate) ?? null;
 	return {
 		days,

@@ -32,6 +32,29 @@ describe('agenda actions', () => {
 		expect(result.draftDirty).toBe(false);
 	});
 
+	test('saves an approved ai draft as the selected day instead of merging stale sessions', () => {
+		const result = saveAgendaDraft({
+			activeText: [
+				'@260531',
+				'#Gammal session 08:00',
+				'Gammal aktivitet 45m',
+				'@260601',
+				'#Jobb 09:00',
+				'Fokus 45m'
+			].join('\n'),
+			draftText: ['@260531', '#Ny AI-plan 10:00', 'Ny aktivitet 30m'].join('\n'),
+			targetDate: '2026-05-31',
+			source: 'ai',
+			agendaMeta: {},
+			agendaDayStart: 8 * 60
+		});
+
+		expect(result.savedText).toContain('#Ny AI-plan 10:00');
+		expect(result.savedText).not.toContain('#Gammal session 08:00');
+		expect(result.savedText).toContain('@260601');
+		expect(result.savedText).toContain('#Jobb 09:00');
+	});
+
 	test('renames an agenda item and keeps flow identity', () => {
 		const days = parseAgenda(['@260531', '#Morgon 08:00 <!--id:abc1234-->', 'Start 30m'].join('\n'));
 		const result = renameAgendaItemAt({
