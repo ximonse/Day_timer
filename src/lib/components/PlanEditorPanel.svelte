@@ -1,15 +1,14 @@
 <script lang="ts">
   import { createVoiceService } from '$lib/voice.js';
-  import { AI_AGENDA_PROMPT_MODE_HELP, AI_AGENDA_PROMPT_MODE_LABELS, AI_FLEXIBILITY_LABELS, aiPlanMetadataItems, type AiAgendaPromptMode, type AiFlexibilityLevel, type AiPlanResponse } from '$lib/ai-plan-engine.js';
+  import { AI_FLEXIBILITY_LABELS, aiPlanMetadataItems, type AiAgendaPromptMode, type AiFlexibilityLevel, type AiPlanResponse } from '$lib/ai-plan-engine.js';
   import { fade } from 'svelte/transition';
   import MicIcon from './MicIcon.svelte';
 
   let textareaEl: HTMLTextAreaElement | null = $state(null);
 
   const voice = createVoiceService();
-  const promptModeOptions = Object.entries(AI_AGENDA_PROMPT_MODE_LABELS) as [AiAgendaPromptMode, string][];
   let isRecording = $state(false);
-  let recordingTarget: 'parts' | 'ai' | 'voice-plan' | null = $state(null);
+  let recordingTarget: 'parts' | 'voice-plan' | null = $state(null);
 
   $effect(() => {
     if (textareaEl && textareaEl.value !== partsValue) {
@@ -26,46 +25,28 @@
     targetDateLabel,
     sourceLabel,
     sourceHelp,
-    showSourceHelp,
-    onToggleSourceHelp,
     titleValue,
     onTitleInput,
-    showTitleHelp,
-    onToggleTitleHelp,
     partsValue,
     onPartsInput,
     onPartsKeyDown,
     partsFeedbackText,
     onCopyPrompt,
     copyBtnText,
-    showPartsHelp,
-    onTogglePartsHelp,
     hasAiKey,
     aiPanelOpen,
-    planMainOpen,
-    planTimeOpen,
     planShareOpen,
     onToggleAiPanel,
-    onTogglePlanMain,
-    onTogglePlanTime,
     onTogglePlanShare,
     aiInput,
     onAiInputChange,
     aiPromptMode,
     aiLastResponse,
-    onSetAiPromptMode,
     aiError,
     aiQuestionText,
     onRunAi,
     aiLoading,
-    actualHistoryOpen,
-    onToggleActualHistory,
-    currentSubjectCategory,
     suggestedDuration,
-    pendingActualEntries,
-    onConfirmActualEntry,
-    onDeleteActualEntry,
-    onExportActualHistory,
     startTimeValue,
     onStartTimeInput,
     endTimeValue,
@@ -75,8 +56,6 @@
     minTotalMinutes,
     endMode,
     onEndModeChange,
-    onToggleTimeHelp,
-    showTimeHelp,
     timeFeedbackText,
     onAction,
     onCreateNew,
@@ -112,48 +91,30 @@
     targetDateLabel: string;
     sourceLabel: string;
     sourceHelp: string;
-    showSourceHelp: boolean;
-    onToggleSourceHelp: () => void;
     titleValue: string;
     onTitleInput: (value: string) => void;
-    showTitleHelp: boolean;
-    onToggleTitleHelp: () => void;
     partsValue: string;
     onPartsInput: (value: string) => void;
     onPartsKeyDown: (e: KeyboardEvent) => void;
     partsFeedbackText: string;
     onCopyPrompt: () => void;
     copyBtnText: string;
-    showPartsHelp: boolean;
-    onTogglePartsHelp: () => void;
     hasAiKey: boolean;
     aiPanelOpen: boolean;
-    planMainOpen: boolean;
-    planTimeOpen: boolean;
     planShareOpen: boolean;
     onToggleAiPanel: () => void;
-    onTogglePlanMain: () => void;
-    onTogglePlanTime: () => void;
     onTogglePlanShare: () => void;
     aiInput: string;
     onAiInputChange: (value: string) => void;
     aiPromptMode: AiAgendaPromptMode;
     aiLastResponse: AiPlanResponse | null;
-    onSetAiPromptMode: (mode: AiAgendaPromptMode) => void;
     aiFlexibilityLevel?: AiFlexibilityLevel;
     onFlexibilityChange?: (level: AiFlexibilityLevel) => void;
     aiError: string;
     aiQuestionText: string;
     onRunAi: () => void;
     aiLoading: boolean;
-    actualHistoryOpen: boolean;
-    onToggleActualHistory: () => void;
-    currentSubjectCategory: string;
     suggestedDuration: { minutes: number; sampleSize: number } | null;
-    pendingActualEntries: any[];
-    onConfirmActualEntry: (id: string) => void;
-    onDeleteActualEntry: (id: string) => void;
-    onExportActualHistory: () => void;
     startTimeValue: string;
     onStartTimeInput: (value: string) => void;
     endTimeValue: string;
@@ -163,8 +124,6 @@
     minTotalMinutes: number;
     endMode: 'end' | 'len';
     onEndModeChange: (mode: 'end' | 'len') => void;
-    onToggleTimeHelp: () => void;
-    showTimeHelp: boolean;
     timeFeedbackText: string;
     onAction: () => void;
     onCreateNew: () => void;
@@ -191,7 +150,7 @@
     whisperApiKey?: string;
   } = $props();
 
-  function startRecording(target: 'parts' | 'ai') {
+  function startRecording() {
     if (isRecording) {
       voice.stop();
       isRecording = false;
@@ -200,13 +159,12 @@
     }
 
     isRecording = true;
-    recordingTarget = target;
+    recordingTarget = 'parts';
     voice.start({
       useWhisper: aiProvider === 'openai' && hasAiKey,
       apiKey: aiApiKey,
       onResult: (text) => {
-        if (target === 'parts') onPartsInput(partsValue ? partsValue + '\n' + text : text);
-        else onAiInputChange(aiInput ? aiInput + ' ' + text : text);
+        onPartsInput(partsValue ? partsValue + '\n' + text : text);
         isRecording = false;
         recordingTarget = null;
       },
@@ -275,7 +233,7 @@
   <div>
     <div class="field-head-actions" style="justify-content:flex-end; margin-bottom:4px;">
       {#if userLevel >= 2}
-        <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={() => startRecording('parts')} title="Röst-till-text – klistras in i aktivitetsfältet"><MicIcon /></button>
+        <button class="micro-btn" class:recording={isRecording && recordingTarget === 'parts'} onclick={startRecording} title="Röst-till-text – klistras in i aktivitetsfältet"><MicIcon /></button>
       {/if}
       {#if userLevel >= 2 && hasAiKey && effectiveWhisperKey}
         <button class="micro-btn voice-plan-btn" class:recording={recordingTarget === 'voice-plan'}
@@ -298,6 +256,18 @@
           {aiPanelOpen ? '−' : '+'} Hjälp av AI
         </button>
         {#if aiPanelOpen}
+          {#if aiError}<div class="ai-error">{aiError}</div>{/if}
+          {#if aiQuestionText}
+            <div class="feedback ai-question" style="white-space:pre-line;">
+              {aiQuestionText}
+            </div>
+          {/if}
+          <textarea
+            class="ai-input"
+            placeholder={aiQuestionText ? 'Svara kort på frågorna ovan...' : aiInputPlaceholder}
+            value={aiInput}
+            oninput={(e) => onAiInputChange((e.target as HTMLTextAreaElement).value)}
+          ></textarea>
           <div class="ai-flex-slider">
             <input type="range" min="0" max="3" step="1"
               value={aiFlexibilityLevel}
@@ -310,12 +280,6 @@
               {/each}
             </div>
           </div>
-          {#if aiError}<div class="ai-error">{aiError}</div>{/if}
-          {#if aiQuestionText}
-            <div class="feedback" style="margin-bottom:8px; white-space:pre-line;">
-              {aiQuestionText}
-            </div>
-          {/if}
           {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
             <div class="ai-meta-list">
               {#each aiPlanMetadataItems(aiLastResponse) as item}
@@ -323,8 +287,9 @@
               {/each}
             </div>
           {/if}
-          <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={aiLoading}>
-            {aiLoading ? 'Tänker...' : 'Planera med AI ▶'}
+          <button class="quickstart ai-generate-btn" onclick={onRunAi}
+            disabled={aiLoading || (!!aiQuestionText && !aiInput.trim()) || (!aiQuestionText && !aiInput.trim() && !partsValue.trim())}>
+            {aiLoading ? 'Tänker...' : aiQuestionText ? 'Skicka svar ▶' : 'Planera med AI ▶'}
           </button>
         {/if}
       </div>
@@ -365,7 +330,9 @@
   <div class="plan-editor-bottom">
     <div style="display:flex; gap:6px; align-items:stretch;">
       <button id="quickStartBtn" class="quickstart" style="flex:1;" onclick={onAction} title={actionHint}><span class="ico">✓</span> {actionLabel}</button>
-      <button class="quickstart" style="flex:1;" onclick={onCreateNew} title="Skapa nytt block med aktuella värden"><span class="ico">＋</span> Nytt</button>
+      {#if hasSelection}
+        <button class="quickstart" style="flex:1;" onclick={onCreateNew} title="Lägg till de aktuella värdena som ett separat block"><span class="ico">＋</span> Lägg till som nytt</button>
+      {/if}
       <button class="ai-key-btn" type="button" style="flex:0 0 auto;" onclick={onRevert} disabled={!canRevert} title={saveStatusLabel || 'Återställ ändringar'}>↺</button>
     </div>
 
@@ -427,30 +394,6 @@
     50% { opacity: 0.7; }
     100% { opacity: 1; }
   }
-  .mic-overlay-btn {
-    position: absolute;
-    right: 10px;
-    bottom: 10px;
-    background: var(--menu-pill);
-    border: 1px solid var(--menu-border);
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
-    z-index: 10;
-  }
-  .mic-overlay-btn:hover { background: var(--menu-surface); }
-  .mic-overlay-btn.recording {
-    background: #ff4444;
-    color: white;
-    border-color: #ff4444;
-    animation: pulse 1.5s infinite;
-  }
   .rec-suggestion {
     background: color-mix(in srgb, var(--accent) 8%, var(--menu-surface));
     border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--menu-border));
@@ -474,6 +417,7 @@
     margin-left: auto;
   }
   .ai-flex-slider { margin-bottom: 8px; }
+  .ai-question { padding: 7px 9px; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
   .flex-range { width: 100%; accent-color: var(--accent); cursor: pointer; }
   .flex-labels { display: flex; justify-content: space-between; margin-top: 2px; }
   .flex-label { font-size: 11px; color: var(--menu-muted); transition: color 0.15s; }

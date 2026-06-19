@@ -81,7 +81,7 @@ export const AI_FLEXIBILITY_LABELS: Record<AiFlexibilityLevel, string> = {
 	0: 'Strikt',
 	1: 'Lite puts',
 	2: 'Fixa',
-	3: 'Autopilot'
+	3: 'Fråga först'
 };
 
 export function flexibilityToModes(level: AiFlexibilityLevel): { planMode: AiBehaviorMode; agendaPromptMode: AiAgendaPromptMode } {

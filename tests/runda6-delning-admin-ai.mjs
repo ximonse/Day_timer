@@ -1,7 +1,8 @@
 import { chromium } from 'playwright';
+import { existsSync } from 'node:fs';
 
 const BASE = 'http://localhost:5177';
-const BROWSER_PATH = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const BROWSER_PATH = process.env.PLAYWRIGHT_CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
 async function shot(page, name) {
   await page.screenshot({ path: `/tmp/r6-${name}.png`, fullPage: false });
@@ -26,7 +27,9 @@ async function clickTab(page, label) {
 }
 
 async function run() {
-  const browser = await chromium.launch({ executablePath: BROWSER_PATH, headless: true });
+  const browser = await chromium.launch(existsSync(BROWSER_PATH)
+    ? { executablePath: BROWSER_PATH, headless: true }
+    : { channel: 'chrome', headless: true });
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
   const page = await ctx.newPage();
   const results = [];
@@ -305,9 +308,9 @@ async function run() {
   // ── TEST 7: AI-panel i PlanEditorPanel (kräver userLevel>=2 && hasAiKey) ─
   // hasAiKey kommer från aiConfig.apiKey — vi satte 'sk-ant-test-key' i localStorage
   // Hitta AI-panel-toggle specifikt inuti PlanEditorPanel (inte actualHistory-toggle)
-  const sessionAiToggle = page.locator('button.ai-panel-toggle:has-text("Planera med AI")').first();
+  const sessionAiToggle = page.locator('button.ai-panel-toggle:has-text("Hjälp av AI")').first();
   if (await sessionAiToggle.isVisible({ timeout: 2000 }).catch(() => false)) {
-    ok('AI-panel-toggle "Planera med AI" synlig i Planera');
+    ok('AI-panel-toggle "Hjälp av AI" synlig i Planera');
     await sessionAiToggle.click();
     await page.waitForTimeout(400);
     const aiTextarea = page.locator('textarea.ai-input').first();
@@ -335,19 +338,16 @@ async function run() {
   }
   await shot(page, '08-ai-input');
 
-  // ── TEST 9: AI prompt-mode knappar ───────────────────────────────────────
-  const aiModeBtns = page.locator('div.ai-mode-row button.ai-mode-btn');
-  const modeCount = await aiModeBtns.count();
-  if (modeCount > 0) {
-    ok(`AI-mode-knappar: ${modeCount} st`);
-    // Click first mode button
-    await aiModeBtns.first().click();
-    await page.waitForTimeout(200);
-    const activeMode = aiModeBtns.first();
-    const activeCls = await activeMode.getAttribute('class') ?? '';
-    ok(`AI-mode-knapp klickbar (klass: "${activeCls}")`);
+  // ── TEST 9: AI flexibilitetsreglage ──────────────────────────────────────
+  const flexRange = page.locator('.ai-panel input.flex-range').first();
+  if (await flexRange.isVisible({ timeout: 1000 }).catch(() => false)) {
+    ok('AI-flexibilitetsreglage synligt');
+    await flexRange.fill('3');
+    const value = await flexRange.inputValue();
+    if (value === '3') ok('AI-flexibilitetsreglage kan sättas till Fråga först');
+    else warn('AI-flexibilitetsreglage', `oväntat värde: ${value}`);
   } else {
-    warn('AI-mode-knappar', 'inga button.ai-mode-btn hittade');
+    warn('AI-flexibilitetsreglage', 'input.flex-range saknas');
   }
 
   // ── TEST 10: AI generera-knapp ────────────────────────────────────────────
@@ -367,7 +367,7 @@ async function run() {
 
   // ── TEST 11: AI-planering i AgendaImportPanel ─────────────────────────────
   await clickTab(page, 'Planera');
-  const agendaAiToggle = page.locator('button.agenda-ai-btn, button:has-text("AI-planering")').first();
+  const agendaAiToggle = page.locator('.agenda-input-header:has-text("Skapa med AI") button.agenda-input-toggle').first();
   if (await agendaAiToggle.isVisible({ timeout: 2000 }).catch(() => false)) {
     ok('Agenda-AI-knapp synlig');
     await agendaAiToggle.click();

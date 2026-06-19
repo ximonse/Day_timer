@@ -18,8 +18,6 @@
     timeFeedbackText,
     hasAiKey,
     aiPanelOpen,
-    planMainOpen,
-    planTimeOpen,
     planShareOpen,
     nowMainOpen,
     nowQuickStartOpen,
@@ -38,25 +36,20 @@
     canRevert,
     showTitleHelp,
     showPartsHelp,
-    showTimeHelp,
     targetDateLabel,
     sourceLabel,
     sourceHelp,
-    showSourceHelp,
     shareCopyText,
     onTitleInput,
     onPartsInput,
     onPartsKeyDown,
     onCopyPrompt,
     onToggleAiPanel,
-    onTogglePlanMain,
-    onTogglePlanTime,
     onTogglePlanShare,
     onToggleNowMain,
     onToggleNowQuickStart,
     onToggleNowShare,
     onAiInputChange,
-    onSetAiPromptMode,
     onRunAi,
     onAction,
     onCreateNew,
@@ -70,8 +63,6 @@
     onRevert,
     onToggleTitleHelp,
     onTogglePartsHelp,
-    onToggleTimeHelp,
-    onToggleSourceHelp,
     onSaveFlow,
     onStartLiveShare,
     quickStartTitle,
@@ -94,14 +85,7 @@
     isCopyingActive,
     isCopyingSession,
     isCopyingDay,
-    actualHistoryOpen,
-    onToggleActualHistory,
-    currentSubjectCategory,
     suggestedDuration,
-    pendingActualEntries,
-    onConfirmActualEntry,
-    onDeleteActualEntry,
-    onExportActualHistory,
     onApplySuggestedDuration,
     onRunAiWithText,
     whisperApiKey = '',
@@ -121,8 +105,6 @@
     timeFeedbackText: string;
     hasAiKey: boolean;
     aiPanelOpen: boolean;
-    planMainOpen: boolean;
-    planTimeOpen: boolean;
     planShareOpen: boolean;
     nowMainOpen: boolean;
     nowQuickStartOpen: boolean;
@@ -144,11 +126,9 @@
     canRevert: boolean;
     showTitleHelp: boolean;
     showPartsHelp: boolean;
-    showTimeHelp: boolean;
     targetDateLabel: string;
     sourceLabel: string;
     sourceHelp: string;
-    showSourceHelp: boolean;
     showPartsFeedback?: boolean;
     shareCopyText: string;
     activeShareUrl: string;
@@ -163,14 +143,11 @@
     onPartsKeyDown: (e: KeyboardEvent) => void;
     onCopyPrompt: () => void;
     onToggleAiPanel: () => void;
-    onTogglePlanMain: () => void;
-    onTogglePlanTime: () => void;
     onTogglePlanShare: () => void;
     onToggleNowMain: () => void;
     onToggleNowQuickStart: () => void;
     onToggleNowShare: () => void;
     onAiInputChange: (value: string) => void;
-    onSetAiPromptMode: (mode: AiAgendaPromptMode) => void;
     onRunAi: () => void;
     onAction: () => void;
     onCreateNew: () => void;
@@ -181,8 +158,6 @@
     onRevert: () => void;
     onToggleTitleHelp: () => void;
     onTogglePartsHelp: () => void;
-    onToggleTimeHelp: () => void;
-    onToggleSourceHelp: () => void;
     onSaveFlow: () => void;
     quickStartTitle: string;
     quickStartText: string;
@@ -198,14 +173,7 @@
     onCopyActiveShare: () => void;
     onCopySessionShare: () => void;
     onCopyDayShare: () => void;
-    actualHistoryOpen: boolean;
-    onToggleActualHistory: () => void;
-    currentSubjectCategory: string;
     suggestedDuration: { minutes: number; sampleSize: number } | null;
-    pendingActualEntries: any[];
-    onConfirmActualEntry: (id: string) => void;
-    onDeleteActualEntry: (id: string) => void;
-    onExportActualHistory: () => void;
     onApplySuggestedDuration: (mins: number) => void;
     onRunAiWithText: (text: string) => void;
     whisperApiKey?: string;
@@ -265,46 +233,28 @@
       {targetDateLabel}
       {sourceLabel}
       {sourceHelp}
-      {showSourceHelp}
-      {onToggleSourceHelp}
       {titleValue}
       {onTitleInput}
-      {showTitleHelp}
-      {onToggleTitleHelp}
       {partsValue}
       {onPartsInput}
       {onPartsKeyDown}
       {partsFeedbackText}
       {onCopyPrompt}
       {copyBtnText}
-      {showPartsHelp}
-      {onTogglePartsHelp}
       {hasAiKey}
       {aiPanelOpen}
-      {planMainOpen}
-      {planTimeOpen}
       {planShareOpen}
       {onToggleAiPanel}
-      {onTogglePlanMain}
-      {onTogglePlanTime}
       {onTogglePlanShare}
       {aiInput}
       {onAiInputChange}
       {aiPromptMode}
       {aiLastResponse}
-      {onSetAiPromptMode}
       {aiError}
       {aiQuestionText}
       {onRunAi}
       {aiLoading}
-      {actualHistoryOpen}
-      {onToggleActualHistory}
-      {currentSubjectCategory}
       {suggestedDuration}
-      {pendingActualEntries}
-      {onConfirmActualEntry}
-      {onDeleteActualEntry}
-      {onExportActualHistory}
       {onApplySuggestedDuration}
       {startTimeValue}
       {onStartTimeInput}
@@ -315,8 +265,6 @@
       {minTotalMinutes}
       {endMode}
       {onEndModeChange}
-      {onToggleTimeHelp}
-      {showTimeHelp}
       {timeFeedbackText}
       {onAction}
       {onCreateNew}

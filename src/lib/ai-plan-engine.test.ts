@@ -61,6 +61,11 @@ describe('ai-plan-engine', () => {
 		expect(AI_PLANNING_MODE_LABELS['free-day']).toBe('Fri dag');
 	});
 
+	test('labels question-first flexibility honestly', async () => {
+		const { AI_FLEXIBILITY_LABELS } = await import('./ai-plan-engine.js');
+		expect(AI_FLEXIBILITY_LABELS[3]).toBe('Fråga först');
+	});
+
 	test('agenda strict format prompt forbids invented content', () => {
 		const prompt = buildAiPlanSystemPrompt({
 			planningMode: 'anchored-day',

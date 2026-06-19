@@ -19,18 +19,15 @@
     agendaAiError,
     agendaAiQuestionText,
     agendaAiLoading,
-    showHelpHints,
     showImportHelp,
     aiFlexibilityLevel = 2,
     isRecordingAgendaAi = false,
     onToggleOpen,
     onDraftChange,
-    onDraftPaste,
     onSave,
     onCopyPrompt,
     onToggleAi,
     onAgendaAiInputChange,
-    onSetAgendaAiPromptMode,
     onRunAi,
     onToggleImportHelp,
     onFlexibilityChange = () => {},
@@ -51,18 +48,15 @@
     agendaAiError: string;
     agendaAiQuestionText: string;
     agendaAiLoading: boolean;
-    showHelpHints: boolean;
     showImportHelp: boolean;
     aiFlexibilityLevel?: AiFlexibilityLevel;
     isRecordingAgendaAi?: boolean;
     onToggleOpen: () => void;
     onDraftChange: (value: string) => void;
-    onDraftPaste: (event: ClipboardEvent) => void;
     onSave: () => void;
     onCopyPrompt: (type: AiAgendaPromptMode) => Promise<void>;
     onToggleAi: () => void;
     onAgendaAiInputChange: (value: string) => void;
-    onSetAgendaAiPromptMode: (mode: AiAgendaPromptMode) => void;
     onRunAi: () => void;
     onToggleImportHelp: () => void;
     onFlexibilityChange?: (level: AiFlexibilityLevel) => void;
@@ -143,7 +137,6 @@
         bind:this={agendaTextarea}
         placeholder="Skriv eller klistra in dagplanen här.&#10;&#10;@260508&#10;#Morgonrutin 08:00-08:45&#10;Vakna 5m&#10;Frukost 20m&#10;&amp; ät på trappen&#10;Promenad&#10;- ta med vatten&#10;&amp;&amp; Möte kl 9"
         oninput={(e) => onDraftChange((e.target as HTMLTextAreaElement).value)}
-        onpaste={(e) => onDraftPaste(e)}
       ></textarea>
     </div>
     <div class="agenda-save-row">
@@ -168,9 +161,15 @@
           </div>
         {/if}
 
+        {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
+        {#if agendaAiQuestionText}
+          <div class="feedback ai-question" style="white-space:pre-line;">
+            {agendaAiQuestionText}
+          </div>
+        {/if}
         <div class="ai-input-row">
           <div class="agenda-input-wrapper" style="flex:1;">
-            <textarea class="ai-input" placeholder={agendaAiPlaceholder}
+            <textarea class="ai-input" placeholder={agendaAiQuestionText ? 'Svara kort på frågorna ovan...' : agendaAiPlaceholder}
               value={agendaAiInput}
               oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
           </div>
@@ -209,12 +208,6 @@
           </div>
         </div>
 
-        {#if agendaAiError}<div class="ai-error">{agendaAiError}</div>{/if}
-        {#if agendaAiQuestionText}
-          <div class="feedback" style="margin-bottom:8px; white-space:pre-line;">
-            {agendaAiQuestionText}
-          </div>
-        {/if}
         {#if aiLastResponse && aiPlanMetadataItems(aiLastResponse).length}
           <div class="ai-meta-list">
             {#each aiPlanMetadataItems(aiLastResponse) as item}
@@ -223,7 +216,7 @@
           </div>
         {/if}
         <button class="quickstart ai-generate-btn" onclick={onRunAi} disabled={agendaAiLoading || !agendaAiInput.trim()}>
-          {agendaAiLoading ? 'Tänker...' : 'Skapa dagplan ▶'}
+          {agendaAiLoading ? 'Tänker...' : agendaAiQuestionText ? 'Skicka svar ▶' : 'Skapa dagplan ▶'}
         </button>
       </div>
     {/if}
@@ -262,6 +255,7 @@
   .ai-input-row { display: flex; gap: 6px; align-items: flex-start; margin-bottom: 8px; }
   .ai-input-actions { display: flex; flex-direction: column; gap: 4px; padding-top: 2px; }
   .ai-flex-slider { margin-bottom: 8px; }
+  .ai-question { padding: 7px 9px; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
   .flex-range { width: 100%; accent-color: var(--accent); cursor: pointer; }
   .flex-labels { display: flex; justify-content: space-between; margin-top: 2px; }
   .flex-label { font-size: 11px; color: var(--menu-muted); transition: color 0.15s; }

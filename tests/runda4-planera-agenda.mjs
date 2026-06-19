@@ -1,7 +1,8 @@
 import { chromium } from 'playwright';
+import { existsSync } from 'node:fs';
 
 const BASE = 'http://localhost:5177';
-const BROWSER_PATH = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const BROWSER_PATH = process.env.PLAYWRIGHT_CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
 async function shot(page, name) {
   await page.screenshot({ path: `/tmp/r4-${name}.png`, fullPage: false });
@@ -24,7 +25,9 @@ async function goToPlan(page) {
 }
 
 async function run() {
-  const browser = await chromium.launch({ executablePath: BROWSER_PATH, headless: true });
+  const browser = await chromium.launch(existsSync(BROWSER_PATH)
+    ? { executablePath: BROWSER_PATH, headless: true }
+    : { channel: 'chrome', headless: true });
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
   const page = await ctx.newPage();
   const results = [];
@@ -34,6 +37,20 @@ async function run() {
   function warn(name, detail) { results.push(`⚠ ${name}: ${detail}`); }
 
   await page.goto(BASE);
+  await page.waitForLoadState('networkidle');
+  await dismissWelcome(page);
+  await page.evaluate(() => {
+    const raw = localStorage.getItem('day_timer_v1');
+    if (raw) {
+      const state = JSON.parse(raw);
+      state.userLevel = 2;
+      localStorage.setItem('day_timer_v1', JSON.stringify(state));
+    }
+    localStorage.setItem('daytimer_ai_config', JSON.stringify({
+      provider: 'anthropic', apiKey: 'sk-ant-test-key', rememberApiKey: true, baseUrl: '', customModel: ''
+    }));
+  });
+  await page.reload();
   await page.waitForLoadState('networkidle');
   await dismissWelcome(page);
   await shot(page, '00-start');
@@ -60,8 +77,8 @@ async function run() {
   }
   await shot(page, '02-plan-editor');
 
-  // ── TEST 3: Titel-input (placeholder="Matematik") ─────────────────────────
-  const titleInput = page.locator('input[placeholder="Matematik"]').first();
+  // ── TEST 3: Titel-input ───────────────────────────────────────────────────
+  const titleInput = page.locator('.plan-editor input[placeholder="Rubrik"]').first();
   if (await titleInput.isVisible({ timeout: 2000 }).catch(() => false)) {
     await titleInput.click();
     await titleInput.fill('Testlektion Matematik');
@@ -69,7 +86,7 @@ async function run() {
     if (val === 'Testlektion Matematik') ok('Titel-input fungerar');
     else fail('Titel-input', `värde="${val}"`);
   } else {
-    fail('Titel-input', 'placeholder="Matematik" ej hittad');
+    fail('Titel-input', 'input[placeholder="Rubrik"] ej hittad i plan-editor');
   }
 
   // ── TEST 4: Aktiviteter-textarea ──────────────────────────────────────────
@@ -246,85 +263,57 @@ async function run() {
   }
   await shot(page, '11-spara-agenda');
 
-  // ── TEST 13: ICS-import sektion ───────────────────────────────────────────
-  // Find the ICS section header and toggle it open
-  const icsLabel = page.locator('span.agenda-input-label:has-text("Importera ICS")').first();
-  if (await icsLabel.isVisible({ timeout: 2000 }).catch(() => false)) {
-    ok('ICS-import sektion synlig');
-    // Find the toggle button next to it
-    const icsToggle = icsLabel.locator('~ button.agenda-input-toggle').first();
-    const icsParent = page.locator('div.agenda-input-header:has(span:has-text("Importera ICS"))').first();
-    const icsOpenBtn = icsParent.locator('button.agenda-input-toggle').first();
-    if (await icsOpenBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await icsOpenBtn.click();
-      await page.waitForTimeout(400);
-    }
-  } else {
-    warn('ICS-import label', '"Importera ICS-kalender" ej synlig');
-  }
-  await shot(page, '12-ics-section');
+  // ── TEST 13: Redigera valt block har tydliga handlingar ──────────────────
+  const savedAgendaBlock = page.locator('.agenda-block').first();
+  if (await savedAgendaBlock.isVisible({ timeout: 1500 }).catch(() => false)) {
+    await savedAgendaBlock.click();
+    await page.waitForTimeout(500);
+    const primaryAction = page.locator('#quickStartBtn').first();
+    const primaryText = (await primaryAction.textContent().catch(() => '')).trim();
+    if (primaryText.includes('Klar')) ok('Valt block använder primärhandlingen "Klar"');
+    else fail('Valt block primärhandling', primaryText);
 
-  // ── TEST 14: ICS textarea ────────────────────────────────────────────────
-  const icsTextareas = page.locator('textarea.agenda-input');
-  const icsCount = await icsTextareas.count();
-  // The ICS textarea is the second .agenda-input (first=dagtext, second=ICS paste)
-  let icsTA = null;
-  for (let i = 0; i < icsCount; i++) {
-    const ph = await icsTextareas.nth(i).getAttribute('placeholder') ?? '';
-    if (ph.includes('ics') || ph.includes('.ics') || ph.includes('BEGIN') || ph.includes('VCALENDAR')) {
-      icsTA = icsTextareas.nth(i);
-      break;
-    }
-  }
-  if (icsTA && await icsTA.isVisible({ timeout: 2000 }).catch(() => false)) {
-    const sampleICS = 'BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:Matematiklektion\nDTSTART:20260530T080000\nDTEND:20260530T090000\nEND:VEVENT\nEND:VCALENDAR';
-    await icsTA.fill(sampleICS);
-    const val = await icsTA.inputValue();
-    if (val.includes('VCALENDAR')) ok('ICS textarea tar emot ICS-text');
-    else fail('ICS textarea', 'värde sparades inte');
-
-    // Förhandsgranska
-    const previewBtn = page.locator('button:has-text("Förhandsgranska ICS")').first();
-    if (await previewBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await previewBtn.click();
-      await page.waitForTimeout(600);
-      ok('Förhandsgranska ICS-knapp klickad');
-      const previewList = page.locator('.preview-list, .preview-item').first();
-      if (await previewList.isVisible({ timeout: 1500 }).catch(() => false)) {
-        const previewText = await previewList.textContent().catch(() => '');
-        ok(`ICS förhandsgranskning: "${previewText.trim().substring(0, 60)}"`);
-      } else {
-        const icsError = page.locator('.ai-error').last();
-        const errText = await icsError.textContent({ timeout: 1000 }).catch(() => '');
-        if (errText) fail('ICS förhandsgranskning', `fel: "${errText.trim()}"`);
-        else warn('ICS förhandsgranskning', 'ingen .preview-list och inget fel');
-      }
+    const addAsNew = page.locator('button:has-text("Lägg till som nytt")').first();
+    if (await addAsNew.isVisible({ timeout: 1000 }).catch(() => false)) {
+      ok('Valt block visar "Lägg till som nytt" som separat handling');
     } else {
-      warn('ICS Förhandsgranska-knapp', 'ej synlig');
+      fail('Lägg till som nytt', 'sekundär handling saknas');
     }
-    await shot(page, '13-ics-preview');
   } else {
-    warn('ICS textarea', `hittade ${icsCount} .agenda-input, ingen med ICS-placeholder`);
-    await shot(page, '13-ics-notfound');
+    warn('Valt block-handlingar', 'inget agendablock skapades av testplanen');
   }
 
-  // ── TEST 15: "Lägg i dagplan"-knappen (import) ────────────────────────────
-  const importBtn = page.locator('button:has-text("Lägg i dagplan")').first();
-  if (await importBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-    ok('"Lägg i dagplan"-knapp synlig');
-    const disabled = await importBtn.isDisabled();
-    if (!disabled) {
-      await importBtn.click();
-      await page.waitForTimeout(500);
-      ok('"Lägg i dagplan" klickad');
+  // ── TEST 14: Samlat importflöde ───────────────────────────────────────────
+  const createAiHeader = page.locator('.agenda-input-header:has-text("Skapa med AI")').first();
+  const createAiToggle = createAiHeader.locator('button.agenda-input-toggle').first();
+  if (await createAiToggle.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await createAiToggle.click();
+    await page.waitForTimeout(400);
+    ok('Skapa med AI-panel kan öppnas');
+  } else {
+    fail('Skapa med AI', 'toggle ej synlig');
+  }
+
+  const uploadBtn = page.locator('button[title="Ladda upp schema, ICS, bild eller textfil"]').first();
+  const uploadInput = page.locator('input[type="file"][accept*=".ics"]').first();
+  if (await uploadBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+    ok('Samlad upload-knapp synlig');
+  } else {
+    fail('Samlad upload-knapp', 'knapp med upload-title saknas');
+  }
+  if (await uploadInput.count() === 1) {
+    const accept = await uploadInput.getAttribute('accept') ?? '';
+    if (accept.includes('.ics') && accept.includes('image/*') && accept.includes('.txt')) {
+      ok('Upload-input accepterar ICS, bild och text');
     } else {
-      warn('"Lägg i dagplan"', 'disabled (förhandsgranskning inte klar?)');
+      fail('Upload-input accept', accept);
     }
   } else {
-    warn('"Lägg i dagplan"', 'knapp ej synlig');
+    fail('Upload-input', 'dold file-input saknas');
   }
+  await shot(page, '12-unified-upload');
 
-  // ── TEST 16: Plan-sektionens "Kör!"-knapp ────────────────────────────────
+  // ── TEST 15: Plan-sektionens primärknapp ──────────────────────────────────
   const quickStartBtn = page.locator('#quickStartBtn, button.quickstart').first();
   if (await quickStartBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     const btnText = await quickStartBtn.textContent().catch(() => '');
