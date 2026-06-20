@@ -619,7 +619,6 @@
       }
       preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
-      s.agendaOpen = true;
       agendaInputOpen = writeMenuSections.agenda || shouldOpenAgendaInputInPlan();
     }
 
