@@ -316,7 +316,7 @@
     {/if}
 
     </div>
-    <div class="write-section-body">
+    <div class="write-section-body controls">
       <div id="plan-time-row" class="row2">
         <div>
           <input type="time" value={startTimeValue} title="Starttid"
