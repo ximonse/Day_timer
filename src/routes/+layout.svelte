@@ -681,6 +681,8 @@
     :global(.mini-menu-shell) { width: min(320px, 100%); }
     :global(.mini-menu-shell.mini-menu-shell--planner),
     :global(.mini-menu-shell.mini-menu-shell--wide) { width: min(760px, 100%); }
+    :global(.mini-menu-shell.mini-menu-shell--planner .toolbar),
+    :global(.mini-menu-shell.mini-menu-shell--wide .toolbar) { max-width: min(320px, 100%); }
   }
   @media (pointer: coarse) {
     :global(.app) { overflow-y: auto; overflow-x: hidden; }
