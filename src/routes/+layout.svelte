@@ -141,6 +141,12 @@
   :global(.top-time) { grid-column: 2; position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 0; justify-self: center; }
   :global(.top-time .now) { background: transparent; border: 0; color: inherit; padding: 0; cursor: pointer; }
   :global(.top-time .left) { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); font-size: 20px; color: var(--muted); margin-top: 0; transition: opacity .2s; font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
+  :global(.plan-overrun-alert) { width: min(520px, calc(100% - 24px)); margin: 8px auto 0; padding: 9px 12px; border: 1px solid color-mix(in srgb, #d97706 44%, var(--border)); border-left-width: 4px; border-radius: 8px; background: color-mix(in srgb, #fef3c7 72%, var(--panel)); color: color-mix(in srgb, #78350f 78%, var(--fg)); box-shadow: 0 8px 24px rgba(0,0,0,.12); display: flex; flex-direction: column; gap: 2px; text-align: left; font-size: 13px; line-height: 1.25; }
+  :global(.plan-overrun-alert strong) { font-size: 13px; font-weight: 800; letter-spacing: 0; }
+  :global(.plan-overrun-alert span) { opacity: .86; }
+  :global(.plan-overrun-alert.active-shift) { border-color: color-mix(in srgb, #dc2626 56%, var(--border)); background: color-mix(in srgb, #fee2e2 68%, var(--panel)); color: color-mix(in srgb, #7f1d1d 80%, var(--fg)); }
+  :global(body.dark .plan-overrun-alert) { background: color-mix(in srgb, #451a03 62%, var(--panel)); color: color-mix(in srgb, #fde68a 80%, var(--fg)); }
+  :global(body.dark .plan-overrun-alert.active-shift) { background: color-mix(in srgb, #450a0a 64%, var(--panel)); color: color-mix(in srgb, #fecaca 84%, var(--fg)); }
   :global(.clock-wrap) { position: relative; margin-top: 34px; }
   :global(.mini-menu-shell) { width: min(348px, 100%); display: flex; flex-direction: column; align-items: center; gap: 7px; }
   :global(.mini-menu-shell--planner) { width: min(760px, 100%); }
@@ -769,6 +775,8 @@
 
   :global(.flash) { position: fixed; inset: 0; pointer-events: none; background: #ffae00; opacity: 0; z-index: 100; transition: opacity .15s; }
   :global(.flash.on) { opacity: .35; }
+  :global(.completion-toast) { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 180; pointer-events: none; padding: 12px 18px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 18%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--border)); color: var(--fg); box-shadow: 0 14px 42px rgba(0,0,0,.18); font-size: 18px; font-weight: 800; letter-spacing: 0; animation: completion-toast-in .22s ease-out; }
+  @keyframes completion-toast-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
   :global(.help-modal) { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
   :global(.help-modal.open) { display: flex; }
     :global(.help-card) { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 24px; padding: 40px; max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; line-height: 1.5; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, ensureRenderableBlocks, flowToBlocks, hasRunnableSessionContent, makeFlowFromSession, showSegmentDoneControl, undoCompletedSegment } from './session.js';
+import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, effectiveRunUntilCheckedBlocks, finalizeRunUntilCheckedSegment, ensureRenderableBlocks, flowToBlocks, hasRunnableSessionContent, makeFlowFromSession, showSegmentDoneControl, undoCompletedSegment } from './session.js';
 import type { Block, Flow } from './state.svelte.js';
 
 function block(patch: Partial<Block> = {}): Block {
@@ -9,7 +9,8 @@ function block(patch: Partial<Block> = {}): Block {
 		minutes: patch.minutes ?? 45,
 		note: patch.note ?? '',
 		warning: patch.warning ?? true,
-		pinned: patch.pinned ?? false
+		pinned: patch.pinned ?? false,
+		...(patch.runUntilChecked !== undefined ? { runUntilChecked: patch.runUntilChecked } : {})
 	};
 }
 
@@ -22,6 +23,7 @@ function flow(patch: Partial<Flow> = {}): Flow {
 		warnings: patch.warnings ?? [false, true],
 		notes: patch.notes ?? ['Note A', 'Note B'],
 		extraInfo: patch.extraInfo ?? 'Info',
+		runUntilChecked: patch.runUntilChecked,
 		startMin: patch.startMin
 	};
 }
@@ -46,11 +48,11 @@ describe('session helpers', () => {
 
 	test('maps a flow to blocks', () => {
 		let i = 0;
-		expect(flowToBlocks(flow(), () => `id-${++i}`, {
+		expect(flowToBlocks(flow({ runUntilChecked: [true, false] }), () => `id-${++i}`, {
 			pinned: (minutes) => minutes > 15,
 			warning: true
 		})).toEqual([
-			{ id: 'id-1', title: 'A', minutes: 10, note: 'Note A', warning: true, pinned: false },
+			{ id: 'id-1', title: 'A', minutes: 10, note: 'Note A', warning: true, pinned: false, runUntilChecked: true },
 			{ id: 'id-2', title: 'B', minutes: 20, note: 'Note B', warning: true, pinned: true }
 		]);
 	});
@@ -77,7 +79,7 @@ describe('session helpers', () => {
 		expect(makeFlowFromSession({
 			id: 'existing',
 			title: '  Pass  ',
-			blocks: [block({ title: 'One', minutes: 30, warning: false }), block({ title: 'Two', minutes: 15, note: 'n' })],
+			blocks: [block({ title: 'One', minutes: 30, warning: false, runUntilChecked: true }), block({ title: 'Two', minutes: 15, note: 'n' })],
 			extraInfo: 'Extra',
 			startMin: 480
 		}, () => 'new')).toEqual({
@@ -87,6 +89,7 @@ describe('session helpers', () => {
 			minutes: [30, 15],
 			warnings: [false, true],
 			notes: ['', 'n'],
+			runUntilChecked: [true, false],
 			extraInfo: 'Extra',
 			startMin: 480
 		});
@@ -173,5 +176,37 @@ describe('session helpers', () => {
 		expect(showSegmentDoneControl('done-b', 'active', ['done-a', 'done-b'])).toBe(true);
 		expect(showSegmentDoneControl('done-a', 'active', ['done-a', 'done-b'])).toBe(false);
 		expect(showSegmentDoneControl('future', 'active', ['done-a'])).toBe(false);
+	});
+
+	test('keeps a run-until-checked segment active after its planned end', () => {
+		const effective = effectiveRunUntilCheckedBlocks([
+			block({ id: 'a', minutes: 10, runUntilChecked: true }),
+			block({ id: 'b', minutes: 5 })
+		], 14);
+
+		expect(effective.map(item => item.minutes)).toEqual([15, 5]);
+		expect(effective[0].runUntilChecked).toBe(true);
+	});
+
+	test('finalizes run-until-checked to elapsed time and clears the flag', () => {
+		const result = finalizeRunUntilCheckedSegment([
+			block({ id: 'a', minutes: 10, runUntilChecked: true }),
+			block({ id: 'b', minutes: 5 })
+		], 0, 14);
+
+		expect(result.blocks.map(item => item.minutes)).toEqual([14, 5]);
+		expect(result.blocks[0].runUntilChecked).toBeFalsy();
+		expect(result.deltaMin).toBe(4);
+	});
+
+	test('keeps total duration when run-until-checked finishes early before another segment', () => {
+		const result = finalizeRunUntilCheckedSegment([
+			block({ id: 'a', minutes: 10, runUntilChecked: true }),
+			block({ id: 'b', minutes: 5 })
+		], 0, 6);
+
+		expect(result.blocks.map(item => item.minutes)).toEqual([6, 9]);
+		expect(result.blocks[0].runUntilChecked).toBeFalsy();
+		expect(result.deltaMin).toBe(0);
 	});
 });

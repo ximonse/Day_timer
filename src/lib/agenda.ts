@@ -157,7 +157,8 @@ export function cloneAgendaDay(day: AgendaDay): AgendaDay {
 			parts: Array.isArray(flow.parts) ? [...flow.parts] : [],
 			minutes: Array.isArray(flow.minutes) ? [...flow.minutes] : [],
 			warnings: Array.isArray(flow.warnings) ? [...flow.warnings] : [],
-			notes: Array.isArray(flow.notes) ? [...flow.notes] : []
+			notes: Array.isArray(flow.notes) ? [...flow.notes] : [],
+			...(Array.isArray(flow.runUntilChecked) ? { runUntilChecked: [...flow.runUntilChecked] } : {})
 		}))
 	};
 }
@@ -207,6 +208,24 @@ export function replaceAgendaFlowInDays(
 	const dayFlows = [...nextDays[dayIdx].flows];
 	dayFlows[flowIdx] = { ...flow };
 	nextDays[dayIdx] = { ...nextDays[dayIdx], flows: dayFlows };
+	return nextDays;
+}
+
+export function shiftAgendaFlowsAfter(
+	days: AgendaDay[] | null | undefined,
+	dayIdx: number,
+	flowIdx: number,
+	deltaMin: number
+): AgendaDay[] {
+	const nextDays = cloneAgendaDays(days);
+	if (!nextDays[dayIdx] || deltaMin === 0) return nextDays;
+	nextDays[dayIdx] = {
+		...nextDays[dayIdx],
+		flows: nextDays[dayIdx].flows.map((flow, index) => {
+			if (index <= flowIdx || flow.startMin === undefined) return flow;
+			return { ...flow, startMin: flow.startMin + deltaMin };
+		})
+	};
 	return nextDays;
 }
 

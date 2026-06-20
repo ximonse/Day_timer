@@ -25,6 +25,43 @@ export function completeActiveSegment(
 	return { minutes: nextMinutes, savedMinutes };
 }
 
+export function effectiveRunUntilCheckedBlocks(blocks: Block[], elapsedMin: number): Block[] {
+	let cum = 0;
+	return blocks.map(block => {
+		if (!block.runUntilChecked) {
+			cum += block.minutes;
+			return block;
+		}
+		const segStart = cum;
+		const plannedEnd = segStart + block.minutes;
+		const activePastPlannedEnd = elapsedMin >= segStart && elapsedMin >= plannedEnd;
+		const minutes = activePastPlannedEnd ? Math.max(block.minutes, Math.ceil(elapsedMin - segStart + 1)) : block.minutes;
+		cum += minutes;
+		return minutes === block.minutes ? block : { ...block, minutes };
+	});
+}
+
+export function finalizeRunUntilCheckedSegment(
+	blocks: Block[],
+	activeIndex: number,
+	elapsedInSegment: number
+): { blocks: Block[]; deltaMin: number } {
+	if (activeIndex < 0 || activeIndex >= blocks.length || !blocks[activeIndex].runUntilChecked) {
+		return { blocks, deltaMin: 0 };
+	}
+	const next = blocks.map(block => ({ ...block }));
+	const actualMinutes = Math.max(1, Math.round(elapsedInSegment));
+	const previousMinutes = next[activeIndex].minutes;
+	next[activeIndex].minutes = actualMinutes;
+	delete next[activeIndex].runUntilChecked;
+	const deltaMin = actualMinutes - previousMinutes;
+	if (deltaMin < 0 && activeIndex < next.length - 1) {
+		next[activeIndex + 1].minutes += Math.abs(deltaMin);
+		return { blocks: next, deltaMin: 0 };
+	}
+	return { blocks: next, deltaMin };
+}
+
 export function undoCompletedSegment(
 	minutes: number[],
 	completedIndex: number,
@@ -117,7 +154,7 @@ function resolveFlowWarning(flow: Flow, index: number, minutes: number, override
 export function flowToBlocks(flow: Flow, createId: () => string, options: FlowBlockOptions = {}): Block[] {
 	return flow.parts.map((title, index) => {
 		const minutes = flow.minutes[index] ?? 45;
-		return {
+		const block: Block = {
 			id: createId(),
 			title,
 			minutes,
@@ -125,6 +162,8 @@ export function flowToBlocks(flow: Flow, createId: () => string, options: FlowBl
 			warning: resolveFlowWarning(flow, index, minutes, options.warning),
 			pinned: resolveFlowBlockFlag(options.pinned, minutes, index),
 		};
+		if (flow.runUntilChecked?.[index]) block.runUntilChecked = true;
+		return block;
 	});
 }
 
@@ -142,6 +181,7 @@ export function makeFlowFromSession(
 	session: { id?: string; startMin?: number; title: string; blocks: Block[]; extraInfo?: string },
 	createId: () => string
 ): Flow {
+	const runUntilChecked = session.blocks.map(block => Boolean(block.runUntilChecked));
 	return {
 		id: session.id ?? createId(),
 		title: session.title.trim() || 'Utan rubrik',
@@ -149,6 +189,7 @@ export function makeFlowFromSession(
 		minutes: session.blocks.map(block => block.minutes),
 		warnings: session.blocks.map(block => block.warning),
 		notes: session.blocks.map(block => block.note),
+		...(runUntilChecked.some(Boolean) ? { runUntilChecked } : {}),
 		extraInfo: session.extraInfo || '',
 		...(session.startMin !== undefined ? { startMin: session.startMin } : {}),
 	};

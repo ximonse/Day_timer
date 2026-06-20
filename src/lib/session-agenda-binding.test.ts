@@ -57,6 +57,37 @@ describe('session agenda binding', () => {
 		expect(result!.agendaMeta[JSON.stringify(['2026-05-31', 'Ändrad', 485, 20, 1])]).toEqual({ source: 'manual' });
 	});
 
+	test('can shift following agenda flows when a run-until-checked session overruns', () => {
+		const days = parseAgenda([
+			'@260531',
+			'#Morgon 08:00 <!--id:abc1234-->',
+			'Diskussion %',
+			'#Nästa 08:10 <!--id:def5678-->',
+			'Start 20m'
+		].join('\n'));
+		const ref = makeAgendaFlowRef('2026-05-31', days[0].flows[0], 8 * 60);
+		const result = syncSessionToAgenda({
+			days,
+			activeRef: ref,
+			activeSection: 'now',
+			source: { kind: 'agenda', date: '2026-05-31', title: 'Morgon', startMin: 8 * 60 },
+			forceUpdate: true,
+			planSelectionExplicit: false,
+			session: {
+				title: 'Morgon',
+				blocks: [{ id: 'b1', title: 'Diskussion', minutes: 17, note: '', warning: true, pinned: false }],
+				extraInfo: '',
+				startMin: 8 * 60
+			},
+			shiftFollowingMin: 7,
+			agendaMeta: {},
+			createId: () => 'newid'
+		});
+
+		expect(result).not.toBeNull();
+		expect(serializeAgenda(result!.days)).toContain('#Nästa 08:17 <!--id:def5678-->');
+	});
+
 	test('prepares agenda flow load without mutating previous agenda state', () => {
 		const days = parseAgenda(['@260531', '#Morgon 08:00 <!--id:abc1234-->', 'Start 30m'].join('\n'));
 		const result = prepareAgendaFlowLoad({

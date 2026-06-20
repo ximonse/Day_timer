@@ -3,8 +3,10 @@ import {
 	makeAgendaFlowRef,
 	makeAgendaMetaKeyForRef,
 	moveAgendaMeta,
+	rebuildAgendaMetaForDay,
 	replaceAgendaFlowInDays,
 	resolveAgendaFlowRef,
+	shiftAgendaFlowsAfter,
 	type AgendaFlowRef
 } from './agenda.js';
 import type { AgendaDay } from './parse.js';
@@ -31,6 +33,7 @@ export interface SyncSessionToAgendaInput {
 	forceUpdate: boolean;
 	planSelectionExplicit: boolean;
 	session: SessionAgendaState;
+	shiftFollowingMin?: number;
 	agendaMeta: Record<string, AgendaFlowMeta>;
 	createId: () => string;
 }
@@ -46,13 +49,18 @@ export function syncSessionToAgenda(input: SyncSessionToAgendaInput) {
 	const active = resolveAgendaFlowRef(daysInput, input.activeRef);
 	if (!active || !daysInput || !input.activeRef) return null;
 	const oldKey = makeAgendaMetaKeyForRef(input.activeRef);
-	const days = replaceAgendaFlowInDays(daysInput, active.dayIdx, active.flowIdx, makeFlowFromSession({
+	const replacedDays = replaceAgendaFlowInDays(daysInput, active.dayIdx, active.flowIdx, makeFlowFromSession({
 		id: active.flow.id,
 		title: input.session.title,
 		blocks: input.session.blocks,
 		extraInfo: input.session.extraInfo,
 		startMin: input.session.startMin
 	}, input.createId));
+	const days = input.shiftFollowingMin
+		? shiftAgendaFlowsAfter(replacedDays, active.dayIdx, active.flowIdx, input.shiftFollowingMin)
+		: replacedDays;
+	const previousDay = daysInput[active.dayIdx] ?? null;
+	const nextDay = days[active.dayIdx] ?? null;
 	const activeRef = {
 		...input.activeRef,
 		title: input.session.title,
@@ -60,10 +68,13 @@ export function syncSessionToAgenda(input: SyncSessionToAgendaInput) {
 		totalMin: input.session.blocks.reduce((sum, block) => sum + block.minutes, 0),
 		partCount: input.session.blocks.length
 	};
+	const movedMeta = moveAgendaMeta(input.agendaMeta, oldKey, makeAgendaMetaKeyForRef(activeRef));
 	return {
 		days,
 		activeRef,
-		agendaMeta: moveAgendaMeta(input.agendaMeta, oldKey, makeAgendaMetaKeyForRef(activeRef))
+		agendaMeta: input.shiftFollowingMin
+			? rebuildAgendaMetaForDay(movedMeta, input.activeRef.date, previousDay, nextDay, input.session.startMin)
+			: movedMeta
 	};
 }
 

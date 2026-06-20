@@ -7,6 +7,7 @@
 
   interface Props {
     blocks: Block[];
+    displayBlocks?: Block[];
     palette: Palette;
     dark: boolean;
     segMinutesMode: 'off' | 'planned' | 'remaining';
@@ -25,6 +26,7 @@
 
   let {
     blocks = $bindable(),
+    displayBlocks,
     palette,
     dark,
     segMinutesMode,
@@ -359,11 +361,19 @@
       }
     }
 
-    // Handle time suffix (e.g. 10m)
+    const runMatch = val.match(/\s+%(?:min)?$/i);
+    if (runMatch) {
+      b.minutes = 10;
+      b.pinned = false;
+      b.runUntilChecked = true;
+      val = val.slice(0, val.length - runMatch[0].length).trim();
+    }
+
     const mMatch = val.match(/\s+(\d+)m$/i);
     if (mMatch) {
       b.minutes = Math.max(1, parseInt(mMatch[1], 10));
       b.pinned = true;
+      delete b.runUntilChecked;
       val = val.slice(0, val.length - mMatch[0].length).trim();
     }
 
@@ -377,6 +387,23 @@
     if (addNew && val) {
       addBlockAfter(b.id);
     }
+  }
+
+  function commitMinutesEdit(b: Block, rawValue: string) {
+    const val = rawValue.trim();
+    if (/^%(?:min)?$/i.test(val)) {
+      b.minutes = 10;
+      b.pinned = false;
+      b.runUntilChecked = true;
+    } else {
+      const v = parseInt(val, 10);
+      if (v > 0) {
+        b.minutes = v;
+        b.pinned = true;
+        delete b.runUntilChecked;
+      }
+    }
+    commitEdit();
   }
 </script>
 
@@ -396,8 +423,10 @@
     {@const ct = clockTheme(palette, dark)}
     {@const displayTitle = stripColorDirective(b.title)}
     {@const blockColor = colorForSegment(b.title, ct.colors, i)}
-    {@const cumMin = blocks.slice(0, i).reduce((a: number, x: Block) => a + x.minutes, 0)}
-    {@const segEnd = cumMin + b.minutes}
+    {@const timingBlocks = displayBlocks ?? blocks}
+    {@const timingBlock = timingBlocks[i] ?? b}
+    {@const cumMin = timingBlocks.slice(0, i).reduce((a: number, x: Block) => a + x.minutes, 0)}
+    {@const segEnd = cumMin + timingBlock.minutes}
     {@const isActive = elapsedMin >= cumMin && elapsedMin < segEnd}
     {@const isPast = elapsedMin >= segEnd}
     {#if dragOverIdx === i && armedBlockId !== b.id}
@@ -427,15 +456,15 @@
         {/if}
       {/if}
       {#if editingBlockId === b.id && editingBlockField === 'min'}
-        <input class="inline-edit min-inp" type="number" min="1" use:focusOnMount
-          value={b.minutes}
-          onblur={(e) => { const v = parseInt((e.target as HTMLInputElement).value); if (v > 0) { b.minutes = v; b.pinned = true; } commitEdit(); }}
+        <input class="inline-edit min-inp" type="text" inputmode="numeric" use:focusOnMount
+          value={b.runUntilChecked ? '%' : b.minutes}
+          onblur={(e) => commitMinutesEdit(b, (e.target as HTMLInputElement).value)}
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
           onclick={(e) => e.stopPropagation()} />
       {:else if segMinutesMode === 'planned'}
-        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{b.minutes}m</button>
+        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : b.runUntilChecked ? '%' : `${b.minutes}m`}</button>
       {:else if segMinutesMode === 'remaining'}
-        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsedMin)) : b.minutes}m kvar</button>
+        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : `${isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsedMin)) : b.minutes}m kvar`}</button>
       {/if}
       {#if !isViewMode && onToggleSegmentDone && showSegmentDoneControl(b.id, isActive ? b.id : null, doneBlockIds)}
         <button class="seg-done-btn" class:checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på nästa segment'}>{doneBlockIds.includes(b.id) ? '✓' : '○'}</button>

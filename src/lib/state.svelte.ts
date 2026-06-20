@@ -17,6 +17,7 @@ export interface Block {
   note: string;
   warning: boolean;
   pinned: boolean;
+  runUntilChecked?: boolean;
 }
 
 export interface Flow {
@@ -26,6 +27,7 @@ export interface Flow {
   minutes: number[];
   warnings: boolean[];
   notes: string[];
+  runUntilChecked?: boolean[];
   extraInfo: string;
   startMin?: number;
   lastUsed?: number;

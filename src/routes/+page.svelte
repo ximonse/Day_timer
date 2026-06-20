@@ -44,7 +44,7 @@
     upsertActualEntry,
     finalizeUnconfirmedForDate
   } from '$lib/actuals.js';
-  import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, hasRunnableSessionContent, makeFlowFromSession, undoCompletedSegment, type SessionFromFlowOptions } from '$lib/session.js';
+  import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, effectiveRunUntilCheckedBlocks, finalizeRunUntilCheckedSegment, hasRunnableSessionContent, makeFlowFromSession, undoCompletedSegment, type SessionFromFlowOptions } from '$lib/session.js';
   import {
     addManualAgendaItem,
     deleteAgendaItemAt,
@@ -165,6 +165,8 @@
 
   let nowMinLive = $state(nowMinutes());
   let doneSegments = $state<Record<string, number>>({});
+  let completionToast = $state('');
+  let completionToastTimer: ReturnType<typeof setTimeout> | null = null;
   let lastAutoLoadKey = $state('');
   let mobileTab = $state<AppSection>('now');
   let showAgendaOverlay = $state(typeof window !== 'undefined' ? window.innerWidth > 980 : true);
@@ -305,6 +307,8 @@
 
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
+  const displayBlocks = $derived.by(() => effectiveRunUntilCheckedBlocks(s.blocks, elapsedMin()));
+  const displayTotalMin = () => displayBlocks.reduce((a, b) => a + b.minutes, 0);
 
   const sectorColors = $derived(clockTheme(s.palette, s.dark).colors);
 
@@ -543,6 +547,39 @@
       ?? agendaItems.find(item => item.startMin + item.totalMin > nowMin && item.startMin > s.startMin)
       ?? null;
     return next ? stripColorDirective(next.flow.title || 'Nästa pass') : '';
+  });
+
+  const runUntilImpact = $derived.by(() => {
+    const elapsed = elapsedMin();
+    if (elapsed < 0) return null;
+    let cum = 0;
+    for (let i = 0; i < s.blocks.length; i++) {
+      const block = s.blocks[i];
+      const remainingAfter = s.blocks.slice(i + 1).reduce((sum, item) => sum + item.minutes, 0);
+      if (block.runUntilChecked && elapsed >= cum) {
+        const actual = Math.max(1, Math.ceil(elapsed - cum));
+        const effectiveCurrent = Math.max(block.minutes, actual);
+        const predictedEnd = s.startMin + cum + effectiveCurrent + remainingAfter;
+        const plannedEnd = s.startMin + totalMin();
+        const source = sessionSource;
+        const next = source.kind === 'agenda'
+          ? agendaItems.find(item => item.startMin > source.startMin)
+          : null;
+        const nextStart = next?.startMin ?? null;
+        const shiftMin = nextStart === null ? Math.max(0, predictedEnd - plannedEnd) : Math.max(0, predictedEnd - nextStart);
+        const riskMin = nextStart === null ? null : nextStart - predictedEnd;
+        if (shiftMin <= 0 && (riskMin === null || riskMin > 2)) return null;
+        return {
+          title: stripColorDirective(block.title || 'Aktivitet'),
+          actualMin: actual,
+          shiftMin,
+          riskMin,
+          nextTitle: next ? stripColorDirective(next.flow.title || 'Nästa pass') : ''
+        };
+      }
+      cum += block.minutes;
+    }
+    return null;
   });
 
   const overlayItems = $derived.by(() => {
@@ -1096,6 +1133,15 @@
     s.blocks.forEach((b, i) => { b.minutes = newMins[i]; });
   }
 
+  function showCompletionToast() {
+    completionToast = 'Bra jobbat!';
+    if (completionToastTimer) clearTimeout(completionToastTimer);
+    completionToastTimer = setTimeout(() => {
+      completionToast = '';
+      completionToastTimer = null;
+    }, 2400);
+  }
+
   function toggleSegmentDone(blockId: string) {
     if (doneSegments[blockId] !== undefined) {
       const saved = doneSegments[blockId];
@@ -1114,19 +1160,31 @@
     }
     const elapsed = elapsedMin();
     let cum = 0;
+    const effectiveBlocks = effectiveRunUntilCheckedBlocks(s.blocks, elapsed);
     for (let i = 0; i < s.blocks.length; i++) {
       if (s.blocks[i].id === blockId) {
-        const isActive = elapsed >= cum && elapsed < cum + s.blocks[i].minutes;
+        const isActive = elapsed >= cum && elapsed < cum + effectiveBlocks[i].minutes;
         if (!isActive) return;
+        if (s.blocks[i].runUntilChecked) {
+          const finalized = finalizeRunUntilCheckedSegment(s.blocks, i, elapsed - cum);
+          s.blocks = finalized.blocks;
+          warnedSet.clear();
+          syncTimerToAgenda(true, Math.max(0, finalized.deltaMin));
+          syncPartsDraftFromState(true);
+          if (i === s.blocks.length - 1) showCompletionToast();
+          appState.persist();
+          return;
+        }
         const completion = completeActiveSegment(s.blocks.map(b => b.minutes), i, elapsed - cum);
         s.blocks.forEach((b, j) => { b.minutes = completion.minutes[j]; });
         doneSegments = { ...doneSegments, [blockId]: completion.savedMinutes };
         warnedSet.clear();
         syncTimerToAgenda(true);
+        if (i === s.blocks.length - 1) showCompletionToast();
         appState.persist();
         return;
       }
-      cum += s.blocks[i].minutes;
+      cum += effectiveBlocks[i].minutes;
     }
   }
 
@@ -1187,7 +1245,7 @@
     
   }
 
-  function syncTimerToAgenda(forceUpdate = false) {
+  function syncTimerToAgenda(forceUpdate = false, shiftFollowingMin = 0) {
     const result = syncSessionToAgenda({
       days: agendaDays,
       activeRef: activeAgendaFlowRef,
@@ -1201,6 +1259,7 @@
         extraInfo: s.extraInfo,
         startMin: s.startMin
       },
+      shiftFollowingMin,
       agendaMeta: s.agendaMeta,
       createId: uid
     });
@@ -1246,6 +1305,23 @@
     } catch { /* ignore */ }
   }
 
+  function planBeep(offset = 0) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const t0 = audioCtx.currentTime + offset;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(392, t0);
+      o.frequency.setValueAtTime(294, t0 + 0.22);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.75);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + 0.85);
+    } catch { /* ignore */ }
+  }
+
   function doFlash() {
     if (!flashEl) return;
     flashEl.classList.add('on');
@@ -1256,7 +1332,7 @@
     if (soundMuted) return;
     const elapsed = elapsedMin();
     let cum = 0;
-    s.blocks.forEach((b, i) => {
+    displayBlocks.forEach((b, i) => {
       const segEnd = cum + b.minutes;
       if (b.warning) {
         const warnAt = segEnd - 3;
@@ -1271,6 +1347,17 @@
       }
       cum = segEnd;
     });
+    const impact = runUntilImpact;
+    if (impact) {
+      const key = impact.shiftMin > 0
+        ? `plan-shift-${impact.shiftMin}`
+        : `plan-risk-${impact.title}`;
+      if (!warnedSet.has(key)) {
+        warnedSet.add(key);
+        planBeep();
+        doFlash();
+      }
+    }
   }
 
   function tick() {
@@ -1282,7 +1369,7 @@
     }
     nowMinLive = nowMinutes();
     nowText = pad(now.getHours()) + ':' + pad(now.getMinutes());
-    const tot = totalMin();
+    const tot = displayTotalMin();
     const nowMin = nowMinutes();
     if (nowMin < s.startMin) {
       leftText = fmtTillStart(s.startMin - nowMin);
@@ -3099,6 +3186,7 @@
   <aside class="sidebar" bind:this={sidebarEl}>
     <Sidebar
       bind:blocks={s.blocks}
+      displayBlocks={displayBlocks}
       palette={s.palette}
       dark={s.dark}
       segMinutesMode={s.segMinutesMode}
@@ -3150,12 +3238,25 @@
       {/if}
     </div>
 
+    {#if runUntilImpact}
+      <div class="plan-overrun-alert" class:active-shift={runUntilImpact.shiftMin > 0} role="status" aria-live="polite">
+        <strong>{runUntilImpact.shiftMin > 0 ? `Planering skjuts +${runUntilImpact.shiftMin} min` : `Nästa pass riskeras`}</strong>
+        <span>
+          {#if runUntilImpact.shiftMin > 0}
+            {runUntilImpact.nextTitle ? `${runUntilImpact.nextTitle} flyttas fram medan ${runUntilImpact.title} pågår.` : `${runUntilImpact.title} går över planerad tid.`}
+          {:else}
+            {runUntilImpact.nextTitle ? `${runUntilImpact.nextTitle} påverkas om du fortsätter ${Math.max(0, runUntilImpact.riskMin ?? 0)} min till.` : `${runUntilImpact.title} är nära passets planerade slut.`}
+          {/if}
+        </span>
+      </div>
+    {/if}
+
     <div id="clock-wrap" class="clock-wrap">
       <Clock
         bind:svgEl={svgEl}
         palette={s.palette}
         dark={s.dark}
-        blocks={s.blocks}
+        blocks={displayBlocks}
         startMin={s.startMin}
         clockSpan={s.clockSpan}
         hollow={s.hollow}
@@ -3865,6 +3966,10 @@
 
 <div class="flash" bind:this={flashEl}></div>
 
+{#if completionToast}
+  <div class="completion-toast" role="status" aria-live="polite">{completionToast}</div>
+{/if}
+
 <div class="help-modal" class:open={helpOpen}
   role="button"
   tabindex="0"
@@ -3897,6 +4002,7 @@
         <div class="help-box">
           <code>Genomgång 10m</code> — Låser tiden till 10 min.<br/>
           <code>Eget arbete</code> — Tar upp resterande tid.<br/>
+          <code>Diskussion %</code> — Kör tills du checkar av aktiviteten.<br/>
           <code>- instruktion</code> — Skapar en underpunkt (instruktionstext) som syns i sidopanelen.<br/>
           <code>&amp; kommentar</code> — Lägger kommentaren under senaste aktiviteten.<br/>
           <code>&amp;&amp; kommentar</code> — Skapar en stor inforuta längst ner i passet.

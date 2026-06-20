@@ -101,7 +101,8 @@ function cloneFlow(flow: Flow): Flow {
 		parts: [...flow.parts],
 		minutes: [...flow.minutes],
 		warnings: [...flow.warnings],
-		notes: [...flow.notes]
+		notes: [...flow.notes],
+		...(Array.isArray(flow.runUntilChecked) ? { runUntilChecked: [...flow.runUntilChecked] } : {})
 	};
 }
 

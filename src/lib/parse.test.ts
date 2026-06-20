@@ -88,6 +88,18 @@ describe('parseParts — opinnade block', () => {
     expect(blocks[0].minutes).toBe(20);
     expect(blocks[1].pinned).toBe(false);
   });
+
+  it('parsar run-until-checked med procenttecken', () => {
+    const { blocks } = parseParts('Diskussion %\nAvslut 5m', []);
+
+    expect(blocks[0]).toMatchObject({
+      title: 'Diskussion',
+      minutes: 10,
+      pinned: false,
+      runUntilChecked: true
+    });
+    expect(blocks[1].runUntilChecked).toBeFalsy();
+  });
 });
 
 describe('parseParts — fallback', () => {
@@ -121,6 +133,11 @@ describe('serializeBlocks', () => {
   it('opinnadt block serialiseras utan tid', () => {
     const result = serializeBlocks([{ id: '1', title: 'Fritt', minutes: 30, note: '', warning: false, pinned: false }]);
     expect(result).toBe('Fritt');
+  });
+
+  it('run-until-checked block serialiseras med procenttecken', () => {
+    const result = serializeBlocks([{ id: '1', title: 'Diskussion', minutes: 18, note: '', warning: false, pinned: false, runUntilChecked: true }]);
+    expect(result).toBe('Diskussion %');
   });
 
   it('noteringar serialiseras som -rader', () => {
@@ -272,6 +289,15 @@ describe('parseAgenda — sessioner', () => {
     expect(flow.minutes).toEqual([45, 10]);
   });
 
+  it('parsar run-until-checked i agenda', () => {
+    const days = parseAgenda('#Session\nDiskussion %\nAvslut 5m');
+    const flow = days[0].flows[0];
+
+    expect(flow.parts).toEqual(['Diskussion', 'Avslut']);
+    expect(flow.minutes).toEqual([10, 5]);
+    expect(flow.runUntilChecked).toEqual([true, false]);
+  });
+
   it('parsar noteringar på aktiviteter', () => {
     const days = parseAgenda('#Session\nFrukost 20m\n- ta med kaffe');
     const flow = days[0].flows[0];
@@ -385,6 +411,15 @@ describe('serializeAgenda — roundtrip', () => {
     const text = serializeAgenda(days);
     const days2 = parseAgenda(text);
     expect(days2[0].flows[0].minutes).toEqual([45, 10]);
+  });
+
+  it('run-until-checked bevaras via agenda roundtrip', () => {
+    const days = parseAgenda('#Session\nDiskussion %\nAvslut 5m');
+    const text = serializeAgenda(days);
+    const days2 = parseAgenda(text);
+
+    expect(text).toContain('Diskussion %');
+    expect(days2[0].flows[0].runUntilChecked).toEqual([true, false]);
   });
 
   it('extraInfo bevaras som && via roundtrip', () => {

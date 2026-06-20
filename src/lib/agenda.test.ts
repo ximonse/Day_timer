@@ -29,6 +29,7 @@ import {
 	replaceAgendaFlowInDays,
 	resolveAgendaFlowRef,
 	serializeSelectedAgendaDay,
+	shiftAgendaFlowsAfter,
 	suggestedStartMinForDate
 } from './agenda.js';
 import type { AgendaDay } from './parse.js';
@@ -301,6 +302,26 @@ describe('agenda helpers', () => {
 
 		expect(next[0].flows[0]).toMatchObject({ title: 'B', startMin: 8 * 60 + 5 });
 		expect(days[0].flows[0].title).toBe('A');
+	});
+
+	test('shifts explicit following agenda flows after an overrun', () => {
+		const days: AgendaDay[] = [
+			{
+				date: '2026-05-18',
+				flows: [
+					flow({ title: 'Nu', startMin: 8 * 60, minutes: [30] }),
+					flow({ title: 'Nästa', startMin: 8 * 60 + 30, minutes: [20] }),
+					flow({ title: 'Senare', startMin: 9 * 60, minutes: [20] })
+				]
+			}
+		];
+
+		const next = shiftAgendaFlowsAfter(days, 0, 0, 7);
+
+		expect(next[0].flows[0].startMin).toBe(8 * 60);
+		expect(next[0].flows[1].startMin).toBe(8 * 60 + 37);
+		expect(next[0].flows[2].startMin).toBe(9 * 60 + 7);
+		expect(days[0].flows[1].startMin).toBe(8 * 60 + 30);
 	});
 
 	test('clones agenda days deeply', () => {

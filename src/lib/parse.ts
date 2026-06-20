@@ -11,6 +11,7 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
   const parts: string[] = [];
   const notes: string[] = [];
   const parsedMins: (number | null)[] = [];
+  const runUntilChecked: boolean[] = [];
   const infoLines: string[] = [];
   let dayTitle = '';
 
@@ -42,13 +43,22 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
         : sub;
       continue;
     }
+    const runMatch = t.match(/\s+%(?:min)?$/i);
+    if (runMatch) {
+      parts.push(t.slice(0, t.length - runMatch[0].length).replace(/[\r\n]+/g, ' ').trim());
+      parsedMins.push(10);
+      runUntilChecked.push(true);
+      continue;
+    }
     const m = t.match(/\s+(\d+)m$/i);
     if (m) {
       parts.push(t.slice(0, t.length - m[0].length).replace(/[\r\n]+/g, ' ').trim());
       parsedMins.push(Math.max(1, parseInt(m[1], 10)));
+      runUntilChecked.push(false);
     } else {
       parts.push(t.replace(/[\r\n]+/g, ' ').trim());
       parsedMins.push(null);
+      runUntilChecked.push(false);
     }
   }
 
@@ -81,7 +91,8 @@ export function parseParts(raw: string, existingBlocks: Block[]): ParseResult {
       minutes,
       note: notes[i] ?? '',
       warning: existing?.warning ?? true,
-      pinned: parsedMins[i] !== null,
+      pinned: parsedMins[i] !== null && !runUntilChecked[i],
+      ...(runUntilChecked[i] ? { runUntilChecked: true } : {}),
     };
   });
 
@@ -103,7 +114,7 @@ interface RawSection {
   title: string;
   startMin?: number;
   availableMin?: number;
-  items: { title: string; minutes: number | null; note: string }[];
+  items: { title: string; minutes: number | null; note: string; runUntilChecked?: boolean }[];
   extraInfo: string;
   id?: string;
   listMode?: boolean;
@@ -215,6 +226,7 @@ function sectionsToFlows(sections: RawSection[]): Flow[] {
       minutes,
       warnings: sectionItems.map(() => true),
       notes: sectionItems.map(b => b.note),
+      ...(sectionItems.some(b => b.runUntilChecked) ? { runUntilChecked: sectionItems.map(b => Boolean(b.runUntilChecked)) } : {}),
       extraInfo: sec.extraInfo,
     } satisfies Flow;
   });
@@ -349,6 +361,13 @@ export function parseAgenda(text: string): AgendaDay[] {
       continue;
     }
 
+    const runMatch = t.match(/^(.*?)\s+%(?:min)?\s*$/i);
+    if (runMatch) {
+      cur.listMode = false;
+      cur.items.push({ title: runMatch[1].trim(), minutes: 10, note: '', runUntilChecked: true });
+      continue;
+    }
+
     const mMatch = t.match(/^(.*?)\s+(\d+)\s*m(?:in)?\s*$/i);
     if (mMatch) {
       cur.listMode = false;
@@ -371,7 +390,7 @@ export function serializeBlocks(blocks: Block[], dayTitle?: string, extraInfo?: 
   if (dayTitle) out.push(`# ${dayTitle}`);
   for (const b of blocks) {
     const title = b.title.replace(/[\r\n]+/g, ' ').trim();
-    out.push(b.pinned ? `${title} ${b.minutes}m` : title);
+    out.push(b.runUntilChecked ? `${title} %` : b.pinned ? `${title} ${b.minutes}m` : title);
     if (b.note) {
       for (const line of b.note.split('\n')) {
         if (line.trim()) out.push('- ' + line);
@@ -413,7 +432,7 @@ export function serializeAgenda(days: AgendaDay[], options: SerializeAgendaOptio
         lines.push(`#${flow.title}${idTag}`);
       }
       for (let i = 0; i < flow.parts.length; i++) {
-        lines.push(`${flow.parts[i]} ${flow.minutes[i]}m`);
+        lines.push(flow.runUntilChecked?.[i] ? `${flow.parts[i]} %` : `${flow.parts[i]} ${flow.minutes[i]}m`);
         if (flow.notes[i]) {
           for (const note of flow.notes[i].split('\n')) {
             if (note.trim()) lines.push(`- ${note}`);
@@ -499,4 +518,3 @@ export function applyMondayAnchor(text: string, mondayYYMMDD: string): string {
     return `@${y}${mo}${dy}`;
   });
 }
-
