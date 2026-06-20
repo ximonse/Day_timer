@@ -683,6 +683,7 @@
     :global(.mini-menu-shell.mini-menu-shell--wide) { width: min(760px, 100%); }
   }
   @media (pointer: coarse) {
+    :global(.app) { overflow-y: auto; overflow-x: hidden; }
     :global(.controls input[type=time]), :global(.controls input[type=number]) { padding: 2px 6px; font-size: 16px; height: 34px; box-sizing: border-box; }
     :global(.controls input[type=text]) { padding: 5px 8px; font-size: 16px; }
     :global(.quickstart) { padding: 6px 11px; font-size: 13px; }
