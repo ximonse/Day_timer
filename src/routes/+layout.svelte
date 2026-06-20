@@ -704,7 +704,7 @@
     :global(.mini-menu-shell.mini-menu-shell--wide) { width: min(760px, 100%); }
   }
   @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
-    :global(.main .clock-wrap .clock) { width: max(220px, 41vw); height: max(220px, 41vw); }
+    :global(.main .clock-wrap .clock) { width: max(220px, 44vw); height: max(220px, 44vw); }
   }
 
   /* ── Dela-sektion ── */
