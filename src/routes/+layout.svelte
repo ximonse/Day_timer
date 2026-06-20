@@ -144,6 +144,7 @@
   :global(.clock-wrap) { position: relative; margin-top: 34px; }
   :global(.mini-menu-shell) { width: min(348px, 100%); display: flex; flex-direction: column; align-items: center; gap: 7px; }
   :global(.mini-menu-shell--planner) { width: min(760px, 100%); }
+  :global(.mini-menu-shell--wide) { width: min(760px, 100%); }
   :global(.mini-menu-toggle) { width: 26px; height: 20px; border-radius: 999px; border: 0; background: transparent; color: color-mix(in srgb, var(--muted) 84%, var(--fg) 16%); opacity: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: color .16s, opacity .16s, transform .16s; }
   :global(.mini-menu-toggle:hover), :global(.mini-menu-toggle:focus-visible) { color: var(--fg); opacity: 1; }
   :global(.mini-menu-toggle span) { display: inline-block; line-height: 1; font-size: 18px; font-weight: 700; transform: rotate(0deg); transition: transform .2s ease; }
@@ -214,6 +215,7 @@
   }
   :global(.controls) { background: var(--menu-panel); border: 1px solid var(--menu-border); border-radius: 16px; padding: 15px; display: flex; flex-direction: column; gap: 10px; width: min(348px, 100%); color: var(--menu-fg); box-sizing: border-box; }
   :global(.controls--planner) { width: min(760px, 100%); max-width: 100%; align-self: center; }
+  :global(.controls--wide) { width: min(760px, 100%); max-width: 100%; align-self: center; }
   :global(.controls label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
   :global(.field-label) { font-size: 11px; color: var(--menu-muted); letter-spacing: 0; font-weight: 600; }
   :global(.field-head) { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }

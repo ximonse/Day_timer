@@ -109,9 +109,9 @@
   }
 </script>
 
-<div class="ws-stack">
+<div class="ws-stack workspace-menu-workspace" class:workspace-menu-workspace--no-ai={userLevel < 2}>
 
-<div class="plan-editor">
+<div class="plan-editor workspace-menu-account">
   {#if loggedInUser}
     <div class="logged-in-row">
       <span class="username">👤 {loggedInUser}</span>
@@ -170,7 +170,7 @@
 </div>
 
 {#if userLevel >= 2}
-  <div class="plan-editor">
+  <div class="plan-editor workspace-menu-ai">
     <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen}>
       {aiConfigOpen ? '−' : '+'} AI-planering <span class="beta-tag">BETA</span>
     </button>
@@ -237,6 +237,7 @@
   </div>
 {/if}
 
+<div class="workspace-menu-secondary">
 <div class="plan-editor">
   <button class="ai-panel-toggle" onclick={onToggleTimeData}>
     {timeDataOpen ? '−' : '+'} Tidsdata & Lärande <span class="beta-tag">BETA</span>
@@ -284,6 +285,8 @@
   </button>
 </div>
 
+</div><!-- workspace-menu-secondary -->
+
 </div><!-- ws-stack -->
 
 <div style="padding-top:24px; display:flex; justify-content:flex-end;">
@@ -301,6 +304,33 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+  .workspace-menu-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
+    gap: 12px;
+    align-items: start;
+  }
+  .workspace-menu-account,
+  .workspace-menu-ai,
+  .workspace-menu-secondary {
+    min-width: 0;
+  }
+  .workspace-menu-workspace--no-ai .workspace-menu-account {
+    grid-column: 1 / -1;
+  }
+  .workspace-menu-secondary {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .workspace-menu-workspace,
+    .workspace-menu-secondary {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
   .state-chip {
     font-size: 10px;

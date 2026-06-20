@@ -3173,7 +3173,11 @@
       />
     </div>
 
-    <div class="mini-menu-shell" class:mini-menu-shell--planner={activeSection === 'plan'}>
+    <div
+      class="mini-menu-shell"
+      class:mini-menu-shell--planner={activeSection === 'plan'}
+      class:mini-menu-shell--wide={activeSection === 'library' || activeSection === 'workspace'}
+    >
       <div
         class="toolbar"
         role="button"
@@ -3271,7 +3275,11 @@
 
       <div class="mini-menu-details" class:open={miniMenuOpen} class:mini-menu-details--planner={activeSection === 'plan'}>
       {#if s.showControls}
-        <div class="controls" class:controls--planner={activeSection === 'plan'}>
+        <div
+          class="controls"
+          class:controls--planner={activeSection === 'plan'}
+          class:controls--wide={activeSection === 'library' || activeSection === 'workspace'}
+        >
         <SectionNav {activeSection} labels={NAV_LABELS} onSelect={(section) => section === 'plan' ? openPlan() : setActiveSection(section)} />
 
         {#if activeSection === 'now'}
