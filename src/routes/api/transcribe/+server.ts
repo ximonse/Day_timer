@@ -10,6 +10,12 @@ export const POST: RequestHandler = async ({ request }) => {
   const file = formData.get('file') as File;
   if (!file) throw error(400, 'Ingen ljudfil medföljde');
 
+  const MAX_BYTES = 25 * 1024 * 1024;
+  if (file.size > MAX_BYTES) throw error(413, 'Ljudfilen är för stor (max 25 MB)');
+  if (file.type && !file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
+    throw error(415, 'Filtypen stöds inte — ladda upp en ljudfil');
+  }
+
   const openai = new OpenAI({ apiKey });
 
   try {
