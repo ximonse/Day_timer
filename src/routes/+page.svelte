@@ -3142,7 +3142,9 @@
     }
 
     setActiveSection('now');
-    if (!hasRunnableSessionContent(s.blocks)) {
+    const sessionTotalMin = totalMin();
+    const sessionIsOver = sessionTotalMin > 0 && now >= s.startMin + sessionTotalMin;
+    if (!hasRunnableSessionContent(s.blocks) || sessionIsOver) {
       const fallback = createCurrentFallbackSession(now, uid);
       s.dayTitle = fallback.dayTitle;
       s.blocks = fallback.blocks;
