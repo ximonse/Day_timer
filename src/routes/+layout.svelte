@@ -251,12 +251,13 @@
   :global(.step-section--action) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--menu-surface)); }
   :global(.step-num) { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--bg); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
   :global(.step-body) { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-  :global(.controls input[type=text]), :global(.controls input[type=time]), :global(.controls input[type=number]), :global(.controls textarea) { background: var(--menu-surface); color: var(--menu-fg); border: 1px solid var(--menu-border); border-radius: 8px; padding: 8px 10px; font-size: 14px; width: 100%; font-family: inherit; }
+  :global(.controls input[type=text]), :global(.controls input[type=time]), :global(.controls input[type=number]), :global(.controls textarea) { background: var(--menu-surface); color: var(--menu-fg); border: 1px solid var(--menu-border); border-radius: 8px; padding: 6px 10px; font-size: 14px; width: 100%; font-family: inherit; }
+  :global(.controls input[type=time]), :global(.controls input[type=number]) { padding: 4px 8px; text-align: center; }
   :global(.controls textarea) { min-height: 100px; resize: vertical; line-height: 1.4; }
   :global(.row2) { display: flex; gap: 8px; }
   :global(.row2 > div) { flex: 1; }
   :global(.mode-toggle) { display: flex; gap: 4px; background: var(--menu-surface); border-radius: 8px; padding: 3px; border: 1px solid var(--menu-border); }
-  :global(.mode-toggle button) { flex: 1; padding: 6px; border: 0; background: transparent; color: var(--menu-fg); cursor: pointer; border-radius: 6px; font-size: 13px; }
+  :global(.mode-toggle button) { flex: 1; padding: 5px; border: 0; background: transparent; color: var(--menu-fg); cursor: pointer; border-radius: 6px; font-size: 13px; }
   :global(.mode-toggle button.on) { background: var(--menu-pill-on); color: var(--menu-pill-on-fg); }
   :global(.feedback) { font-size: 12px; color: var(--menu-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
   :global(.quickstart) { background: var(--menu-pill); color: var(--menu-fg); border: 1px solid var(--menu-border); border-radius: 999px; padding: 9px 15px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s, color .15s; line-height: 1.2; }
@@ -680,11 +681,13 @@
     :global(.mini-menu-shell) { width: min(320px, 100%); }
     :global(.mini-menu-shell.mini-menu-shell--planner),
     :global(.mini-menu-shell.mini-menu-shell--wide) { width: min(760px, 100%); }
-    :global(.controls input[type=time]), :global(.controls input[type=number]) { padding: 4px 8px; font-size: 16px; height: 36px; }
-    :global(.controls input[type=text]) { padding: 6px 8px; font-size: 16px; }
-    :global(.quickstart) { padding: 7px 12px; font-size: 13px; }
-    :global(#quickStartBtn) { padding: 7px 12px; font-size: 13px; }
-    :global(.mode-toggle button) { padding: 5px; font-size: 12px; }
+  }
+  @media (pointer: coarse) {
+    :global(.controls input[type=time]), :global(.controls input[type=number]) { padding: 2px 6px; font-size: 16px; height: 34px; box-sizing: border-box; }
+    :global(.controls input[type=text]) { padding: 5px 8px; font-size: 16px; }
+    :global(.quickstart) { padding: 6px 11px; font-size: 13px; }
+    :global(#quickStartBtn) { padding: 6px 11px; font-size: 13px; }
+    :global(.mode-toggle button) { padding: 4px; font-size: 12px; }
   }
   @media (max-width: 800px) and (orientation: portrait) {
     :global(.main) { padding-top: max(6px, env(safe-area-inset-top)); gap: 2px; }

@@ -290,7 +290,7 @@
           aria-label="Justera blockgräns"
           aria-valuenow={s.a0}
           x1={x0} y1={y0} x2={x1} y2={y1} 
-          stroke="transparent" stroke-width="32" pointer-events="stroke" style="cursor:grab;touch-action:none"
+          stroke="transparent" stroke-width="32" pointer-events="stroke" style="cursor:grab;touch-action:pinch-zoom"
           onpointerdown={(e) => onStartBoundaryDrag?.(e, s.i - 1)} />
       {/if}
     {/each}
@@ -306,7 +306,7 @@
         fill={s.baseColor}
         opacity={s.opacity}
         pointer-events={s.isEnd || s.boundaryIndex !== null ? 'visiblePainted' : 'none'}
-        style={s.isEnd || s.boundaryIndex !== null ? 'cursor:grab;touch-action:none' : undefined}
+        style={s.isEnd || s.boundaryIndex !== null ? 'cursor:grab;touch-action:pinch-zoom' : undefined}
         onpointerdown={(e) => {
           if (s.isEnd) onStartEndDrag?.(e);
           else if (s.boundaryIndex !== null) onStartBoundaryDrag?.(e, s.boundaryIndex);
@@ -338,7 +338,7 @@
       aria-label="Justera starttid"
       aria-valuenow={startAngle}
       x1={sx0} y1={sy0} x2={sx1} y2={sy1} 
-      stroke="transparent" stroke-width="36" pointer-events="stroke" style="cursor:grab;touch-action:none"
+      stroke="transparent" stroke-width="36" pointer-events="stroke" style="cursor:grab;touch-action:pinch-zoom"
       onpointerdown={(e) => onStartStartDrag?.(e)} />
 
     {#if (totalMin / clockSpan) * 360 < 360 - 2}
@@ -351,7 +351,7 @@
         aria-label="Justera sluttid"
         aria-valuenow={aEnd}
         x1={ex0} y1={ey0} x2={ex1} y2={ey1} 
-        stroke="transparent" stroke-width="36" pointer-events="stroke" style="cursor:grab;touch-action:none"
+        stroke="transparent" stroke-width="36" pointer-events="stroke" style="cursor:grab;touch-action:pinch-zoom"
         onpointerdown={(e) => onStartEndDrag?.(e)} />
     {/if}
 
@@ -364,7 +364,7 @@
         aria-label="Justera omlott blockgräns"
         aria-valuenow={h.ang}
         x1={wx0} y1={wy0} x2={wx1} y2={wy1}
-        stroke="transparent" stroke-width="38" pointer-events="stroke" style="cursor:grab;touch-action:none"
+        stroke="transparent" stroke-width="38" pointer-events="stroke" style="cursor:grab;touch-action:pinch-zoom"
         onpointerdown={(e) => onStartBoundaryDrag?.(e, h.i)} />
     {/each}
 
@@ -377,7 +377,7 @@
         aria-label="Justera omlott sluttid"
         aria-valuenow={wrappedEndHandle.ang}
         x1={we0x} y1={we0y} x2={we1x} y2={we1y}
-        stroke="transparent" stroke-width="38" pointer-events="stroke" style="cursor:grab;touch-action:none"
+        stroke="transparent" stroke-width="38" pointer-events="stroke" style="cursor:grab;touch-action:pinch-zoom"
         onpointerdown={(e) => onStartEndDrag?.(e)} />
     {/if}
   {/if}

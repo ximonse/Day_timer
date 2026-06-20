@@ -339,7 +339,7 @@
 
       {#if showRecSuggestion}
         <div class="rec-suggestion" transition:fade>
-          <span class="ico">★</span> Tidigare har {titleValue || 'detta'} tagit <strong>{suggestedDuration?.minutes} min</strong>.
+          <span class="ico">★</span> Tidigare har {titleValue || 'detta'} tagit <strong>{Math.round(suggestedDuration?.minutes ?? 0)} min</strong>.
           <button class="rec-apply-btn" onclick={() => onApplySuggestedDuration(suggestedDuration!.minutes)}>Använd</button>
         </div>
       {/if}
