@@ -3685,9 +3685,9 @@
         {/if}
 
 	        {#if activeSection === 'plan'}
-	          <div class="menu-blob menu-blob--planner" in:fade={{ duration: 150 }}>
-	            <div class="planner-menu-workspace">
-	              <div class="planner-menu-main">
+	          <div class="planner-menu-workspace" in:fade={{ duration: 150 }}>
+	            <div class="planner-menu-main">
+	              <div class="menu-blob menu-blob--planner">
 	                <AgendaImportPanel
 	              {agendaInputOpen}
 	              {agendaDraft}
@@ -3730,8 +3730,9 @@
 	              onUnifiedUpload={handleUnifiedUpload}
 	            />
 	              </div>
-	              <div class="planner-menu-side">
-	                <SessionEditorPanel
+	            </div>
+	            <div class="planner-menu-side">
+	              <SessionEditorPanel
 	                  userLevel={effectiveUserLevel}
 	                  aiProvider={aiConfig.provider}
 	                  aiApiKey={aiConfig.apiKey}
@@ -3898,7 +3899,6 @@
 	                  onToggleNowShare={() => setWriteMenuSection('nowShare', !writeMenuSections.nowShare)}
 	                  whisperApiKey={aiConfig.whisperKey}
 	                />
-	              </div>
 	            </div>
 	          </div>
 	        {/if}

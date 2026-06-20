@@ -442,7 +442,7 @@
   .clock {
     display: block;
     user-select: none;
-    touch-action: none;
+    touch-action: pinch-zoom;
     overflow: visible;
     width: min(88vh, 55vw);
     height: min(88vh, 55vw);

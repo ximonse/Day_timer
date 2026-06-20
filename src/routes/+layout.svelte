@@ -680,6 +680,11 @@
     :global(.mini-menu-shell) { width: min(320px, 100%); }
     :global(.mini-menu-shell.mini-menu-shell--planner),
     :global(.mini-menu-shell.mini-menu-shell--wide) { width: min(760px, 100%); }
+    :global(.controls input[type=time]), :global(.controls input[type=number]) { padding: 4px 8px; font-size: 16px; height: 36px; }
+    :global(.controls input[type=text]) { padding: 6px 8px; font-size: 16px; }
+    :global(.quickstart) { padding: 7px 12px; font-size: 13px; }
+    :global(#quickStartBtn) { padding: 7px 12px; font-size: 13px; }
+    :global(.mode-toggle button) { padding: 5px; font-size: 12px; }
   }
   @media (max-width: 800px) and (orientation: portrait) {
     :global(.main) { padding-top: max(6px, env(safe-area-inset-top)); gap: 2px; }
