@@ -679,8 +679,6 @@
     :global(.clock-wrap) { margin-top: clamp(10px, 2.4cqi, 20px); }
     :global(.main .clock) { width: max(220px, min(88vw, 100dvh - 300px)); height: max(220px, min(88vw, 100dvh - 300px)); }
     :global(.mini-menu-shell) { width: min(320px, 100%); }
-    :global(.mini-menu-shell.mini-menu-shell--planner),
-    :global(.mini-menu-shell.mini-menu-shell--wide) { width: min(760px, 100%); }
   }
   @media (pointer: coarse) {
     :global(.app) { overflow-y: auto; overflow-x: hidden; }
@@ -698,8 +696,6 @@
     :global(.clock-wrap) { margin-top: 6px; }
     :global(.main .clock) { width: min(78vw, calc(100dvh - 210px)); height: min(78vw, calc(100dvh - 210px)); }
     :global(.mini-menu-shell) { width: min(304px, 100%); }
-    :global(.mini-menu-shell.mini-menu-shell--planner),
-    :global(.mini-menu-shell.mini-menu-shell--wide) { width: min(760px, 100%); }
   }
   @media (hover: none) and (pointer: coarse) and (orientation: landscape) {
     :global(.main .clock) { width: min(70vh, 46vw); height: min(70vh, 46vw); }
