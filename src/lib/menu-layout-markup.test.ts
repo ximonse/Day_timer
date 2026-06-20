@@ -15,6 +15,12 @@ describe('wide menu layout markup', () => {
 		expect(layoutSource).toContain('.mini-menu-shell--wide');
 	});
 
+	test('keeps wide and planner menus wide on touch and portrait layouts', () => {
+		expect(layoutSource).toContain('.mini-menu-shell.mini-menu-shell--planner');
+		expect(layoutSource).toContain('.mini-menu-shell.mini-menu-shell--wide');
+		expect(layoutSource).toContain('width: min(760px, 100%)');
+	});
+
 	test('organizes library and workspace panels as workspaces', () => {
 		expect(librarySource).toContain('library-menu-workspace');
 		expect(librarySource).toContain('library-menu-primary');
