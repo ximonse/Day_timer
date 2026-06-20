@@ -1089,9 +1089,9 @@
 
   // ── Drag ──
   type DragState =
-    | { type: 'between'; i: number; leftMin: number; rightMin: number; boundaryMin0: number }
-    | { type: 'end'; totalMin0: number }
-    | { type: 'start'; startMin0: number; endMin0: number; pointerAng0: number };
+    | { type: 'between'; i: number; leftMin: number; rightMin: number; boundaryMin0: number; pointerId?: number }
+    | { type: 'end'; totalMin0: number; pointerId?: number }
+    | { type: 'start'; startMin0: number; endMin0: number; pointerAng0: number; pointerId?: number };
   let drag: DragState | null = null;
 
   function pointerAngle(e: PointerEvent): number {
@@ -1107,25 +1107,28 @@
 
   function startBoundaryDrag(pe: PointerEvent, i: number) {
     if (isViewMode || locked) return;
-    pe.preventDefault();
+    if (pe.pointerType === 'mouse') pe.preventDefault();
     const boundaryMin0 = s.blocks.slice(0, i + 1).reduce((sum, b) => sum + b.minutes, 0);
-    drag = { type: 'between', i, leftMin: s.blocks[i].minutes, rightMin: s.blocks[i+1].minutes, boundaryMin0 };
+    drag = { type: 'between', i, leftMin: s.blocks[i].minutes, rightMin: s.blocks[i+1].minutes, boundaryMin0, pointerId: pe.pointerId };
     window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
   }
   function startEndDrag(pe: PointerEvent) {
     if (isViewMode || locked) return;
-    pe.preventDefault();
-    drag = { type: 'end', totalMin0: totalMin() };
+    if (pe.pointerType === 'mouse') pe.preventDefault();
+    drag = { type: 'end', totalMin0: totalMin(), pointerId: pe.pointerId };
     window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
   }
   function startStartDrag(pe: PointerEvent) {
     if (isViewMode || locked) return;
-    pe.preventDefault();
-    drag = { type: 'start', startMin0: s.startMin, endMin0: s.startMin + totalMin(), pointerAng0: pointerAngle(pe) };
+    if (pe.pointerType === 'mouse') pe.preventDefault();
+    drag = { type: 'start', startMin0: s.startMin, endMin0: s.startMin + totalMin(), pointerAng0: pointerAngle(pe), pointerId: pe.pointerId };
     window.addEventListener('pointermove', onDrag);
     window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
   }
 
   function scaleMinutesTo(newTotal: number) {
@@ -1190,6 +1193,7 @@
 
   function onDrag(e: PointerEvent) {
     if (!drag || locked) return;
+    if (drag.pointerId !== undefined && e.pointerId !== drag.pointerId) return;
     const ang = pointerAngle(e);
     const sa = startAngle();
     let rel = ang - sa;
@@ -1274,6 +1278,7 @@
     drag = null;
     window.removeEventListener('pointermove', onDrag);
     window.removeEventListener('pointerup', endDrag);
+    window.removeEventListener('pointercancel', endDrag);
     syncTimerToAgenda(true);
     partsDraftDirty = false;
     appState.persist();
