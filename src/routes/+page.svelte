@@ -3188,11 +3188,9 @@
         }}
       >
         <div class="toolbar-side toolbar-side-left" class:collapsed={!miniMenuOpen}>
-          <button class="icon" onclick={() => { s.showControls = !s.showControls; appState.persist(); }} title="Skapa och planera timers">✎</button>
           <button class="icon" onclick={(e) => { e.stopPropagation(); optionsMenuOpen = !optionsMenuOpen; }} title="Visningsalternativ">⚙</button>
-          <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title="Klockvy">{s.clockSpan === 720 ? '12h' : '1h'}</button>
+          <button class="icon clock-span-btn" class:active={s.clockSpan === 720} onclick={cycleClockSpan} title={s.clockSpan === 720 ? 'Byt till 1h-vy' : 'Byt till 12h-vy'}>{s.clockSpan === 720 ? '1h' : '12h'}</button>
           <button class="icon" onclick={() => helpOpen = true} title="Hjälp">ⓘ</button>
-          <button class="icon" class:active={widgetMode} onclick={() => widgetMode = !widgetMode} title={widgetMode ? 'Avsluta widget-läge' : 'Widget-läge – dölj menyer, visa bara klockan'}>⊡</button>
         </div>
 
         {#if !isViewMode}
@@ -3211,7 +3209,7 @@
         {/if}
 
         <div class="toolbar-side toolbar-side-right" class:collapsed={!miniMenuOpen}>
-          <button class="icon lock-btn" class:locked onclick={() => locked = !locked} title={locked ? 'Lås upp' : 'Lås sidan'}>{locked ? '○' : '⊠'}</button>
+          <button class="icon lock-btn" class:locked onclick={() => locked = !locked} title={locked ? 'Lås upp' : 'Lås sidan'}>{locked ? '🔒' : '🔓'}</button>
           
           <div id="theme-and-audio" style="display:flex; align-items:center; gap:0;">
             <ThemePicker bind:open={themePickerOpen} onSyncBodyClasses={syncBodyClasses} />

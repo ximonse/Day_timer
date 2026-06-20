@@ -160,9 +160,9 @@
   :global(.toolbar-center) { justify-self: center; align-self: center; z-index: 1; display: flex; align-items: center; }
   :global(.toolbar button.icon) { background: transparent; border: 0; color: color-mix(in srgb, var(--muted) 84%, var(--fg) 16%); cursor: pointer; font-size: 16px; width: 29px; height: 29px; padding: 0; border-radius: 999px; font-family: "Segoe UI Symbol", "Apple Symbols", system-ui, sans-serif; font-variant-emoji: text; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
   :global(.toolbar button.icon:hover) { background: var(--pill); color: var(--fg); }
-  :global(.toolbar .clock-span-btn) { font-size: 11px; font-weight: 700; letter-spacing: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; min-width: 34px; text-align: center; border: 1px solid var(--pill-on); background: var(--pill-on); color: var(--pill-on-fg); border-color: var(--pill-on); }
+  :global(.toolbar .clock-span-btn) { font-size: 10.5px; font-weight: 500; letter-spacing: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; min-width: 34px; text-align: center; border: 1px solid var(--pill-on); background: var(--pill-on); color: var(--pill-on-fg); border-color: var(--pill-on); }
   :global(.toolbar .clock-span-btn:hover) { opacity: .8; }
-  :global(.toolbar .clock-span-btn.active) { background: transparent; color: var(--muted); border-color: color-mix(in srgb, var(--border) 72%, transparent); font-weight: 600; }
+  :global(.toolbar .clock-span-btn.active) { background: transparent; color: var(--muted); border-color: color-mix(in srgb, var(--border) 72%, transparent); font-weight: 500; }
   :global(.warnings-popup) {
     position: absolute; bottom: calc(100% + 12px); right: -10px;
     background: var(--menu-panel); border: 1px solid var(--menu-border);
