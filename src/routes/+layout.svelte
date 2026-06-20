@@ -4,7 +4,7 @@
 
 <svelte:head>
   <title>Timer [BETA]</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
 </svelte:head>
 
 {@render children()}
