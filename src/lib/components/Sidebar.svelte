@@ -408,6 +408,7 @@
          onclickcapture={maybeSuppressClick}>
       <span class="dot drag-handle"
             style="background:{blockColor}"
+            role="button" tabindex="-1" aria-label="Dra för att flytta blocket"
             onpointerdown={(e) => rowPointerDown(e, b.id)}></span>
       {#if editingBlockId === b.id && editingBlockField === 'name'}
         <input class="inline-edit name-inp" use:focusOnMount
@@ -420,9 +421,9 @@
           {@html parseMarkdownHtml(displayTitle)}
         </button>
         {#if !onToggleSegmentDone}
-          <div class="title-check-btn" class:revealed={revealedCheckId === `${b.id}-title`} onclick={(e) => { e.stopPropagation(); toggleTitleCheck(b); revealedCheckId = null; }} title="Bocka av block">
+          <button type="button" class="title-check-btn" class:revealed={revealedCheckId === `${b.id}-title`} onclick={(e) => { e.stopPropagation(); toggleTitleCheck(b); revealedCheckId = null; }} title="Bocka av block" aria-label="Bocka av block">
             {#if b.title.includes('~~')}✓{/if}
-          </div>
+          </button>
         {/if}
       {/if}
       {#if editingBlockId === b.id && editingBlockField === 'min'}
@@ -450,9 +451,9 @@
         <button class="note seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'note')}>
           {#each b.note.split('\n') as line, lineIdx}
             {#if line.trim()}
-              <div class="note-line" oncontextmenu={(e) => { e.preventDefault(); revealedCheckId = `${b.id}-${lineIdx}`; }}>
+              <div class="note-line" role="group" oncontextmenu={(e) => { e.preventDefault(); revealedCheckId = `${b.id}-${lineIdx}`; }}>
                 <span class="note-text">{@html parseMarkdownHtml(stripColorDirective(line))}</span>
-                <div class="check-btn" class:revealed={revealedCheckId === `${b.id}-${lineIdx}`} onclick={(e) => { e.stopPropagation(); toggleCheck(b, lineIdx); revealedCheckId = null; }} title="Bocka av">
+                <div class="check-btn" role="button" tabindex="0" class:revealed={revealedCheckId === `${b.id}-${lineIdx}`} onclick={(e) => { e.stopPropagation(); toggleCheck(b, lineIdx); revealedCheckId = null; }} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); toggleCheck(b, lineIdx); revealedCheckId = null; } }} title="Bocka av" aria-label="Bocka av">
                   {#if line.includes('~~')}✓{/if}
                 </div>
               </div>
@@ -555,7 +556,7 @@
   
   .note-line { display: flex; align-items: flex-start; gap: 10px; }
   .note-line .check-btn {
-    flex-shrink: 0; margin-top: 5px;
+    flex-shrink: 0; margin-top: 5px; padding: 0; font-family: inherit;
     background: transparent; border: 2px solid currentColor; border-radius: 6px;
     color: inherit; opacity: 0; width: 26px; height: 26px;
     display: flex; align-items: center; justify-content: center;
@@ -565,7 +566,7 @@
   .note-line .check-btn:hover, .note-line .check-btn.revealed { opacity: 1 !important; }
 
   .title-check-btn {
-    flex-shrink: 0; margin-top: 10px; margin-right: 4px;
+    flex-shrink: 0; margin-top: 10px; margin-right: 4px; padding: 0; font-family: inherit;
     background: transparent; border: 2px solid currentColor; border-radius: 8px;
     color: inherit; opacity: 0; width: 30px; height: 30px;
     display: flex; align-items: center; justify-content: center;
