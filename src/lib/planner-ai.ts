@@ -54,7 +54,9 @@ export function composeAiConversationInput({
 			prevResponse,
 			'',
 			'Användarens korrigering:',
-			answer
+			answer,
+			'',
+			'Returnera korrigerad plan som JSON i samma format som tidigare. Inga konversationssvar.'
 		].join('\n');
 	}
 
