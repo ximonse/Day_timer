@@ -3648,7 +3648,7 @@
 	                  totalMinutesValue={totalMin()}
 	                  minTotalMinutes={s.blocks.length * 2}
 	                  {endMode}
-	                  actionLabel={selectedAgendaDetails && planSelectionExplicit ? 'Klar' : 'Lägg till i dagplan'}
+	                  actionLabel={selectedAgendaDetails && planSelectionExplicit ? 'Klar' : 'Spara pass'}
 	                  actionHint={planActionHint}
 	                  saveStatusLabel={activePanelStatusLabel}
 	                  canRevert={canRevertPanel}
