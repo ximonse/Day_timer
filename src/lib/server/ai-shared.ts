@@ -11,7 +11,9 @@ export const PRIVATE_IP = [
 ];
 
 export function isPrivateHost(hostname: string): boolean {
-  const h = hostname.replace(/^\[|\]$/g, '');
+  const h = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (h === '' || h === 'localhost' || h === 'localhost.localdomain' || h.endsWith('.localhost')) return true;
+  if (h === '::' || h === '0.0.0.0') return true;
   return PRIVATE_IP.some(r => r.test(h));
 }
 
