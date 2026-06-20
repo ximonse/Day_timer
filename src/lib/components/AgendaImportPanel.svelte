@@ -167,7 +167,7 @@
         {/if}
         <div class="ai-input-row">
           <div class="agenda-input-wrapper" style="flex:1;">
-            <textarea class="ai-input" placeholder={agendaAiQuestionText ? 'Svara kort på frågorna ovan...' : agendaAiPlaceholder}
+            <textarea class="ai-input" placeholder={agendaAiQuestionText ? 'Svara kort på frågorna ovan...' : aiLastResponse ? 'Skriv vad du vill ändra, lägga till eller ta bort — AI:n minns sitt förslag...' : agendaAiPlaceholder}
               value={agendaAiInput}
               oninput={(e) => onAgendaAiInputChange((e.target as HTMLTextAreaElement).value)}></textarea>
           </div>
