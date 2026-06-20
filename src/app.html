@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=5" />
-		<script>(function(){var m=document.querySelector('meta[name=viewport]');if(!m)return;var c=m.content;m.content='width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1';setTimeout(function(){m.content=c;},0);})();</script>
+		<script>(function(){if('scrollRestoration'in history)history.scrollRestoration='manual';var ORIG='width=device-width, initial-scale=1, minimum-scale=0.5, maximum-scale=5';function resetZoom(){var m=document.querySelector('meta[name=viewport]');if(!m)return;m.content='width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1';setTimeout(function(){m.content=ORIG;},100);}resetZoom();window.addEventListener('load',function(){setTimeout(resetZoom,150);});})();</script>
 		<meta name="text-scale" content="scale" />
 		<link rel="icon" href="/icon.svg" type="image/svg+xml" />
 		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
