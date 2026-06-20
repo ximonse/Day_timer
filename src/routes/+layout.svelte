@@ -677,7 +677,7 @@
     :global(.hero-text) { font-size: clamp(30px, 5.6cqi, 64px); line-height: 1.02; }
     :global(.top-time .left) { top: calc(100% + 2px); font-size: 16px; }
     :global(.clock-wrap) { margin-top: clamp(10px, 2.4cqi, 20px); }
-    :global(.main .clock) { width: max(220px, min(88vw, 100dvh - 300px)); height: max(220px, min(88vw, 100dvh - 300px)); }
+    :global(.main .clock) { width: max(220px, min(88vw, 100svh - 300px)); height: max(220px, min(88vw, 100svh - 300px)); }
     :global(.mini-menu-shell) { width: min(320px, 100%); }
     :global(.mini-menu-shell.mini-menu-shell--planner),
     :global(.mini-menu-shell.mini-menu-shell--wide) { width: min(760px, 100%); }
