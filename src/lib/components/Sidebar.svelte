@@ -551,7 +551,7 @@
     }
     .seglist .dot.drag-handle {
       width: 28px; height: 28px; margin-top: 14px;
-      touch-action: none;
+      touch-action: pinch-zoom;
       cursor: grab;
     }
     .seglist .row.armed .dot.drag-handle { cursor: grabbing; }

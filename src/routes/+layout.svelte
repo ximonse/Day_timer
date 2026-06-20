@@ -128,7 +128,7 @@
   :global(.resize-handle-sb), :global(.resize-handle-ag) {
     width: 5px; cursor: ew-resize; flex-shrink: 0; height: 100%;
     background: transparent; transition: background .15s; z-index: 5;
-    touch-action: none;
+    touch-action: pinch-zoom;
   }
   :global(.resize-handle-sb:hover), :global(.resize-handle-ag:hover) { background: var(--border); }
   :global(.main-header) { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; column-gap: 16px; min-height: clamp(44px, 8.5cqi, 92px); }
@@ -433,21 +433,21 @@
       display: block;
       position: absolute; left: 20%; top: 0;
       width: 60%; height: 22px;
-      touch-action: none;
+      touch-action: pinch-zoom;
       z-index: 3;
     }
     :global(.agenda-zone-resize-bottom) {
       display: block;
       position: absolute; left: 20%; bottom: 0;
       width: 60%; height: 22px;
-      touch-action: none;
+      touch-action: pinch-zoom;
       z-index: 3;
     }
     :global(.agenda-zone-right) {
       display: flex; align-items: center; justify-content: center;
       position: absolute; right: 0; top: 0;
       width: 20%; height: 100%;
-      touch-action: none;
+      touch-action: pinch-zoom;
       z-index: 2;
       color: var(--muted); font-size: 14px; letter-spacing: -1px;
       opacity: .55;
