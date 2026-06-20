@@ -122,7 +122,11 @@ function timeFrameText(timeFrame?: AiTimeFrame): string {
 	if (typeof timeFrame.totalMin === 'number') parts.push(`${timeFrame.totalMin} minuter`);
 	if (typeof timeFrame.startMin === 'number') parts.push(`startMin ${timeFrame.startMin}`);
 	if (typeof timeFrame.endMin === 'number') parts.push(`endMin ${timeFrame.endMin}`);
-	if (timeFrame.date) parts.push(`datum ${timeFrame.date}`);
+	if (timeFrame.date) {
+		const WEEKDAYS = ['söndag', 'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag'];
+		const weekday = WEEKDAYS[new Date(timeFrame.date + 'T12:00:00').getDay()];
+		parts.push(`datum ${timeFrame.date} (${weekday})`);
+	}
 	return parts.length ? parts.join(', ') : 'Ingen exakt tidsram angiven.';
 }
 

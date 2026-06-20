@@ -88,14 +88,10 @@
 
   $effect(() => {
     if (!agendaTextarea) return;
-    if (document.activeElement === agendaTextarea) return;
+    const isAiResult = agendaDraftSource === 'ai';
+    if (!isAiResult && document.activeElement === agendaTextarea) return;
     if (agendaTextarea.value !== agendaDraft) agendaTextarea.value = agendaDraft;
-  });
-
-  $effect(() => {
-    if (agendaDraftSource === 'ai' && agendaTextarea) {
-      agendaTextarea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    if (isAiResult) agendaTextarea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 
   async function handleCopy(type: AiAgendaPromptMode) {

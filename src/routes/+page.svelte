@@ -2160,11 +2160,17 @@
   }
 
   async function runAiAgenda() {
+    const targetDate = selectedDay?.date ?? activeAgendaDate() ?? localDateISO();
+    if (agendaAiConversationSeed && agendaDraftDate && agendaDraftDate !== targetDate) {
+      agendaAiConversationSeed = '';
+      agendaAiLastResponse = null;
+    }
     const input = composeAiConversationInput({
       input: agendaAiInput,
       fallback: '',
       seed: agendaAiConversationSeed,
-      questions: agendaAiQuestionText
+      questions: agendaAiQuestionText,
+      previousResponse: agendaAiLastResponse?.text ?? ''
     });
     if (!input) return;
     agendaAiLoading = true; agendaAiError = ''; agendaAiQuestionText = '';
@@ -2202,11 +2208,10 @@
       agendaInputOpen = true;
       agendaAiInput = '';
       agendaAiQuestionText = '';
-      agendaAiConversationSeed = '';
-    } catch (e: any) { 
+    } catch (e: any) {
       agendaAiLastResponse = null;
       agendaAiConversationSeed = '';
-      agendaAiError = e.message || 'Nätverksfel'; 
+      agendaAiError = e.message || 'Nätverksfel';
     } finally { 
       agendaAiLoading = false; 
     }

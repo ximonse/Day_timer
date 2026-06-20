@@ -6,6 +6,7 @@ export interface AiConversationInput {
 	fallback: string;
 	seed: string;
 	questions: string;
+	previousResponse?: string;
 	allowFallback?: boolean;
 }
 
@@ -23,11 +24,13 @@ export function composeAiConversationInput({
 	fallback,
 	seed,
 	questions,
+	previousResponse,
 	allowFallback = true
 }: AiConversationInput): string {
 	const answer = input.trim();
 	const original = seed.trim();
 	const pendingQuestions = questions.trim();
+	const prevResponse = previousResponse?.trim() ?? '';
 
 	if (original && pendingQuestions && answer) {
 		return [
@@ -38,6 +41,19 @@ export function composeAiConversationInput({
 			pendingQuestions,
 			'',
 			'Användarens svar:',
+			answer
+		].join('\n');
+	}
+
+	if (original && prevResponse && answer) {
+		return [
+			'Ursprunglig instruktion:',
+			original,
+			'',
+			'Ditt tidigare förslag:',
+			prevResponse,
+			'',
+			'Användarens korrigering:',
 			answer
 		].join('\n');
 	}
