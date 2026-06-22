@@ -11,7 +11,8 @@
     onToggleFlows,
     onLoadFlow,
     onAddToAgenda,
-    onDeleteFlow
+    onDeleteFlow,
+    showInfo = true
   }: {
     savedFlowMsg: string;
     flows: Flow[];
@@ -23,13 +24,24 @@
     onLoadFlow: (id: string) => void;
     onAddToAgenda: (id: string) => void;
     onDeleteFlow: (id: string) => void;
+    showInfo?: boolean;
   } = $props();
+
+  let showSaveInfo = $state(showInfo);
+  $effect(() => { showSaveInfo = showInfo; });
 </script>
 
 <div class="library-menu-workspace">
   <div class="plan-editor library-menu-primary">
-    <div class="plan-section-title">Spara mall</div>
-    <div class="planner-card-copy">Gör nuvarande pass återanvändbart. Mallen sparar rubrik, aktiviteter, tider och kommentarer.</div>
+    <div class="lib-section-title">
+      <span>Spara mall</span>
+      <button class="menu-i" class:active={showSaveInfo}
+        onclick={() => showSaveInfo = !showSaveInfo}
+        title={showSaveInfo ? 'Dölj förklaring' : 'Visa förklaring'}>i</button>
+    </div>
+    {#if showSaveInfo}
+      <div class="planner-card-copy">Gör nuvarande pass återanvändbart. Mallen sparar rubrik, aktiviteter, tider och kommentarer.</div>
+    {/if}
     <button class="quickstart" onclick={onSaveFlow}
       title="Sparar nuvarande schema — rubrik, aktiviteter och tid — som en återanvändbar mall i biblioteket.">
       <span class="ico">💾︎</span> {savedFlowMsg || 'Spara som mall'}
@@ -37,7 +49,9 @@
   </div>
 
   <div class="plan-editor library-menu-list">
-    <div class="plan-section-title">Sparade mallar</div>
+    <div class="lib-section-title">
+      <span>Sparade mallar</span>
+    </div>
     {#if flows.length === 0}
       <p class="flows-hint">Inga mallar ännu. Spara ett pass från Nu eller Planera.</p>
     {:else}
@@ -81,6 +95,16 @@
   .library-menu-primary {
     position: sticky;
     top: 0;
+  }
+  .lib-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--menu-fg);
+    margin-bottom: 4px;
   }
   @container (max-width: 480px) {
     .library-menu-primary { position: static; }

@@ -102,6 +102,10 @@
   let aiConfigOpen = $state(false);
   let inviteCode = $state('');
 
+  let showAiInfo = $state(showHelpHints);
+  let showTimeInfo = $state(showHelpHints);
+  $effect(() => { showAiInfo = showHelpHints; showTimeInfo = showHelpHints; });
+
   function snapshotLabel(createdAt: string) {
     const date = new Date(createdAt);
     if (Number.isNaN(date.getTime())) return createdAt;
@@ -171,13 +175,20 @@
 
 {#if userLevel >= 2}
   <div class="plan-editor workspace-menu-ai">
-    <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen}>
-      {aiConfigOpen ? '−' : '+'} AI-planering <span class="beta-tag">BETA</span>
-    </button>
+    <div class="ws-section-head">
+      <button class="ai-panel-toggle" onclick={() => aiConfigOpen = !aiConfigOpen}>
+        {aiConfigOpen ? '−' : '+'} AI-planering <span class="beta-tag">BETA</span>
+      </button>
+      <button class="menu-i" class:active={showAiInfo}
+        onclick={() => showAiInfo = !showAiInfo}
+        title={showAiInfo ? 'Dölj förklaring' : 'Visa förklaring'}>i</button>
+    </div>
     {#if aiConfigOpen}
-      <div class="section-copy muted" style="font-size:11px;">
-        Nyckeln skickas enbart direkt till vald leverantör — sparas aldrig på server.
-      </div>
+      {#if showAiInfo}
+        <div class="section-copy muted" style="font-size:11px;">
+          Nyckeln skickas enbart direkt till vald leverantör — sparas aldrig på server.
+        </div>
+      {/if}
 
       <select class="sync-input ai-provider-select"
         value={aiProvider}
@@ -239,13 +250,20 @@
 
 <div class="workspace-menu-secondary">
 <div class="plan-editor">
-  <button class="ai-panel-toggle" onclick={onToggleTimeData}>
-    {timeDataOpen ? '−' : '+'} Tidsdata & Lärande <span class="beta-tag">BETA</span>
-  </button>
+  <div class="ws-section-head">
+    <button class="ai-panel-toggle" onclick={onToggleTimeData}>
+      {timeDataOpen ? '−' : '+'} Tidsdata & Lärande <span class="beta-tag">BETA</span>
+    </button>
+    <button class="menu-i" class:active={showTimeInfo}
+      onclick={() => showTimeInfo = !showTimeInfo}
+      title={showTimeInfo ? 'Dölj förklaring' : 'Visa förklaring'}>i</button>
+  </div>
   {#if timeDataOpen}
-    <div class="section-copy muted" style="font-size:11px;">
-      Baserat på {confirmedActualCount} bekräftade pass.
-    </div>
+    {#if showTimeInfo}
+      <div class="section-copy muted" style="font-size:11px;">
+        Baserat på {confirmedActualCount} bekräftade pass.
+      </div>
+    {/if}
     <div class="rel-box">
       <div class="rel-head">
         <span>Tillförlitlighet: <strong>{reliabilityLevel}</strong></span>
@@ -304,6 +322,15 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+  .ws-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .ws-section-head .ai-panel-toggle {
+    flex: 1;
   }
   .workspace-menu-workspace {
     display: grid;
