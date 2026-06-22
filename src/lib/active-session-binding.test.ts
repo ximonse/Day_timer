@@ -18,7 +18,7 @@ describe('active session binding', () => {
 		})).toBe(false);
 	});
 
-	test('agenda sessions write back only in explicit plan editing or forced update', () => {
+	test('agenda-bound sessions always write back regardless of section or explicit selection', () => {
 		const source = { kind: 'agenda' as const, date: '2026-06-03', title: 'Pass', startMin: 9 * 60 };
 
 		expect(canWriteActiveSessionBack({
@@ -33,13 +33,13 @@ describe('active session binding', () => {
 			activeSection: 'plan',
 			planSelectionExplicit: false,
 			forceUpdate: false
-		})).toBe(false);
+		})).toBe(true);
 
 		expect(canWriteActiveSessionBack({
 			source,
 			activeSection: 'now',
 			planSelectionExplicit: false,
-			forceUpdate: true
+			forceUpdate: false
 		})).toBe(true);
 	});
 

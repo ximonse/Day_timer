@@ -10,9 +10,7 @@ export interface CanWriteBackInput {
 }
 
 export function canWriteActiveSessionBack(input: CanWriteBackInput): boolean {
-	if (input.source.kind !== 'agenda') return false;
-	if (input.forceUpdate) return true;
-	return input.activeSection === 'plan' && input.planSelectionExplicit;
+	return input.source.kind === 'agenda';
 }
 
 export interface SectionChangeBindingInput {
