@@ -434,7 +434,11 @@
     {/if}
     <div class="row" class:active={isActive} class:past={isPast} class:armed={armedBlockId === b.id} class:done={doneBlockIds.includes(b.id)}
          use:bindRow={b.id}
-         onclickcapture={maybeSuppressClick}>
+         onclickcapture={maybySuppressClick}>
+      {#if !isViewMode}
+        <span class="grip-icon" aria-hidden="true"
+              onpointerdown={(e) => rowPointerDown(e, b.id)}></span>
+      {/if}
       <span class="dot drag-handle"
             style="background:{blockColor}"
             role="button" tabindex="-1" aria-label="Dra för att flytta blocket"
@@ -518,6 +522,11 @@
     <div class="sidebar-add-row">
       <button class="seg-add-btn" onclick={addBlock}>+</button>
     </div>
+    <div class="format-tips" aria-hidden="true">
+      <span class="format-tip-code">10m</span> låser tid &nbsp;·&nbsp;
+      <span class="format-tip-code">%</span> fortsätter tills avbockad &nbsp;·&nbsp;
+      <span class="format-tip-code">&amp;</span> kommentar
+    </div>
   {/if}
 </div>
 
@@ -573,15 +582,51 @@
   }
   .seglist .name-inp { flex: 1; font-size: inherit; font-weight: inherit; }
   .seglist .min-inp { width: 5ch; text-align: right; font-size: 20px; font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 500; flex-shrink: 0; margin-top: 4px; }
+  .grip-icon {
+    flex-shrink: 0;
+    width: 10px;
+    height: 18px;
+    margin-top: 15px;
+    background:
+      radial-gradient(circle, var(--muted) 1.4px, transparent 1.4px) 0 0 / 5px 6px,
+      radial-gradient(circle, var(--muted) 1.4px, transparent 1.4px) 5px 0 / 5px 6px;
+    background-repeat: repeat-y;
+    opacity: 0.32;
+    cursor: grab;
+    touch-action: pinch-zoom;
+    transition: opacity .15s;
+  }
+  .row:hover .grip-icon { opacity: 0.55; }
+  .row.armed .grip-icon { cursor: grabbing; opacity: 0.75; }
+  :global(body.run-mode) .grip-icon { display: none; }
   .seg-add-btn {
     display: block; width: 100%; margin-top: 4px; padding: 6px 10px;
     background: none; border: 0; border-radius: 8px;
     color: var(--muted); font-size: 13px; cursor: pointer; text-align: center;
-    transition: opacity .12s; opacity: .38;
+    transition: opacity .12s; opacity: .58;
   }
-  .seg-add-btn:hover { opacity: .8; }
+  .seg-add-btn:hover { opacity: .9; }
+  :global(body.run-mode) .seg-add-btn { opacity: .22; }
   .sidebar-add-row { display: flex; gap: 8px; margin-top: 4px; }
   .sidebar-add-row .seg-add-btn { flex: 1; }
+  .format-tips {
+    margin-top: 10px;
+    padding: 6px 8px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: color-mix(in srgb, var(--muted) 70%, var(--fg) 30%);
+    opacity: 0.7;
+    text-align: center;
+  }
+  .format-tip-code {
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--muted) 12%, transparent);
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+  :global(body.run-mode) .format-tips { display: none; }
   .seglist .note { color: var(--sidebar-subheading); font-size: 33px; line-height: 1.2; padding: 0 12px 8px 50px; white-space: pre-wrap; }
   
   .note-line { display: flex; align-items: flex-start; gap: 10px; }
@@ -623,7 +668,6 @@
     border-left: 5px solid var(--muted);
   }
   
-  /* Sänk överstrykningen och låt den sticka ut utanför orden */
   :global(del) {
     text-decoration: none;
     background-image: linear-gradient(color-mix(in srgb, currentColor, #000 25%), color-mix(in srgb, currentColor, #000 25%));
@@ -645,5 +689,13 @@
     .seglist .min { font-size: 16px; margin-top: 2px; }
     .seglist .note { font-size: 15px; padding: 0 8px 6px 36px; }
     .seglist .infobox { font-size: 16px; padding: 12px 14px; margin-top: 12px; }
+  }
+  @media (hover: none) and (pointer: coarse) {
+    .seglist .row { font-size: clamp(26px, 5.5cqi, 42px); gap: 8px; }
+    .seglist .min { font-size: clamp(14px, 2.4cqi, 20px); }
+    .seglist .note { font-size: clamp(18px, 3.8cqi, 33px); }
+    .seglist .infobox { font-size: clamp(16px, 3.4cqi, 26px); }
+    .grip-icon { margin-top: 11px; width: 12px; height: 20px; }
+    .format-tips { font-size: 10px; }
   }
 </style>
