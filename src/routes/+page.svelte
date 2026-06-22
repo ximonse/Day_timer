@@ -1969,6 +1969,8 @@
       return;
     }
 
+    const prevRef = activeAgendaFlowRef;
+    const prevDetails = selectedAgendaDetails;
     const result = saveAgendaDraft({
       activeText: activeAgendaText(),
       draftText: agendaDraft,
@@ -1983,8 +1985,19 @@
     agendaDraftDirty = result.draftDirty;
     agendaDraftSource = result.draftSource;
     s.agendaMeta = result.agendaMeta;
-    activeAgendaFlowRef = null;
-    sessionSource = { kind: 'unscheduled' };
+
+    if (prevRef?.date === targetDate && prevDetails) {
+      const savedDay = result.days.find(d => d.date === targetDate) ?? null;
+      const items = savedDay ? buildAgendaItemsForDay(savedDay, agendaDayStart) : [];
+      const match = items.find(item => item.startMin === prevDetails.startMin && item.flow.title === prevDetails.flow.title)
+        ?? items.find(item => item.flow.title === prevDetails.flow.title);
+      activeAgendaFlowRef = match ? makeAgendaFlowRef(targetDate, match.flow, match.startMin) : null;
+      sessionSource = activeAgendaFlowRef ? sessionSource : { kind: 'unscheduled' };
+    } else {
+      activeAgendaFlowRef = null;
+      sessionSource = { kind: 'unscheduled' };
+    }
+
     appState.persist();
 
     if (hasSyncSession()) syncSave();
