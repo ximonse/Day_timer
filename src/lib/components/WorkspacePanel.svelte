@@ -307,7 +307,7 @@
   }
   .workspace-menu-workspace {
     display: grid;
-    grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
     gap: 12px;
     align-items: start;
   }
@@ -322,15 +322,9 @@
   .workspace-menu-secondary {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
     gap: 10px;
     align-items: start;
-  }
-  @media (max-width: 760px) {
-    .workspace-menu-workspace,
-    .workspace-menu-secondary {
-      grid-template-columns: minmax(0, 1fr);
-    }
   }
   .state-chip {
     font-size: 10px;

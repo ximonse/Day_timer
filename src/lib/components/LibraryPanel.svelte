@@ -70,7 +70,7 @@
 <style>
   .library-menu-workspace {
     display: grid;
-    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
     gap: 12px;
     align-items: start;
   }
@@ -82,12 +82,7 @@
     position: sticky;
     top: 0;
   }
-  @media (max-width: 760px) {
-    .library-menu-workspace {
-      grid-template-columns: minmax(0, 1fr);
-    }
-    .library-menu-primary {
-      position: static;
-    }
+  @container (max-width: 480px) {
+    .library-menu-primary { position: static; }
   }
 </style>
