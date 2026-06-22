@@ -223,7 +223,8 @@
   :global(.controls--planner) { width: min(760px, 100%); max-width: 100%; align-self: center; }
   :global(.controls--wide) { width: min(760px, 100%); max-width: 100%; align-self: center; }
   :global(.controls label) { font-size: 12px; color: var(--menu-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
-  :global(.field-label) { font-size: 11px; color: var(--menu-muted); letter-spacing: 0; font-weight: 600; }
+  :global(.field-label) { font-size: 11px; color: color-mix(in srgb, var(--menu-fg) 65%, transparent); letter-spacing: 0; font-weight: 600; }
+  :global(.section-nav-row) { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
   :global(.field-head) { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
   :global(.field-head--wrap) { align-items: flex-start; flex-wrap: wrap; }
   :global(.field-head-actions) { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }

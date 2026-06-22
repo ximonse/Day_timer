@@ -434,7 +434,7 @@
     {/if}
     <div class="row" class:active={isActive} class:past={isPast} class:armed={armedBlockId === b.id} class:done={doneBlockIds.includes(b.id)}
          use:bindRow={b.id}
-         onclickcapture={maybySuppressClick}>
+         onclickcapture={maybeSuppressClick}>
       {#if !isViewMode}
         <span class="grip-icon" aria-hidden="true"
               onpointerdown={(e) => rowPointerDown(e, b.id)}></span>

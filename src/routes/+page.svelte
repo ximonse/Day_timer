@@ -3393,7 +3393,12 @@
           class:controls--planner={activeSection === 'plan'}
           class:controls--wide={activeSection === 'library' || activeSection === 'workspace'}
         >
-        <SectionNav {activeSection} labels={NAV_LABELS} onSelect={(section) => section === 'plan' ? openPlan() : setActiveSection(section)} />
+        <div class="section-nav-row">
+          <SectionNav {activeSection} labels={NAV_LABELS} onSelect={(section) => section === 'plan' ? openPlan() : setActiveSection(section)} />
+          <button class="menu-i" class:active={s.showHelpHints}
+            onclick={() => { s.showHelpHints = !s.showHelpHints; appState.persist(); }}
+            title={s.showHelpHints ? 'Dölj hjälptexter (Alt+i)' : 'Visa hjälptexter (Alt+i)'}>i</button>
+        </div>
 
         {#if activeSection === 'now'}
           <div class="section-hero section-hero--split section-hero--compact">
@@ -3626,6 +3631,7 @@
               onLoadFlow={(id) => loadFlow(id, selectedDay?.date ? 'plan' : 'now')}
               onAddToAgenda={addTemplateToSelectedAgendaDate}
               onDeleteFlow={deleteFlow}
+              showInfo={s.showHelpHints}
             />
           </div>
         {:else if activeSection === 'workspace'}
