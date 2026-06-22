@@ -1986,18 +1986,23 @@
     agendaDraftSource = result.draftSource;
     s.agendaMeta = result.agendaMeta;
 
-    if (prevRef?.date === targetDate && prevDetails) {
+    if (prevRef?.date === targetDate && prevDetails && planSelectionExplicit) {
       const savedDay = result.days.find(d => d.date === targetDate) ?? null;
       const items = savedDay ? buildAgendaItemsForDay(savedDay, agendaDayStart) : [];
       const match = items.find(item => item.startMin === prevDetails.startMin && item.flow.title === prevDetails.flow.title)
         ?? items.find(item => item.flow.title === prevDetails.flow.title);
-      activeAgendaFlowRef = match ? makeAgendaFlowRef(targetDate, match.flow, match.startMin) : null;
-      sessionSource = activeAgendaFlowRef ? sessionSource : { kind: 'unscheduled' };
-    } else {
-      activeAgendaFlowRef = null;
-      sessionSource = { kind: 'unscheduled' };
+      if (match) {
+        activeAgendaFlowRef = null;
+        loadAgendaFlow(match.flow, match.startMin, 'plan', true);
+        if (hasSyncSession()) syncSave();
+        savedAgendaMsg = savingAiDraft ? 'AI-förslag godkänt ✓' : 'Sparat ✓';
+        setTimeout(() => { savedAgendaMsg = ''; }, 2000);
+        return;
+      }
     }
 
+    activeAgendaFlowRef = null;
+    sessionSource = { kind: 'unscheduled' };
     appState.persist();
 
     if (hasSyncSession()) syncSave();
