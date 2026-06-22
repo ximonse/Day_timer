@@ -457,7 +457,7 @@
           <button type="button" class="title-check-btn seg-done-control" class:done-checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på nästa segment'} aria-label={doneBlockIds.includes(b.id) ? 'Ångra' : 'Klar'}>
             {#if doneBlockIds.includes(b.id)}✓{/if}
           </button>
-        {:else if !onToggleSegmentDone}
+        {:else if !isViewMode}
           <button type="button" class="title-check-btn" class:revealed={revealedCheckId === `${b.id}-title`} onclick={(e) => { e.stopPropagation(); toggleTitleCheck(b); revealedCheckId = null; }} title="Bocka av block" aria-label="Bocka av block">
             {#if b.title.includes('~~')}✓{/if}
           </button>
@@ -651,6 +651,8 @@
   .title-check-btn:hover, .title-check-btn.revealed { opacity: 1 !important; }
   .title-check-btn.seg-done-control { opacity: 0.35; }
   .title-check-btn.done-checked { opacity: 1; color: var(--accent); border-color: var(--accent); }
+  :global(body.run-mode) .title-check-btn:not(.seg-done-control) { opacity: 0.28; }
+  :global(body.run-mode) .note-line .check-btn { opacity: 0.28; }
 
   .seglist .infobox { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: #ffffff; color: #1a1410; border: 1px solid #b8b0a4; font-size: 26px; line-height: 1.35; white-space: pre-wrap; font-style: italic; }
   :global(.dark) .seglist .infobox { background: #ececec; color: #000000; border: none; }
