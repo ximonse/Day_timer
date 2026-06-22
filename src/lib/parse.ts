@@ -202,14 +202,18 @@ function normalizeAgendaText(raw: string): string {
 function sectionsToFlows(sections: RawSection[]): Flow[] {
   return sections.map((sec, i) => {
     const next = sections[i + 1];
-    let available = sec.availableMin ?? 60;
-    if (sec.availableMin === undefined && sec.startMin !== undefined && next?.startMin !== undefined && next.startMin > sec.startMin) {
+    let available = sec.availableMin;
+    if (available === undefined && sec.startMin !== undefined && next?.startMin !== undefined && next.startMin > sec.startMin) {
       available = next.startMin - sec.startMin;
     }
+    const hasExplicitAvailable = available !== undefined;
+    if (available === undefined) available = 60;
     const sectionItems = sec.items.length > 0 ? sec.items : [{ title: sec.title, minutes: available, note: '' }];
     const pinnedSum = sectionItems.reduce((a, b) => a + (b.minutes ?? 0), 0);
     const unpinnedCount = sectionItems.filter(b => b.minutes === null).length;
-    const unpinnedTotal = Math.max(unpinnedCount, available - pinnedSum);
+    const unpinnedTotal = hasExplicitAvailable
+      ? Math.max(unpinnedCount * 5, available - pinnedSum)
+      : unpinnedCount * 5;
     const unpinnedBase = unpinnedCount > 0 ? Math.floor(unpinnedTotal / unpinnedCount) : 0;
     let unpinnedRemainder = unpinnedCount > 0 ? unpinnedTotal - unpinnedBase * unpinnedCount : 0;
     const minutes = sectionItems.map(b => {

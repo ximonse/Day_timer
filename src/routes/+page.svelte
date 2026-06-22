@@ -2190,7 +2190,7 @@
   function addBlock() {
     if (isViewMode) return;
     const newId = uid();
-    s.blocks = [...s.blocks, { id: newId, title: '', minutes: 10, note: '', warning: true, pinned: false }];
+    s.blocks = [...s.blocks, { id: newId, title: '', minutes: 5, note: '', warning: true, pinned: false }];
     commitBlockEdit();
   }
 
@@ -2209,7 +2209,7 @@
   function deleteBlock(id: string) {
     s.blocks = s.blocks.filter(x => x.id !== id);
     if (s.blocks.length === 0) {
-      s.blocks = [{ id: uid(), title: '', minutes: 10, note: '', warning: true, pinned: false }];
+      s.blocks = [{ id: uid(), title: '', minutes: 5, note: '', warning: true, pinned: false }];
     }
     commitBlockEdit();
   }

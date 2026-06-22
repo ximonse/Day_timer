@@ -153,7 +153,7 @@ function resolveFlowWarning(flow: Flow, index: number, minutes: number, override
 
 export function flowToBlocks(flow: Flow, createId: () => string, options: FlowBlockOptions = {}): Block[] {
 	return flow.parts.map((title, index) => {
-		const minutes = flow.minutes[index] ?? 45;
+		const minutes = flow.minutes[index] ?? 5;
 		const block: Block = {
 			id: createId(),
 			title,
