@@ -34,6 +34,7 @@ export interface AgendaFlowRef {
 	startMin: number;
 	totalMin: number;
 	partCount: number;
+	id?: string;
 }
 
 export interface AgendaItem {
@@ -279,7 +280,8 @@ export function makeAgendaFlowRef(date: string | null, flow: Flow, startMin: num
 		title: flow.title,
 		startMin,
 		totalMin: totalFlowMinutes(flow),
-		partCount: flow.parts.length
+		partCount: flow.parts.length,
+		...(flow.id ? { id: flow.id } : {})
 	};
 }
 
@@ -408,6 +410,10 @@ export function resolveAgendaFlowRef(days: AgendaDay[] | null, ref: AgendaFlowRe
 	if (dayIdx < 0) return null;
 	const day = days[dayIdx];
 	const items = buildAgendaItemsForDay(day, ref.startMin);
+	if (ref.id) {
+		const byId = items.find(item => item.flow.id === ref.id);
+		if (byId) return { ...byId, dayIdx };
+	}
 	const exact = items.find(item => item.startMin === ref.startMin && item.flow.title === ref.title);
 	if (exact) return { ...exact, dayIdx };
 	const fallback = items.find(item =>

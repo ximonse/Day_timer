@@ -251,6 +251,17 @@ describe('agenda helpers', () => {
 		expect(resolveAgendaFlowRef(days, { ...exactRef, date: '2026-05-19' })).toBeNull();
 	});
 
+	test('resolves by stable id even when the pass was renamed', () => {
+		const target = flow({ id: 'abc1234', title: 'Matte', startMin: 9 * 60, parts: ['Tal'], minutes: [35] });
+		const ref = makeAgendaFlowRef('2026-05-18', target, 9 * 60);
+		expect(ref.id).toBe('abc1234');
+
+		const renamedDays: AgendaDay[] = [{ date: '2026-05-18', flows: [{ ...target, title: 'Matematik' }] }];
+		const resolved = resolveAgendaFlowRef(renamedDays, ref);
+		expect(resolved?.flow.id).toBe('abc1234');
+		expect(resolved?.flow.title).toBe('Matematik');
+	});
+
 	test('builds agenda meta lookup without exposing mutable meta objects', () => {
 		const matte = flow({ title: 'Matte', startMin: 9 * 60, parts: ['Tal'], minutes: [35] });
 		const key = makeAgendaMetaKeyForFlow('2026-05-18', matte, 9 * 60);
