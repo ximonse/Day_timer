@@ -47,6 +47,11 @@ export interface ActualTimeEntry {
   confirmed: boolean;
   confirmedAt: number | null;
   autoFinalized: boolean;
+  entryKind?: 'session' | 'activity';
+  executionMode?: 'timed' | 'flow';
+  plannedDurationMin?: number;
+  sessionTitle?: string;
+  blockId?: string;
 }
 
 export interface EditorDraft {

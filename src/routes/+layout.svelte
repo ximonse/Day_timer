@@ -754,7 +754,7 @@
   :global(.lock-btn) { opacity: .18; font-size: 14px !important; }
   :global(.lock-btn:hover) { opacity: .5; }
   :global(.lock-btn.locked) { opacity: .55; }
-  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle):not(.collapse-btn):not(.agenda-toggle-btn):not(.agenda-input-toggle):not(.agenda-nav-btn):not(.agenda-calendar-day)) { pointer-events: none !important; }
+  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle):not(.collapse-btn):not(.agenda-toggle-btn):not(.agenda-input-toggle):not(.agenda-nav-btn):not(.agenda-calendar-day):not(.seg-done-control)) { pointer-events: none !important; }
   :global(body.page-locked input) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked textarea) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked .resize-handle-sb) { pointer-events: none !important; }
@@ -779,7 +779,8 @@
   :global(body.page-locked.run-mode .collapse-btn),
   :global(body.page-locked.run-mode .agenda-toggle-btn) { pointer-events: auto !important; }
   :global(body.run-mode .title-check-btn),
-  :global(body.run-mode .check-btn) { pointer-events: auto !important; }
+  :global(body.run-mode .check-btn),
+  :global(body.page-locked.run-mode button.seg-done-control) { pointer-events: auto !important; }
   :global(body.run-mode .agenda-block) { pointer-events: auto !important; }
   :global(body.page-locked.run-mode .agenda-calendar button) { pointer-events: auto !important; }
   :global(svg.clock *:focus),
