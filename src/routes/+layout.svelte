@@ -520,10 +520,11 @@
   :global(.agenda-calendar-weekdays),
   :global(.agenda-calendar-grid) { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; }
   :global(.agenda-calendar-weekdays) { margin-bottom: 0; }
-  :global(.agenda-calendar-weekdays span) { text-align: center; font-size: 10px; color: var(--muted); font-weight: 700; }
+  :global(.agenda-calendar-weekdays span) { text-align: center; font-size: clamp(8px, 1.8cqi, 10px); color: var(--muted); font-weight: 700; }
   :global(.agenda-calendar-day) {
-    min-height: 28px; border: 1px solid transparent; border-radius: 7px; background: transparent;
-    color: var(--fg); cursor: pointer; font: inherit; position: relative; padding: 4px 2px 8px;
+    aspect-ratio: 1; min-height: 26px; max-height: 44px;
+    border: 1px solid transparent; border-radius: 7px; background: transparent;
+    color: var(--fg); cursor: pointer; font-size: clamp(9px, 2cqi, 13px); position: relative; padding: 2px 1px 4px;
     display: flex; align-items: flex-start; justify-content: center;
   }
   :global(.agenda-calendar-day:hover) { background: var(--pill); }
@@ -531,7 +532,7 @@
   :global(.agenda-calendar-day.selected) { border-color: var(--accent); background: var(--pill); }
   :global(.agenda-calendar-day.has-content) { font-weight: 700; }
   :global(.agenda-calendar-density) {
-    position: absolute; left: 8px; right: 8px; bottom: 5px; height: 4px; border-radius: 999px;
+    position: absolute; left: 15%; right: 15%; bottom: 10%; height: 3px; border-radius: 999px;
     background: var(--accent); opacity: 0;
   }
   :global(.agenda-input-header) { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
@@ -578,7 +579,7 @@
   :global(.plan-editor) { display: flex; flex-direction: column; gap: 12px; background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 12px; padding: 12px; }
   :global(.menu-blob) { background: var(--menu-surface); border: 1px solid var(--menu-border); border-radius: 12px; padding: 12px; }
   :global(.menu-blob--planner) { width: 100%; box-sizing: border-box; }
-  :global(.planner-menu-workspace) { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, .85fr); gap: 12px; align-items: start; }
+  :global(.planner-menu-workspace) { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px; align-items: start; }
   :global(.planner-menu-main),
   :global(.planner-menu-side) { min-width: 0; }
   :global(.agenda-planner-card) { display: flex; flex-direction: column; gap: 8px; }
@@ -590,7 +591,6 @@
   @media (max-width: 760px) {
     :global(.controls--planner) { width: 100%; }
     :global(.menu-blob--planner) { width: 100%; }
-    :global(.planner-menu-workspace) { grid-template-columns: minmax(0, 1fr); }
   }
   :global(.plan-editor-bottom) { display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
   :global(.write-section-toggle) { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: transparent; border: 0; padding: 6px 2px 5px; color: var(--menu-muted); cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
@@ -704,7 +704,7 @@
     :global(.mini-menu-shell.mini-menu-shell--wide) { width: min(760px, 100%); }
   }
   @media (any-pointer: coarse) and (orientation: landscape) {
-    :global(.main .clock-wrap svg.clock) { width: max(220px, 51vw); height: max(220px, 51vw); }
+    :global(.main .clock-wrap svg.clock) { width: max(220px, 54vw); height: max(220px, 54vw); }
   }
 
   /* ── Dela-sektion ── */
