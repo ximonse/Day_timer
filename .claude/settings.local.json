@@ -17,7 +17,8 @@
       "Skill(run)",
       "Skill(run:*)",
       "mcp__Claude_Preview__preview_start",
-      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__fill"
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__fill",
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__resize_page"
     ]
   }
 }
