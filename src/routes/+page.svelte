@@ -1,5 +1,6 @@
 <script lang="ts">
   import AgendaPanel from '$lib/components/AgendaPanel.svelte';
+  import ExecutionModeToggle from '$lib/components/ExecutionModeToggle.svelte';
   
   import { onMount, untrack } from 'svelte';
   import { fade, fly } from 'svelte/transition';
@@ -84,6 +85,8 @@
   import { decideWorkspaceSyncLoad, type SyncLoadSource } from '$lib/sync-load-decision.js';
   import { nextBindingAfterSectionChange } from '$lib/active-session-binding.js';
   import { stripColorDirective } from '$lib/title-color.js';
+  import { createFlowRuntime } from '$lib/flow-runtime.svelte.js';
+  import { makeFlowActualEntry } from '$lib/flow-actuals.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -98,6 +101,7 @@
   import AdminPanel from '$lib/components/AdminPanel.svelte';
 
   const s = appState.value;
+  const flowRuntime = createFlowRuntime();
   let activeSection = $state<AppSection>(s.activeSection as AppSection);
   const NS = 'http://www.w3.org/2000/svg';
 
@@ -307,7 +311,12 @@
 
   const pad = (n: number) => String(Math.floor(n)).padStart(2, '0');
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
-  const displayBlocks = $derived.by(() => effectiveRunUntilCheckedBlocks(s.blocks, elapsedMin()));
+  const flowModeEnabled = $derived(flowRuntime.mode === 'flow');
+  const flowRunActive = $derived(flowModeEnabled && locked && !miniMenuOpen && flowRuntime.execution !== null);
+  const timerStartMin = () => flowRunActive ? flowRuntime.execution!.displayStartMin : s.startMin;
+  const displayBlocks = $derived.by(() => flowRunActive
+    ? flowRuntime.displayBlocks(nowMinLive)
+    : effectiveRunUntilCheckedBlocks(s.blocks, nowMinLive - s.startMin));
   const displayTotalMin = () => displayBlocks.reduce((a, b) => a + b.minutes, 0);
 
   const sectorColors = $derived(clockTheme(s.palette, s.dark).colors);
@@ -531,7 +540,17 @@
     const timeline = selectedDay
       ? buildAgendaItemsForDay(selectedDay, agendaDayStart)
       : buildSequentialTimeline(flows, s.startMin);
-    return timeline.map(({ flow, startMin, totalMin }) => ({ flow, startMin, totalMin, fromText }));
+    const items = timeline.map(({ flow, startMin, totalMin }) => ({ flow, startMin, totalMin, fromText }));
+    const source = sessionSource;
+    if (!flowRunActive || source.kind !== 'agenda' || !flowRuntime.execution) return items;
+    const currentIndex = items.findIndex(item => item.startMin === source.startMin && item.flow.title === source.title);
+    if (currentIndex < 0) return items;
+    const plannedTotal = flowRuntime.execution.blocks.reduce((sum, block) => sum + block.minutes, 0);
+    const plannedEnd = source.startMin + plannedTotal;
+    const liveEnd = timerStartMin() + displayTotalMin();
+    const shiftMin = Math.max(0, liveEnd - plannedEnd);
+    if (shiftMin <= 0) return items;
+    return items.map((item, index) => index > currentIndex ? { ...item, startMin: item.startMin + shiftMin } : item);
   });
   const agendaLayout = $derived(buildAgendaLayout(agendaItems.map((item, index) => ({
     id: item.flow.id ?? `${item.startMin}-${item.flow.title}-${index}`,
@@ -550,6 +569,7 @@
   });
 
   const runUntilImpact = $derived.by(() => {
+    if (flowRunActive) return null;
     const elapsed = elapsedMin();
     if (elapsed < 0) return null;
     let cum = 0;
@@ -698,6 +718,18 @@
     agendaCalendarOpen = false;
   }
 
+  function setExecutionMode(enabled: boolean) {
+    if (locked && !miniMenuOpen) return;
+    flowRuntime.setMode(enabled ? 'flow' : 'timed');
+    warnedSet.clear();
+  }
+
+  function ensureFlowRuntime() {
+    if (isViewMode || flowRuntime.mode !== 'flow' || !locked || miniMenuOpen) return;
+    const contextKey = `${localDateISO()}|${sessionSource.kind}|${s.dayTitle}`;
+    flowRuntime.ensureStarted(s.blocks, s.startMin, nowMinutes(), contextKey);
+  }
+
   function persistRunModePreference(active: boolean) {
     try {
       localStorage.setItem(RUN_MODE_STORAGE, active ? '1' : '0');
@@ -741,6 +773,7 @@
       s.showControls = decision.showControls;
       if (decision.action === 'stay-open') mobileTab = decision.mobileTab;
       else collapseActiveWorkMenus();
+      if (decision.action === 'enter-run') ensureFlowRuntime();
       persistRunModePreference(decision.persistRunMode);
       appState.persist();
       return;
@@ -1014,6 +1047,7 @@
     return `${h}h ${m}m till start`;
   }
   function trackActualForActiveAgendaItem() {
+    if (flowRunActive) return;
     const date = localDateISO();
     const nowMin = nowMinutes();
     const active = agendaItems.find((item) => nowMin >= item.startMin && nowMin < item.startMin + item.totalMin);
@@ -1067,7 +1101,7 @@
     }
     return 'Fristående session';
   }
-  const elapsedMin = () => nowMinutes() - s.startMin;
+  const elapsedMin = () => nowMinutes() - timerStartMin();
   const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
   let warningsOpen = $state(false);
   let soundMuted = $state(false);
@@ -1146,6 +1180,24 @@
   }
 
   function toggleSegmentDone(blockId: string) {
+    if (flowRunActive) {
+      const completion = flowRuntime.complete(blockId, nowMinutes());
+      if (!completion) return;
+      const entry = makeFlowActualEntry({
+        date: localDateISO(),
+        agendaDate: selectedDay?.date ?? null,
+        sessionTitle: s.dayTitle || 'Session',
+        dayTextSnapshot: serializeSelectedAgendaDay(selectedDay?.date ?? null, agendaDays ?? null),
+        completion
+      });
+      s.actualTimeLog = upsertActualEntry(s.actualTimeLog, entry);
+      warnedSet.clear();
+      if (!flowRuntime.activeBlockId) showCompletionToast();
+      appState.persist();
+      if (hasSyncSession()) void syncSave();
+      void pushShareState();
+      return;
+    }
     if (doneSegments[blockId] !== undefined) {
       const saved = doneSegments[blockId];
       const idx = s.blocks.findIndex(b => b.id === blockId);
@@ -1334,7 +1386,7 @@
   }
 
   function checkWarnings() {
-    if (soundMuted) return;
+    if (soundMuted || flowRunActive) return;
     const elapsed = elapsedMin();
     let cum = 0;
     displayBlocks.forEach((b, i) => {
@@ -1373,13 +1425,16 @@
       lastSeenDate = todayIso;
     }
     nowMinLive = nowMinutes();
+    ensureFlowRuntime();
+    flowRuntime.tick(nowMinLive);
     nowText = pad(now.getHours()) + ':' + pad(now.getMinutes());
     const tot = displayTotalMin();
     const nowMin = nowMinutes();
-    if (nowMin < s.startMin) {
-      leftText = fmtTillStart(s.startMin - nowMin);
+    const startMin = timerStartMin();
+    if (nowMin < startMin) {
+      leftText = fmtTillStart(startMin - nowMin);
     } else {
-      leftText = fmtLeft((s.startMin + tot) - nowMin);
+      leftText = fmtLeft((startMin + tot) - nowMin);
     }
     checkAutoLoad();
     trackActualForActiveAgendaItem();
@@ -1852,7 +1907,7 @@
   async function pushShareState() {
     const entry = shareEntries[ACTIVE_SHARE_KEY];
     if (!entry || entry.mode !== 'active-session-live') return;
-    const state = buildLiveShareState(s);
+    const state = buildLiveShareState({ ...s, blocks: displayBlocks, startMin: timerStartMin() });
     const hash = JSON.stringify(state);
     if (hash === lastPushedHash) return;
     try {
@@ -1882,7 +1937,7 @@
   async function startSharing(mode: ShareMode) {
     const uiState = sharedUiStateFromState(s);
     const payload = mode === 'active-session-live'
-      ? buildLiveShareState(s)
+      ? buildLiveShareState({ ...s, blocks: displayBlocks, startMin: timerStartMin() })
       : mode === 'selected-session-snapshot'
         ? (selectedAgendaDetails ? buildSelectedSessionSnapshot(selectedAgendaDetails, uiState, uid) : null)
         : buildSelectedDaySnapshot(selectedDay, selectedAgendaDetails, agendaDayStart, { ...uiState, blocks: s.blocks }, uid);
@@ -2987,6 +3042,7 @@
   }
 
   function checkAutoLoad() {
+    if (flowRunActive) return;
     const nowMin = nowMinutes();
     const decision = decideAutoLoadAgendaItem({
       activeSection: s.activeSection as AppSection,
@@ -3224,7 +3280,9 @@
       agendaView={s.agendaView}
       onCommitEdit={commitBlockEdit}
       onToggleSegmentDone={toggleSegmentDone}
-      doneBlockIds={Object.keys(doneSegments)}
+      doneBlockIds={flowRunActive ? flowRuntime.completedBlockIds : Object.keys(doneSegments)}
+      flowMode={flowRunActive}
+      flowActiveBlockId={flowRuntime.activeBlockId}
     />
   </aside>
 
@@ -3283,7 +3341,7 @@
         palette={s.palette}
         dark={s.dark}
         blocks={displayBlocks}
-        startMin={s.startMin}
+        startMin={timerStartMin()}
         clockSpan={s.clockSpan}
         hollow={s.hollow}
         textOutside={s.textOutside}
@@ -3330,7 +3388,7 @@
         </div>
 
         {#if !isViewMode}
-          <div class="toolbar-center" style="display:flex; align-items:center; gap:0;">
+          <div class="toolbar-center" style="display:flex; align-items:center; gap:5px;">
             <button
               id="mini-menu-toggle"
               class="mini-menu-toggle"
@@ -3341,6 +3399,11 @@
             >
               <span>{miniMenuOpen ? '▶' : '■'}</span>
             </button>
+            <ExecutionModeToggle
+              enabled={flowModeEnabled}
+              disabled={locked && !miniMenuOpen}
+              onChange={setExecutionMode}
+            />
           </div>
         {/if}
 

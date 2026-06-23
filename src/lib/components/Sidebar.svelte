@@ -22,6 +22,8 @@
     onCommitEdit: () => void;
     onToggleSegmentDone?: (id: string) => void;
     doneBlockIds?: string[];
+    flowMode?: boolean;
+    flowActiveBlockId?: string | null;
   }
 
   let {
@@ -38,7 +40,9 @@
     agendaView,
     onCommitEdit,
     onToggleSegmentDone,
-    doneBlockIds = []
+    doneBlockIds = [],
+    flowMode = false,
+    flowActiveBlockId = null
   }: Props = $props();
 
   let editingBlockId = $state<string | null>(null);
@@ -453,8 +457,8 @@
         <button class="name seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'name')} oncontextmenu={(e) => { e.preventDefault(); revealedCheckId = `${b.id}-title`; }}>
           {@html parseMarkdownHtml(displayTitle)}
         </button>
-        {#if !isViewMode && onToggleSegmentDone && showSegmentDoneControl(b.id, isActive ? b.id : null, doneBlockIds)}
-          <button type="button" class="title-check-btn seg-done-control" class:done-checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på nästa segment'} aria-label={doneBlockIds.includes(b.id) ? 'Ångra' : 'Klar'}>
+        {#if !isViewMode && onToggleSegmentDone && (flowMode ? b.id === flowActiveBlockId : showSegmentDoneControl(b.id, isActive ? b.id : null, doneBlockIds))}
+          <button type="button" class="title-check-btn seg-done-control" class:done-checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={flowMode ? 'Klar nu' : doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på nästa segment'} aria-label={doneBlockIds.includes(b.id) ? 'Ångra' : 'Klar'}>
             {#if doneBlockIds.includes(b.id)}✓{/if}
           </button>
         {:else if !isViewMode && !onToggleSegmentDone}
@@ -470,9 +474,9 @@
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
           onclick={(e) => e.stopPropagation()} />
       {:else if segMinutesMode === 'planned'}
-        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : b.runUntilChecked ? '%' : `${b.minutes}m`}</button>
+        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{flowMode && b.id === flowActiveBlockId ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : b.runUntilChecked ? '%' : `${flowMode ? timingBlock.minutes : b.minutes}m`}</button>
       {:else if segMinutesMode === 'remaining'}
-        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : `${isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsedMin)) : b.minutes}m kvar`}</button>
+        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{flowMode && b.id === flowActiveBlockId ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : `${isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsedMin)) : flowMode ? timingBlock.minutes : b.minutes}m kvar`}</button>
       {/if}
     </div>
     {#if showSegNotes}
@@ -497,6 +501,17 @@
       {/if}
     {/if}
   {/each}
+  {#if flowMode && displayBlocks && displayBlocks.length > blocks.length}
+    {#each displayBlocks.slice(blocks.length) as rest, restIndex (rest.id)}
+      {@const restStart = displayBlocks.slice(0, blocks.length + restIndex).reduce((sum, item) => sum + item.minutes, 0)}
+      {@const restActive = elapsedMin >= restStart && elapsedMin < restStart + rest.minutes}
+      <div class="row flow-rest-row" class:active={restActive} class:past={elapsedMin >= restStart + rest.minutes}>
+        <span class="flow-rest-dot" aria-hidden="true"></span>
+        <span class="name">*</span>
+        <span class="min">{rest.minutes}m</span>
+      </div>
+    {/each}
+  {/if}
   {#if armedBlockId !== null && dragOverIdx === blocks.length}
     <div class="drag-drop-line" aria-hidden="true"></div>
   {/if}
@@ -576,6 +591,9 @@
   .seg-done-btn:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: var(--accent); }
   .seg-done-btn.checked { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .row.done { opacity: 0.5; }
+  .flow-rest-row { color: var(--muted); }
+  .flow-rest-dot { width: 14px; height: 14px; margin-top: 17px; border-radius: 50%; border: 1px dashed currentColor; flex-shrink: 0; }
+  .flow-rest-row .name { cursor: default; }
   .seglist .inline-edit {
     background: transparent; border: none; border-bottom: 1px solid var(--muted);
     color: var(--fg); font: inherit; padding: 0; outline: none; min-width: 0;

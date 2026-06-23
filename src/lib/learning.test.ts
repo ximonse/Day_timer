@@ -69,6 +69,17 @@ describe('computeRecommendation', () => {
     expect(rec?.minutes).toBe(25);
     expect(rec?.basis).toBe('title+category');
   });
+
+  it('exkluderar flödets aktivitetsposter från sessionsrekommendationen', () => {
+    const history = [
+      mkEntry({ durationActualMin: 30, weekday: 4 }),
+      mkEntry({ durationActualMin: 2, weekday: 4, entryKind: 'activity', executionMode: 'flow' }),
+      mkEntry({ durationActualMin: 2, weekday: 4, entryKind: 'activity', executionMode: 'flow' })
+    ];
+    const rec = computeRecommendation(history, 'Förbereda matematik', 'Matematik', 4);
+    expect(rec?.minutes).toBe(30);
+    expect(rec?.sampleSize).toBe(1);
+  });
 });
 
 describe('applyDayTextHeuristic', () => {
