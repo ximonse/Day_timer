@@ -31,7 +31,7 @@ export function computeRecommendation(
   weekday: number
 ): TimeRecommendation | null {
   const normalizedTitle = title.trim().toLowerCase();
-  const base = history.filter((entry) => entry.confirmed && entry.durationActualMin > 0);
+  const base = history.filter((entry) => entry.confirmed && entry.durationActualMin > 0 && entry.entryKind !== 'activity');
   if (!base.length) return null;
 
   const byTitleCategoryWeekday = base.filter((entry) =>
