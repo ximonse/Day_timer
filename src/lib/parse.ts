@@ -310,7 +310,8 @@ export function parseAgenda(text: string): AgendaDay[] {
     if (t.startsWith('#')) {
       const content = t.slice(1).trim();
       const parsedHeader = parseSessionHeader(content.replace(/<!--id:([a-z0-9-]+)-->/i, '').trim());
-      if (cur && cur.startMin !== undefined && parsedHeader.startMin === undefined && parsedHeader.availableMin === undefined) {
+      const isMarkdownSubheading = /^#+\s/.test(t);
+      if (isMarkdownSubheading && cur && cur.startMin !== undefined && parsedHeader.startMin === undefined && parsedHeader.availableMin === undefined) {
         cur.items.push({ title: content.replace(/^#+\s*/, '').trim(), minutes: null, note: '' });
         continue;
       }

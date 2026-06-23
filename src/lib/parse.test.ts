@@ -282,6 +282,14 @@ describe('parseAgenda — sessioner', () => {
     expect(flow.minutes).toEqual([30, 30]);
   });
 
+  it('skapar nytt pass för #titel utan mellanslag under tidsatt session', () => {
+    const days = parseAgenda('#Lektion 10:00 60m\nGenomgång 30m\n#Nytt pass');
+
+    expect(days[0].flows).toHaveLength(2);
+    expect(days[0].flows[0].title).toBe('Lektion');
+    expect(days[0].flows[1].title).toBe('Nytt pass');
+  });
+
   it('parsar aktiviteter med tid', () => {
     const days = parseAgenda('#Session\nMatematik 45m\nRast 10m');
     const flow = days[0].flows[0];
