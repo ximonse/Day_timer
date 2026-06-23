@@ -4,13 +4,13 @@ import { makeAgendaFlowRef } from './agenda.js';
 import { prepareAgendaFlowLoad, syncSessionToAgenda } from './session-agenda-binding.js';
 
 describe('session agenda binding', () => {
-	test('skips implicit plan sync unless forced', () => {
+	test('writes an implicitly bound agenda session back even without explicit plan selection', () => {
 		const days = parseAgenda(['@260531', '#Morgon 08:00 <!--id:abc1234-->', 'Start 30m'].join('\n'));
 		const ref = makeAgendaFlowRef('2026-05-31', days[0].flows[0], 8 * 60);
 		const result = syncSessionToAgenda({
 			days,
 			activeRef: ref,
-			activeSection: 'plan',
+			activeSection: 'now',
 			source: { kind: 'agenda', date: '2026-05-31', title: 'Morgon', startMin: 8 * 60 },
 			forceUpdate: false,
 			planSelectionExplicit: false,
@@ -24,7 +24,8 @@ describe('session agenda binding', () => {
 			createId: () => 'newid'
 		});
 
-		expect(result).toBeNull();
+		expect(result).not.toBeNull();
+		expect(serializeAgenda(result!.days)).toContain('Ny 20m');
 	});
 
 	test('writes an explicit session back to the referenced agenda flow', () => {
