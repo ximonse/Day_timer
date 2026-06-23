@@ -32,3 +32,9 @@ Analys/
 
 # Superpowers (lokal brainstorm-scratch)
 .superpowers/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
