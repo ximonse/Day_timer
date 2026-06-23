@@ -670,6 +670,17 @@
   .title-check-btn.seg-done-control { opacity: 0.35; }
   .title-check-btn.done-checked { opacity: 1; color: var(--accent); border-color: var(--accent); }
 
+  /* Run mode: the check-off control must be clearly tappable (visible on touch, no hover needed) */
+  :global(body.run-mode) .title-check-btn.seg-done-control {
+    opacity: 1;
+    width: 34px; height: 34px;
+    color: var(--accent); border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+  }
+  :global(body.run-mode) .title-check-btn.seg-done-control:hover {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
 
   .seglist .infobox { margin-top: 18px; padding: 16px 18px; border-radius: 12px; background: #ffffff; color: #1a1410; border: 1px solid #b8b0a4; font-size: 26px; line-height: 1.35; white-space: pre-wrap; font-style: italic; }
   :global(.dark) .seglist .infobox { background: #ececec; color: #000000; border: none; }
