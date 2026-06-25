@@ -365,7 +365,7 @@
         writeMenuSections = { ...DEFAULT_WRITE_MENU_SECTIONS, ...parsed };
       }
     } catch {}
-    agendaInputOpen = writeMenuSections.agenda || shouldOpenAgendaInputInPlan();
+    agendaInputOpen = shouldOpenAgendaInputInPlan();
     aiPanelOpen = writeMenuSections.sessionAi;
   }
 
@@ -679,7 +679,7 @@
       }
       preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
-      agendaInputOpen = writeMenuSections.agenda || shouldOpenAgendaInputInPlan();
+      agendaInputOpen = shouldOpenAgendaInputInPlan();
     }
 
     partsDraftDirty = false;
@@ -864,8 +864,7 @@
 
   function shouldOpenAgendaInputInPlan() {
     if (agendaDraftDirty) return true;
-    const day = selectedDay;
-    return !day || day.flows.length === 0;
+    return writeMenuSections.agenda;
   }
 
   function agendaPlanningModeForPromptMode(mode: AiAgendaPromptMode): AiPlanningMode {
@@ -940,7 +939,7 @@
       preparePlanDraftForEntry();
       applyEditorDraft(s.planDraft);
       s.agendaOpen = true;
-      agendaInputOpen = writeMenuSections.agenda || shouldOpenAgendaInputInPlan();
+      agendaInputOpen = shouldOpenAgendaInputInPlan();
     }
     partsDraftDirty = false;
     syncPartsDraftFromState(true);
