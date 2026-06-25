@@ -89,15 +89,22 @@ describe('workspace snapshots', () => {
 		expect(summarizeWorkspaceSnapshots([snapshot])[0]).not.toHaveProperty('workspace');
 	});
 
-	test('summarizes the flow titles and pass count of a snapshot', () => {
+	test('summarizes the planned sessions from the school agenda', () => {
+		const workspace = workspaceDataFromAppState(state('Start'), 4);
+		workspace.agenda.schoolText = '#Matematik\nUppgift 45m\n#Slöjd\nArbete 60m\n#Idrott\nLek 40m';
+		const snapshot = createWorkspaceSnapshot(workspace, 'manual-save', 'snap-2', '2026-05-23T12:00:00.000Z');
+
+		expect(summarizeWorkspaceSnapshots([snapshot])[0].summary).toBe('Matematik, Slöjd · 3 sessioner');
+	});
+
+	test('falls back to the template library count when no agenda is planned', () => {
 		const workspace = workspaceDataFromAppState(state('Start'), 4);
 		workspace.flows = [
 			{ id: 'f1', title: 'Matematik', parts: ['A'], minutes: [45], warnings: [false], notes: [''], extraInfo: '' },
-			{ id: 'f2', title: 'Slöjd', parts: ['A'], minutes: [60], warnings: [false], notes: [''], extraInfo: '' },
-			{ id: 'f3', title: 'Idrott', parts: ['A'], minutes: [40], warnings: [false], notes: [''], extraInfo: '' }
+			{ id: 'f2', title: 'Slöjd', parts: ['A'], minutes: [60], warnings: [false], notes: [''], extraInfo: '' }
 		];
-		const snapshot = createWorkspaceSnapshot(workspace, 'manual-save', 'snap-2', '2026-05-23T12:00:00.000Z');
+		const snapshot = createWorkspaceSnapshot(workspace, 'manual-save', 'snap-3', '2026-05-23T12:00:00.000Z');
 
-		expect(summarizeWorkspaceSnapshots([snapshot])[0].summary).toBe('Matematik, Slöjd · 3 pass');
+		expect(summarizeWorkspaceSnapshots([snapshot])[0].summary).toBe('2 mallar');
 	});
 });

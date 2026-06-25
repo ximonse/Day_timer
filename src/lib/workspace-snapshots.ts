@@ -1,5 +1,6 @@
 import type { WorkspaceData } from './workspace.js';
 import { stripColorDirective } from './title-color.js';
+import { parseAgenda } from './parse.js';
 
 export type WorkspaceSnapshotReason = 'manual-save' | 'restore';
 
@@ -13,18 +14,26 @@ export interface WorkspaceSnapshot {
 
 export type WorkspaceSnapshotSummary = Omit<WorkspaceSnapshot, 'workspace'> & { summary: string };
 
-export function describeWorkspaceSnapshot(workspace: WorkspaceData): string {
-	const count = workspace.flows.length;
-	const titles: string[] = [];
-	for (const flow of workspace.flows) {
-		const title = stripColorDirective(flow.title || '').trim();
-		if (title && !titles.includes(title)) titles.push(title);
-		if (titles.length >= 2) break;
+function previewTitles(titles: string[]): string {
+	const unique: string[] = [];
+	for (const raw of titles) {
+		const title = stripColorDirective(raw || '').trim();
+		if (title && !unique.includes(title)) unique.push(title);
+		if (unique.length >= 2) break;
 	}
-	if (count === 0) return 'Tomt';
-	const label = count === 1 ? '1 pass' : `${count} pass`;
-	const preview = titles.join(', ');
-	return preview ? `${preview} · ${label}` : label;
+	return unique.join(', ');
+}
+
+export function describeWorkspaceSnapshot(workspace: WorkspaceData): string {
+	const sessions = parseAgenda(workspace.agenda.schoolText || '').flatMap(day => day.flows);
+	if (sessions.length > 0) {
+		const label = sessions.length === 1 ? '1 session' : `${sessions.length} sessioner`;
+		const preview = previewTitles(sessions.map(session => session.title));
+		return preview ? `${preview} · ${label}` : label;
+	}
+	const mallar = workspace.flows.length;
+	if (mallar === 0) return 'Tomt';
+	return mallar === 1 ? '1 mall' : `${mallar} mallar`;
 }
 
 export const MAX_WORKSPACE_SNAPSHOTS = 10;
