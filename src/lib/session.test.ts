@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, effectiveRunUntilCheckedBlocks, finalizeRunUntilCheckedSegment, ensureRenderableBlocks, flowToBlocks, hasRunnableSessionContent, makeFlowFromSession, showSegmentDoneControl, undoCompletedSegment } from './session.js';
+import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, effectiveRunUntilCheckedBlocks, finalizeRunUntilCheckedSegment, ensureRenderableBlocks, flowToBlocks, hasRunnableSessionContent, makeFlowFromSession, showSegmentDoneControl, undoCompletedSegment, undoFinalizedRunUntilCheckedSegment } from './session.js';
 import type { Block, Flow } from './state.svelte.js';
 
 function block(patch: Partial<Block> = {}): Block {
@@ -208,5 +208,42 @@ describe('session helpers', () => {
 		expect(result.blocks.map(item => item.minutes)).toEqual([6, 9]);
 		expect(result.blocks[0].runUntilChecked).toBeFalsy();
 		expect(result.deltaMin).toBe(0);
+		expect(result.movedToNextMin).toBe(4);
+		expect(result.fillerBlockId).toBeNull();
+		expect(result.prevMinutes).toBe(10);
+	});
+
+	test('appends a filler block to keep end time when the last run-until-checked segment finishes early', () => {
+		const result = finalizeRunUntilCheckedSegment([
+			block({ id: 'a', minutes: 5 }),
+			block({ id: 'b', minutes: 10, runUntilChecked: true })
+		], 1, 6, () => 'filler');
+
+		expect(result.blocks.map(item => item.minutes)).toEqual([5, 6, 4]);
+		expect(result.blocks[2]).toMatchObject({ id: 'filler', minutes: 4, title: 'Ställtid' });
+		expect(result.fillerBlockId).toBe('filler');
+		expect(result.movedToNextMin).toBe(0);
+		expect(result.prevMinutes).toBe(10);
+	});
+
+	test('restores a finalized run-until-checked segment that moved time to the next block', () => {
+		const restored = undoFinalizedRunUntilCheckedSegment([
+			block({ id: 'a', minutes: 6 }),
+			block({ id: 'b', minutes: 9 })
+		], 0, 10, 4, null);
+
+		expect(restored.map(item => item.minutes)).toEqual([10, 5]);
+		expect(restored[0].runUntilChecked).toBe(true);
+	});
+
+	test('restores a finalized run-until-checked segment by removing its filler block', () => {
+		const restored = undoFinalizedRunUntilCheckedSegment([
+			block({ id: 'a', minutes: 5 }),
+			block({ id: 'b', minutes: 6 }),
+			block({ id: 'filler', minutes: 4, title: 'Ställtid' })
+		], 1, 10, 0, 'filler');
+
+		expect(restored.map(item => item.id)).toEqual(['a', 'b']);
+		expect(restored[1]).toMatchObject({ minutes: 10, runUntilChecked: true });
 	});
 });

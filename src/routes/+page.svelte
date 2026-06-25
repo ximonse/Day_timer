@@ -45,7 +45,7 @@
     upsertActualEntry,
     finalizeUnconfirmedForDate
   } from '$lib/actuals.js';
-  import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, effectiveRunUntilCheckedBlocks, finalizeRunUntilCheckedSegment, hasRunnableSessionContent, makeFlowFromSession, undoCompletedSegment, type SessionFromFlowOptions } from '$lib/session.js';
+  import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, effectiveRunUntilCheckedBlocks, finalizeRunUntilCheckedSegment, hasRunnableSessionContent, makeFlowFromSession, undoCompletedSegment, undoFinalizedRunUntilCheckedSegment, type SessionFromFlowOptions } from '$lib/session.js';
   import {
     addManualAgendaItem,
     deleteAgendaItemAt,
@@ -168,7 +168,10 @@
 
 
   let nowMinLive = $state(nowMinutes());
-  let doneSegments = $state<Record<string, number>>({});
+  type SegmentUndo =
+    | { kind: 'regular'; saved: number }
+    | { kind: 'runUntil'; prevMinutes: number; movedToNextMin: number; fillerBlockId: string | null };
+  let doneSegments = $state<Record<string, SegmentUndo>>({});
   let completionToast = $state('');
   let completionToastTimer: ReturnType<typeof setTimeout> | null = null;
   let lastAutoLoadKey = $state('');
@@ -1170,8 +1173,8 @@
     s.blocks.forEach((b, i) => { b.minutes = newMins[i]; });
   }
 
-  function showCompletionToast() {
-    completionToast = 'Bra jobbat!';
+  function showCompletionToast(message = 'Bra jobbat!') {
+    completionToast = message;
     if (completionToastTimer) clearTimeout(completionToastTimer);
     completionToastTimer = setTimeout(() => {
       completionToast = '';
@@ -1199,11 +1202,14 @@
       return;
     }
     if (doneSegments[blockId] !== undefined) {
-      const saved = doneSegments[blockId];
+      const undo = doneSegments[blockId];
       const idx = s.blocks.findIndex(b => b.id === blockId);
-      if (idx !== -1) {
-        const restoredMinutes = undoCompletedSegment(s.blocks.map(b => b.minutes), idx, saved);
+      if (idx !== -1 && undo.kind === 'regular') {
+        const restoredMinutes = undoCompletedSegment(s.blocks.map(b => b.minutes), idx, undo.saved);
         s.blocks.forEach((b, i) => { b.minutes = restoredMinutes[i]; });
+      } else if (idx !== -1 && undo.kind === 'runUntil') {
+        s.blocks = undoFinalizedRunUntilCheckedSegment(s.blocks, idx, undo.prevMinutes, undo.movedToNextMin, undo.fillerBlockId);
+        syncPartsDraftFromState(true);
       }
       const next = { ...doneSegments };
       delete next[blockId];
@@ -1220,22 +1226,27 @@
       if (s.blocks[i].id === blockId) {
         const isActive = elapsed >= cum && elapsed < cum + effectiveBlocks[i].minutes;
         if (!isActive) return;
+        const wasLast = i === s.blocks.length - 1;
         if (s.blocks[i].runUntilChecked) {
-          const finalized = finalizeRunUntilCheckedSegment(s.blocks, i, elapsed - cum);
+          const finalized = finalizeRunUntilCheckedSegment(s.blocks, i, elapsed - cum, uid);
           s.blocks = finalized.blocks;
+          doneSegments = { ...doneSegments, [blockId]: { kind: 'runUntil', prevMinutes: finalized.prevMinutes, movedToNextMin: finalized.movedToNextMin, fillerBlockId: finalized.fillerBlockId } };
           warnedSet.clear();
           syncTimerToAgenda(true, Math.max(0, finalized.deltaMin));
           syncPartsDraftFromState(true);
-          if (i === s.blocks.length - 1) showCompletionToast();
+          if (finalized.fillerBlockId) showCompletionToast('Ställtid tillagd — sluttiden behålls');
+          else if (finalized.movedToNextMin > 0) showCompletionToast(`+${finalized.movedToNextMin} min flyttat till nästa block`);
+          else if (wasLast) showCompletionToast();
           appState.persist();
           return;
         }
         const completion = completeActiveSegment(s.blocks.map(b => b.minutes), i, elapsed - cum);
         s.blocks.forEach((b, j) => { b.minutes = completion.minutes[j]; });
-        doneSegments = { ...doneSegments, [blockId]: completion.savedMinutes };
+        doneSegments = { ...doneSegments, [blockId]: { kind: 'regular', saved: completion.savedMinutes } };
         warnedSet.clear();
         syncTimerToAgenda(true);
-        if (i === s.blocks.length - 1) showCompletionToast();
+        if (completion.savedMinutes > 0 && !wasLast) showCompletionToast(`+${completion.savedMinutes} min flyttat till nästa block`);
+        else if (wasLast) showCompletionToast();
         appState.persist();
         return;
       }

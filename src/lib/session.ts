@@ -41,13 +41,22 @@ export function effectiveRunUntilCheckedBlocks(blocks: Block[], elapsedMin: numb
 	});
 }
 
+export interface FinalizeRunUntilCheckedResult {
+	blocks: Block[];
+	deltaMin: number;
+	movedToNextMin: number;
+	fillerBlockId: string | null;
+	prevMinutes: number;
+}
+
 export function finalizeRunUntilCheckedSegment(
 	blocks: Block[],
 	activeIndex: number,
-	elapsedInSegment: number
-): { blocks: Block[]; deltaMin: number } {
+	elapsedInSegment: number,
+	makeId?: () => string
+): FinalizeRunUntilCheckedResult {
 	if (activeIndex < 0 || activeIndex >= blocks.length || !blocks[activeIndex].runUntilChecked) {
-		return { blocks, deltaMin: 0 };
+		return { blocks, deltaMin: 0, movedToNextMin: 0, fillerBlockId: null, prevMinutes: blocks[activeIndex]?.minutes ?? 0 };
 	}
 	const next = blocks.map(block => ({ ...block }));
 	const actualMinutes = Math.max(1, Math.round(elapsedInSegment));
@@ -55,11 +64,39 @@ export function finalizeRunUntilCheckedSegment(
 	next[activeIndex].minutes = actualMinutes;
 	delete next[activeIndex].runUntilChecked;
 	const deltaMin = actualMinutes - previousMinutes;
-	if (deltaMin < 0 && activeIndex < next.length - 1) {
-		next[activeIndex + 1].minutes += Math.abs(deltaMin);
-		return { blocks: next, deltaMin: 0 };
+	if (deltaMin < 0) {
+		const freed = Math.abs(deltaMin);
+		if (activeIndex < next.length - 1) {
+			next[activeIndex + 1].minutes += freed;
+			return { blocks: next, deltaMin: 0, movedToNextMin: freed, fillerBlockId: null, prevMinutes: previousMinutes };
+		}
+		if (makeId) {
+			const fillerBlockId = makeId();
+			next.push({ id: fillerBlockId, title: 'Ställtid', minutes: freed, note: '', warning: false, pinned: false });
+			return { blocks: next, deltaMin: 0, movedToNextMin: 0, fillerBlockId, prevMinutes: previousMinutes };
+		}
 	}
-	return { blocks: next, deltaMin };
+	return { blocks: next, deltaMin, movedToNextMin: 0, fillerBlockId: null, prevMinutes: previousMinutes };
+}
+
+export function undoFinalizedRunUntilCheckedSegment(
+	blocks: Block[],
+	index: number,
+	prevMinutes: number,
+	movedToNextMin: number,
+	fillerBlockId: string | null
+): Block[] {
+	let next = blocks.map(block => ({ ...block }));
+	if (fillerBlockId) {
+		next = next.filter(block => block.id !== fillerBlockId);
+	}
+	if (index < 0 || index >= next.length) return next;
+	if (movedToNextMin > 0 && index < next.length - 1) {
+		next[index + 1].minutes = Math.max(1, next[index + 1].minutes - movedToNextMin);
+	}
+	next[index].minutes = prevMinutes;
+	next[index].runUntilChecked = true;
+	return next;
 }
 
 export function undoCompletedSegment(
