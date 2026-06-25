@@ -1,4 +1,5 @@
 import type { WorkspaceData } from './workspace.js';
+import { stripColorDirective } from './title-color.js';
 
 export type WorkspaceSnapshotReason = 'manual-save' | 'restore';
 
@@ -10,7 +11,21 @@ export interface WorkspaceSnapshot {
 	workspace: WorkspaceData;
 }
 
-export type WorkspaceSnapshotSummary = Omit<WorkspaceSnapshot, 'workspace'>;
+export type WorkspaceSnapshotSummary = Omit<WorkspaceSnapshot, 'workspace'> & { summary: string };
+
+export function describeWorkspaceSnapshot(workspace: WorkspaceData): string {
+	const count = workspace.flows.length;
+	const titles: string[] = [];
+	for (const flow of workspace.flows) {
+		const title = stripColorDirective(flow.title || '').trim();
+		if (title && !titles.includes(title)) titles.push(title);
+		if (titles.length >= 2) break;
+	}
+	if (count === 0) return 'Tomt';
+	const label = count === 1 ? '1 pass' : `${count} pass`;
+	const preview = titles.join(', ');
+	return preview ? `${preview} · ${label}` : label;
+}
 
 export const MAX_WORKSPACE_SNAPSHOTS = 10;
 
@@ -42,5 +57,11 @@ export function appendWorkspaceSnapshot(
 }
 
 export function summarizeWorkspaceSnapshots(snapshots: WorkspaceSnapshot[]): WorkspaceSnapshotSummary[] {
-	return snapshots.map(({ id, revision, createdAt, reason }) => ({ id, revision, createdAt, reason }));
+	return snapshots.map(({ id, revision, createdAt, reason, workspace }) => ({
+		id,
+		revision,
+		createdAt,
+		reason,
+		summary: describeWorkspaceSnapshot(workspace)
+	}));
 }

@@ -200,7 +200,7 @@
   let syncStatusError = $state(false);
   let syncProbeText = $state('');
   let syncProbeState = $state<'idle' | 'queued' | 'loading' | 'saving' | 'ok' | 'error' | 'conflict'>('idle');
-  type WorkspaceSnapshotSummary = { id: string; revision: number; createdAt: string; reason: 'manual-save' | 'restore' };
+  type WorkspaceSnapshotSummary = { id: string; revision: number; createdAt: string; reason: 'manual-save' | 'restore'; summary: string };
   let workspaceSnapshots = $state<WorkspaceSnapshotSummary[]>([]);
   let workspaceSnapshotsLoading = $state(false);
   let endMode = $state<'end' | 'len'>(s.endMode ?? 'end');

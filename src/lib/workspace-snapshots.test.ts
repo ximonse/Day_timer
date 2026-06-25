@@ -83,8 +83,21 @@ describe('workspace snapshots', () => {
 			id: 'snap-1',
 			revision: 3,
 			createdAt: '2026-05-23T12:00:00.000Z',
-			reason: 'manual-save'
+			reason: 'manual-save',
+			summary: 'Tomt'
 		}]);
 		expect(summarizeWorkspaceSnapshots([snapshot])[0]).not.toHaveProperty('workspace');
+	});
+
+	test('summarizes the flow titles and pass count of a snapshot', () => {
+		const workspace = workspaceDataFromAppState(state('Start'), 4);
+		workspace.flows = [
+			{ id: 'f1', title: 'Matematik', parts: ['A'], minutes: [45], warnings: [false], notes: [''], extraInfo: '' },
+			{ id: 'f2', title: 'Slöjd', parts: ['A'], minutes: [60], warnings: [false], notes: [''], extraInfo: '' },
+			{ id: 'f3', title: 'Idrott', parts: ['A'], minutes: [40], warnings: [false], notes: [''], extraInfo: '' }
+		];
+		const snapshot = createWorkspaceSnapshot(workspace, 'manual-save', 'snap-2', '2026-05-23T12:00:00.000Z');
+
+		expect(summarizeWorkspaceSnapshots([snapshot])[0].summary).toBe('Matematik, Slöjd · 3 pass');
 	});
 });

@@ -83,7 +83,7 @@
     onLogin: () => void;
     syncProbeText: string;
     syncProbeState: 'idle' | 'queued' | 'loading' | 'saving' | 'ok' | 'error' | 'conflict';
-    workspaceSnapshots: { id: string; revision: number; createdAt: string; reason: 'manual-save' | 'restore' }[];
+    workspaceSnapshots: { id: string; revision: number; createdAt: string; reason: 'manual-save' | 'restore'; summary: string }[];
     workspaceSnapshotsLoading: boolean;
     onLoginNameChange: (value: string) => void;
     onLoginPassChange: (value: string) => void;
@@ -133,9 +133,9 @@
         <div class="snapshot-list">
           {#each workspaceSnapshots as snapshot}
             <div class="snapshot-row">
-              <span>
-                {snapshotLabel(snapshot.createdAt)}
-                <small>rev {snapshot.revision}</small>
+              <span class="snapshot-meta">
+                <span class="snapshot-time">{snapshotLabel(snapshot.createdAt)} <small>rev {snapshot.revision}</small></span>
+                {#if snapshot.summary}<small class="snapshot-summary">{snapshot.summary}</small>{/if}
               </span>
               <button class="snapshot-restore" onclick={() => onRestoreSnapshot(snapshot.id)}>Återställ</button>
             </div>
@@ -152,6 +152,12 @@
     {#if syncProbeState === 'conflict'}
       <div class="section-copy" style="color:var(--accent); font-weight:600; font-size:11px;">
         Välj "Ladda" för att hämta molnets version.
+      </div>
+    {/if}
+    {#if syncProbeState === 'error'}
+      <div class="sync-error-hint">
+        <span>⚠️ Kunde inte ansluta till molnsynken. Kontrollera internet och kontokod.</span>
+        <button class="sync-retry-btn" type="button" onclick={onSyncLoad}>Försök igen</button>
       </div>
     {/if}
   {:else}
@@ -243,6 +249,10 @@
           oninput={(e) => onWhisperKeyChange((e.target as HTMLInputElement).value)}
           placeholder="OpenAI-nyckel för röst (Whisper) – valfri"
           title="Lägg till en OpenAI-nyckel enbart för röstigenkänning med Whisper. Din AI-leverantör för planering påverkas inte." />
+      {:else}
+        <div class="section-copy muted" style="font-size:11px;">
+          Din OpenAI-nyckel ovan används automatiskt även för röst (Whisper).
+        </div>
       {/if}
     {/if}
   </div>
@@ -411,6 +421,26 @@
   }
   .sync-probe.error { color: #a12d21; }
   .sync-probe.conflict { color: var(--accent); font-weight: 600; }
+  .sync-error-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #a12d21;
+  }
+  .sync-retry-btn {
+    border: 1px solid currentColor;
+    background: transparent;
+    color: inherit;
+    border-radius: 7px;
+    padding: 3px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .sync-retry-btn:hover { background: color-mix(in srgb, #a12d21 12%, transparent); }
   .snapshot-panel {
     display: flex;
     flex-direction: column;
@@ -437,6 +467,19 @@
   .snapshot-row small {
     color: var(--menu-muted);
     margin-left: 4px;
+  }
+  .snapshot-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .snapshot-summary {
+    margin-left: 0;
+    color: var(--menu-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .snapshot-restore {
     border: 1px solid var(--menu-line);
