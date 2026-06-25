@@ -300,12 +300,15 @@
           {@const topPct = (layoutItem?.topPct ?? ((item.startMin - windowStart) / windowMinutes * 100)).toFixed(3)}
           {@const heightPct = (layoutItem?.heightPct ?? (item.totalMin / windowMinutes * 100)).toFixed(3)}
           {@const itemMeta = item.fromText && selectedDay ? s.agendaMeta[makeAgendaMetaKeyForFlow(selectedDay.date ?? null, item.flow, item.startMin)] ?? null : null}
+          {@const overlapMin = layoutItem?.overlapMin ?? 0}
+          {@const overlapsWith = layoutItem?.overlapsWith ?? []}
           <div class="agenda-block"
                role="button"
                tabindex="0"
-               title="{itemTitle} {fmtHM(item.startMin)}–{fmtHM(itemEnd)}"
+               title={overlapMin > 0 ? `⚠️ Krock: ${overlapMin} min överlapp med ${overlapsWith.join(', ')}` : `${itemTitle} ${fmtHM(item.startMin)}–${fmtHM(itemEnd)}`}
                class:past={isPast}
                class:active={isActive}
+               class:clash={overlapMin > 0}
                class:compact={layoutItem?.compact ?? item.totalMin < AGENDA_COMPACT_ITEM_MINUTES}
                class:dragging={agendaMoveState?.dayIdx === selectedDayIdx && agendaMoveState?.flowIdx === ai}
                style="top: {topPct}%; height: {heightPct}%; border-left-color: {itemColor}"
@@ -317,6 +320,9 @@
                  }
                }}>
             <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
+            {#if overlapMin > 0}
+              <span class="agenda-clash-badge" title="Krock: {overlapMin} min överlapp med {overlapsWith.join(', ')}">⚠️ {overlapMin}m</span>
+            {/if}
             {#if itemMeta}
               <span class="agenda-source-badge" class:template={itemMeta.source === 'template'} class:ai={itemMeta.source === 'ai'} class:imported={itemMeta.source === 'import'} title={agendaMetaLabel(itemMeta)}>
                 {agendaMetaBadge(itemMeta)}

@@ -24,6 +24,27 @@ export interface AgendaLayoutItem extends AgendaLayoutSourceItem {
 	topPct: number;
 	heightPct: number;
 	compact: boolean;
+	overlapMin: number;
+	overlapsWith: string[];
+}
+
+export function computeAgendaOverlaps(
+	items: Pick<AgendaLayoutSourceItem, 'title' | 'startMin' | 'totalMin'>[]
+): { overlapMin: number; overlapsWith: string[] }[] {
+	return items.map((a, i) => {
+		const aEnd = a.startMin + a.totalMin;
+		let overlapMin = 0;
+		const overlapsWith: string[] = [];
+		items.forEach((b, j) => {
+			if (i === j) return;
+			const overlap = Math.min(aEnd, b.startMin + b.totalMin) - Math.max(a.startMin, b.startMin);
+			if (overlap > 0) {
+				overlapMin = Math.max(overlapMin, overlap);
+				overlapsWith.push(b.title);
+			}
+		});
+		return { overlapMin, overlapsWith };
+	});
 }
 
 export interface AgendaLayout {
@@ -58,9 +79,10 @@ export function yToMinute(y: number, window: AgendaLayoutWindow, roundToMin = 1)
 
 export function buildAgendaLayout(items: AgendaLayoutSourceItem[]): AgendaLayout {
 	const window = buildAgendaLayoutWindow(items);
+	const overlaps = computeAgendaOverlaps(items);
 	return {
 		window,
-		items: items.map((item) => {
+		items: items.map((item, index) => {
 			const topPx = minuteToY(item.startMin, window);
 			const heightPx = item.totalMin * AGENDA_MINUTE_PX;
 			return {
@@ -69,7 +91,9 @@ export function buildAgendaLayout(items: AgendaLayoutSourceItem[]): AgendaLayout
 				heightPx,
 				topPct: topPx / window.heightPx * 100,
 				heightPct: heightPx / window.heightPx * 100,
-				compact: item.totalMin < AGENDA_COMPACT_ITEM_MINUTES
+				compact: item.totalMin < AGENDA_COMPACT_ITEM_MINUTES,
+				overlapMin: overlaps[index].overlapMin,
+				overlapsWith: overlaps[index].overlapsWith
 			};
 		})
 	};
