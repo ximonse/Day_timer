@@ -61,6 +61,15 @@ describe('flow execution', () => {
 		expect(flowExecutionBlocks(result.state, 520).map(item => item.minutes)).toEqual([40, 30, 30]);
 	});
 
+	it('keeps the current activity visually active at its planned boundary until checked', () => {
+		const initial = createFlowExecution([block('a', 30), block('b', 30)], 480, 480);
+		const rendered = flowExecutionBlocks(initial, 510);
+
+		expect(activeFlowBlockId(initial)).toBe('a');
+		expect(rendered.map(item => item.minutes)).toEqual([31, 30]);
+		expect(rendered[0].runUntilChecked).toBe(true);
+	});
+
 	it('keeps visual allocations in whole minutes when started mid-minute', () => {
 		const initial = createFlowExecution([block('a', 30)], 480, 480.5);
 		const result = completeFlowActivity(initial, 'a', 481.5);

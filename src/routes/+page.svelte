@@ -100,6 +100,7 @@
   import { stripColorDirective } from '$lib/title-color.js';
   import { createFlowRuntime } from '$lib/flow-runtime.svelte.js';
   import { makeFlowActualEntry } from '$lib/flow-actuals.js';
+  import { adjustAgendaItemsForFlowRun } from '$lib/flow-agenda.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -544,14 +545,9 @@
     const items = timeline.map(({ flow, startMin, totalMin }) => ({ flow, startMin, totalMin, fromText }));
     const source = sessionSource;
     if (!flowRunActive || source.kind !== 'agenda' || !flowRuntime.execution) return items;
-    const currentIndex = items.findIndex(item => item.startMin === source.startMin && item.flow.title === source.title);
-    if (currentIndex < 0) return items;
     const plannedTotal = flowRuntime.execution.blocks.reduce((sum, block) => sum + block.minutes, 0);
-    const plannedEnd = source.startMin + plannedTotal;
     const liveEnd = timerStartMin() + displayTotalMin();
-    const shiftMin = Math.max(0, liveEnd - plannedEnd);
-    if (shiftMin <= 0) return items;
-    return items.map((item, index) => index > currentIndex ? { ...item, startMin: item.startMin + shiftMin } : item);
+    return adjustAgendaItemsForFlowRun(items, source, plannedTotal, liveEnd);
   });
   const agendaLayout = $derived(buildAgendaLayout(agendaItems.map((item, index) => ({
     id: item.flow.id ?? `${item.startMin}-${item.flow.title}-${index}`,
@@ -1101,7 +1097,7 @@
     }
     return 'Fristående session';
   }
-  const elapsedMin = () => nowMinutes() - timerStartMin();
+  const elapsedMin = () => nowMinLive - timerStartMin();
   const startAngle = () => ((s.startMin % s.clockSpan) / s.clockSpan) * 360;
   let warningsOpen = $state(false);
   let soundMuted = $state(false);
@@ -3291,6 +3287,7 @@
       doneBlockIds={flowRunActive ? flowRuntime.completedBlockIds : Object.keys(doneSegments)}
       flowMode={flowRunActive}
       flowActiveBlockId={flowRuntime.activeBlockId}
+      flowAllocations={flowRuntime.execution?.allocations ?? []}
     />
   </aside>
 

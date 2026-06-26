@@ -4,6 +4,7 @@
   import { parseMarkdownHtml } from '$lib/markdown.js';
   import { showSegmentDoneControl } from '$lib/session.js';
   import { colorForSegment, stripColorDirective, toggleTitleStrikethrough } from '$lib/title-color.js';
+  import { formatFlowSegmentMinutes } from '$lib/flow-display.js';
 
   interface Props {
     blocks: Block[];
@@ -24,6 +25,7 @@
     doneBlockIds?: string[];
     flowMode?: boolean;
     flowActiveBlockId?: string | null;
+    flowAllocations?: number[];
   }
 
   let {
@@ -42,7 +44,8 @@
     onToggleSegmentDone,
     doneBlockIds = [],
     flowMode = false,
-    flowActiveBlockId = null
+    flowActiveBlockId = null,
+    flowAllocations = []
   }: Props = $props();
 
   let editingBlockId = $state<string | null>(null);
@@ -409,6 +412,15 @@
     }
     commitEdit();
   }
+
+  function flowMinuteLabel(index: number, active: boolean, displayMinutes: number, elapsedMinutes: number) {
+    return formatFlowSegmentMinutes({
+      active,
+      plannedMinutes: flowAllocations[index] ?? displayMinutes,
+      displayMinutes,
+      elapsedMinutes: Math.max(0, elapsedMinutes)
+    });
+  }
 </script>
 
 <div id="sidebar-blocks" class="seglist">
@@ -433,6 +445,7 @@
     {@const segEnd = cumMin + timingBlock.minutes}
     {@const isActive = elapsedMin >= cumMin && elapsedMin < segEnd}
     {@const isPast = elapsedMin >= segEnd}
+    {@const elapsedInSegment = elapsedMin - cumMin}
     {#if dragOverIdx === i && armedBlockId !== b.id}
       <div class="drag-drop-line" aria-hidden="true"></div>
     {/if}
@@ -474,9 +487,9 @@
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
           onclick={(e) => e.stopPropagation()} />
       {:else if segMinutesMode === 'planned'}
-        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{flowMode && b.id === flowActiveBlockId ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : b.runUntilChecked ? '%' : `${flowMode ? timingBlock.minutes : b.minutes}m`}</button>
+        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{flowMode ? flowMinuteLabel(i, b.id === flowActiveBlockId, timingBlock.minutes, elapsedInSegment) : b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedInSegment))}m` : b.runUntilChecked ? '%' : `${b.minutes}m`}</button>
       {:else if segMinutesMode === 'remaining'}
-        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{flowMode && b.id === flowActiveBlockId ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedMin - cumMin))}m` : `${isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsedMin)) : flowMode ? timingBlock.minutes : b.minutes}m kvar`}</button>
+        <button class="min seg-inline-btn" type="button" onclick={() => startBlockEdit(b.id, 'min')}>{flowMode ? flowMinuteLabel(i, b.id === flowActiveBlockId, timingBlock.minutes, elapsedInSegment) : b.runUntilChecked && isActive ? `pågår ${Math.max(1, Math.ceil(elapsedInSegment))}m` : `${isPast ? 0 : isActive ? Math.max(0, Math.ceil(segEnd - elapsedMin)) : b.minutes}m kvar`}</button>
       {/if}
     </div>
     {#if showSegNotes}

@@ -197,9 +197,10 @@ export function flowExecutionBlocks(state: FlowExecutionState, nowMin: number): 
 		const actual = state.actualMinutes[index];
 		if (actual !== null) return { ...block, minutes: actual, runUntilChecked: false };
 		if (index === state.currentIndex && state.status === 'running') {
+			const workedMinutes = currentFlowWorkedMinutes(state, nowMin);
 			return {
 				...block,
-				minutes: Math.max(state.allocations[index], Math.ceil(currentFlowWorkedMinutes(state, nowMin))),
+				minutes: Math.max(state.allocations[index], Math.floor(workedMinutes) + 1),
 				runUntilChecked: true
 			};
 		}
