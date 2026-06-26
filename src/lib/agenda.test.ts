@@ -26,6 +26,7 @@ import {
 	makeAgendaMetaKeyForFlow,
 	moveAgendaMeta,
 	rebuildAgendaMetaForDay,
+	redistributeFlowsAcrossDays,
 	replaceAgendaFlowInDays,
 	resolveAgendaFlowRef,
 	serializeSelectedAgendaDay,
@@ -96,6 +97,51 @@ describe('agenda helpers', () => {
 			['Lektion', 9 * 60, 45],
 			['Exit', 9 * 60 + 45, 10]
 		]);
+	});
+
+	test('moves flows pushed past midnight to the next day', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [
+				flow({ title: 'Kväll', startMin: 23 * 60, minutes: [30] }),
+				flow({ title: 'Natt', startMin: 24 * 60 + 30, minutes: [20] })
+			]
+		}];
+		const result = redistributeFlowsAcrossDays(days);
+		expect(result.map(d => d.date)).toEqual(['2026-05-18', '2026-05-19']);
+		expect(result[0].flows.map(f => f.title)).toEqual(['Kväll']);
+		expect(result[1].flows.map(f => [f.title, f.startMin])).toEqual([['Natt', 30]]);
+	});
+
+	test('cascades flows more than a day past midnight', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [flow({ title: 'Långt fram', startMin: 2 * 24 * 60 + 15, minutes: [10] })]
+		}];
+		const result = redistributeFlowsAcrossDays(days);
+		expect(result.map(d => d.date)).toEqual(['2026-05-18', '2026-05-19', '2026-05-20']);
+		expect(result[0].flows).toEqual([]);
+		expect(result[2].flows.map(f => [f.title, f.startMin])).toEqual([['Långt fram', 15]]);
+	});
+
+	test('merges moved flows into an existing next day in start order', () => {
+		const days: AgendaDay[] = [
+			{ date: '2026-05-18', flows: [flow({ title: 'Sent', startMin: 24 * 60 + 60, minutes: [30] })] },
+			{ date: '2026-05-19', flows: [flow({ title: 'Morgon', startMin: 8 * 60, minutes: [30] })] }
+		];
+		const result = redistributeFlowsAcrossDays(days);
+		expect(result.map(d => d.date)).toEqual(['2026-05-18', '2026-05-19']);
+		expect(result[1].flows.map(f => [f.title, f.startMin])).toEqual([['Sent', 60], ['Morgon', 8 * 60]]);
+	});
+
+	test('leaves a pass that starts before midnight on its start day', () => {
+		const days: AgendaDay[] = [{
+			date: '2026-05-18',
+			flows: [flow({ title: 'Straddle', startMin: 23 * 60 + 30, minutes: [60] })]
+		}];
+		const result = redistributeFlowsAcrossDays(days);
+		expect(result).toHaveLength(1);
+		expect(result[0].flows.map(f => [f.title, f.startMin])).toEqual([['Straddle', 23 * 60 + 30]]);
 	});
 
 	test('serializes a selected day or returns an empty dated marker', () => {

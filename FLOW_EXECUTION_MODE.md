@@ -9,11 +9,13 @@ Flödesläge är ett separat sätt att genomföra en vanlig Day Timer-plan. Plan
 
 ## Tidsregler
 
-1. En aktivitet som tar längre tid skjuter hela återstående passet framåt.
-2. Tid som sparas används först för att minska en befintlig försening.
-3. Återstående sparad tid läggs till nästa aktivitet.
-4. Om sista aktiviteten blir klar med tid över skapas `*` för återhämtning.
-5. Originalplanens tider skrivs aldrig över av utfallet.
+> Det aktuella beteendet beskrivs i **`MODES.md`** (sanningskälla). Kort:
+>
+> 1. En aktivitet som tar längre tid skjuter återstående pass framåt (live, även följande agenda-block).
+> 2. Sparad tid används först för att minska en befintlig försening.
+> 3. Återstående sparad tid läggs i en **platshållare i slutet av passet** (`*`), inte på nästa aktivitet.
+> 4. Avbockad aktivitet krymper till faktisk tid på klockan.
+> 5. Originalplanens tider skrivs aldrig över i tysthet av utfallet.
 
 ## Data
 

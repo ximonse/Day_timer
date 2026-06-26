@@ -9,6 +9,12 @@ export function parseIsoDate(iso: string) {
   return new Date(y, m - 1, d);
 }
 
+export function addDaysISO(iso: string, days: number): string {
+  const date = parseIsoDate(iso);
+  date.setDate(date.getDate() + days);
+  return localDateISO(date);
+}
+
 export function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }

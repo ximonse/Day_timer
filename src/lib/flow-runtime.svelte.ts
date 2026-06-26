@@ -3,6 +3,7 @@ import {
 	activeFlowBlockId,
 	completeFlowActivity,
 	createFlowExecution,
+	finishFlowExecution,
 	flowExecutionBlocks,
 	flowPlanKey,
 	rebindFlowExecutionBlocks,
@@ -83,6 +84,11 @@ export function createFlowRuntime() {
 		startRest(restMinutes: number, startedAtMin: number) {
 			if (!execution) return;
 			execution = startFlowRest(execution, restMinutes, startedAtMin);
+			persistExecution();
+		},
+		finish() {
+			if (!execution) return;
+			execution = finishFlowExecution(execution);
 			persistExecution();
 		},
 		tick(nowMin: number) {

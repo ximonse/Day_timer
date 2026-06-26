@@ -323,7 +323,7 @@
             oninput={(e) => onStartTimeInput((e.target as HTMLInputElement).value)} />
         </div>
         <div>
-          {#if endMode === 'end'}
+          {#if hasSelection || endMode === 'end'}
             <input type="time" value={endTimeValue} title="Sluttid"
               oninput={(e) => onEndTimeInput((e.target as HTMLInputElement).value)} />
           {:else}
@@ -332,10 +332,12 @@
           {/if}
         </div>
       </div>
-      <div class="mode-toggle">
-        <button class:on={endMode === 'end'} onclick={() => onEndModeChange('end')}>Sluttid</button>
-        <button class:on={endMode === 'len'} onclick={() => onEndModeChange('len')}>Längd</button>
-      </div>
+      {#if !hasSelection}
+        <div class="mode-toggle">
+          <button class:on={endMode === 'end'} onclick={() => onEndModeChange('end')}>Sluttid</button>
+          <button class:on={endMode === 'len'} onclick={() => onEndModeChange('len')}>Längd</button>
+        </div>
+      {/if}
 
       {#if showRecSuggestion}
         <div class="rec-suggestion" transition:fade>

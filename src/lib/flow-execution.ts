@@ -16,6 +16,7 @@ export interface FlowCompletion {
 
 export interface FlowExecutionState {
 	planKey: string;
+	contextKey: string;
 	plannedStartMin: number;
 	displayStartMin: number;
 	blocks: Block[];
@@ -26,6 +27,7 @@ export interface FlowExecutionState {
 	currentWorkedMin: number;
 	runningSinceMin: number | null;
 	delayMin: number;
+	bufferMinutes: number;
 	restMinutes: number;
 	restStartedAtMin: number | null;
 	status: FlowExecutionStatus;
@@ -37,9 +39,7 @@ export interface CompleteFlowActivityResult {
 	completion: FlowCompletion | null;
 }
 
-export interface CompleteFlowActivityOptions {
-	restOnFinalBonus?: boolean;
-}
+export type CompleteFlowActivityOptions = Record<string, never>;
 
 function cloneBlocks(blocks: Block[]): Block[] {
 	return blocks.map(block => ({ ...block }));
@@ -68,6 +68,7 @@ export function createFlowExecution(
 	const status: FlowExecutionStatus = blocks.length > 0 ? 'running' : 'complete';
 	return {
 		planKey: flowPlanKey(blocks, plannedStartMin, contextKey),
+		contextKey,
 		plannedStartMin,
 		displayStartMin,
 		blocks: cloneBlocks(blocks),
@@ -78,6 +79,7 @@ export function createFlowExecution(
 		currentWorkedMin: 0,
 		runningSinceMin: status === 'running' ? workStartMin : null,
 		delayMin: Math.max(0, Math.floor(displayStartMin - plannedStartMin)),
+		bufferMinutes: 0,
 		restMinutes: 0,
 		restStartedAtMin: null,
 		status,
@@ -127,12 +129,11 @@ export function completeFlowActivity(
 	state: FlowExecutionState,
 	blockId: string,
 	nowMin: number,
-	options: CompleteFlowActivityOptions = {}
+	_options: CompleteFlowActivityOptions = {}
 ): CompleteFlowActivityResult {
 	if (state.status !== 'running') return { state, completion: null };
 	const block = state.blocks[state.currentIndex];
 	if (!block || block.id !== blockId) return { state, completion: null };
-	const restOnFinalBonus = options.restOnFinalBonus ?? true;
 
 	const plannedMinutes = state.allocations[state.currentIndex];
 	const actualMinutes = Math.max(1, Math.round(currentFlowWorkedMinutes(state, nowMin)));
@@ -148,18 +149,8 @@ export function completeFlowActivity(
 
 	const nextIndex = state.currentIndex + 1;
 	const hasNext = nextIndex < state.blocks.length;
-	let restMinutes = state.restMinutes;
-	let status: FlowExecutionStatus = hasNext ? 'running' : 'complete';
-	let restStartedAtMin = state.restStartedAtMin;
-
-	if (bonusMinutes > 0) {
-		if (hasNext) allocations[nextIndex] += bonusMinutes;
-		else if (restOnFinalBonus) {
-			restMinutes = bonusMinutes;
-			restStartedAtMin = nowMin;
-			status = 'rest';
-		}
-	}
+	const status: FlowExecutionStatus = hasNext ? 'running' : 'complete';
+	const bufferMinutes = state.bufferMinutes + bonusMinutes;
 
 	const completion: FlowCompletion = {
 		blockId: block.id,
@@ -183,8 +174,7 @@ export function completeFlowActivity(
 			currentWorkedMin: 0,
 			runningSinceMin: hasNext ? nowMin : null,
 			delayMin: delayAfterMin,
-			restMinutes,
-			restStartedAtMin,
+			bufferMinutes,
 			status,
 			completions: [...state.completions, completion]
 		},
@@ -201,10 +191,22 @@ export function startFlowRest(
 	if (minutes <= 0) return state;
 	return {
 		...state,
+		bufferMinutes: 0,
 		restMinutes: minutes,
 		restStartedAtMin: startedAtMin,
 		status: 'rest',
 		runningSinceMin: null
+	};
+}
+
+export function finishFlowExecution(state: FlowExecutionState): FlowExecutionState {
+	return {
+		...state,
+		bufferMinutes: 0,
+		restMinutes: 0,
+		restStartedAtMin: null,
+		runningSinceMin: null,
+		status: 'complete'
 	};
 }
 
@@ -229,6 +231,17 @@ export function flowExecutionBlocks(state: FlowExecutionState, nowMin: number): 
 		return { ...block, minutes: state.allocations[index], runUntilChecked: false };
 	});
 
+	if (state.bufferMinutes > 0) {
+		blocks.push({
+			id: `${state.blocks[0]?.id ?? 'flow'}:buffer`,
+			title: '*',
+			minutes: state.bufferMinutes,
+			note: '',
+			warning: false,
+			pinned: true
+		});
+	}
+
 	if (state.restMinutes > 0) {
 		blocks.push({
 			id: `${state.blocks[0]?.id ?? 'flow'}:rest`,
@@ -247,4 +260,3 @@ export function activeFlowBlockId(state: FlowExecutionState): string | null {
 	if (state.status !== 'running') return null;
 	return state.blocks[state.currentIndex]?.id ?? null;
 }
-

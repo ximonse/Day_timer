@@ -284,6 +284,10 @@
       {@const windowStart = agendaLayout.window.start}
       {@const windowMinutes = agendaLayout.window.minutes}
       <div id="agenda-timeline" class="agenda-timeline" class:has-overlay={overlayItems.length > 0} style="height: {agendaLayout.window.heightPx}px" bind:this={timelineEl}>
+        {#if agendaLayout.window.end > AGENDA_DAY_WINDOW_END}
+          {@const midnightTop = ((AGENDA_DAY_WINDOW_END - windowStart) / windowMinutes * 100).toFixed(3)}
+          <div class="agenda-midnight-line" style="top: {midnightTop}%"><span>{fmtHM(0)} · nästa dygn</span></div>
+        {/if}
         {#if agendaMoveState && agendaMoveState.previewValid && agendaMoveState.previewStart !== null}
           {@const previewTop = ((agendaMoveState.previewStart - windowStart) / windowMinutes * 100).toFixed(3)}
           <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>
@@ -320,9 +324,6 @@
                  }
                }}>
             <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
-            {#if overlapMin > 0}
-              <span class="agenda-clash-badge" title="Krock: {overlapMin} min överlapp med {overlapsWith.join(', ')}">⚠️ {overlapMin}m</span>
-            {/if}
             {#if itemMeta}
               <span class="agenda-source-badge" class:template={itemMeta.source === 'template'} class:ai={itemMeta.source === 'ai'} class:imported={itemMeta.source === 'import'} title={agendaMetaLabel(itemMeta)}>
                 {agendaMetaBadge(itemMeta)}
