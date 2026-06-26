@@ -8,7 +8,7 @@
   import { clockTheme, labelColorFor } from '$lib/theme.js';
   import { CX, CY, R, Ri, polar, arcPath, nowMinutes, fmtHM, truncate } from '$lib/clock.js';
   import { localDateISO, parseIsoDate, monthKey, shiftMonth, fmtAgendaDate, monthLabel } from '$lib/date.js';
-  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda, stripDraftComments, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
+  import { parseParts, serializeBlocks, parseAgenda, serializeAgenda as serializeAgendaRaw, stripDraftComments, totalFlowMinutes, mergeAgendaDayData, type AgendaDay } from '$lib/parse.js';
   import { runScheduleImport } from '$lib/schedule-import.js';
   import {
     AGENDA_DAY_WINDOW_END,
@@ -25,6 +25,7 @@
     moveAgendaMeta,
     replaceAgendaFlowInDays,
     rebuildAgendaMetaForDay,
+    redistributeFlowsAcrossDays,
     resolveAgendaFlowRef,
     serializeSelectedAgendaDay,
     suggestedStartMinForDate,
@@ -118,6 +119,9 @@
   import AdminPanel from '$lib/components/AdminPanel.svelte';
 
   const s = appState.value;
+  function serializeAgenda(days: AgendaDay[], options?: { includeIds?: boolean }): string {
+    return serializeAgendaRaw(redistributeFlowsAcrossDays(days), options);
+  }
   const flowRuntime = createFlowRuntime();
   const FLOW_COMPLETION_UNDO_MS = 3000;
   type PendingFlowCompletion = { blockId: string; isLast: boolean };

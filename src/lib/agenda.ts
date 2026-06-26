@@ -1,6 +1,6 @@
 import type { AgendaFlowMeta, Flow } from './state.svelte.js';
 import { serializeAgenda, totalFlowMinutes, type AgendaDay } from './parse.js';
-import { localDateISO, monthKey, parseIsoDate } from './date.js';
+import { addDaysISO, localDateISO, monthKey, parseIsoDate } from './date.js';
 import {
 	AGENDA_COMPACT_ITEM_MINUTES,
 	AGENDA_DAY_END,
@@ -228,6 +228,40 @@ export function shiftAgendaFlowsAfter(
 		})
 	};
 	return nextDays;
+}
+
+const MINUTES_PER_DAY = 24 * 60;
+
+export function redistributeFlowsAcrossDays(days: AgendaDay[] | null | undefined): AgendaDay[] {
+	const result = cloneAgendaDays(days);
+	let i = 0;
+	while (i < result.length) {
+		const day = result[i];
+		if (!day.date) { i++; continue; }
+		const stay: Flow[] = [];
+		const move: Flow[] = [];
+		for (const flow of day.flows) {
+			if (flow.startMin !== undefined && flow.startMin >= MINUTES_PER_DAY) {
+				move.push({ ...flow, startMin: flow.startMin - MINUTES_PER_DAY });
+			} else {
+				stay.push(flow);
+			}
+		}
+		if (move.length === 0) { i++; continue; }
+		result[i] = { ...day, flows: stay };
+		const nextDate = addDaysISO(day.date, 1);
+		let nextIdx = result.findIndex(d => d.date === nextDate);
+		if (nextIdx < 0) {
+			let insertAt = result.findIndex(d => d.date !== null && d.date > nextDate);
+			if (insertAt < 0) insertAt = result.length;
+			result.splice(insertAt, 0, { date: nextDate, flows: [] });
+			nextIdx = insertAt;
+		}
+		const mergedFlows = [...result[nextIdx].flows, ...move].sort((a, b) => (a.startMin ?? 0) - (b.startMin ?? 0));
+		result[nextIdx] = { ...result[nextIdx], flows: mergedFlows };
+		i++;
+	}
+	return result;
 }
 
 export function serializeSelectedAgendaDay(date: string | null, days: AgendaDay[] | null, options: { includeIds?: boolean } = {}): string {
