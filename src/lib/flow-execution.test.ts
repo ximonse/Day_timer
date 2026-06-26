@@ -3,6 +3,7 @@ import {
 	activeFlowBlockId,
 	completeFlowActivity,
 	createFlowExecution,
+	finishFlowExecution,
 	flowExecutionBlocks,
 	pauseFlowExecution,
 	rebindFlowExecutionBlocks,
@@ -23,7 +24,7 @@ describe('flow execution', () => {
 		expect(result.completion).toMatchObject({ actualMinutes: 20, bonusMinutes: 10, delayAfterMin: 0 });
 		expect(result.state.allocations).toEqual([30, 30]);
 		expect(result.state.bufferMinutes).toBe(10);
-		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 30], ['B', 30], ['*', 10]]);
+		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 20], ['B', 30], ['*', 10]]);
 		expect(activeFlowBlockId(result.state)).toBe('b');
 	});
 
@@ -34,7 +35,7 @@ describe('flow execution', () => {
 		expect(result.completion).toMatchObject({ actualMinutes: 10, bonusMinutes: 10, delayBeforeMin: 10, delayAfterMin: 0 });
 		expect(result.state.allocations).toEqual([30, 30]);
 		expect(result.state.bufferMinutes).toBe(10);
-		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 30], ['B', 30], ['*', 10]]);
+		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 10], ['B', 30], ['*', 10]]);
 	});
 
 	it('starts the next activity without bonus while the plan remains behind', () => {
@@ -55,7 +56,7 @@ describe('flow execution', () => {
 		expect(result.state.status).toBe('complete');
 		expect(result.state.bufferMinutes).toBe(10);
 		expect(result.state.restMinutes).toBe(0);
-		expect(rendered.map(item => [item.title, item.minutes])).toEqual([['A', 30], ['*', 10]]);
+		expect(rendered.map(item => [item.title, item.minutes])).toEqual([['A', 20], ['*', 10]]);
 	});
 
 	it('accumulates delay when an activity overruns, next activities keep their planned time', () => {
@@ -64,7 +65,7 @@ describe('flow execution', () => {
 
 		expect(result.completion).toMatchObject({ actualMinutes: 40, delayAfterMin: 10, bonusMinutes: 0 });
 		expect(result.state.bufferMinutes).toBe(0);
-		expect(flowExecutionBlocks(result.state, 520).map(item => item.minutes)).toEqual([30, 30, 30]);
+		expect(flowExecutionBlocks(result.state, 520).map(item => item.minutes)).toEqual([40, 30, 30]);
 	});
 
 	it('keeps the current activity visually active at its planned boundary until checked', () => {
@@ -103,7 +104,7 @@ describe('flow execution', () => {
 		expect(result.completion?.actualMinutes).toBe(20);
 	});
 
-	it('completed block shows planned time on clock, actual time is stored separately', () => {
+	it('completed block shrinks to actual time, saved time moves to the end buffer', () => {
 		const initial = createFlowExecution([block('a', 30)], 480, 480);
 		const result = completeFlowActivity(initial, 'a', 500);
 
@@ -111,7 +112,7 @@ describe('flow execution', () => {
 		expect(result.state.status).toBe('complete');
 		expect(result.state.bufferMinutes).toBe(10);
 		expect(result.state.restMinutes).toBe(0);
-		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 30], ['*', 10]]);
+		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 20], ['*', 10]]);
 	});
 
 	it('can start rest from buffer time, clearing the buffer', () => {
@@ -123,6 +124,25 @@ describe('flow execution', () => {
 		expect(resting.status).toBe('rest');
 		expect(resting.restStartedAtMin).toBe(500);
 		expect(resting.bufferMinutes).toBe(0);
-		expect(flowExecutionBlocks(resting, 500).map(item => [item.title, item.minutes])).toEqual([['A', 30], ['*', 10]]);
+		expect(flowExecutionBlocks(resting, 500).map(item => [item.title, item.minutes])).toEqual([['A', 20], ['*', 10]]);
+	});
+
+	it('finishFlowExecution clears buffer and rest and shows only actual blocks', () => {
+		const initial = createFlowExecution([block('a', 30)], 480, 480);
+		const completed = completeFlowActivity(initial, 'a', 500).state;
+		expect(completed.bufferMinutes).toBe(10);
+		const finished = finishFlowExecution(completed);
+
+		expect(finished.status).toBe('complete');
+		expect(finished.bufferMinutes).toBe(0);
+		expect(finished.restMinutes).toBe(0);
+		expect(flowExecutionBlocks(finished, 500).map(item => [item.title, item.minutes])).toEqual([['A', 20]]);
+	});
+
+	it('carries the context key on the execution state', () => {
+		const initial = createFlowExecution([block('a', 30)], 480, 480, 'mon|agenda|Pass');
+		expect(initial.contextKey).toBe('mon|agenda|Pass');
+		const completed = completeFlowActivity(initial, 'a', 500).state;
+		expect(completed.contextKey).toBe('mon|agenda|Pass');
 	});
 });

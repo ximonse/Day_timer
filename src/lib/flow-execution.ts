@@ -16,6 +16,7 @@ export interface FlowCompletion {
 
 export interface FlowExecutionState {
 	planKey: string;
+	contextKey: string;
 	plannedStartMin: number;
 	displayStartMin: number;
 	blocks: Block[];
@@ -67,6 +68,7 @@ export function createFlowExecution(
 	const status: FlowExecutionStatus = blocks.length > 0 ? 'running' : 'complete';
 	return {
 		planKey: flowPlanKey(blocks, plannedStartMin, contextKey),
+		contextKey,
 		plannedStartMin,
 		displayStartMin,
 		blocks: cloneBlocks(blocks),
@@ -197,6 +199,17 @@ export function startFlowRest(
 	};
 }
 
+export function finishFlowExecution(state: FlowExecutionState): FlowExecutionState {
+	return {
+		...state,
+		bufferMinutes: 0,
+		restMinutes: 0,
+		restStartedAtMin: null,
+		runningSinceMin: null,
+		status: 'complete'
+	};
+}
+
 export function tickFlowExecution(state: FlowExecutionState, nowMin: number): FlowExecutionState {
 	if (state.status !== 'rest' || state.restStartedAtMin === null) return state;
 	if (nowMin < state.restStartedAtMin + state.restMinutes) return state;
@@ -206,7 +219,7 @@ export function tickFlowExecution(state: FlowExecutionState, nowMin: number): Fl
 export function flowExecutionBlocks(state: FlowExecutionState, nowMin: number): Block[] {
 	const blocks: Block[] = state.blocks.map((block, index) => {
 		const actual = state.actualMinutes[index];
-		if (actual !== null) return { ...block, minutes: state.allocations[index], runUntilChecked: false };
+		if (actual !== null) return { ...block, minutes: actual, runUntilChecked: false };
 		if (index === state.currentIndex && state.status === 'running') {
 			const workedMinutes = currentFlowWorkedMinutes(state, nowMin);
 			return {

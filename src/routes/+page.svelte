@@ -324,7 +324,7 @@
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
   const flowModeEnabled = $derived(flowRuntime.mode === 'flow');
   const flowRunActive = $derived(flowModeEnabled && locked && !miniMenuOpen && flowRuntime.execution !== null);
-  const timerStartMin = () => flowRunActive ? flowRuntime.execution!.displayStartMin : s.startMin;
+  const timerStartMin = () => flowRunActive ? flowRuntime.execution!.plannedStartMin : s.startMin;
   const displayBlocks = $derived.by(() => flowRunActive
     ? flowRuntime.displayBlocks(nowMinLive)
     : effectiveRunUntilCheckedBlocks(s.blocks, nowMinLive - s.startMin));
@@ -736,6 +736,8 @@
   function ensureFlowRuntime() {
     if (isViewMode || flowRuntime.mode !== 'flow' || !locked || miniMenuOpen) return;
     const contextKey = `${localDateISO()}|${sessionSource.kind}|${s.dayTitle}`;
+    const exec = flowRuntime.execution;
+    if (exec && exec.status !== 'running' && exec.contextKey === contextKey) return;
     flowRuntime.ensureStarted(s.blocks, s.startMin, nowMinutes(), contextKey);
   }
 
@@ -1279,6 +1281,7 @@
     const choice = flowFinishChoice;
     if (!choice || !choice.canChill) return;
     writeFlowActualTimesToSession();
+    s.blocks = [...s.blocks, { id: uid(), title: '*', minutes: choice.bufferMinutes, note: '', warning: false, pinned: true }];
     syncTimerToAgenda(true);
     flowRuntime.startRest(choice.bufferMinutes, choice.completion.completedAtMin);
     flowFinishChoice = null;
@@ -1292,6 +1295,7 @@
     if (!flowFinishChoice) return;
     writeFlowActualTimesToSession();
     syncTimerToAgenda(true);
+    flowRuntime.finish();
     flowFinishChoice = null;
     showCompletionToast('Pass avslutat');
     appState.persist();
