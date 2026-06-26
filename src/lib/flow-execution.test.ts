@@ -16,23 +16,25 @@ function block(id: string, minutes: number): Block {
 }
 
 describe('flow execution', () => {
-	it('adds saved time to the next activity when the plan is on time', () => {
+	it('routes saved time to the end buffer, not the next activity', () => {
 		const initial = createFlowExecution([block('a', 30), block('b', 30)], 480, 480);
 		const result = completeFlowActivity(initial, 'a', 500);
 
 		expect(result.completion).toMatchObject({ actualMinutes: 20, bonusMinutes: 10, delayAfterMin: 0 });
-		expect(result.state.allocations).toEqual([30, 40]);
-		expect(flowExecutionBlocks(result.state, 500).map(item => item.minutes)).toEqual([20, 40]);
+		expect(result.state.allocations).toEqual([30, 30]);
+		expect(result.state.bufferMinutes).toBe(10);
+		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 30], ['B', 30], ['*', 10]]);
 		expect(activeFlowBlockId(result.state)).toBe('b');
 	});
 
-	it('uses saved time to catch up before giving bonus time', () => {
+	it('uses saved time to catch up delay before routing remainder to buffer', () => {
 		const initial = createFlowExecution([block('a', 30), block('b', 30)], 480, 490);
 		const result = completeFlowActivity(initial, 'a', 500);
 
 		expect(result.completion).toMatchObject({ actualMinutes: 10, bonusMinutes: 10, delayBeforeMin: 10, delayAfterMin: 0 });
-		expect(result.state.allocations).toEqual([30, 40]);
-		expect(flowExecutionBlocks(result.state, 500).map(item => item.minutes)).toEqual([10, 40]);
+		expect(result.state.allocations).toEqual([30, 30]);
+		expect(result.state.bufferMinutes).toBe(10);
+		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 30], ['B', 30], ['*', 10]]);
 	});
 
 	it('starts the next activity without bonus while the plan remains behind', () => {
@@ -41,25 +43,28 @@ describe('flow execution', () => {
 
 		expect(result.completion).toMatchObject({ actualMinutes: 20, bonusMinutes: 0, delayAfterMin: 5 });
 		expect(result.state.allocations).toEqual([30, 30]);
+		expect(result.state.bufferMinutes).toBe(0);
 		expect(activeFlowBlockId(result.state)).toBe('b');
 	});
 
-	it('creates a rest block after the final activity when bonus remains', () => {
+	it('routes bonus to buffer after the final activity', () => {
 		const initial = createFlowExecution([block('a', 30)], 480, 480);
 		const result = completeFlowActivity(initial, 'a', 500);
 		const rendered = flowExecutionBlocks(result.state, 500);
 
-		expect(result.state.status).toBe('rest');
-		expect(result.state.restMinutes).toBe(10);
-		expect(rendered.map(item => [item.title, item.minutes])).toEqual([['A', 20], ['*', 10]]);
+		expect(result.state.status).toBe('complete');
+		expect(result.state.bufferMinutes).toBe(10);
+		expect(result.state.restMinutes).toBe(0);
+		expect(rendered.map(item => [item.title, item.minutes])).toEqual([['A', 30], ['*', 10]]);
 	});
 
-	it('pushes the whole remaining plan when an activity overruns', () => {
+	it('accumulates delay when an activity overruns, next activities keep their planned time', () => {
 		const initial = createFlowExecution([block('a', 30), block('b', 30), block('c', 30)], 480, 480);
 		const result = completeFlowActivity(initial, 'a', 520);
 
 		expect(result.completion).toMatchObject({ actualMinutes: 40, delayAfterMin: 10, bonusMinutes: 0 });
-		expect(flowExecutionBlocks(result.state, 520).map(item => item.minutes)).toEqual([40, 30, 30]);
+		expect(result.state.bufferMinutes).toBe(0);
+		expect(flowExecutionBlocks(result.state, 520).map(item => item.minutes)).toEqual([30, 30, 30]);
 	});
 
 	it('keeps the current activity visually active at its planned boundary until checked', () => {
@@ -76,7 +81,8 @@ describe('flow execution', () => {
 		const result = completeFlowActivity(initial, 'a', 481.5);
 
 		expect(result.state.delayMin).toBe(0);
-		expect(result.state.restMinutes).toBe(29);
+		expect(result.state.bufferMinutes).toBe(29);
+		expect(result.state.restMinutes).toBe(0);
 	});
 
 	it('rebinds temporary block ids after a reload', () => {
@@ -97,24 +103,26 @@ describe('flow execution', () => {
 		expect(result.completion?.actualMinutes).toBe(20);
 	});
 
-	it('can finish the final activity without automatically creating rest time', () => {
+	it('completed block shows planned time on clock, actual time is stored separately', () => {
 		const initial = createFlowExecution([block('a', 30)], 480, 480);
-		const result = completeFlowActivity(initial, 'a', 500, { restOnFinalBonus: false });
+		const result = completeFlowActivity(initial, 'a', 500);
 
 		expect(result.completion).toMatchObject({ actualMinutes: 20, bonusMinutes: 10 });
 		expect(result.state.status).toBe('complete');
+		expect(result.state.bufferMinutes).toBe(10);
 		expect(result.state.restMinutes).toBe(0);
-		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 20]]);
+		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 30], ['*', 10]]);
 	});
 
-	it('can start final rest time after a clean final completion', () => {
+	it('can start rest from buffer time, clearing the buffer', () => {
 		const initial = createFlowExecution([block('a', 30)], 480, 480);
-		const completed = completeFlowActivity(initial, 'a', 500, { restOnFinalBonus: false }).state;
+		const completed = completeFlowActivity(initial, 'a', 500).state;
+		expect(completed.bufferMinutes).toBe(10);
 		const resting = startFlowRest(completed, 10, 500);
 
 		expect(resting.status).toBe('rest');
 		expect(resting.restStartedAtMin).toBe(500);
-		expect(flowExecutionBlocks(resting, 500).map(item => [item.title, item.minutes])).toEqual([['A', 20], ['*', 10]]);
+		expect(resting.bufferMinutes).toBe(0);
+		expect(flowExecutionBlocks(resting, 500).map(item => [item.title, item.minutes])).toEqual([['A', 30], ['*', 10]]);
 	});
 });
-

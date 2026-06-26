@@ -320,9 +320,6 @@
                  }
                }}>
             <span class="agenda-time">{fmtHM(item.startMin)}–{fmtHM(itemEnd)}</span>
-            {#if overlapMin > 0}
-              <span class="agenda-clash-badge" title="Krock: {overlapMin} min överlapp med {overlapsWith.join(', ')}">⚠️ {overlapMin}m</span>
-            {/if}
             {#if itemMeta}
               <span class="agenda-source-badge" class:template={itemMeta.source === 'template'} class:ai={itemMeta.source === 'ai'} class:imported={itemMeta.source === 'import'} title={agendaMetaLabel(itemMeta)}>
                 {agendaMetaBadge(itemMeta)}

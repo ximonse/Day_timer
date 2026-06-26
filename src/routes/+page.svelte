@@ -121,7 +121,7 @@
   const flowRuntime = createFlowRuntime();
   const FLOW_COMPLETION_UNDO_MS = 3000;
   type PendingFlowCompletion = { blockId: string; isLast: boolean };
-  type FlowFinishChoice = { completion: FlowCompletion; canChill: boolean; canStartNext: boolean; nextTitle: string };
+  type FlowFinishChoice = { completion: FlowCompletion; canChill: boolean; canStartNext: boolean; nextTitle: string; bufferMinutes: number };
   let activeSection = $state<AppSection>(s.activeSection as AppSection);
   const NS = 'http://www.w3.org/2000/svg';
 
@@ -1235,11 +1235,13 @@
 
   function showFlowFinishChoice(completion: FlowCompletion) {
     const next = nextAgendaItemTargetForFlowRun();
+    const bufferMin = flowRuntime.execution?.bufferMinutes ?? 0;
     flowFinishChoice = {
       completion,
-      canChill: completion.bonusMinutes > 0,
+      canChill: bufferMin > 0,
       canStartNext: !!next,
-      nextTitle: next ? stripColorDirective(next.item.flow.title || 'Nästa pass') : ''
+      nextTitle: next ? stripColorDirective(next.item.flow.title || 'Nästa pass') : '',
+      bufferMinutes: bufferMin
     };
   }
 
@@ -1247,13 +1249,22 @@
     const pending = pendingFlowCompletion;
     if (!pending || pending.blockId !== blockId) return;
     clearPendingFlowCompletion();
-    const completion = completeFlowBlockNow(blockId, { restOnFinalBonus: !pending.isLast });
+    const completion = completeFlowBlockNow(blockId);
     if (!completion) return;
     if (pending.isLast) {
       showFlowFinishChoice(completion);
     } else if (!flowRuntime.activeBlockId) {
       showCompletionToast();
     }
+  }
+
+  function writeFlowActualTimesToSession() {
+    const execution = flowRuntime.execution;
+    if (!execution) return;
+    s.blocks = s.blocks.map((block, i) => {
+      const actual = execution.actualMinutes[i];
+      return actual !== null ? { ...block, minutes: actual } : block;
+    });
   }
 
   function queueFlowCompletion(blockId: string) {
@@ -1267,7 +1278,9 @@
   function chooseFlowChill() {
     const choice = flowFinishChoice;
     if (!choice || !choice.canChill) return;
-    flowRuntime.startRest(choice.completion.bonusMinutes, choice.completion.completedAtMin);
+    writeFlowActualTimesToSession();
+    syncTimerToAgenda(true);
+    flowRuntime.startRest(choice.bufferMinutes, choice.completion.completedAtMin);
     flowFinishChoice = null;
     showCompletionToast('Chillar till passets slut');
     appState.persist();
@@ -1277,6 +1290,8 @@
 
   function chooseFlowEnd() {
     if (!flowFinishChoice) return;
+    writeFlowActualTimesToSession();
+    syncTimerToAgenda(true);
     flowFinishChoice = null;
     showCompletionToast('Pass avslutat');
     appState.persist();
@@ -1309,11 +1324,13 @@
 
   function chooseFlowStartNext() {
     if (!flowFinishChoice) return;
+    writeFlowActualTimesToSession();
+    syncTimerToAgenda(true);
+    flowFinishChoice = null;
     if (!startNextAgendaFlowNow()) {
       showCompletionToast('Inget nästa pass');
       return;
     }
-    flowFinishChoice = null;
     showCompletionToast('Nästa pass startat');
   }
   function toggleSegmentDone(blockId: string) {

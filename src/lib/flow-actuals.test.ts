@@ -62,6 +62,7 @@ describe('makeFlowActualEntry', () => {
 			executionMode: 'flow',
 			confirmed: true
 		});
-		expect(state.allocations[1]).toBeGreaterThan(15);
+		expect(state.bufferMinutes).toBeGreaterThan(0);
+		expect(state.allocations[1]).toBe(15);
 	});
 });
