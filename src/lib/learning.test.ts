@@ -70,11 +70,13 @@ describe('computeRecommendation', () => {
     expect(rec?.basis).toBe('title+category');
   });
 
-  it('exkluderar flödets aktivitetsposter från sessionsrekommendationen', () => {
+  it('exkluderar flödets aktivitetsposter och okonfirmerade poster från sessionsrekommendationen', () => {
     const history = [
       mkEntry({ durationActualMin: 30, weekday: 4 }),
       mkEntry({ durationActualMin: 2, weekday: 4, entryKind: 'activity', executionMode: 'flow' }),
-      mkEntry({ durationActualMin: 2, weekday: 4, entryKind: 'activity', executionMode: 'flow' })
+      mkEntry({ durationActualMin: 2, weekday: 4, entryKind: 'activity', executionMode: 'flow' }),
+      mkEntry({ durationActualMin: 90, weekday: 4, confirmed: false, confirmedAt: null }),
+      mkEntry({ durationActualMin: 0, weekday: 4 })
     ];
     const rec = computeRecommendation(history, 'Förbereda matematik', 'Matematik', 4);
     expect(rec?.minutes).toBe(30);
