@@ -4199,10 +4199,6 @@
 
 <div class="flash" bind:this={flashEl}></div>
 
-{#if pendingFlowCompletion}
-  <div class="flow-undo-toast" role="status" aria-live="polite">Ångra inom 4 sek: klicka rutan igen</div>
-{/if}
-
 {#if flowFinishChoice}
   <div class="flow-finish-overlay" role="dialog" aria-modal="true" aria-labelledby="flow-finish-title">
     <div class="flow-finish-card" in:fly={{ y: 14, duration: 180 }}>
