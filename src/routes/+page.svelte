@@ -119,7 +119,7 @@
 
   const s = appState.value;
   const flowRuntime = createFlowRuntime();
-  const FLOW_COMPLETION_UNDO_MS = 4000;
+  const FLOW_COMPLETION_UNDO_MS = 3000;
   type PendingFlowCompletion = { blockId: string; isLast: boolean };
   type FlowFinishChoice = { completion: FlowCompletion; canChill: boolean; canStartNext: boolean; nextTitle: string };
   let activeSection = $state<AppSection>(s.activeSection as AppSection);
@@ -4207,9 +4207,9 @@
         <p>Nästa: {flowFinishChoice.nextTitle}</p>
       {/if}
       <div class="flow-finish-actions">
-        <button class="quickstart" type="button" onclick={chooseFlowChill} disabled={!flowFinishChoice.canChill}>Chilla</button>
-        <button class="quickstart quickstart-subtle" type="button" onclick={chooseFlowEnd}>Avsluta pass</button>
-        <button class="quickstart" type="button" onclick={chooseFlowStartNext} disabled={!flowFinishChoice.canStartNext}>Starta nästa pass</button>
+        <button class="quickstart flow-finish-btn" type="button" onclick={chooseFlowChill} disabled={!flowFinishChoice.canChill}>Chilla</button>
+        <button class="quickstart quickstart-subtle flow-finish-btn" type="button" onclick={chooseFlowEnd}>Avsluta pass</button>
+        <button class="quickstart flow-finish-btn" type="button" onclick={chooseFlowStartNext} disabled={!flowFinishChoice.canStartNext}>Starta nästa pass</button>
       </div>
     </div>
   </div>

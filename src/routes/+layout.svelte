@@ -761,7 +761,7 @@
   :global(.lock-btn) { opacity: .18; font-size: 14px !important; }
   :global(.lock-btn:hover) { opacity: .5; }
   :global(.lock-btn.locked) { opacity: .55; }
-  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle):not(.collapse-btn):not(.agenda-toggle-btn):not(.agenda-input-toggle):not(.agenda-nav-btn):not(.agenda-calendar-day):not(.seg-done-control)) { pointer-events: none !important; }
+  :global(body.page-locked button:not(.lock-btn):not(.mini-menu-toggle):not(.collapse-btn):not(.agenda-toggle-btn):not(.agenda-input-toggle):not(.agenda-nav-btn):not(.agenda-calendar-day):not(.seg-done-control):not(.flow-finish-btn)) { pointer-events: none !important; }
   :global(body.page-locked input) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked textarea) { pointer-events: none !important; user-select: none; }
   :global(body.page-locked .resize-handle-sb) { pointer-events: none !important; }
@@ -807,7 +807,6 @@
   :global(.flow-finish-card p) { margin: 8px 0 0; color: var(--menu-muted); font-size: 14px; line-height: 1.3; }
   :global(.flow-finish-actions) { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 18px; }
   :global(.flow-finish-actions .quickstart) { justify-content: center; border-radius: 8px; padding: 12px 14px; font-weight: 800; }
-  :global(body.page-locked .flow-finish-overlay button) { pointer-events: auto !important; }
   :global(.help-modal) { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
   :global(.help-modal.open) { display: flex; }
     :global(.help-card) { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 24px; padding: 40px; max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; line-height: 1.5; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
