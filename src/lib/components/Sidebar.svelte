@@ -522,6 +522,9 @@
         <span class="flow-rest-dot" aria-hidden="true"></span>
         <span class="name">*</span>
         <span class="min">{rest.minutes}m</span>
+        {#if !isViewMode && onToggleSegmentDone && rest.id.endsWith(':rest')}
+          <button type="button" class="title-check-btn seg-done-control" onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(rest.id); }} title="Val för passet" aria-label="Val för passet"></button>
+        {/if}
       </div>
     {/each}
   {/if}

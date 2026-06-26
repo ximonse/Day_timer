@@ -121,7 +121,7 @@
   const flowRuntime = createFlowRuntime();
   const FLOW_COMPLETION_UNDO_MS = 3000;
   type PendingFlowCompletion = { blockId: string; isLast: boolean };
-  type FlowFinishChoice = { completion: FlowCompletion; canChill: boolean; canStartNext: boolean; nextTitle: string; bufferMinutes: number };
+  type FlowFinishChoice = { chillStartMin: number; canChill: boolean; canStartNext: boolean; nextTitle: string; bufferMinutes: number };
   let activeSection = $state<AppSection>(s.activeSection as AppSection);
   const NS = 'http://www.w3.org/2000/svg';
 
@@ -795,7 +795,6 @@
       sessionSourceKind: sessionSource.kind,
       snapshot: miniMenuSnapshot
     });
-    if (decision.sectionToRestore) setActiveSection(decision.sectionToRestore);
     if (decision.snapshotToRestore) {
       locked = decision.snapshotToRestore.locked;
       s.agendaOpen = decision.snapshotToRestore.agendaOpen;
@@ -812,8 +811,11 @@
     if (decision.keepInspectedAgendaBlock) {
       s.agendaOpen = decision.agendaOpen;
       agendaInputOpen = decision.agendaInputOpen;
-      planSelectionExplicit = decision.planSelectionExplicit;
     }
+    // Stoppa kör-läge → landa alltid i Planera med passet som kördes (Static + Flow)
+    setActiveSection('plan');
+    mobileTab = 'plan';
+    if (sessionSource.kind === 'agenda') planSelectionExplicit = true;
     appState.persist();
   }
 
@@ -1239,11 +1241,25 @@
     const next = nextAgendaItemTargetForFlowRun();
     const bufferMin = flowRuntime.execution?.bufferMinutes ?? 0;
     flowFinishChoice = {
-      completion,
+      chillStartMin: completion.completedAtMin,
       canChill: bufferMin > 0,
       canStartNext: !!next,
       nextTitle: next ? stripColorDirective(next.item.flow.title || 'Nästa pass') : '',
       bufferMinutes: bufferMin
+    };
+  }
+
+  function reopenFlowFinishChoice() {
+    const exec = flowRuntime.execution;
+    if (!exec) return;
+    const next = nextAgendaItemTargetForFlowRun();
+    const chillMin = exec.status === 'rest' ? exec.restMinutes : exec.bufferMinutes;
+    flowFinishChoice = {
+      chillStartMin: nowMinutes(),
+      canChill: chillMin > 0 && exec.status !== 'rest',
+      canStartNext: !!next,
+      nextTitle: next ? stripColorDirective(next.item.flow.title || 'Nästa pass') : '',
+      bufferMinutes: chillMin
     };
   }
 
@@ -1283,7 +1299,7 @@
     writeFlowActualTimesToSession();
     s.blocks = [...s.blocks, { id: uid(), title: '*', minutes: choice.bufferMinutes, note: '', warning: false, pinned: true }];
     syncTimerToAgenda(true);
-    flowRuntime.startRest(choice.bufferMinutes, choice.completion.completedAtMin);
+    flowRuntime.startRest(choice.bufferMinutes, choice.chillStartMin);
     flowFinishChoice = null;
     showCompletionToast('Chillar till passets slut');
     appState.persist();
@@ -1339,6 +1355,10 @@
   }
   function toggleSegmentDone(blockId: string) {
     if (flowRunActive) {
+      if (blockId.endsWith(':buffer') || blockId.endsWith(':rest')) {
+        if (flowRuntime.execution && flowRuntime.execution.status !== 'running') reopenFlowFinishChoice();
+        return;
+      }
       if (pendingFlowCompletion?.blockId === blockId) {
         clearPendingFlowCompletion();
         showCompletionToast('Ångrat');
