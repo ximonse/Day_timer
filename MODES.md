@@ -74,6 +74,11 @@ I alla tre fallen skrivs faktiska tider till planen (`s.blocks`) och synkas ut t
 - **Flow:** följande block puttas framåt live vid övertid (§2). ✅
 - **Static / manuell redigering:** ingen automatisk push. Användaren flyttar själv pass som är i vägen, alternativt skriver in dagplanen eller ber AI flytta passen. ✅
 
+### Dygnsgränsen (midnatt) ✅
+- Agendan är ett långt flöde. **Ett pass syns på den dag det startar.**
+- Ett pass som börjar före men slutar efter midnatt **bryts inte** — dygnsfönstret förlängs så passet ritas helt, med en streckad midnatts-linje som markerar dygnsgränsen.
+- Ett pass vars **start** hamnar på/efter midnatt (via drag, shift eller flow-övertid) flyttas i datan till nästa dag (`startMin −= 1440`, kaskad för flera dygn) så lagrade tider alltid är giltiga (0–1439). `redistributeFlowsAcrossDays` körs vid varje agenda-serialisering.
+
 ---
 
 ## 6. Planera-vyn ("Valt pass")

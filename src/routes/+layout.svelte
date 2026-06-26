@@ -358,6 +358,25 @@
     pointer-events: none;
     z-index: 6;
   }
+  :global(.agenda-midnight-line) {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1px dashed color-mix(in srgb, var(--muted) 70%, transparent);
+    pointer-events: none;
+    z-index: 5;
+  }
+  :global(.agenda-midnight-line span) {
+    position: absolute;
+    right: 4px;
+    top: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--sidebar-subheading, var(--muted));
+    opacity: 0.8;
+  }
   :global(.agenda-timeline:not(.has-overlay) .agenda-drop-indicator) { right: 0; }
   :global(.agenda-timeline.has-overlay .agenda-block:not(.ghost)) { right: 37%; }
   :global(.agenda-block.ghost) { left: 65%; right: 0; border-left-width: 8px; pointer-events: none; }

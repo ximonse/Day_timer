@@ -284,6 +284,10 @@
       {@const windowStart = agendaLayout.window.start}
       {@const windowMinutes = agendaLayout.window.minutes}
       <div id="agenda-timeline" class="agenda-timeline" class:has-overlay={overlayItems.length > 0} style="height: {agendaLayout.window.heightPx}px" bind:this={timelineEl}>
+        {#if agendaLayout.window.end > AGENDA_DAY_WINDOW_END}
+          {@const midnightTop = ((AGENDA_DAY_WINDOW_END - windowStart) / windowMinutes * 100).toFixed(3)}
+          <div class="agenda-midnight-line" style="top: {midnightTop}%"><span>{fmtHM(0)} · nästa dygn</span></div>
+        {/if}
         {#if agendaMoveState && agendaMoveState.previewValid && agendaMoveState.previewStart !== null}
           {@const previewTop = ((agendaMoveState.previewStart - windowStart) / windowMinutes * 100).toFixed(3)}
           <div class="agenda-drop-indicator" style="top: {previewTop}%"></div>

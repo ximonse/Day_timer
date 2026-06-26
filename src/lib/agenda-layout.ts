@@ -62,8 +62,9 @@ export function buildAgendaLayoutWindow(items: Pick<AgendaLayoutSourceItem, 'sta
 		};
 	}
 	const firstStart = Math.min(...items.map(item => item.startMin));
+	const lastEnd = Math.max(...items.map(item => item.startMin + item.totalMin));
 	const start = Math.max(AGENDA_DAY_START, firstStart - AGENDA_TOP_BREATHING_ROOM_MIN);
-	const end = AGENDA_DAY_END;
+	const end = Math.max(AGENDA_DAY_END, lastEnd);
 	const minutes = Math.max(60, end - start);
 	return { start, end, minutes, heightPx: minutes * AGENDA_MINUTE_PX };
 }

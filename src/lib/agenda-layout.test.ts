@@ -20,6 +20,24 @@ describe('agenda layout', () => {
 		expect(layout.items[1].compact).toBe(false);
 	});
 
+	test('extends the day window past midnight so a straddling pass renders whole', () => {
+		const layout = buildAgendaLayout([
+			{ id: 'a', title: 'Kväll', startMin: 23 * 60, totalMin: 90 }
+		]);
+
+		expect(layout.window.end).toBe(24 * 60 + 30);
+		expect(layout.items[0].heightPx).toBe(90 * 1.75);
+		// The pass renders fully within the timeline (top + height <= total height).
+		expect(layout.items[0].topPx + layout.items[0].heightPx).toBeLessThanOrEqual(layout.window.heightPx + 0.01);
+	});
+
+	test('keeps the window at a full day when nothing crosses midnight', () => {
+		const layout = buildAgendaLayout([
+			{ id: 'a', title: 'Dag', startMin: 9 * 60, totalMin: 60 }
+		]);
+		expect(layout.window.end).toBe(24 * 60);
+	});
+
 	test('flags overlapping sessions with the overlap minutes and the clashing titles', () => {
 		const overlaps = computeAgendaOverlaps([
 			{ title: 'Morgonrutin', startMin: 8 * 60, totalMin: 40 },
