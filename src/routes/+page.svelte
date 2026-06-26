@@ -75,6 +75,19 @@
     sharedUiStateFromState
   } from '$lib/share-state.js';
   import {
+    ACTIVE_SHARE_KEY,
+    SHARE_ENTRIES_STORAGE,
+    SHARE_MODE_STORAGE,
+    SHARE_OWNER_STORAGE,
+    SHARE_TOKEN_STORAGE,
+    dayShareKey,
+    parseShareEntries,
+    sessionShareKey,
+    shareKeyFromModeAndPayload,
+    type ShareEntry,
+    withLegacyActiveShareEntry
+  } from '$lib/share-entries.js';
+  import {
     applyWorkspaceDataToAppState,
     isWorkspaceMeaningfullyEmpty,
     workspaceDataFromAppState,
@@ -112,7 +125,6 @@
   let loginName = $state('');
   let loginPass = $state('');
   let loggedInUser = $state('');
-  type ShareEntry = { viewToken: string; ownerToken: string; mode: ShareMode };
   let shareEntries = $state<Record<string, ShareEntry>>({});
   let shareCopyText = $state('Kopiera länk');
   let shareCopyTargetKey = $state('');
@@ -273,10 +285,6 @@
     return 'inherit';
   }
 
-  const SHARE_TOKEN_STORAGE = 'daytimer_share_token';
-  const SHARE_OWNER_STORAGE = 'daytimer_share_owner_token';
-  const SHARE_MODE_STORAGE = 'daytimer_share_mode';
-  const SHARE_ENTRIES_STORAGE = 'daytimer_share_entries';
   const RUN_MODE_STORAGE = 'daytimer_run_mode';
   const WRITE_MENU_STORAGE = 'daytimer_write_menu_sections_v1';
   type WriteMenuSection = 'agenda' | 'planShare' | 'nowMain' | 'nowQuickStart' | 'nowShare' | 'sessionAi';
@@ -289,16 +297,6 @@
     sessionAi: false
   };
   let writeMenuSections = $state<Record<WriteMenuSection, boolean>>({ ...DEFAULT_WRITE_MENU_SECTIONS });
-
-  const ACTIVE_SHARE_KEY = 'active';
-  function sessionShareKey(flowId: string): string { return `session:${flowId}`; }
-  function dayShareKey(date: string): string { return `day:${date}`; }
-  function shareKeyFromModeAndPayload(mode: ShareMode, flowId?: string | null, date?: string | null): string | null {
-    if (mode === 'active-session-live') return ACTIVE_SHARE_KEY;
-    if (mode === 'selected-session-snapshot') return flowId ? sessionShareKey(flowId) : null;
-    if (mode === 'selected-day-snapshot') return date ? dayShareKey(date) : null;
-    return null;
-  }
 
   function saveAiConfig() {
     persistAiConfig(aiConfig);
@@ -1619,8 +1617,8 @@
     const raw = localStorage.getItem(SHARE_ENTRIES_STORAGE);
     if (!raw) return {};
     try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return parsed as Record<string, ShareEntry>;
+      const parsed = parseShareEntries(raw);
+      if (parsed) return parsed;
       console.warn('[day_timer] share entries had unexpected shape, ignoring');
     } catch (err) {
       console.warn('[day_timer] failed to parse share entries, ignoring', err);
@@ -2808,9 +2806,9 @@
     const legacyToken = readSessionValue(SHARE_TOKEN_STORAGE) ?? localStorage.getItem(SHARE_TOKEN_STORAGE);
     const legacyOwner = readSessionValue(SHARE_OWNER_STORAGE) ?? localStorage.getItem(SHARE_OWNER_STORAGE);
     const legacyMode = (readSessionValue(SHARE_MODE_STORAGE) ?? localStorage.getItem(SHARE_MODE_STORAGE)) as ShareMode | null;
-    const legacyIsActive = legacyToken && legacyOwner && (legacyMode ?? 'active-session-live') === 'active-session-live';
-    if (legacyIsActive && !shareEntries[ACTIVE_SHARE_KEY]) {
-      shareEntries = { ...shareEntries, [ACTIVE_SHARE_KEY]: { viewToken: legacyToken, ownerToken: legacyOwner, mode: 'active-session-live' } };
+    const migratedShareEntries = withLegacyActiveShareEntry(shareEntries, legacyToken, legacyOwner, legacyMode);
+    if (migratedShareEntries !== shareEntries) {
+      shareEntries = migratedShareEntries;
       persistShareEntries();
     }
     clearLegacyShareState();

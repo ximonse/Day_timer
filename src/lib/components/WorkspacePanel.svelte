@@ -102,9 +102,9 @@
   let aiConfigOpen = $state(false);
   let inviteCode = $state('');
 
-  let showAiInfo = $state(showHelpHints);
-  let showTimeInfo = $state(showHelpHints);
-  $effect(() => { showAiInfo = showHelpHints; showTimeInfo = showHelpHints; });
+  let showAiInfo = $state(false);
+  let showTimeInfo = $state(false);
+  $effect.pre(() => { showAiInfo = showHelpHints; showTimeInfo = showHelpHints; });
 
   function snapshotLabel(createdAt: string) {
     const date = new Date(createdAt);

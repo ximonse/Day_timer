@@ -27,8 +27,8 @@
     showInfo?: boolean;
   } = $props();
 
-  let showSaveInfo = $state(showInfo);
-  $effect(() => { showSaveInfo = showInfo; });
+  let showSaveInfo = $state(false);
+  $effect.pre(() => { showSaveInfo = showInfo; });
 </script>
 
 <div class="library-menu-workspace">

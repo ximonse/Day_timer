@@ -587,9 +587,6 @@
   }
   .seglist .min { color: var(--sidebar-subheading); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 500; min-width: 4ch; text-align: right; flex-shrink: 0; margin-top: 4px; cursor: text; }
   .seg-inline-btn { background: transparent; border: 0; padding: 0; font: inherit; text-align: left; }
-  .seg-done-btn { background: color-mix(in srgb, var(--accent) 5%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--menu-border)); border-radius: 6px; padding: 2px 7px; font-size: 14px; color: color-mix(in srgb, var(--accent) 45%, var(--menu-muted)); cursor: pointer; flex-shrink: 0; margin-left: auto; transition: background 0.15s, color 0.15s, border-color 0.15s; }
-  .seg-done-btn:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: var(--accent); }
-  .seg-done-btn.checked { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .row.done { opacity: 0.5; }
   .flow-rest-row { color: var(--muted); }
   .flow-rest-dot { width: 14px; height: 14px; margin-top: 17px; border-radius: 50%; border: 1px dashed currentColor; flex-shrink: 0; }
