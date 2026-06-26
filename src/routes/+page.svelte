@@ -22,6 +22,8 @@
     insertFlowIntoAgendaDate,
     makeAgendaFlowRef,
     makeAgendaMetaKeyForFlow,
+    moveAgendaMeta,
+    replaceAgendaFlowInDays,
     rebuildAgendaMetaForDay,
     resolveAgendaFlowRef,
     serializeSelectedAgendaDay,
@@ -100,7 +102,8 @@
   import { stripColorDirective } from '$lib/title-color.js';
   import { createFlowRuntime } from '$lib/flow-runtime.svelte.js';
   import { makeFlowActualEntry } from '$lib/flow-actuals.js';
-  import { adjustAgendaItemsForFlowRun } from '$lib/flow-agenda.js';
+  import { adjustAgendaItemsForFlowRun, nextAgendaItemForFlowRun } from '$lib/flow-agenda.js';
+  import type { CompleteFlowActivityOptions, FlowCompletion } from '$lib/flow-execution.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -116,6 +119,9 @@
 
   const s = appState.value;
   const flowRuntime = createFlowRuntime();
+  const FLOW_COMPLETION_UNDO_MS = 4000;
+  type PendingFlowCompletion = { blockId: string; isLast: boolean };
+  type FlowFinishChoice = { completion: FlowCompletion; canChill: boolean; canStartNext: boolean; nextTitle: string };
   let activeSection = $state<AppSection>(s.activeSection as AppSection);
   const NS = 'http://www.w3.org/2000/svg';
 
@@ -187,6 +193,9 @@
   let doneSegments = $state<Record<string, SegmentUndo>>({});
   let completionToast = $state('');
   let completionToastTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingFlowCompletion = $state<PendingFlowCompletion | null>(null);
+  let pendingFlowCompletionTimer: ReturnType<typeof setTimeout> | null = null;
+  let flowFinishChoice = $state<FlowFinishChoice | null>(null);
   let lastAutoLoadKey = $state('');
   let mobileTab = $state<AppSection>('now');
   let showAgendaOverlay = $state(typeof window !== 'undefined' ? window.innerWidth > 980 : true);
@@ -320,6 +329,9 @@
     ? flowRuntime.displayBlocks(nowMinLive)
     : effectiveRunUntilCheckedBlocks(s.blocks, nowMinLive - s.startMin));
   const displayTotalMin = () => displayBlocks.reduce((a, b) => a + b.minutes, 0);
+  const flowDoneBlockIds = $derived.by(() => pendingFlowCompletion
+    ? [...flowRuntime.completedBlockIds, pendingFlowCompletion.blockId]
+    : flowRuntime.completedBlockIds);
 
   const sectorColors = $derived(clockTheme(s.palette, s.dark).colors);
 
@@ -1175,23 +1187,143 @@
     }, 2400);
   }
 
+  function clearPendingFlowCompletion() {
+    if (pendingFlowCompletionTimer) {
+      clearTimeout(pendingFlowCompletionTimer);
+      pendingFlowCompletionTimer = null;
+    }
+    pendingFlowCompletion = null;
+  }
+
+  function currentFlowBlockIsLast(blockId: string) {
+    const execution = flowRuntime.execution;
+    return !!execution
+      && execution.status === 'running'
+      && execution.blocks[execution.currentIndex]?.id === blockId
+      && execution.currentIndex === execution.blocks.length - 1;
+  }
+
+  function nextAgendaItemTargetForFlowRun() {
+    const source = sessionSource;
+    if (source.kind !== 'agenda' || !agendaDays) return null;
+    const sourceDayIdx = agendaDays.findIndex(day => (day.date ?? null) === source.date);
+    const dayIdx = sourceDayIdx >= 0 ? sourceDayIdx : selectedDayIdx;
+    const day = agendaDays[dayIdx] ?? null;
+    if (!day) return null;
+    const items = buildAgendaItemsForDay(day, agendaDayStart);
+    const item = nextAgendaItemForFlowRun(items, source);
+    return item ? { dayIdx, day, item } : null;
+  }
+
+  function completeFlowBlockNow(blockId: string, options: CompleteFlowActivityOptions = {}) {
+    const completion = flowRuntime.complete(blockId, nowMinutes(), options);
+    if (!completion) return null;
+    const entry = makeFlowActualEntry({
+      date: localDateISO(),
+      agendaDate: selectedDay?.date ?? null,
+      sessionTitle: s.dayTitle || 'Session',
+      dayTextSnapshot: serializeSelectedAgendaDay(selectedDay?.date ?? null, agendaDays ?? null),
+      completion
+    });
+    s.actualTimeLog = upsertActualEntry(s.actualTimeLog, entry);
+    warnedSet.clear();
+    appState.persist();
+    if (hasSyncSession()) void syncSave();
+    void pushShareState();
+    return completion;
+  }
+
+  function showFlowFinishChoice(completion: FlowCompletion) {
+    const next = nextAgendaItemTargetForFlowRun();
+    flowFinishChoice = {
+      completion,
+      canChill: completion.bonusMinutes > 0,
+      canStartNext: !!next,
+      nextTitle: next ? stripColorDirective(next.item.flow.title || 'Nästa pass') : ''
+    };
+  }
+
+  function confirmPendingFlowCompletion(blockId: string) {
+    const pending = pendingFlowCompletion;
+    if (!pending || pending.blockId !== blockId) return;
+    clearPendingFlowCompletion();
+    const completion = completeFlowBlockNow(blockId, { restOnFinalBonus: !pending.isLast });
+    if (!completion) return;
+    if (pending.isLast) {
+      showFlowFinishChoice(completion);
+    } else if (!flowRuntime.activeBlockId) {
+      showCompletionToast();
+    }
+  }
+
+  function queueFlowCompletion(blockId: string) {
+    const execution = flowRuntime.execution;
+    if (!execution || execution.status !== 'running' || execution.blocks[execution.currentIndex]?.id !== blockId) return;
+    clearPendingFlowCompletion();
+    pendingFlowCompletion = { blockId, isLast: currentFlowBlockIsLast(blockId) };
+    pendingFlowCompletionTimer = setTimeout(() => confirmPendingFlowCompletion(blockId), FLOW_COMPLETION_UNDO_MS);
+  }
+
+  function chooseFlowChill() {
+    const choice = flowFinishChoice;
+    if (!choice || !choice.canChill) return;
+    flowRuntime.startRest(choice.completion.bonusMinutes, choice.completion.completedAtMin);
+    flowFinishChoice = null;
+    showCompletionToast('Chillar till passets slut');
+    appState.persist();
+    if (hasSyncSession()) void syncSave();
+    void pushShareState();
+  }
+
+  function chooseFlowEnd() {
+    if (!flowFinishChoice) return;
+    flowFinishChoice = null;
+    showCompletionToast('Pass avslutat');
+    appState.persist();
+    if (hasSyncSession()) void syncSave();
+    void pushShareState();
+  }
+
+  function startNextAgendaFlowNow() {
+    const target = nextAgendaItemTargetForFlowRun();
+    if (!target || !agendaDays) return false;
+    const startMin = Math.floor(nowMinutes());
+    const updatedFlow = { ...target.item.flow, startMin };
+    const oldKey = makeAgendaMetaKeyForFlow(target.day.date ?? null, target.item.flow, target.item.startMin);
+    const newKey = makeAgendaMetaKeyForFlow(target.day.date ?? null, updatedFlow, startMin);
+    const days = replaceAgendaFlowInDays(agendaDays, target.dayIdx, target.item.flowIdx, updatedFlow);
+    setActiveAgendaText(serializeAgenda(days));
+    s.agendaMeta = moveAgendaMeta(s.agendaMeta, oldKey, newKey);
+    if (target.day.date) setActiveAgendaDate(target.day.date);
+    markPlanSaved();
+    activeAgendaFlowRef = null;
+    sessionSource = { kind: 'unscheduled' };
+    flowRuntime.clear();
+    loadAgendaFlow(updatedFlow, startMin, 'now', false);
+    ensureFlowRuntime();
+    appState.persist();
+    if (hasSyncSession()) void syncSave('auto-panel');
+    void pushShareState();
+    return true;
+  }
+
+  function chooseFlowStartNext() {
+    if (!flowFinishChoice) return;
+    if (!startNextAgendaFlowNow()) {
+      showCompletionToast('Inget nästa pass');
+      return;
+    }
+    flowFinishChoice = null;
+    showCompletionToast('Nästa pass startat');
+  }
   function toggleSegmentDone(blockId: string) {
     if (flowRunActive) {
-      const completion = flowRuntime.complete(blockId, nowMinutes());
-      if (!completion) return;
-      const entry = makeFlowActualEntry({
-        date: localDateISO(),
-        agendaDate: selectedDay?.date ?? null,
-        sessionTitle: s.dayTitle || 'Session',
-        dayTextSnapshot: serializeSelectedAgendaDay(selectedDay?.date ?? null, agendaDays ?? null),
-        completion
-      });
-      s.actualTimeLog = upsertActualEntry(s.actualTimeLog, entry);
-      warnedSet.clear();
-      if (!flowRuntime.activeBlockId) showCompletionToast();
-      appState.persist();
-      if (hasSyncSession()) void syncSave();
-      void pushShareState();
+      if (pendingFlowCompletion?.blockId === blockId) {
+        clearPendingFlowCompletion();
+        showCompletionToast('Ångrat');
+        return;
+      }
+      queueFlowCompletion(blockId);
       return;
     }
     if (doneSegments[blockId] !== undefined) {
@@ -2930,6 +3062,7 @@
     return () => {
       clearInterval(id);
       if (workspaceAutosaveTimer) clearTimeout(workspaceAutosaveTimer);
+      clearPendingFlowCompletion();
       if (viewPollId) clearInterval(viewPollId);
       if (syncPollId) clearInterval(syncPollId);
       if (viewVisibilityHandler) document.removeEventListener('visibilitychange', viewVisibilityHandler);
@@ -3284,7 +3417,7 @@
       agendaView={s.agendaView}
       onCommitEdit={commitBlockEdit}
       onToggleSegmentDone={toggleSegmentDone}
-      doneBlockIds={flowRunActive ? flowRuntime.completedBlockIds : Object.keys(doneSegments)}
+      doneBlockIds={flowRunActive ? flowDoneBlockIds : Object.keys(doneSegments)}
       flowMode={flowRunActive}
       flowActiveBlockId={flowRuntime.activeBlockId}
       flowAllocations={flowRuntime.execution?.allocations ?? []}
@@ -4066,6 +4199,26 @@
 
 <div class="flash" bind:this={flashEl}></div>
 
+{#if pendingFlowCompletion}
+  <div class="flow-undo-toast" role="status" aria-live="polite">Ångra inom 4 sek: klicka rutan igen</div>
+{/if}
+
+{#if flowFinishChoice}
+  <div class="flow-finish-overlay" role="dialog" aria-modal="true" aria-labelledby="flow-finish-title">
+    <div class="flow-finish-card" in:fly={{ y: 14, duration: 180 }}>
+      <h2 id="flow-finish-title">Passet är klart</h2>
+      {#if flowFinishChoice.nextTitle}
+        <p>Nästa: {flowFinishChoice.nextTitle}</p>
+      {/if}
+      <div class="flow-finish-actions">
+        <button class="quickstart" type="button" onclick={chooseFlowChill} disabled={!flowFinishChoice.canChill}>Chilla</button>
+        <button class="quickstart quickstart-subtle" type="button" onclick={chooseFlowEnd}>Avsluta pass</button>
+        <button class="quickstart" type="button" onclick={chooseFlowStartNext} disabled={!flowFinishChoice.canStartNext}>Starta nästa pass</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 {#if completionToast}
   <div class="completion-toast" role="status" aria-live="polite">{completionToast}</div>
 {/if}
@@ -4206,3 +4359,4 @@
       appState.persist();
     }}
   />
+

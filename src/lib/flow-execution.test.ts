@@ -6,7 +6,8 @@ import {
 	flowExecutionBlocks,
 	pauseFlowExecution,
 	rebindFlowExecutionBlocks,
-	resumeFlowExecution
+	resumeFlowExecution,
+	startFlowRest
 } from './flow-execution.js';
 import type { Block } from './state.svelte.js';
 
@@ -95,4 +96,25 @@ describe('flow execution', () => {
 
 		expect(result.completion?.actualMinutes).toBe(20);
 	});
+
+	it('can finish the final activity without automatically creating rest time', () => {
+		const initial = createFlowExecution([block('a', 30)], 480, 480);
+		const result = completeFlowActivity(initial, 'a', 500, { restOnFinalBonus: false });
+
+		expect(result.completion).toMatchObject({ actualMinutes: 20, bonusMinutes: 10 });
+		expect(result.state.status).toBe('complete');
+		expect(result.state.restMinutes).toBe(0);
+		expect(flowExecutionBlocks(result.state, 500).map(item => [item.title, item.minutes])).toEqual([['A', 20]]);
+	});
+
+	it('can start final rest time after a clean final completion', () => {
+		const initial = createFlowExecution([block('a', 30)], 480, 480);
+		const completed = completeFlowActivity(initial, 'a', 500, { restOnFinalBonus: false }).state;
+		const resting = startFlowRest(completed, 10, 500);
+
+		expect(resting.status).toBe('rest');
+		expect(resting.restStartedAtMin).toBe(500);
+		expect(flowExecutionBlocks(resting, 500).map(item => [item.title, item.minutes])).toEqual([['A', 20], ['*', 10]]);
+	});
 });
+

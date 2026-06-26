@@ -37,6 +37,10 @@ export interface CompleteFlowActivityResult {
 	completion: FlowCompletion | null;
 }
 
+export interface CompleteFlowActivityOptions {
+	restOnFinalBonus?: boolean;
+}
+
 function cloneBlocks(blocks: Block[]): Block[] {
 	return blocks.map(block => ({ ...block }));
 }
@@ -122,11 +126,13 @@ export function resumeFlowExecution(state: FlowExecutionState, nowMin: number): 
 export function completeFlowActivity(
 	state: FlowExecutionState,
 	blockId: string,
-	nowMin: number
+	nowMin: number,
+	options: CompleteFlowActivityOptions = {}
 ): CompleteFlowActivityResult {
 	if (state.status !== 'running') return { state, completion: null };
 	const block = state.blocks[state.currentIndex];
 	if (!block || block.id !== blockId) return { state, completion: null };
+	const restOnFinalBonus = options.restOnFinalBonus ?? true;
 
 	const plannedMinutes = state.allocations[state.currentIndex];
 	const actualMinutes = Math.max(1, Math.round(currentFlowWorkedMinutes(state, nowMin)));
@@ -148,7 +154,7 @@ export function completeFlowActivity(
 
 	if (bonusMinutes > 0) {
 		if (hasNext) allocations[nextIndex] += bonusMinutes;
-		else {
+		else if (restOnFinalBonus) {
 			restMinutes = bonusMinutes;
 			restStartedAtMin = nowMin;
 			status = 'rest';
@@ -183,6 +189,22 @@ export function completeFlowActivity(
 			completions: [...state.completions, completion]
 		},
 		completion
+	};
+}
+
+export function startFlowRest(
+	state: FlowExecutionState,
+	restMinutes: number,
+	startedAtMin: number
+): FlowExecutionState {
+	const minutes = Math.max(0, restMinutes);
+	if (minutes <= 0) return state;
+	return {
+		...state,
+		restMinutes: minutes,
+		restStartedAtMin: startedAtMin,
+		status: 'rest',
+		runningSinceMin: null
 	};
 }
 
@@ -225,3 +247,4 @@ export function activeFlowBlockId(state: FlowExecutionState): string | null {
 	if (state.status !== 'running') return null;
 	return state.blocks[state.currentIndex]?.id ?? null;
 }
+

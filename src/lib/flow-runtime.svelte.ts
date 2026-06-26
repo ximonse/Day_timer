@@ -6,7 +6,9 @@ import {
 	flowExecutionBlocks,
 	flowPlanKey,
 	rebindFlowExecutionBlocks,
+	startFlowRest,
 	tickFlowExecution,
+	type CompleteFlowActivityOptions,
 	type FlowCompletion,
 	type FlowExecutionState
 } from './flow-execution.js';
@@ -71,12 +73,17 @@ export function createFlowRuntime() {
 			}
 			return execution;
 		},
-		complete(blockId: string, nowMin: number): FlowCompletion | null {
+		complete(blockId: string, nowMin: number, options: CompleteFlowActivityOptions = {}): FlowCompletion | null {
 			if (!execution) return null;
-			const result = completeFlowActivity(execution, blockId, nowMin);
+			const result = completeFlowActivity(execution, blockId, nowMin, options);
 			execution = result.state;
 			persistExecution();
 			return result.completion;
+		},
+		startRest(restMinutes: number, startedAtMin: number) {
+			if (!execution) return;
+			execution = startFlowRest(execution, restMinutes, startedAtMin);
+			persistExecution();
 		},
 		tick(nowMin: number) {
 			if (!execution) return;
@@ -95,3 +102,4 @@ export function createFlowRuntime() {
 		}
 	};
 }
+

@@ -23,3 +23,11 @@ export function adjustAgendaItemsForFlowRun<T extends FlowAgendaItem>(
 		return item;
 	});
 }
+export function nextAgendaItemForFlowRun<T extends FlowAgendaItem>(
+	items: T[],
+	active: { title: string; startMin: number }
+): T | null {
+	const currentIndex = items.findIndex(item => item.startMin === active.startMin && item.flow.title === active.title);
+	return currentIndex >= 0 ? items[currentIndex + 1] ?? null : null;
+}
+

@@ -471,7 +471,7 @@
           {@html parseMarkdownHtml(displayTitle)}
         </button>
         {#if !isViewMode && onToggleSegmentDone && (flowMode ? b.id === flowActiveBlockId : showSegmentDoneControl(b.id, isActive ? b.id : null, doneBlockIds))}
-          <button type="button" class="title-check-btn seg-done-control" class:done-checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={flowMode ? 'Klar nu' : doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på nästa segment'} aria-label={doneBlockIds.includes(b.id) ? 'Ångra' : 'Klar'}>
+          <button type="button" class="title-check-btn seg-done-control" class:done-checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={flowMode ? doneBlockIds.includes(b.id) ? 'Ångra' : 'Klar nu' : doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på nästa segment'} aria-label={doneBlockIds.includes(b.id) ? 'Ångra' : 'Klar'}>
             {#if doneBlockIds.includes(b.id)}✓{/if}
           </button>
         {:else if !isViewMode && !onToggleSegmentDone}
@@ -739,3 +739,4 @@
     .format-tips { font-size: 10px; }
   }
 </style>
+

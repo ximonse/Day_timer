@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { adjustAgendaItemsForFlowRun } from './flow-agenda.js';
+import { adjustAgendaItemsForFlowRun, nextAgendaItemForFlowRun } from './flow-agenda.js';
 
 describe('flow agenda timing', () => {
 	test('extends the active agenda item and shifts later items when flow run overruns', () => {
@@ -24,4 +24,23 @@ describe('flow agenda timing', () => {
 
 		expect(adjustAgendaItemsForFlowRun(items, { title: 'Aktiv', startMin: 9 * 60 }, 45, 9 * 60 + 40)).toBe(items);
 	});
+
+	test('finds the next agenda item after the active flow source', () => {
+		const items = [
+			{ flow: { title: 'Före' }, startMin: 8 * 60, totalMin: 30 },
+			{ flow: { title: 'Aktiv' }, startMin: 9 * 60, totalMin: 45 },
+			{ flow: { title: 'Nästa' }, startMin: 9 * 60 + 45, totalMin: 30 }
+		];
+
+		expect(nextAgendaItemForFlowRun(items, { title: 'Aktiv', startMin: 9 * 60 })).toBe(items[2]);
+	});
+
+	test('returns null when the active flow has no following agenda item', () => {
+		const items = [
+			{ flow: { title: 'Aktiv' }, startMin: 9 * 60, totalMin: 45 }
+		];
+
+		expect(nextAgendaItemForFlowRun(items, { title: 'Aktiv', startMin: 9 * 60 })).toBeNull();
+	});
 });
+

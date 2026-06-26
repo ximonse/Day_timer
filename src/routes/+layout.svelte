@@ -801,6 +801,14 @@
   :global(.flash.on) { opacity: .35; }
   :global(.completion-toast) { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 180; pointer-events: none; padding: 12px 18px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 18%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--border)); color: var(--fg); box-shadow: 0 14px 42px rgba(0,0,0,.18); font-size: 18px; font-weight: 800; letter-spacing: 0; animation: completion-toast-in .22s ease-out; }
   @keyframes completion-toast-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  :global(.flow-undo-toast) { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 185; padding: 10px 16px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 18%, var(--panel)); border: 1px solid color-mix(in srgb, var(--accent) 46%, var(--border)); color: var(--fg); box-shadow: 0 14px 42px rgba(0,0,0,.16); font-size: 14px; font-weight: 800; letter-spacing: 0; pointer-events: none; animation: completion-toast-in .18s ease-out; }
+  :global(.flow-finish-overlay) { position: fixed; inset: 0; z-index: 190; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.28); backdrop-filter: blur(5px); }
+  :global(.flow-finish-card) { width: min(420px, 100%); background: var(--menu-surface); color: var(--menu-fg); border: 1px solid var(--menu-border); border-radius: 12px; padding: 22px; box-shadow: 0 24px 70px rgba(0,0,0,.28); text-align: center; }
+  :global(.flow-finish-card h2) { margin: 0; font-size: 22px; line-height: 1.15; font-weight: 850; letter-spacing: 0; }
+  :global(.flow-finish-card p) { margin: 8px 0 0; color: var(--menu-muted); font-size: 14px; line-height: 1.3; }
+  :global(.flow-finish-actions) { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 18px; }
+  :global(.flow-finish-actions .quickstart) { justify-content: center; border-radius: 8px; padding: 12px 14px; font-weight: 800; }
+  :global(body.page-locked .flow-finish-overlay button) { pointer-events: auto !important; }
   :global(.help-modal) { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
   :global(.help-modal.open) { display: flex; }
     :global(.help-card) { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 24px; padding: 40px; max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; line-height: 1.5; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
@@ -858,3 +866,4 @@
     100% { opacity: 0; transform: translate(-50%, -10px); }
   }
   </style>
+
