@@ -8,6 +8,22 @@
 
 ---
 
+## 🧭 Läs först (vid relevant arbete)
+
+- **`ARCHITECTURE.md`** — beroendekarta & kontrakt för delar som tyst går sönder.
+- **`MODES.md`** — lägesbeteende (Static/Flow, kör-läge, avslutsval).
+
+**När du rör X → kontrollera Y:**
+
+| Ändrar | Kontrollera |
+| --- | --- |
+| `parse.ts` (pass-/dagformat) | parse-tester + uppdatera AI-prompterna (`ai.ts`) |
+| AI-prompter (`ai.ts`) | `ai-format-contract.test.ts` |
+| `ActualTimeEntry` / `learning.ts` | `learning.test.ts` (rekommendations-filtret) |
+| agenda-tider | `redistributeFlowsAcrossDays` + `agenda*.test.ts` |
+
+---
+
 ## 🛑 Utvecklingspolicy (Viktigt!)
 
 - **Polish är prioriterat**: Små UI-förbättringar, mjukare animationer och UX-puts är alltid välkommet.
