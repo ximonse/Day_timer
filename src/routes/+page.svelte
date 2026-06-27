@@ -1537,39 +1537,21 @@
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const t0 = audioCtx.currentTime + offset;
-      const tone = audioCtx.createOscillator();
-      const toneGain = audioCtx.createGain();
-      tone.type = 'sawtooth';
-      tone.frequency.setValueAtTime(2600, t0);
-      tone.frequency.exponentialRampToValueAtTime(1300, t0 + 0.035);
-      toneGain.gain.setValueAtTime(0.0001, t0);
-      toneGain.gain.exponentialRampToValueAtTime(0.11, t0 + 0.003);
-      toneGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
-      tone.connect(toneGain); toneGain.connect(audioCtx.destination);
-      tone.start(t0); tone.stop(t0 + 0.055);
-
-      const samples = Math.max(1, Math.floor(audioCtx.sampleRate * 0.035));
-      const buffer = audioCtx.createBuffer(1, samples, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < samples; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / samples);
-      const noise = audioCtx.createBufferSource();
-      const filter = audioCtx.createBiquadFilter();
-      const noiseGain = audioCtx.createGain();
-      noise.buffer = buffer;
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(3200, t0);
-      filter.Q.setValueAtTime(7, t0);
-      noiseGain.gain.setValueAtTime(0.0001, t0);
-      noiseGain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.002);
-      noiseGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.032);
-      noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(audioCtx.destination);
-      noise.start(t0); noise.stop(t0 + 0.04);
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(1800, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.13, t0 + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.055);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + 0.07);
     } catch { /* ignore */ }
   }
 
   function clickClick() {
     clickTick();
-    clickTick(0.14);
+    clickTick(0.18);
   }
 
   function doFlash() {
