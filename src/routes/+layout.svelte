@@ -185,6 +185,9 @@
   :global(.mute-all-btn) { width: 100%; margin-bottom: 8px; padding: 5px 8px; border-radius: 999px; border: 1px solid var(--menu-border); background: transparent; color: var(--menu-muted); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; text-align: center; transition: background .12s, color .12s; }
   :global(.mute-all-btn:hover) { background: var(--pill); color: var(--fg); }
   :global(.mute-all-btn.on) { background: color-mix(in srgb, var(--accent) 15%, var(--menu-surface)); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--menu-border)); }
+  :global(.sound-test-grid) { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  :global(.sound-test-btn) { min-width: 70px; padding: 5px 7px; border-radius: 8px; border: 1px solid var(--menu-border); background: var(--menu-surface); color: var(--menu-fg); font: inherit; font-size: 11px; font-weight: 650; cursor: pointer; }
+  :global(.sound-test-btn:hover) { background: var(--pill); color: var(--fg); }
   :global(.warn-dots-grid) { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; }
   :global(.warn-dots-grid.muted) { opacity: .35; pointer-events: none; }
   :global(.warn-dots-grid .wd) { width: 22px; height: 22px; border: 0; cursor: pointer; background: transparent; color: color-mix(in srgb, var(--muted) 45%, var(--border) 55%); padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; line-height: 1; border-radius: 999px; transition: all .12s; }

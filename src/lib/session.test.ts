@@ -188,6 +188,17 @@ describe('session helpers', () => {
 		expect(effective[0].runUntilChecked).toBe(true);
 	});
 
+	test('keeps a completed static run-until segment at planned duration', () => {
+		const blocks = [
+			block({ id: 'a', minutes: 10, runUntilChecked: true }),
+			block({ id: 'b', minutes: 5 })
+		];
+		const effective = effectiveRunUntilCheckedBlocks(blocks, 14, ['a']);
+
+		expect(effective.map(item => item.minutes)).toEqual([10, 5]);
+		expect(blocks.map(item => item.minutes)).toEqual([10, 5]);
+		expect(effective[0].runUntilChecked).toBe(true);
+	});
 	test('finalizes run-until-checked to elapsed time and clears the flag', () => {
 		const result = finalizeRunUntilCheckedSegment([
 			block({ id: 'a', minutes: 10, runUntilChecked: true }),

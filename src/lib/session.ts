@@ -25,10 +25,11 @@ export function completeActiveSegment(
 	return { minutes: nextMinutes, savedMinutes };
 }
 
-export function effectiveRunUntilCheckedBlocks(blocks: Block[], elapsedMin: number): Block[] {
+export function effectiveRunUntilCheckedBlocks(blocks: Block[], elapsedMin: number, doneBlockIds: string[] = []): Block[] {
+	const done = new Set(doneBlockIds);
 	let cum = 0;
 	return blocks.map(block => {
-		if (!block.runUntilChecked) {
+		if (!block.runUntilChecked || done.has(block.id)) {
 			cum += block.minutes;
 			return block;
 		}

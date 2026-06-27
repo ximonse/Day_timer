@@ -48,7 +48,7 @@
     upsertActualEntry,
     finalizeUnconfirmedForDate
   } from '$lib/actuals.js';
-  import { allocateBlockMinutes, completeActiveSegment, createCurrentFallbackSession, createSessionStateFromFlow, effectiveRunUntilCheckedBlocks, finalizeRunUntilCheckedSegment, hasRunnableSessionContent, makeFlowFromSession, undoCompletedSegment, undoFinalizedRunUntilCheckedSegment, type SessionFromFlowOptions } from '$lib/session.js';
+  import { allocateBlockMinutes, createCurrentFallbackSession, createSessionStateFromFlow, effectiveRunUntilCheckedBlocks, hasRunnableSessionContent, makeFlowFromSession, type SessionFromFlowOptions } from '$lib/session.js';
   import {
     addManualAgendaItem,
     deleteAgendaItemAt,
@@ -98,13 +98,13 @@
   } from '$lib/workspace.js';
   import { normalizeSyncSaveSource, type SyncSaveSource } from '$lib/sync-source.js';
   import { shouldSkipWorkspaceAutosave } from '$lib/autosave.js';
-  import { decideWorkspaceSyncLoad, type SyncLoadSource } from '$lib/sync-load-decision.js';
+  import { decideWorkspaceSyncLoad, shouldPauseAutoSyncLoadForFlow, type SyncLoadSource } from '$lib/sync-load-decision.js';
   import { nextBindingAfterSectionChange } from '$lib/active-session-binding.js';
   import { stripColorDirective } from '$lib/title-color.js';
   import { createFlowRuntime } from '$lib/flow-runtime.svelte.js';
   import { makeFlowActualEntry } from '$lib/flow-actuals.js';
   import { adjustAgendaItemsForFlowRun, nextAgendaItemForFlowRun } from '$lib/flow-agenda.js';
-  import type { CompleteFlowActivityOptions, FlowCompletion } from '$lib/flow-execution.js';
+  import { flowWarningEvents, type CompleteFlowActivityOptions, type FlowCompletion } from '$lib/flow-execution.js';
   import SectionNav from '$lib/components/SectionNav.svelte';
   import SectionHero from '$lib/components/SectionHero.svelte';
   import SessionEditorPanel from '$lib/components/SessionEditorPanel.svelte';
@@ -191,10 +191,7 @@
 
 
   let nowMinLive = $state(nowMinutes());
-  type SegmentUndo =
-    | { kind: 'regular'; saved: number }
-    | { kind: 'runUntil'; prevMinutes: number; movedToNextMin: number; fillerBlockId: string | null };
-  let doneSegments = $state<Record<string, SegmentUndo>>({});
+  let doneSegments = $state<Record<string, true>>({});
   let completionToast = $state('');
   let completionToastTimer: ReturnType<typeof setTimeout> | null = null;
   let pendingFlowCompletion = $state<PendingFlowCompletion | null>(null);
@@ -328,10 +325,10 @@
   const totalMin = () => s.blocks.reduce((a, b) => a + b.minutes, 0);
   const flowModeEnabled = $derived(flowRuntime.mode === 'flow');
   const flowRunActive = $derived(flowModeEnabled && locked && !miniMenuOpen && flowRuntime.execution !== null);
-  const timerStartMin = () => flowRunActive ? flowRuntime.execution!.plannedStartMin : s.startMin;
+  const timerStartMin = () => flowRunActive ? flowRuntime.execution!.displayStartMin : s.startMin;
   const displayBlocks = $derived.by(() => flowRunActive
     ? flowRuntime.displayBlocks(nowMinLive)
-    : effectiveRunUntilCheckedBlocks(s.blocks, nowMinLive - s.startMin));
+    : effectiveRunUntilCheckedBlocks(s.blocks, nowMinLive - s.startMin, Object.keys(doneSegments)));
   const displayTotalMin = () => displayBlocks.reduce((a, b) => a + b.minutes, 0);
   const flowDoneBlockIds = $derived.by(() => pendingFlowCompletion
     ? [...flowRuntime.completedBlockIds, pendingFlowCompletion.blockId]
@@ -588,6 +585,10 @@
     let cum = 0;
     for (let i = 0; i < s.blocks.length; i++) {
       const block = s.blocks[i];
+      if (doneSegments[block.id]) {
+        cum += block.minutes;
+        continue;
+      }
       const remainingAfter = s.blocks.slice(i + 1).reduce((sum, item) => sum + item.minutes, 0);
       if (block.runUntilChecked && elapsed >= cum) {
         const actual = Math.max(1, Math.ceil(elapsed - cum));
@@ -1372,51 +1373,23 @@
       return;
     }
     if (doneSegments[blockId] !== undefined) {
-      const undo = doneSegments[blockId];
-      const idx = s.blocks.findIndex(b => b.id === blockId);
-      if (idx !== -1 && undo.kind === 'regular') {
-        const restoredMinutes = undoCompletedSegment(s.blocks.map(b => b.minutes), idx, undo.saved);
-        s.blocks.forEach((b, i) => { b.minutes = restoredMinutes[i]; });
-      } else if (idx !== -1 && undo.kind === 'runUntil') {
-        s.blocks = undoFinalizedRunUntilCheckedSegment(s.blocks, idx, undo.prevMinutes, undo.movedToNextMin, undo.fillerBlockId);
-        syncPartsDraftFromState(true);
-      }
       const next = { ...doneSegments };
       delete next[blockId];
       doneSegments = next;
       warnedSet.clear();
-      syncTimerToAgenda(true);
       appState.persist();
       return;
     }
     const elapsed = elapsedMin();
     let cum = 0;
-    const effectiveBlocks = effectiveRunUntilCheckedBlocks(s.blocks, elapsed);
+    const effectiveBlocks = effectiveRunUntilCheckedBlocks(s.blocks, elapsed, Object.keys(doneSegments));
     for (let i = 0; i < s.blocks.length; i++) {
       if (s.blocks[i].id === blockId) {
         const isActive = elapsed >= cum && elapsed < cum + effectiveBlocks[i].minutes;
         if (!isActive) return;
-        const wasLast = i === s.blocks.length - 1;
-        if (s.blocks[i].runUntilChecked) {
-          const finalized = finalizeRunUntilCheckedSegment(s.blocks, i, elapsed - cum, uid);
-          s.blocks = finalized.blocks;
-          doneSegments = { ...doneSegments, [blockId]: { kind: 'runUntil', prevMinutes: finalized.prevMinutes, movedToNextMin: finalized.movedToNextMin, fillerBlockId: finalized.fillerBlockId } };
-          warnedSet.clear();
-          syncTimerToAgenda(true, Math.max(0, finalized.deltaMin));
-          syncPartsDraftFromState(true);
-          if (finalized.fillerBlockId) showCompletionToast('Ställtid tillagd — sluttiden behålls');
-          else if (finalized.movedToNextMin > 0) showCompletionToast(`+${finalized.movedToNextMin} min flyttat till nästa block`);
-          else if (wasLast) showCompletionToast();
-          appState.persist();
-          return;
-        }
-        const completion = completeActiveSegment(s.blocks.map(b => b.minutes), i, elapsed - cum);
-        s.blocks.forEach((b, j) => { b.minutes = completion.minutes[j]; });
-        doneSegments = { ...doneSegments, [blockId]: { kind: 'regular', saved: completion.savedMinutes } };
+        doneSegments = { ...doneSegments, [blockId]: true };
         warnedSet.clear();
-        syncTimerToAgenda(true);
-        if (completion.savedMinutes > 0 && !wasLast) showCompletionToast(`+${completion.savedMinutes} min flyttat till nästa block`);
-        else if (wasLast) showCompletionToast();
+        showCompletionToast();
         appState.persist();
         return;
       }
@@ -1560,6 +1533,27 @@
     } catch { /* ignore */ }
   }
 
+  function clickTick(offset = 0) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const t0 = audioCtx.currentTime + offset;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(1800, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.13, t0 + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.055);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + 0.07);
+    } catch { /* ignore */ }
+  }
+
+  function clickClick() {
+    clickTick();
+    clickTick(0.18);
+  }
+
   function doFlash() {
     if (!flashEl) return;
     flashEl.classList.add('on');
@@ -1567,7 +1561,18 @@
   }
 
   function checkWarnings() {
-    if (soundMuted || flowRunActive) return;
+    if (soundMuted) return;
+    if (flowRunActive && flowRuntime.execution) {
+      flowWarningEvents(flowRuntime.execution, nowMinLive).forEach(event => {
+        if (warnedSet.has(event.key)) return;
+        warnedSet.add(event.key);
+        if (event.kind === 'warning') beep();
+        else if (event.kind === 'end') { beep(); beep(0.45); }
+        else clickClick();
+        doFlash();
+      });
+      return;
+    }
     const elapsed = elapsedMin();
     let cum = 0;
     displayBlocks.forEach((b, i) => {
@@ -1830,6 +1835,18 @@
   }
 
   async function syncLoad(source: SyncLoadSource = 'manual') {
+    if (shouldPauseAutoSyncLoadForFlow({
+      source,
+      flowModeEnabled,
+      locked,
+      miniMenuOpen,
+      hasFlowExecution: flowRuntime.execution !== null
+    })) {
+      syncProbeState = 'idle';
+      syncProbeText = 'Flow körs – molnladdning pausad';
+      loadingFromCloud = false;
+      return;
+    }
     if (source === 'auto' && hasUnsavedAgendaDraft()) {
       syncProbeState = 'idle';
       syncProbeText = 'Dagtext osparad – molnladdning pausad';
@@ -3612,6 +3629,12 @@
                     title="Tystar alla ljud för detta pass tills du slår på igen. Per-aktivitetsinställningar påverkas inte.">
                     {soundMuted ? '🔇 Tystat' : '🔔 Ljud på'}
                   </button>
+                  <div class="sound-test-grid" aria-label="Ljudtest">
+                    <button type="button" class="sound-test-btn" onclick={() => { beep(); doFlash(); }}>Pling</button>
+                    <button type="button" class="sound-test-btn" onclick={() => { beep(); beep(0.45); doFlash(); }}>Dubbel</button>
+                    <button type="button" class="sound-test-btn" onclick={() => { planBeep(); doFlash(); }}>Plan</button>
+                    <button type="button" class="sound-test-btn" onclick={() => { clickClick(); doFlash(); }}>Click</button>
+                  </div>
                   {#if s.blocks.length > 0}
                     <div class="warn-dots-grid" class:muted={soundMuted}>
                       {#each s.blocks as b, i (b.id)}
