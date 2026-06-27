@@ -256,6 +256,48 @@ export function flowExecutionBlocks(state: FlowExecutionState, nowMin: number): 
 	return blocks;
 }
 
+export type FlowWarningEventKind = 'warning' | 'end' | 'overrun';
+
+export interface FlowWarningEvent {
+	kind: FlowWarningEventKind;
+	key: string;
+	blockId: string;
+	targetMin: number;
+}
+
+function inWarningWindow(value: number, target: number, windowMin: number): boolean {
+	return value >= target && value < target + windowMin;
+}
+
+export function flowWarningEvents(state: FlowExecutionState, nowMin: number, windowMin = 1 / 60): FlowWarningEvent[] {
+	if (state.status !== 'running') return [];
+	const block = state.blocks[state.currentIndex];
+	if (!block || !block.warning) return [];
+
+	const plannedMinutes = state.allocations[state.currentIndex] ?? block.minutes;
+	const workedMinutes = currentFlowWorkedMinutes(state, nowMin);
+	const baseKey = `${state.contextKey}|${block.id}|${Math.round(state.currentStartedAtMin * 1000)}`;
+	const events: FlowWarningEvent[] = [];
+	const warningTarget = plannedMinutes - 3;
+
+	if (warningTarget >= 0 && inWarningWindow(workedMinutes, warningTarget, windowMin)) {
+		events.push({ kind: 'warning', key: `${baseKey}|warning|${warningTarget}`, blockId: block.id, targetMin: warningTarget });
+	}
+	if (inWarningWindow(workedMinutes, plannedMinutes, windowMin)) {
+		events.push({ kind: 'end', key: `${baseKey}|end|${plannedMinutes}`, blockId: block.id, targetMin: plannedMinutes });
+	}
+
+	const overrunMinutes = workedMinutes - plannedMinutes;
+	if (overrunMinutes >= 5) {
+		const overrunStep = Math.floor(overrunMinutes / 5) * 5;
+		if (overrunStep >= 5 && inWarningWindow(overrunMinutes, overrunStep, windowMin)) {
+			events.push({ kind: 'overrun', key: `${baseKey}|overrun|${overrunStep}`, blockId: block.id, targetMin: plannedMinutes + overrunStep });
+		}
+	}
+
+	return events;
+}
+
 export function activeFlowBlockId(state: FlowExecutionState): string | null {
 	if (state.status !== 'running') return null;
 	return state.blocks[state.currentIndex]?.id ?? null;

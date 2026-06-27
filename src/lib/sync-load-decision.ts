@@ -11,6 +11,14 @@ export interface WorkspaceSyncLoadDecisionInput {
 	cloudEmpty: boolean;
 }
 
+export interface FlowAutoSyncPauseInput {
+	source: SyncLoadSource;
+	flowModeEnabled: boolean;
+	locked: boolean;
+	miniMenuOpen: boolean;
+	hasFlowExecution: boolean;
+}
+
 export function decideWorkspaceSyncLoad(input: WorkspaceSyncLoadDecisionInput): WorkspaceSyncLoadAction {
 	if (input.cloudEmpty && !input.localEmpty) return 'upload-local';
 	if (
@@ -20,4 +28,12 @@ export function decideWorkspaceSyncLoad(input: WorkspaceSyncLoadDecisionInput): 
 		&& input.localRevision >= input.cloudRevision
 	) return 'upload-local';
 	return 'apply-cloud';
+}
+
+export function shouldPauseAutoSyncLoadForFlow(input: FlowAutoSyncPauseInput): boolean {
+	return input.source === 'auto'
+		&& input.flowModeEnabled
+		&& input.locked
+		&& !input.miniMenuOpen
+		&& input.hasFlowExecution;
 }

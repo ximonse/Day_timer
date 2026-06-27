@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { decideWorkspaceSyncLoad } from './sync-load-decision.js';
+import { decideWorkspaceSyncLoad, shouldPauseAutoSyncLoadForFlow } from './sync-load-decision.js';
 
 describe('decideWorkspaceSyncLoad', () => {
 	test('auto load uploads local changes when cloud has the same revision but older content', () => {
@@ -48,5 +48,37 @@ describe('decideWorkspaceSyncLoad', () => {
 			localEmpty: false,
 			cloudEmpty: true
 		})).toBe('upload-local');
+	});
+});
+
+describe('shouldPauseAutoSyncLoadForFlow', () => {
+	test('pauses automatic cloud load while a flow run is active', () => {
+		expect(shouldPauseAutoSyncLoadForFlow({
+			source: 'auto',
+			flowModeEnabled: true,
+			locked: true,
+			miniMenuOpen: false,
+			hasFlowExecution: true
+		})).toBe(true);
+	});
+
+	test('allows manual cloud load even during a flow run', () => {
+		expect(shouldPauseAutoSyncLoadForFlow({
+			source: 'manual',
+			flowModeEnabled: true,
+			locked: true,
+			miniMenuOpen: false,
+			hasFlowExecution: true
+		})).toBe(false);
+	});
+
+	test('allows automatic cloud load when the run menu is open', () => {
+		expect(shouldPauseAutoSyncLoadForFlow({
+			source: 'auto',
+			flowModeEnabled: true,
+			locked: true,
+			miniMenuOpen: true,
+			hasFlowExecution: true
+		})).toBe(false);
 	});
 });

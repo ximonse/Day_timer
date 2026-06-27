@@ -5,6 +5,7 @@ import {
 	createFlowExecution,
 	finishFlowExecution,
 	flowExecutionBlocks,
+	flowWarningEvents,
 	pauseFlowExecution,
 	rebindFlowExecutionBlocks,
 	resumeFlowExecution,
@@ -137,6 +138,22 @@ describe('flow execution', () => {
 		expect(finished.bufferMinutes).toBe(0);
 		expect(finished.restMinutes).toBe(0);
 		expect(flowExecutionBlocks(finished, 500).map(item => [item.title, item.minutes])).toEqual([['A', 20]]);
+	});
+
+	it('emits ordinary warning and end events for the active flow activity', () => {
+		const initial = createFlowExecution([block('a', 10)], 480, 480, 'today');
+
+		expect(flowWarningEvents(initial, 487).map(event => event.kind)).toEqual(['warning']);
+		expect(flowWarningEvents(initial, 490).map(event => event.kind)).toEqual(['end']);
+	});
+
+	it('emits overrun events every five minutes after the planned flow activity end', () => {
+		const initial = createFlowExecution([block('a', 10)], 480, 480, 'today');
+
+		expect(flowWarningEvents(initial, 494.99).map(event => event.kind)).toEqual([]);
+		expect(flowWarningEvents(initial, 495).map(event => event.kind)).toEqual(['overrun']);
+		expect(flowWarningEvents(initial, 500).map(event => event.kind)).toEqual(['overrun']);
+		expect(flowWarningEvents(initial, 501).map(event => event.kind)).toEqual([]);
 	});
 
 	it('carries the context key on the execution state', () => {

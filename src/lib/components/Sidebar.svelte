@@ -441,6 +441,7 @@
     {@const blockColor = colorForSegment(b.title, ct.colors, i)}
     {@const timingBlocks = displayBlocks ?? blocks}
     {@const timingBlock = timingBlocks[i] ?? b}
+    {@const isDone = doneBlockIds.includes(b.id)}
     {@const cumMin = timingBlocks.slice(0, i).reduce((a: number, x: Block) => a + x.minutes, 0)}
     {@const segEnd = cumMin + timingBlock.minutes}
     {@const isActive = elapsedMin >= cumMin && elapsedMin < segEnd}
@@ -449,7 +450,7 @@
     {#if dragOverIdx === i && armedBlockId !== b.id}
       <div class="drag-drop-line" aria-hidden="true"></div>
     {/if}
-    <div class="row" class:active={isActive} class:past={isPast} class:armed={armedBlockId === b.id} class:done={doneBlockIds.includes(b.id)}
+    <div class="row" class:active={isActive} class:past={isPast} class:armed={armedBlockId === b.id} class:done={isDone}
          use:bindRow={b.id}
          onclickcapture={maybeSuppressClick}>
       {#if !isViewMode}
@@ -471,9 +472,11 @@
           {@html parseMarkdownHtml(displayTitle)}
         </button>
         {#if !isViewMode && onToggleSegmentDone && (flowMode ? b.id === flowActiveBlockId : showSegmentDoneControl(b.id, isActive ? b.id : null, doneBlockIds))}
-          <button type="button" class="title-check-btn seg-done-control" class:done-checked={doneBlockIds.includes(b.id)} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={flowMode ? doneBlockIds.includes(b.id) ? 'Ångra' : 'Klar nu' : doneBlockIds.includes(b.id) ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på nästa segment'} aria-label={doneBlockIds.includes(b.id) ? 'Ångra' : 'Klar'}>
-            {#if doneBlockIds.includes(b.id)}✓{/if}
+          <button type="button" class="title-check-btn seg-done-control" class:done-checked={isDone} onclick={(e) => { e.stopPropagation(); onToggleSegmentDone(b.id); }} title={flowMode ? isDone ? 'Ångra' : 'Klar nu' : isDone ? 'Ångra — återställ tid' : 'Klar nu — resterande tid läggs på nästa segment'} aria-label={isDone ? 'Ångra' : 'Klar'}>
+            {#if isDone}✓{/if}
           </button>
+        {:else if flowMode && isDone}
+          <span class="title-check-btn seg-done-control done-checked flow-done-marker" aria-label="Klar">✓</span>
         {:else if !isViewMode && !onToggleSegmentDone}
           <button type="button" class="title-check-btn" class:revealed={revealedCheckId === `${b.id}-title`} onclick={(e) => { e.stopPropagation(); toggleTitleCheck(b); revealedCheckId = null; }} title="Bocka av block" aria-label="Bocka av block">
             {#if b.title.includes('~~')}✓{/if}
@@ -682,6 +685,7 @@
   .title-check-btn:hover, .title-check-btn.revealed { opacity: 1 !important; }
   .title-check-btn.seg-done-control { opacity: 0.35; }
   .title-check-btn.done-checked { opacity: 1; color: var(--accent); border-color: var(--accent); }
+  .title-check-btn.flow-done-marker { cursor: default; }
 
   /* Run mode: the check-off control must be clearly tappable (visible on touch, no hover needed) */
   :global(body.run-mode) .title-check-btn.seg-done-control {
